@@ -1,8 +1,11 @@
 // Persistência local (IndexedDB). Único módulo que lê e grava dados.
 
 const DB_NAME = 'carteira-jf';
-const DB_VERSION = 1;
-export const STORES = Object.freeze({ expenses: 'expenses', categories: 'categories', meta: 'meta' });
+const DB_VERSION = 2;
+export const STORES = Object.freeze({
+  expenses: 'expenses', categories: 'categories', meta: 'meta',
+  incomes: 'incomes', accounts: 'accounts', images: 'images',
+});
 
 let dbPromise;
 
@@ -18,6 +21,12 @@ export function openDB() {
       }
       if (!db.objectStoreNames.contains(STORES.categories)) db.createObjectStore(STORES.categories, { keyPath: 'id' });
       if (!db.objectStoreNames.contains(STORES.meta)) db.createObjectStore(STORES.meta, { keyPath: 'key' });
+      // v2: entradas (rendimentos), contas bancárias e fotos
+      if (!db.objectStoreNames.contains(STORES.incomes)) {
+        db.createObjectStore(STORES.incomes, { keyPath: 'id' }).createIndex('month', 'month');
+      }
+      if (!db.objectStoreNames.contains(STORES.accounts)) db.createObjectStore(STORES.accounts, { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(STORES.images)) db.createObjectStore(STORES.images, { keyPath: 'id' });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -68,6 +77,11 @@ export async function remove(store, key) {
   return done(tx);
 }
 
+export async function get(store, key) {
+  const db = await openDB();
+  return request(db.transaction(store).objectStore(store).get(key));
+}
+
 export async function getMeta(key, fallback = null) {
   const db = await openDB();
   const row = await request(db.transaction(STORES.meta).objectStore(STORES.meta).get(key));
@@ -78,16 +92,17 @@ export function setMeta(key, value) {
   return put(STORES.meta, { key, value });
 }
 
-/** Troca todos os gastos e categorias de uma vez (restauração de backup). Tudo ou nada. */
-export async function replaceAll({ expenses, categories }) {
+/** Troca todos os dados financeiros de uma vez (restauração de backup). Tudo ou nada. Fotos ficam como estão. */
+export async function replaceAll({ expenses, categories, incomes = [], accounts = [] }) {
   const db = await openDB();
-  const tx = db.transaction([STORES.expenses, STORES.categories], 'readwrite');
-  const e = tx.objectStore(STORES.expenses);
-  const c = tx.objectStore(STORES.categories);
-  e.clear();
-  c.clear();
-  for (const x of expenses) e.put(x);
-  for (const x of categories) c.put(x);
+  const names = [STORES.expenses, STORES.categories, STORES.incomes, STORES.accounts];
+  const tx = db.transaction(names, 'readwrite');
+  const data = [expenses, categories, incomes, accounts];
+  names.forEach((n, i) => {
+    const s = tx.objectStore(n);
+    s.clear();
+    for (const x of data[i]) s.put(x);
+  });
   return done(tx);
 }
 

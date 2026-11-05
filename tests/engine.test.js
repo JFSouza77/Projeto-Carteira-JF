@@ -91,3 +91,55 @@ test('mês verde', () => {
   assert.deepEqual(detectMonthClose({ expenses: [exp(60000, 'mercado', '2026-10-10')], categories: c, currentMonth: '2026-11' }), []);
   assert.deepEqual(detectMonthClose({ expenses: [], categories: c, currentMonth: '2026-11' }), []);
 });
+
+import { createIncome, createAccount, accountBalance, totalBalance, analyze, parseSignedAmount, periodRange, forecastMonth } from '../js/engine.js';
+
+test('entradas validam a fonte', () => {
+  assert.throws(() => createIncome({ amountCents: 100, sourceId: 'xyz' }));
+  const i = createIncome({ amountCents: 150000, sourceId: 'salario', date: '2026-11-05' });
+  assert.equal(i.month, '2026-11');
+});
+
+test('saldo da conta = informado + lançamentos DEPOIS do saldo', () => {
+  const t0 = new Date(2026, 10, 1, 10);
+  const acc = createAccount({ bank: 'Nubank', balanceCents: 50000 }, { now: t0 });
+  const antes = createExpense({ amountCents: 1000, categoryId: 'mercado', date: '2026-11-01', accountId: acc.id }, { categories: cats, now: new Date(t0 - 1000) });
+  const depois = createExpense({ amountCents: 2000, categoryId: 'mercado', date: '2026-11-02', accountId: acc.id }, { categories: cats, now: new Date(+t0 + 1000) });
+  const outra = createExpense({ amountCents: 9999, categoryId: 'mercado', date: '2026-11-02' }, { categories: cats, now: new Date(+t0 + 1000) });
+  const ent = createIncome({ amountCents: 10000, sourceId: 'freela', date: '2026-11-03', accountId: acc.id }, { now: new Date(+t0 + 2000) });
+  assert.equal(accountBalance(acc, [antes, depois, outra], [ent]), 50000 - 2000 + 10000);
+  assert.equal(totalBalance([acc], [antes, depois, outra], [ent]), 58000);
+});
+
+test('parseSignedAmount aceita negativo e zero', () => {
+  assert.equal(parseSignedAmount('-50'), -5000);
+  assert.equal(parseSignedAmount('0'), 0);
+  assert.equal(parseSignedAmount('1.200,00'), 120000);
+  assert.equal(parseSignedAmount('abc'), null);
+});
+
+test('períodos', () => {
+  assert.deepEqual(periodRange('semana', '2026-11-05'), { from: '2026-10-30', to: '2026-11-05', label: 'nos últimos 7 dias' });
+  assert.equal(periodRange('mes_passado', '2026-01-10').month, '2025-12');
+  assert.equal(forecastMonth([exp(3000, 'mercado', '2026-11-01')], '2026-11', '2026-11-10').projectedCents, 9000);
+});
+
+test('ritmo alto só projeta as categorias COM limite (gasto sem limite não conta)', () => {
+  const c = withBudget('lazer', 10000);
+  // Lazer: 30 em 10 dias -> 90 no mês, dentro do limite de 100. Mercado (sem limite) gastou muito.
+  const list = [exp(3000, 'lazer', '2026-11-02'), exp(80000, 'mercado', '2026-11-03')];
+  assert.ok(!analyze({ expenses: list, categories: c }, '2026-11-10').some(a => a.type === 'ritmo_alto'));
+  const muito = [exp(6000, 'lazer', '2026-11-02')]; // 60 em 10 dias -> 180 no mês
+  const a = analyze({ expenses: muito, categories: c }, '2026-11-10').find(x => x.type === 'ritmo_alto');
+  assert.equal(a.projectedCents, 18000);
+});
+
+test('alertas: saindo mais do que entrando e conta negativa', () => {
+  const t0 = new Date(2026, 10, 1);
+  const acc = createAccount({ bank: 'Inter', balanceCents: 1000 }, { now: t0 });
+  const g = createExpense({ amountCents: 5000, categoryId: 'mercado', date: '2026-11-04', accountId: acc.id }, { categories: cats, now: new Date(+t0 + 1) });
+  const i = createIncome({ amountCents: 2000, sourceId: 'freela', date: '2026-11-02' }, { now: t0 });
+  const tipos = analyze({ expenses: [g], incomes: [i], categories: cats, accounts: [acc] }, '2026-11-05').map(a => a.type);
+  assert.ok(tipos.includes('mes_negativo'));
+  assert.ok(tipos.includes('conta_negativa'));
+});

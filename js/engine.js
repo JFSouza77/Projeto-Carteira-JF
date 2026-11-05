@@ -78,7 +78,7 @@ function isValidISODate(s) {
 }
 
 /** Valida e monta um gasto novo. Lança Error com mensagem para o usuário se algo estiver errado. */
-export function createExpense({ amountCents, categoryId, note = '', date }, { categories, now = new Date(), id } = {}) {
+export function createExpense({ amountCents, categoryId, note = '', date, accountId = null, imageId = null }, { categories, now = new Date(), id } = {}) {
   if (!Number.isInteger(amountCents) || amountCents <= 0) throw new Error('Valor inválido.');
   if (amountCents > 100_000_000_00) throw new Error('Valor alto demais. Confere aí.');
   if (categories && !categories.some(c => c.id === categoryId)) throw new Error('Escolha uma categoria.');
@@ -91,6 +91,8 @@ export function createExpense({ amountCents, categoryId, note = '', date }, { ca
     note: String(note).trim().slice(0, 120),
     date: day,
     month: monthKey(day),
+    accountId: accountId || null,
+    imageId: imageId || null,
     createdAt: now.getTime(),
   };
 }
@@ -208,3 +210,187 @@ export function detectMonthClose({ expenses, categories, currentMonth }) {
   }
   return [];
 }
+
+// ======================================================================
+// Entradas (rendimentos), contas bancárias, consultas e alertas
+// ======================================================================
+
+export const INCOME_SOURCES = Object.freeze([
+  { id: 'salario', name: 'Salário', emoji: '💼' },
+  { id: 'freela', name: 'Freela / extra', emoji: '🛠️' },
+  { id: 'rendimento', name: 'Rendimentos', emoji: '📈' },
+  { id: 'presente', name: 'Presente / Pix recebido', emoji: '🎁' },
+  { id: 'outros', name: 'Outros', emoji: '💰' },
+].map(s => Object.freeze(s)));
+
+// Bancos mais usados no Brasil. Só o nome: o app não se conecta ao banco, o saldo é você que informa.
+export const BANKS = Object.freeze([
+  'Nubank', 'Itaú', 'Bradesco', 'Banco do Brasil', 'Caixa', 'Santander', 'Inter', 'C6 Bank', 'PicPay',
+  'Mercado Pago', 'PagBank', 'BTG Pactual', 'XP', 'Sicoob', 'Sicredi', 'Neon', 'Next', 'Banrisul',
+  'Carteira (dinheiro vivo)', 'Outro',
+]);
+
+/** Valida e monta uma entrada (rendimento). */
+export function createIncome({ amountCents, sourceId, note = '', date, accountId = null }, { now = new Date(), id } = {}) {
+  if (!Number.isInteger(amountCents) || amountCents <= 0) throw new Error('Valor inválido.');
+  if (amountCents > 100_000_000_00) throw new Error('Valor alto demais. Confere aí.');
+  if (!INCOME_SOURCES.some(s => s.id === sourceId)) throw new Error('Escolha de onde veio o dinheiro.');
+  const day = date || toISODate(now);
+  if (!isValidISODate(day)) throw new Error('Data inválida.');
+  return {
+    id: id || newId(), amountCents, sourceId, note: String(note).trim().slice(0, 120),
+    date: day, month: monthKey(day), accountId: accountId || null, createdAt: now.getTime(),
+  };
+}
+
+/** Valida e monta uma conta. O saldo informado vale a partir de `balanceAt`. */
+export function createAccount({ bank, nickname = '', balanceCents }, { now = new Date(), id } = {}) {
+  const b = String(bank || '').trim();
+  if (!b) throw new Error('Escolha o banco.');
+  if (!Number.isInteger(balanceCents)) throw new Error('Saldo inválido.');
+  return {
+    id: id || newId(), bank: b.slice(0, 40), nickname: String(nickname).trim().slice(0, 30),
+    balanceCents, balanceAt: now.getTime(), createdAt: now.getTime(),
+  };
+}
+
+/** Saldo em reais aceitando negativo: "-50", "1.200,00". */
+export function parseSignedAmount(input) {
+  const s = String(input ?? '').trim();
+  if (s === '' ) return null;
+  if (/^0+([.,]0+)?$/.test(s.replace(/R\$|\s/gi, ''))) return 0;
+  const neg = /^-/.test(s.replace(/R\$|\s/gi, ''));
+  const v = parseAmount(s.replace('-', ''));
+  return v == null ? null : neg ? -v : v;
+}
+
+export function accountLabel(a) {
+  return a.nickname ? `${a.bank} · ${a.nickname}` : a.bank;
+}
+
+/**
+ * Saldo estimado da conta: o saldo que a pessoa informou + entradas − gastos lançados nessa conta DEPOIS disso.
+ * O motor nunca muda o saldo guardado; quem atualiza é a pessoa ("Atualizar saldo").
+ */
+export function accountBalance(account, expenses, incomes) {
+  let v = account.balanceCents;
+  for (const i of incomes) if (i.accountId === account.id && i.createdAt > account.balanceAt) v += i.amountCents;
+  for (const e of expenses) if (e.accountId === account.id && e.createdAt > account.balanceAt) v -= e.amountCents;
+  return v;
+}
+
+export function totalBalance(accounts, expenses, incomes) {
+  return accounts.reduce((s, a) => s + accountBalance(a, expenses, incomes), 0);
+}
+
+export function incomeIn(incomes, month, sourceId) {
+  let t = 0;
+  for (const i of incomes) if (i.month === month && (sourceId === undefined || i.sourceId === sourceId)) t += i.amountCents;
+  return t;
+}
+
+export function daysInMonth(key) {
+  const [y, m] = key.split('-').map(Number);
+  return new Date(y, m, 0).getDate();
+}
+
+/** Período por nome: hoje, ontem, semana (últimos 7 dias), mes, mes_passado, ano. Datas ISO, inclusivas. */
+export function periodRange(name, today = toISODate()) {
+  const [y, m, d] = today.split('-').map(Number);
+  const iso = dt => toISODate(dt);
+  switch (name) {
+    case 'hoje': return { from: today, to: today, label: 'hoje' };
+    case 'ontem': { const o = iso(new Date(y, m - 1, d - 1)); return { from: o, to: o, label: 'ontem' }; }
+    case 'semana': return { from: iso(new Date(y, m - 1, d - 6)), to: today, label: 'nos últimos 7 dias' };
+    case 'mes_passado': {
+      const k = shiftMonth(monthKey(today), -1);
+      return { from: `${k}-01`, to: `${k}-${String(daysInMonth(k)).padStart(2, '0')}`, label: 'no mês passado', month: k };
+    }
+    case 'ano': return { from: `${y}-01-01`, to: today, label: `em ${y}` };
+    default: return { from: `${monthKey(today)}-01`, to: today, label: 'neste mês', month: monthKey(today) };
+  }
+}
+
+export function sumInRange(list, { from, to }, filter = () => true) {
+  let t = 0, n = 0;
+  for (const x of list) if (x.date >= from && x.date <= to && filter(x)) { t += x.amountCents; n++; }
+  return { totalCents: t, count: n };
+}
+
+/** Previsão do mês no ritmo atual (só faz sentido para o mês corrente). */
+export function forecastMonth(expenses, month, today = toISODate()) {
+  const spent = spentIn(expenses, month);
+  const total = daysInMonth(month);
+  const day = monthKey(today) === month ? Number(today.slice(8, 10)) : total;
+  const perDay = day > 0 ? spent / day : 0;
+  return { spentCents: spent, perDayCents: Math.round(perDay), projectedCents: Math.round(perDay * total), day, daysTotal: total };
+}
+
+const SEVERITY = { alta: 3, media: 2, baixa: 1 };
+
+/**
+ * Alertas do momento (o "radar" do C.A.O.S.). Só leitura: devolve uma lista ordenada por gravidade.
+ * Cada alerta tem type, severity e os números que o narrador precisa para falar.
+ */
+export function analyze({ expenses, incomes = [], categories, accounts = [] }, today = toISODate()) {
+  const month = monthKey(today);
+  const s = summarizeMonth(expenses, categories, month);
+  const out = [];
+
+  for (const r of s.rows) {
+    if (!r.budgetCents) continue;
+    if (r.spentCents > r.budgetCents) {
+      out.push({ type: 'categoria_estourada', severity: 'alta', categoryId: r.id, categoryName: r.name,
+        spentCents: r.spentCents, budgetCents: r.budgetCents, overCents: r.spentCents - r.budgetCents,
+        pct: Math.round(r.ratio * 100) });
+    } else if (r.ratio >= ALERT_RATIO) {
+      out.push({ type: 'orcamento_80', severity: 'media', categoryId: r.id, categoryName: r.name,
+        spentCents: r.spentCents, budgetCents: r.budgetCents, leftCents: r.budgetCents - r.spentCents,
+        pct: Math.round(r.ratio * 100) });
+    }
+  }
+
+  // Ritmo: projeta só o gasto das categorias COM limite contra o orçamento (as sem limite não entram)
+  const f = forecastMonth(expenses, month, today);
+  const perDayBud = f.day > 0 ? s.budgetedSpentCents / f.day : 0;
+  const projBud = Math.round(perDayBud * f.daysTotal);
+  if (s.budgetTotalCents > 0 && f.day >= 5 && projBud > s.budgetTotalCents && s.budgetedSpentCents <= s.budgetTotalCents) {
+    out.push({ type: 'ritmo_alto', severity: 'media', projectedCents: projBud, budgetCents: s.budgetTotalCents,
+      perDayCents: Math.round(perDayBud), overCents: projBud - s.budgetTotalCents });
+  }
+
+  const inc = incomeIn(incomes, month);
+  if (inc > 0 && s.totalCents > inc) {
+    out.push({ type: 'mes_negativo', severity: 'alta', incomeCents: inc, totalCents: s.totalCents, overCents: s.totalCents - inc });
+  }
+
+  for (const a of accounts) {
+    const bal = accountBalance(a, expenses, incomes);
+    if (bal < 0) out.push({ type: 'conta_negativa', severity: 'alta', accountId: a.id, accountName: accountLabel(a), balanceCents: bal });
+  }
+
+  const recentDelivery = expenses.filter(e => e.categoryId === 'delivery' && daysBetween(e.date, today) >= 0
+    && daysBetween(e.date, today) < DELIVERY_WINDOW_DAYS);
+  if (recentDelivery.length >= DELIVERY_REPEAT_COUNT) {
+    out.push({ type: 'delivery_repetido', severity: 'baixa', count: recentDelivery.length, days: DELIVERY_WINDOW_DAYS,
+      totalCents: recentDelivery.reduce((t, e) => t + e.amountCents, 0) });
+  }
+
+  if (expenses.length > 0) {
+    const last = expenses.reduce((mx, e) => (e.date > mx ? e.date : mx), '0000-00-00');
+    const gap = daysBetween(last, today);
+    if (gap >= 3) out.push({ type: 'sem_registro', severity: 'baixa', days: gap });
+  }
+
+  return out.sort((a, b) => SEVERITY[b.severity] - SEVERITY[a.severity]);
+}
+
+/** Categorias ordenadas pelo gasto num intervalo. */
+export function topCategories(expenses, categories, range) {
+  return categories
+    .map(c => ({ ...c, ...sumInRange(expenses, range, e => e.categoryId === c.id) }))
+    .filter(c => c.totalCents > 0)
+    .sort((a, b) => b.totalCents - a.totalCents);
+}
+
+export { daysBetween };
