@@ -4,13 +4,14 @@
 
 import { formatBRL, INCOME_SOURCES, daysInMonth, toISODate } from '../engine.js';
 import { congelar, protegido } from './espinha.js';
-import { sentir, emocaoAtual, emocoesIniciais, ROSTO } from './emocoes.js';
+import { sentir, emocaoAtual, emocoesIniciais, intensidade, ROSTO } from './emocoes.js';
+import { escolherRosto, memoriaRostoInicial } from './rostos.js';
 import { gerarFala } from './gerador.js';
 import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '1.1.0';
+export const CAOS_VERSAO = '1.2.0';
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -36,13 +37,13 @@ const RADAR_COOLDOWN = 6 * 3_600_000;
 const ALERTAS = new Set(['categoria_estourada', 'orcamento_80', 'delivery_repetido', 'ritmo_alto', 'mes_negativo', 'conta_negativa']);
 
 export function memoriaInicial(now = Date.now()) {
-  return { versao: CAOS_VERSAO, gerador: {}, emocoes: emocoesIniciais(now), lastAt: {}, lastMonthClosed: null };
+  return { versao: CAOS_VERSAO, gerador: {}, emocoes: emocoesIniciais(now), lastAt: {}, lastMonthClosed: null, rosto: memoriaRostoInicial(), rostoUltimo: null };
 }
 
 function normalizarMem(m, now) {
   const base = memoriaInicial(now);
   if (!m || typeof m !== 'object') return base;
-  return { ...base, ...m, gerador: m.gerador || {}, lastAt: m.lastAt || {}, emocoes: m.emocoes || base.emocoes };
+  return { ...base, ...m, gerador: m.gerador || {}, lastAt: m.lastAt || {}, emocoes: m.emocoes || base.emocoes, rosto: m.rosto || base.rosto };
 }
 
 function periodo(h) {
@@ -87,6 +88,19 @@ function rostoDe(emocao) {
   return ROSTO[emocao] || ROSTO.calmo;
 }
 
+// Momentos fortes: o rosto vai direto, sem a escada (como no Perfil)
+const ROSTO_LIVRE = new Set(['mes_verde', 'categoria_estourada', 'conta_negativa', 'piada', 'entrada_cadastrada']);
+
+/** Rosto animado (sistema do Perfil) para o momento; devolve a memória nova. */
+function rostoPara(mem, { emocao, evento, humor, now, rng, direto = false }) {
+  const { rosto, memoria } = escolherRosto({
+    emocao, evento, humor, rng, intensidade: intensidade(mem.emocoes, emocao, now),
+    // reação direta a algo que a pessoa falou: rosto na hora; mudança de humor espontânea: pela escada
+    memoria: mem.rosto, livre: direto || ROSTO_LIVRE.has(evento),
+  });
+  return { rosto, mem: { ...mem, rosto: memoria, rostoUltimo: rosto } };
+}
+
 /**
  * Reage a eventos do motor (gasto cadastrado, alertas, boas-vindas…).
  * @returns {{ fala: null | { texto, evento, alerta, emocao, rosto }, memoria }}
@@ -118,12 +132,13 @@ function reagirBruto(eventos, { mood = DEFAULT_MOOD, memory, now = Date.now(), r
   const emocao = emocaoAtual(mem.emocoes, humor, now);
   const { texto, gerador } = montar(ev.type, varsDoEvento(ev), { humor, emocao, mem, now, rng });
   if (!texto) return { fala: null, memoria: mem };
+  const r = rostoPara(mem, { emocao, evento: ev.type, humor, now, rng });
   const memoria = {
-    ...mem, gerador,
+    ...r.mem, gerador,
     lastAt: { ...mem.lastAt, [ev.radar ? `radar:${ev.type}` : ev.type]: now },
     lastMonthClosed: ev.type === 'mes_verde' ? ev.month : mem.lastMonthClosed,
   };
-  return { fala: { texto, evento: ev.type, alerta: ALERTAS.has(ev.type), emocao, rosto: rostoDe(emocao) }, memoria };
+  return { fala: { texto, evento: ev.type, alerta: ALERTAS.has(ev.type), emocao, rosto: r.rosto }, memoria };
 }
 
 const EVENTO_DA_INTENCAO = { elogio: 'elogio', xingamento: 'xingamento', agradecimento: 'agradecimento', piada: 'piada', identidade: 'carinho_conversa' };
@@ -161,10 +176,14 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
     mem = { ...mem, gerador: r.gerador };
   }
 
+  const EVENTO_ROSTO = { piada: 'piada', identidade: 'identidade', significado: 'identidade', criador: 'identidade', origem: 'identidade',
+    nao_entendi: 'nao_entendi', xingamento: 'xingamento', elogio: 'elogio', como_funciona: 'pensando', limites: 'pensando' };
+  const r = rostoPara(mem, { emocao, evento: EVENTO_ROSTO[intencao.intent], humor, now, rng, direto: !!EVENTO_ROSTO[intencao.intent] });
+  mem = r.mem;
   return {
     fala: {
       texto: saida || 'Hmm.',
-      emocao, rosto: rostoDe(emocao),
+      emocao, rosto: r.rosto,
       sugestoes: resp.sugestoes || (intencao.intent === 'nao_entendi' ? SUGESTOES.slice(0, 5) : []),
       acao: resp.acao || null,
       entendeu: intencao.intent !== 'nao_entendi',
@@ -189,13 +208,19 @@ function nomeAlerta(a) {
 export function emocaoDoMomento(memory, mood = DEFAULT_MOOD, now = Date.now()) {
   const m = normalizarMem(memory, now);
   const e = emocaoAtual(m.emocoes, MOODS[mood] ? mood : DEFAULT_MOOD, now);
-  return { emocao: e, rosto: rostoDe(e) };
+  return { emocao: e, aparencia: rostoDe(e), rosto: m.rostoUltimo };
+}
+
+/** Rosto pra um momento sem fala (ex.: "pensando" enquanto a IA online responde). Não muda a memória. */
+export function rostoAvulso(evento, { mood = DEFAULT_MOOD, memory, now = Date.now(), rng = Math.random } = {}) {
+  const m = normalizarMem(memory, now);
+  return escolherRosto({ emocao: 'calmo', evento, humor: MOODS[mood] ? mood : DEFAULT_MOOD, memoria: m.rosto, rng, livre: true }).rosto;
 }
 
 // 3ª lei: erro dentro do narrador vira silêncio, nunca trava o app.
 export const reagir = protegido('reagir', reagirBruto, (ev, o = {}) => ({ fala: null, memoria: o.memory ?? memoriaInicial() }));
 export const conversar = protegido('conversar', conversarBruto, (t, d, o = {}) => ({
-  fala: { texto: 'Deu um curto aqui dentro. Tenta de novo?', emocao: 'calmo', rosto: ROSTO.calmo, sugestoes: SUGESTOES.slice(0, 3), acao: null, entendeu: false },
+  fala: { texto: 'Deu um curto aqui dentro. Tenta de novo?', emocao: 'calmo', rosto: null, sugestoes: SUGESTOES.slice(0, 3), acao: null, entendeu: false },
   memoria: o.memory ?? memoriaInicial(),
 }));
 export { nomeAlerta };

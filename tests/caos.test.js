@@ -234,3 +234,68 @@ test('entende "C.A.O.S." com pontinhos e o "não posso" fica com o sentido certo
   assert.match(t, /Não posso gravar, apagar ou mudar nada sozinho, nem acessar seu banco/);
   assert.match(t, /seus dados ficam no seu aparelho: não mando pra ninguém/);
 });
+
+import { escolherRosto, escada, EMOS } from '../js/caos/rostos.js';
+import { VIZINHOS } from '../js/caos/rostos-dados.js';
+
+test('rostos: os dados vieram do Perfil completos (todo vizinho existe, todo rosto tem quadros)', () => {
+  for (const [k, e] of Object.entries(EMOS)) {
+    assert.ok(e.niv.length >= 1 && e.cor && e.fr > 0, k);
+    for (const nivel of e.niv) for (const q of nivel) assert.ok(Array.isArray(q) && q.length >= 1 && q.every(x => typeof x === 'string' && x.length), k);
+  }
+  for (const [k, l] of Object.entries(VIZINHOS)) for (const v of l) assert.ok(EMOS[v], `${k} → ${v}`);
+});
+
+test('rostos: escada não pula de festa pra raiva direto', () => {
+  const passo = escada('festa', 'raiva');
+  assert.notEqual(passo, 'raiva');
+  assert.ok(EMOS[passo]);
+  assert.equal(escada('calmo', 'pensando'), 'pensando'); // vizinho: vai direto
+});
+
+test('rostos: humor Suave nunca mostra raiva, deboche ou julgando', () => {
+  let mem;
+  for (let i = 0; i < 200; i++) {
+    for (const [emocao, evento] of [['irritacao'], ['tenso'], ['calmo', 'xingamento'], ['calmo', 'categoria_estourada'], ['calmo', 'piada']]) {
+      const r = escolherRosto({ emocao, evento, humor: 'suave', intensidade: 1, memoria: mem, livre: true });
+      mem = r.memoria;
+      assert.ok(!['raiva', 'deboche', 'julgando'].includes(r.rosto.emo), `${emocao}/${evento} → ${r.rosto.emo}`);
+      assert.ok(!r.rosto.mistura);
+    }
+  }
+});
+
+test('rostos: Ácido zoa no estouro; intensidade sobe o nível; não repete em seguida', () => {
+  assert.equal(escolherRosto({ evento: 'categoria_estourada', humor: 'acido', livre: true }).rosto.emo, 'deboche');
+  const leve = escolherRosto({ emocao: 'orgulho', intensidade: 0, livre: true, rng: () => 0 }).rosto.quadros;
+  const forte = escolherRosto({ emocao: 'orgulho', intensidade: 1, livre: true, rng: () => 0 }).rosto.quadros;
+  assert.ok(EMOS.orgulho.niv[0].some(q => q === leve) || JSON.stringify(EMOS.orgulho.niv[0]).includes(JSON.stringify(leve)));
+  assert.ok(JSON.stringify(EMOS.orgulho.niv[EMOS.orgulho.niv.length - 1]).includes(JSON.stringify(forte)));
+  let mem;
+  let ant = null;
+  for (let i = 0; i < 30; i++) {
+    const r = escolherRosto({ emocao: 'calmo', intensidade: 0, memoria: mem, livre: true });
+    mem = r.memoria;
+    const q = JSON.stringify(r.rosto.quadros);
+    assert.notEqual(q, ant);
+    ant = q;
+  }
+});
+
+test('fala do C.A.O.S. vem com rosto animado (quadros e cor)', () => {
+  const a = reagir([{ type: 'mes_verde', month: '2026-10', monthName: 'outubro de 2026', savedCents: 100 }], { now: NOW });
+  assert.equal(a.fala.rosto.emo, 'orgulho');
+  assert.ok(a.fala.rosto.quadros.length >= 1 && a.fala.rosto.cor);
+  const p = conversar('conta uma piada', dados(), { now: NOW, today: hoje });
+  assert.equal(p.fala.rosto.emo, 'festa');
+});
+
+test('na conversa, reação direta muda o rosto na hora (sem ficar um passo atrasado)', () => {
+  let mem = memoriaInicial(NOW);
+  const d = dados();
+  const p = conversar('conta uma piada', d, { now: NOW, today: hoje, memory: mem, mood: 'normal' });
+  const x = conversar('você é burro', d, { now: NOW + 1, today: hoje, memory: p.memoria, mood: 'normal' });
+  assert.equal(x.fala.rosto.emo, 'julgando');
+  const q = conversar('quem é você?', d, { now: NOW + 2, today: hoje, memory: x.memoria, mood: 'normal' });
+  assert.equal(q.fala.rosto.emo, 'orgulho');
+});
