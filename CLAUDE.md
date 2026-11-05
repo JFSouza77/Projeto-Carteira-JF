@@ -12,6 +12,8 @@ App de controle de gastos com o C.A.O.S., narrador trazido do Perfil JF (JFSouza
 - Pedido de opinião: dar uma recomendação clara.
 - Decisões práticas (organização, por onde começar): o Code decide pelo mais fácil, prático e seguro, e avisa.
   **Apagar coisa (arquivos, dados): perguntar antes.**
+- **Merge e publicação (JF, 05/11/2026):** o Code pode fazer o merge na `main` e publicar sozinho (a `main` vai pro
+  ar no Cloudflare Pages automaticamente), sem esperar o JF. Depois avisa o JF do que foi ao ar.
 - Agenda: pedido urgente do JF vem primeiro. Att grande: quinta a partir das 18h e sexta das 9h às 18h (Brasília).
 
 ## Plataforma
@@ -63,6 +65,12 @@ Mapa do cérebro: `docs/CAOS_Carteira.md`.
   do repositório ou no chat. O Code **nunca pede chave ao JF**; teste usa chave de mentira.
 - A IA online recebe só **totais agregados**; a foto só vai quando a pessoa toca em "Ler com IA". O push é vazio.
 - Nada de identificador de modelo de IA em commit, PR ou texto do repositório fora da configuração do servidor.
+
+## Publicação
+
+- Site: Cloudflare Pages, projeto `carteira-jf` → https://carteira-jf.pages.dev (build `npm run build`, saída `dist`,
+  branch de produção `main`). Todo merge na `main` publica sozinho.
+- Servidor (opcional): `servidor/LEIA-ME.md`.
 
 ## Comandos
 
