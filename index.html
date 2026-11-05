@@ -78,6 +78,7 @@
             <input id="amount" name="amount" type="text" inputmode="decimal" placeholder="0,00" aria-label="Valor" required>
           </label>
           <div class="chips" id="category-chips" role="radiogroup" aria-label="Categoria"></div>
+          <p class="sugestao" id="cat-sugestao" hidden></p>
           <div class="row">
             <input id="note" name="note" type="text" maxlength="120" placeholder="Descrição" aria-label="Descrição">
             <input id="date" name="date" type="date" aria-label="Data">
@@ -120,6 +121,60 @@
     </form>
   </section>
 
+  <!-- ============ MÊS (planejamento e compromissos) ============ -->
+  <section class="tela" id="tela-mes" data-tela="mes" hidden>
+    <header class="topbar"><h1 id="mes-titulo">Planejamento do mês</h1></header>
+    <main>
+      <section class="card summary">
+        <p class="label">Sobra prevista no mês</p>
+        <p class="big" id="plan-sobra">—</p>
+        <ul class="plan-linhas" id="plan-linhas"></ul>
+        <p class="caos-dica" id="plan-caos"></p>
+      </section>
+
+      <section class="card">
+        <h2>Compromissos</h2>
+        <p class="muted small">Contas fixas, faturas, assinaturas e planos que se repetem (ex.: comida japonesa a cada 2 meses). Eu lembro dos vencimentos e você lança quando pagar.</p>
+        <ul class="comp-list" id="comp-list"></ul>
+        <details class="sub-form">
+          <summary>＋ Adicionar compromisso</summary>
+          <form id="comp-form" autocomplete="off" novalidate>
+            <input id="comp-nome" type="text" maxlength="60" placeholder="Nome (ex.: Fatura Nubank, Aluguel, Netflix)" aria-label="Nome">
+            <div class="row2">
+              <label class="field"><span>Tipo</span><select id="comp-tipo"></select></label>
+              <label class="field"><span>Valor (R$)</span><input id="comp-valor" type="text" inputmode="decimal" placeholder="0,00"></label>
+            </div>
+            <div class="row2">
+              <label class="field"><span>Dia do vencimento</span><input id="comp-dia" type="number" min="1" max="31" inputmode="numeric" placeholder="ex.: 7"></label>
+              <label class="field"><span>Repete</span><select id="comp-cada">
+                <option value="1">todo mês</option><option value="2">a cada 2 meses</option><option value="3">a cada 3 meses</option>
+                <option value="6">a cada 6 meses</option><option value="12">todo ano</option></select></label>
+            </div>
+            <div class="row2">
+              <label class="field"><span>Próxima vez</span><select id="comp-inicio"></select></label>
+              <label class="field"><span>Categoria</span><select id="comp-cat"></select></label>
+            </div>
+            <label class="field" id="comp-conta-field" hidden><span>Conta (opcional)</span><select id="comp-conta"></select></label>
+            <p class="error" id="comp-error" role="alert" hidden></p>
+            <button class="primary" type="submit">Salvar compromisso</button>
+          </form>
+        </details>
+      </section>
+
+      <section class="card">
+        <h2>Planos deste mês</h2>
+        <p class="muted small">O que você planejou comprar ou gastar. Eu calculo se cabe e o que dá pra adiar.</p>
+        <ul class="plan-list" id="plan-list"></ul>
+        <form id="plan-form" class="plan-form" autocomplete="off" novalidate>
+          <input id="plan-nome" type="text" maxlength="60" placeholder="O quê? (ex.: tênis)" aria-label="O que você planejou">
+          <span class="amount small"><span>R$</span><input id="plan-valor" type="text" inputmode="decimal" placeholder="0,00" aria-label="Valor"></span>
+          <button class="primary" type="submit" aria-label="Adicionar plano">＋</button>
+        </form>
+        <p class="error" id="plan-error" role="alert" hidden></p>
+      </section>
+    </main>
+  </section>
+
   <!-- ============ CONTAS ============ -->
   <section class="tela" id="tela-contas" data-tela="contas" hidden>
     <header class="topbar"><h1>Contas</h1></header>
@@ -148,6 +203,12 @@
   <section class="tela" id="tela-ajustes" data-tela="ajustes" hidden>
     <header class="topbar"><h1>Ajustes</h1></header>
     <main>
+      <details class="card">
+        <summary><h2>Seu perfil</h2></summary>
+        <p class="muted small" id="perfil-resumo">O C.A.O.S. ainda não te conhece.</p>
+        <button type="button" class="ghost" id="perfil-refazer">Refazer apresentação com o C.A.O.S.</button>
+      </details>
+
       <details class="card" open>
         <summary><h2>C.A.O.S.</h2></summary>
         <fieldset class="mood">
@@ -198,6 +259,7 @@
   <nav class="tabbar" aria-label="Navegação">
     <a href="#inicio" data-tab="inicio" aria-current="page"><span aria-hidden="true">🏠</span>Início</a>
     <a href="#lancar" data-tab="lancar"><span aria-hidden="true">➕</span>Lançar</a>
+    <a href="#mes" data-tab="mes"><span aria-hidden="true">📅</span>Mês</a>
     <a href="#conversa" data-tab="conversa"><span aria-hidden="true">💬</span>C.A.O.S.</a>
     <a href="#contas" data-tab="contas"><span aria-hidden="true">🏦</span>Contas</a>
     <a href="#ajustes" data-tab="ajustes"><span aria-hidden="true">⚙️</span>Ajustes</a>

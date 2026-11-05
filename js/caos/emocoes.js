@@ -48,6 +48,10 @@ const EFEITO = {
   xingamento: { irritacao: 2.5, carinho: -1 },
   agradecimento: { carinho: 2, alegria: 0.5 },
   piada: { alegria: 2, tedio: -2 },
+  compromisso_vence: { preocupacao: 2, carinho: 0.5 },
+  compromisso_atrasado: { preocupacao: 4, carinho: 1 },
+  plano_do_mes: { alegria: 1.5, carinho: 1 },
+  confira_banco: { carinho: 1, curiosidade: 0.5 },
   carinho_conversa: { carinho: 1.5, curiosidade: 0.5 },
 };
 

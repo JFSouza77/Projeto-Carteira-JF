@@ -15,6 +15,9 @@ os gastos e avisa quando um orçamento aperta, sem nunca alterar os dados.
 - **C.A.O.S. 1.0** (trazido do Perfil JF): emoções, falas montadas por contexto sem repetir, 3 humores (Suave é o
   padrão), voz opcional, e **conversa**: pergunte "quanto gastei em delivery?", "tive rendimentos?", "vai dar até o
   fim do mês?", ou diga "gastei 30 no mercado" que ele prepara o registro pra você confirmar
+- **Planejamento do mês (aba 📅 Mês):** compromissos (contas fixas, faturas, assinaturas e planos que se repetem a
+  cada N meses), planos de compra do mês e a sobra prevista; o C.A.O.S. avisa vencimentos e diz se cabe
+- **Primeiro acesso:** o C.A.O.S. pergunta seu nome e como quer ser tratado, e aprende suas categorias pelo histórico
 - **Lembretes** para anotar os gastos
 - **IA online opcional** (servidor próprio no Cloudflare): lê foto de comprovante e responde perguntas livres
 - Offline, instala na tela inicial, backup em JSON

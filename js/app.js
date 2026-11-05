@@ -6,8 +6,10 @@ import {
   DEFAULT_CATEGORIES, INCOME_SOURCES, BANKS, formatBRL, parseAmount, parseSignedAmount, toISODate, monthKey,
   shiftMonth, monthLabel, createExpense, createIncome, createAccount, summarizeMonth, detectExpenseEvents,
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
+  TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria,
 } from './engine.js';
-import { reagir, conversar, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta } from './caos/index.js';
+import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta } from './caos/index.js';
+import { extrairNome } from './caos/conversa.js';
 import { falar, vozDisponivel, ditadoDisponivel, ouvir } from './voz.js';
 import * as imagens from './imagens.js';
 import * as ia from './ia.js';
@@ -31,9 +33,17 @@ const state = {
   selectedSource: null,
   photo: null, // { id, url } da foto anexada no formulário
   chat: [],
+  compromissos: [],
+  planos: [],
+  perfil: null, // { nome, apelido, tratamento, foco[] } (primeiro acesso)
+  onboarding: null, // { passo, dados } enquanto o C.A.O.S. está conhecendo a pessoa
+  catSugerida: false,
 };
 
-const dados = () => ({ expenses: state.expenses, incomes: state.incomes, categories: state.categories, accounts: state.accounts });
+const dados = () => ({
+  expenses: state.expenses, incomes: state.incomes, categories: state.categories, accounts: state.accounts,
+  compromissos: state.compromissos, planos: state.planos,
+});
 const catById = id => state.categories.find(c => c.id === id);
 const srcById = id => INCOME_SOURCES.find(s => s.id === id);
 
@@ -95,7 +105,7 @@ function pintarOlho() {
 
 function narrate(events, { ignoreCooldown = false } = {}) {
   const memory = ignoreCooldown ? { ...state.caosMemory, lastAt: {} } : state.caosMemory;
-  const { fala, memoria } = reagir(events, { mood: state.settings.mood, memory, now: Date.now() });
+  const { fala, memoria } = reagir(events, { mood: state.settings.mood, memory, now: Date.now(), perfil: state.perfil });
   // ignorar cooldown nesta fala não pode apagar os cooldowns dos outros eventos
   guardarMemoria({ ...memoria, lastAt: { ...state.caosMemory.lastAt, ...memoria.lastAt } });
   if (!fala) { pintarOlho(); return null; }
@@ -114,7 +124,7 @@ function narrate(events, { ignoreCooldown = false } = {}) {
 // Navegação
 // ======================================================================
 
-const TELAS = ['inicio', 'lancar', 'conversa', 'contas', 'ajustes'];
+const TELAS = ['inicio', 'lancar', 'mes', 'conversa', 'contas', 'ajustes'];
 
 function irPara(tela) {
   const t = TELAS.includes(tela) ? tela : 'inicio';
@@ -130,6 +140,7 @@ function irPara(tela) {
     window.scrollTo(0, 0);
   }
   if (t === 'contas') renderContas();
+  if (t === 'mes') renderMes();
 }
 
 // ======================================================================
@@ -144,7 +155,8 @@ function barStyle(ratio) {
 
 const ICONE_ALERTA = {
   categoria_estourada: '🔴', orcamento_80: '🟡', ritmo_alto: '📈', mes_negativo: '⚠️', conta_negativa: '🏦',
-  delivery_repetido: '🛵', sem_registro: '💤',
+  delivery_repetido: '🛵', sem_registro: '💤', compromisso_vence: '📅', compromisso_atrasado: '⏰', plano_do_mes: '🗓️',
+  confira_banco: '🔎',
 };
 
 function render() {
@@ -260,8 +272,8 @@ async function limparFoto({ apagar }) {
 }
 
 /** Grava um gasto (do formulário ou de uma proposta do C.A.O.S. confirmada). Devolve os eventos. */
-async function registrarGasto({ amountCents, categoryId, note, date, accountId, imageId }) {
-  const expense = createExpense({ amountCents, categoryId, note, date, accountId, imageId }, { categories: state.categories });
+async function registrarGasto({ amountCents, categoryId, note, date, accountId, imageId, compromissoId }) {
+  const expense = createExpense({ amountCents, categoryId, note, date, accountId, imageId, compromissoId }, { categories: state.categories });
   const conta = accountId && state.accounts.find(a => a.id === accountId);
   const antes = conta ? accountBalance(conta, state.expenses, state.incomes) : null;
   await db.put(db.STORES.expenses, expense);
@@ -305,6 +317,10 @@ async function onSubmit(ev) {
     }
     $('#amount').value = '';
     $('#note').value = '';
+    state.catSugerida = false;
+    state.selectedCategory = null; // o próximo lançamento começa livre pra o C.A.O.S. sugerir pela descrição
+    $('#cat-sugestao').hidden = true;
+    renderLancar();
     const fala = narrate(events);
     toast(fala ? fala.texto : 'Salvo!');
   } catch (e) {
@@ -418,8 +434,9 @@ function renderChat() {
 async function enviarPergunta(texto) {
   const t = String(texto || '').trim();
   if (!t) return;
+  if (state.onboarding) return onboardingResposta(t);
   addMsg({ de: 'eu', texto: t });
-  const { fala, memoria } = conversar(t, dados(), { mood: state.settings.mood, memory: state.caosMemory, now: Date.now() });
+  const { fala, memoria } = conversar(t, dados(), { mood: state.settings.mood, memory: state.caosMemory, now: Date.now(), perfil: state.perfil });
   guardarMemoria(memoria);
   pintarRosto(fala.rosto);
 
@@ -455,9 +472,17 @@ async function confirmarAcao(i, ok) {
   }
   try {
     const a = m.acao;
+    if (a.tipo === 'mudar_apelido') {
+      state.perfil = { ...(state.perfil || {}), apelido: a.apelido, nome: state.perfil?.nome || a.apelido };
+      await db.setMeta('perfil', state.perfil);
+      renderPerfil();
+      addMsg({ de: 'caos', texto: `Fechado! A partir de agora te chamo de ${a.apelido}.` });
+      return;
+    }
     const events = a.tipo === 'registrar_entrada'
       ? await registrarEntrada({ amountCents: a.amountCents, sourceId: a.sourceId, note: a.note, date: a.date })
-      : await registrarGasto({ amountCents: a.amountCents, categoryId: a.categoryId, note: a.note, date: a.date, imageId: a.imageId });
+      : await registrarGasto({ amountCents: a.amountCents, categoryId: a.categoryId, note: a.note, date: a.date, imageId: a.imageId, compromissoId: a.compromissoId, accountId: a.accountId });
+    if (a.compromissoId) renderMes();
     const fala = narrate(events, { ignoreCooldown: true });
     addMsg({ de: 'caos', texto: fala ? fala.texto : 'Anotado!', rosto: fala?.rosto });
     if (state.settings.voice && fala) falar(fala.texto, fala.emocao);
@@ -581,6 +606,7 @@ function renderBudgets() {
 }
 
 async function renderSettings() {
+  prepararFormCompromisso();
   $('#mood-options').innerHTML = Object.entries(MOODS).map(([id, label]) => `
     <label><input type="radio" name="mood" value="${id}" ${state.settings.mood === id ? 'checked' : ''}><span>${label}</span></label>`).join('');
   $('#voice-toggle').checked = state.settings.voice;
@@ -639,8 +665,9 @@ async function onRemindTime() {
 
 function exportBackup() {
   const data = {
-    app: 'carteira-jf', version: 2, exportedAt: new Date().toISOString(),
+    app: 'carteira-jf', version: 3, exportedAt: new Date().toISOString(),
     categories: state.categories, expenses: state.expenses, incomes: state.incomes, accounts: state.accounts,
+    compromissos: state.compromissos, planos: state.planos, perfil: state.perfil,
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -664,10 +691,15 @@ async function importBackup(file) {
     const accounts = Array.isArray(data.accounts) ? data.accounts : [];
     const okI = incomes.every(i => i && typeof i.id === 'string' && Number.isInteger(i.amountCents) && typeof i.month === 'string');
     const okA = accounts.every(a => a && typeof a.id === 'string' && Number.isInteger(a.balanceCents));
-    if (!okE || !okI || !okA) throw new Error('Backup com dados inválidos.');
-    if (!confirm(`Substituir os dados atuais por ${data.expenses.length} gastos, ${incomes.length} entradas e ${accounts.length} contas do backup?`)) return;
-    await db.replaceAll({ expenses: data.expenses, categories: data.categories, incomes, accounts });
-    Object.assign(state, { expenses: data.expenses, categories: data.categories, incomes, accounts });
+    const compromissos = Array.isArray(data.compromissos) ? data.compromissos : [];
+    const planos = Array.isArray(data.planos) ? data.planos : [];
+    const okC = compromissos.every(c => c && typeof c.id === 'string' && Number.isInteger(c.valorCents) && /^\d{4}-\d{2}$/.test(c.inicioMes) && Number.isInteger(c.cadaMeses));
+    const okP = planos.every(p => p && typeof p.id === 'string' && Number.isInteger(p.valorCents) && typeof p.month === 'string');
+    if (!okE || !okI || !okA || !okC || !okP) throw new Error('Backup com dados inválidos.');
+    if (!confirm(`Substituir os dados atuais por ${data.expenses.length} gastos, ${incomes.length} entradas, ${accounts.length} contas e ${compromissos.length} compromissos do backup?`)) return;
+    await db.replaceAll({ expenses: data.expenses, categories: data.categories, incomes, accounts, compromissos, planos });
+    Object.assign(state, { expenses: data.expenses, categories: data.categories, incomes, accounts, compromissos, planos });
+    if (data.perfil && typeof data.perfil === 'object') { state.perfil = data.perfil; await db.setMeta('perfil', data.perfil); renderPerfil(); }
     renderLancar();
     renderBudgets();
     render();
@@ -675,6 +707,270 @@ async function importBackup(file) {
   } catch (e) {
     toast(e.message || 'Não deu para importar.');
   }
+}
+
+// ======================================================================
+// Mês: compromissos e planejamento (1.3.0)
+// ======================================================================
+
+const nomeMes = k => cap(monthLabel(k));
+
+function prepararFormCompromisso() {
+  $('#comp-tipo').innerHTML = Object.entries(TIPOS_COMPROMISSO).map(([id, n]) => `<option value="${id}">${esc(n)}</option>`).join('');
+  const hoje = monthKey(toISODate());
+  $('#comp-inicio').innerHTML = [0, 1, 2, 3].map(i => {
+    const k = shiftMonth(hoje, i);
+    return `<option value="${k}">${i === 0 ? 'este mês' : i === 1 ? 'mês que vem' : nomeMes(k)}</option>`;
+  }).join('');
+  $('#comp-cat').innerHTML = state.categories.map(c => `<option value="${c.id}" ${c.id === 'contas' ? 'selected' : ''}>${c.emoji} ${esc(c.name)}</option>`).join('');
+  $('#comp-conta-field').hidden = !state.accounts.length;
+  $('#comp-conta').innerHTML = '<option value="">Sem conta</option>' + state.accounts.map(a => `<option value="${esc(a.id)}">${esc(accountLabel(a))}</option>`).join('');
+}
+
+function textoStatus(c) {
+  if (!c.noMes) return `próxima vez: ${nomeMes(c.proximaVez).toLowerCase()}`;
+  if (c.status === 'pago') return `✔ pago este mês (${formatBRL(c.pagoCents)})`;
+  if (c.status === 'atrasado') return `⏰ venceu dia ${c.diaNoMes}`;
+  if (c.status === 'pendente') return 'é deste mês';
+  return c.diasParaVencer === 0 ? 'vence hoje' : c.diasParaVencer === 1 ? 'vence amanhã' : `vence dia ${c.diaNoMes} (em ${c.diasParaVencer} dias)`;
+}
+
+function renderMes() {
+  const hoje = toISODate();
+  const a = analisarPlanejamento(dados(), hoje);
+  $('#mes-titulo').textContent = `Planejamento · ${nomeMes(a.month)}`;
+  const el = $('#plan-sobra');
+  if (a.sobraCents == null) {
+    el.textContent = '—';
+    el.className = 'big';
+  } else {
+    el.textContent = formatBRL(a.sobraCents);
+    el.className = `big ${a.sobraCents < 0 ? 'bad' : 'ok'}`;
+  }
+  const linhas = [
+    [a.baseTipo === 'orcamento' ? 'Orçamento do mês' : 'Entradas do mês', a.baseTipo ? formatBRL(a.baseCents) : 'lance suas entradas'],
+    ['Já saiu', `− ${formatBRL(a.gastosCents)}`],
+    ['Compromissos a pagar', `− ${formatBRL(a.compPendentesCents)}`],
+    ['Planos a fazer', `− ${formatBRL(a.planosPendentesCents)}`],
+  ];
+  $('#plan-linhas').innerHTML = linhas.map(([k, v]) => `<li><span>${esc(k)}</span><span>${esc(v)}</span></li>`).join('');
+  // a análise do C.A.O.S. (só leitura: não muda a memória dele)
+  const { fala } = conversar('cabe no mês?', dados(), { mood: state.settings.mood, memory: state.caosMemory, perfil: state.perfil });
+  $('#plan-caos').textContent = `🤖 ${fala.texto}`;
+
+  const sit = situacaoCompromissos(state.compromissos, state.expenses, hoje);
+  $('#comp-list').innerHTML = sit.length ? sit.map(c => {
+    const cat = catById(c.categoryId);
+    const rep = c.cadaMeses === 1 ? 'todo mês' : c.cadaMeses === 12 ? 'todo ano' : `a cada ${c.cadaMeses} meses`;
+    return `
+    <li class="${c.status}">
+      <span class="comp-info"><span>${cat?.emoji ?? '📌'} ${esc(c.nome)}</span>
+        <small>${esc(TIPOS_COMPROMISSO[c.tipo])} · ${rep}${c.dia ? ` · dia ${c.dia}` : ''} · ${esc(textoStatus(c))}</small></span>
+      <span class="num">${formatBRL(c.valorCents)}</span>
+      <span class="comp-acoes">
+        ${c.noMes && c.status !== 'pago' ? `<button class="lancar" data-comp-lancar="${esc(c.id)}">Paguei · lançar</button>` : ''}
+        <button data-comp-del="${esc(c.id)}">Remover</button>
+      </span>
+    </li>`;
+  }).join('') : '<li class="muted">Nenhum compromisso ainda. Adicione contas fixas, faturas e assinaturas.</li>';
+
+  $('#plan-list').innerHTML = a.planos.length ? a.planos.map(p => `
+    <li class="${p.feito ? 'feito' : ''}">
+      <label class="plan-info"><input type="checkbox" data-plan-feito="${esc(p.id)}" ${p.feito ? 'checked' : ''}><span>${esc(p.nome)}</span></label>
+      <span class="num">${formatBRL(p.valorCents)} <button class="icon-btn del" data-plan-del="${esc(p.id)}" aria-label="Remover plano">×</button></span>
+    </li>`).join('') : '<li class="muted">Nada planejado ainda. O que você quer comprar ou gastar este mês?</li>';
+}
+
+async function onAddCompromisso(ev) {
+  ev.preventDefault();
+  const err = $('#comp-error');
+  err.hidden = true;
+  try {
+    const valor = $('#comp-valor').value.trim() ? parseAmount($('#comp-valor').value) : 0;
+    if (valor == null) throw new Error('Valor inválido.');
+    const c = createCompromisso({
+      nome: $('#comp-nome').value, valorCents: valor, tipo: $('#comp-tipo').value, categoryId: $('#comp-cat').value,
+      dia: $('#comp-dia').value || null, cadaMeses: Number($('#comp-cada').value), inicioMes: $('#comp-inicio').value,
+      accountId: $('#comp-conta').value || null,
+    }, { categories: state.categories });
+    await db.put(db.STORES.compromissos, c);
+    state.compromissos.push(c);
+    $('#comp-form').reset();
+    prepararFormCompromisso();
+    renderMes();
+    render();
+    toast(`${c.nome} salvo. Eu lembro quando chegar a hora.`);
+  } catch (e) {
+    err.textContent = e.message;
+    err.hidden = false;
+  }
+}
+
+async function lancarCompromisso(id) {
+  const c = state.compromissos.find(x => x.id === id);
+  if (!c) return;
+  let valor = c.valorCents;
+  const r = prompt(`Quanto foi ${c.nome}? (confira o valor)`, (valor / 100).toFixed(2).replace('.', ','));
+  if (r == null) return;
+  valor = parseAmount(r);
+  if (!valor) return toast('Valor inválido.');
+  const events = await registrarGasto({ amountCents: valor, categoryId: c.categoryId, note: c.nome, date: toISODate(), accountId: c.accountId, compromissoId: c.id });
+  const fala = narrate(events, { ignoreCooldown: true });
+  renderMes();
+  toast(fala ? fala.texto : `${c.nome} lançado.`);
+}
+
+async function removerCompromisso(id) {
+  const c = state.compromissos.find(x => x.id === id);
+  if (!c || !confirm(`Remover o compromisso ${c.nome}? Os lançamentos já feitos continuam.`)) return;
+  await db.remove(db.STORES.compromissos, id);
+  state.compromissos = state.compromissos.filter(x => x.id !== id);
+  renderMes();
+  render();
+}
+
+async function onAddPlano(ev) {
+  ev.preventDefault();
+  const err = $('#plan-error');
+  err.hidden = true;
+  try {
+    const nome = $('#plan-nome').value;
+    const sug = sugerirCategoria(nome, state.expenses);
+    const p = createPlano({ nome, valorCents: parseAmount($('#plan-valor').value) || 0, categoryId: sug?.categoryId || 'outros' });
+    await db.put(db.STORES.planos, p);
+    state.planos.push(p);
+    $('#plan-nome').value = '';
+    $('#plan-valor').value = '';
+    renderMes();
+  } catch (e) {
+    err.textContent = e.message;
+    err.hidden = false;
+  }
+}
+
+async function marcarPlano(id, feito) {
+  const p = state.planos.find(x => x.id === id);
+  if (!p) return;
+  if (feito && confirm(`Lançar ${formatBRL(p.valorCents)} de ${p.nome} como gasto agora?`)) {
+    const events = await registrarGasto({ amountCents: p.valorCents, categoryId: p.categoryId, note: p.nome, date: toISODate() });
+    narrate(events);
+  }
+  const upd = { ...p, feito };
+  await db.put(db.STORES.planos, upd);
+  state.planos = state.planos.map(x => (x.id === id ? upd : x));
+  renderMes();
+}
+
+async function removerPlano(id) {
+  const p = state.planos.find(x => x.id === id);
+  if (!p || !confirm(`Remover o plano ${p.nome}?`)) return;
+  await db.remove(db.STORES.planos, id);
+  state.planos = state.planos.filter(x => x.id !== id);
+  renderMes();
+}
+
+// ======================================================================
+// Primeiro acesso: o C.A.O.S. conhece a pessoa (1.3.0)
+// ======================================================================
+
+const FOCOS = ['Controlar o dia a dia', 'Sair do vermelho', 'Juntar dinheiro', 'Organizar contas e planos', 'Entender investimentos'];
+
+function renderPerfil() {
+  const p = state.perfil;
+  $('#perfil-resumo').textContent = p?.apelido
+    ? `O C.A.O.S. te chama de ${p.apelido}${p.nome && p.nome !== p.apelido ? ` (${p.nome})` : ''}, num jeito ${p.tratamento === 'formal' ? 'mais formal' : 'descontraído'}.${p.foco?.length ? ` Foco: ${p.foco.join(', ').toLowerCase()}.` : ''}`
+    : 'O C.A.O.S. ainda não te conhece.';
+}
+
+function caosDiz(gatilho, vars, sugestoes) {
+  const r = falaAvulsa(gatilho, vars, { mood: state.settings.mood, memory: state.caosMemory, perfil: state.perfil });
+  guardarMemoria(r.memoria);
+  const rosto = rostoAvulso(gatilho === 'onb_fim' ? 'identidade' : 'surpresa', { mood: state.settings.mood, memory: state.caosMemory });
+  pintarRosto(rosto);
+  addMsg({ de: 'caos', texto: r.texto, sugestoes, rosto });
+  if (state.settings.voice) falar(r.texto);
+}
+
+function iniciarOnboarding() {
+  state.onboarding = { passo: 'nome', dados: { foco: [] } };
+  if (location.hash.slice(1) !== 'conversa') location.hash = 'conversa';
+  caosDiz('onb_nome', {}, ['Pular por enquanto']);
+}
+
+function sugestoesFoco() {
+  const f = state.onboarding.dados.foco;
+  return [...FOCOS.map(x => (f.includes(x) ? `✓ ${x}` : x)), 'Pronto'];
+}
+
+async function onboardingResposta(t) {
+  const o = state.onboarding;
+  const d = o.dados;
+  if (/^pular/i.test(t)) {
+    addMsg({ de: 'eu', texto: t });
+    state.perfil = { nome: null, apelido: null, tratamento: 'descontraido', foco: [], pulou: true, criadoEm: Date.now() };
+    state.onboarding = null;
+    await db.setMeta('perfil', state.perfil);
+    renderPerfil();
+    addMsg({ de: 'caos', texto: 'Sem problema! Quando quiser se apresentar, é só ir em Ajustes → Seu perfil. Bora cuidar da carteira?' });
+    return;
+  }
+  if (o.passo === 'ajuda') {
+    const limpo = t.replace(/^✓\s*/, '');
+    if (/^pronto$/i.test(limpo)) {
+      addMsg({ de: 'eu', texto: d.foco.length ? d.foco.join(', ') : 'Pronto' });
+      state.perfil = { nome: d.nome, apelido: d.apelido, tratamento: d.tratamento, foco: d.foco, criadoEm: Date.now() };
+      state.onboarding = null;
+      await db.setMeta('perfil', state.perfil);
+      renderPerfil();
+      const foco = d.foco.length ? d.foco.join(', ').toLowerCase() : 'cuidar da carteira no dia a dia';
+      caosDiz('onb_fim', { nome: d.apelido, foco }, SUGESTOES.slice(0, 6));
+      return;
+    }
+    if (FOCOS.includes(limpo)) d.foco = d.foco.includes(limpo) ? d.foco.filter(x => x !== limpo) : [...d.foco, limpo];
+    else if (limpo) d.foco = [...d.foco, limpo.slice(0, 40)];
+    // atualiza só as opções (marca o que foi escolhido), sem nova fala
+    const ult = [...state.chat].reverse().find(m => m.de === 'caos');
+    if (ult) ult.sugestoes = sugestoesFoco();
+    renderChat();
+    return;
+  }
+  addMsg({ de: 'eu', texto: t });
+  if (o.passo === 'nome') {
+    const nome = extrairNome(t);
+    if (!nome) return caosDiz('onb_nome', {}, ['Pular por enquanto']);
+    d.nome = nome;
+    o.passo = 'apelido';
+    const primeiro = nome.split(' ')[0];
+    caosDiz('onb_apelido', { nome: primeiro }, [...new Set([primeiro, nome])]);
+  } else if (o.passo === 'apelido') {
+    d.apelido = extrairNome(t) || d.nome.split(' ')[0];
+    o.passo = 'tratamento';
+    caosDiz('onb_tratamento', { nome: d.apelido }, ['Descontraído', 'Mais formal']);
+  } else if (o.passo === 'tratamento') {
+    d.tratamento = /formal/i.test(t) && !/descontra/i.test(t) ? 'formal' : 'descontraido';
+    o.passo = 'ajuda';
+    caosDiz('onb_ajuda', { nome: d.apelido }, sugestoesFoco());
+  }
+}
+
+/** Lançar: o C.A.O.S. lembra a categoria pela descrição ("Uber" → Transporte). */
+function sugerirPelaDescricao() {
+  if (state.kind !== 'gasto') return;
+  const aviso = $('#cat-sugestao');
+  if (state.selectedCategory && !state.catSugerida) return;
+  const s2 = sugerirCategoria($('#note').value, state.expenses);
+  if (!s2) {
+    if (state.catSugerida) { state.selectedCategory = null; state.catSugerida = false; renderLancar(); }
+    aviso.hidden = true;
+    return;
+  }
+  const cat = catById(s2.categoryId);
+  if (!cat) return;
+  state.selectedCategory = cat.id;
+  state.catSugerida = true;
+  renderLancar();
+  aviso.textContent = `🤖 Lembrei: isso costuma ser ${cat.emoji} ${cat.name}. Se não for, é só tocar em outra.`;
+  aviso.hidden = false;
 }
 
 function toast(msg) {
@@ -711,7 +1007,7 @@ function bind() {
   $('#category-chips').addEventListener('click', e => {
     const b = e.target.closest('[data-cat]');
     if (!b) return;
-    if (state.kind === 'gasto') state.selectedCategory = b.dataset.cat;
+    if (state.kind === 'gasto') { state.selectedCategory = b.dataset.cat; state.catSugerida = false; $('#cat-sugestao').hidden = true; }
     else state.selectedSource = b.dataset.cat;
     renderLancar();
   });
@@ -798,6 +1094,26 @@ function bind() {
       $('#ai-status').textContent = `✖ ${e.message}`;
     }
   });
+  // Mês
+  $('#comp-form').addEventListener('submit', onAddCompromisso);
+  $('#comp-list').addEventListener('click', e => {
+    const l = e.target.closest('[data-comp-lancar]');
+    if (l) return lancarCompromisso(l.dataset.compLancar);
+    const d = e.target.closest('[data-comp-del]');
+    if (d) removerCompromisso(d.dataset.compDel);
+  });
+  $('#plan-form').addEventListener('submit', onAddPlano);
+  $('#plan-list').addEventListener('change', e => {
+    const c = e.target.closest('[data-plan-feito]');
+    if (c) marcarPlano(c.dataset.planFeito, c.checked);
+  });
+  $('#plan-list').addEventListener('click', e => {
+    const d = e.target.closest('[data-plan-del]');
+    if (d) removerPlano(d.dataset.planDel);
+  });
+  $('#perfil-refazer').addEventListener('click', () => iniciarOnboarding());
+  $('#note').addEventListener('input', sugerirPelaDescricao);
+
   $('#export-btn').addEventListener('click', exportBackup);
   $('#import-input').addEventListener('change', e => {
     const f = e.target.files?.[0];
@@ -830,7 +1146,7 @@ async function init() {
   bind();
   $('#date').value = toISODate();
   try {
-    const [cats, expenses, incomes, accounts, settings, memory, chat] = await Promise.all([
+    const [cats, expenses, incomes, accounts, settings, memory, chat, compromissos, planos, perfil] = await Promise.all([
       db.getAll(db.STORES.categories),
       db.getAll(db.STORES.expenses),
       db.getAll(db.STORES.incomes),
@@ -838,7 +1154,11 @@ async function init() {
       db.getMeta('settings'),
       db.getMeta('caosMemory'),
       db.getMeta('chat', []),
+      db.getAll(db.STORES.compromissos),
+      db.getAll(db.STORES.planos),
+      db.getMeta('perfil'),
     ]);
+    Object.assign(state, { compromissos, planos, perfil: perfil || null });
     if (cats.length === 0) {
       state.categories = DEFAULT_CATEGORIES.map(c => ({ ...c }));
       await db.putMany(db.STORES.categories, state.categories);
@@ -859,8 +1179,11 @@ async function init() {
   renderLancar();
   renderBudgets();
   await renderSettings();
+  renderPerfil();
   render();
   irPara(location.hash.slice(1));
+  // Primeiro acesso: o C.A.O.S. se apresenta e conhece a pessoa
+  if (!state.perfil) iniciarOnboarding();
   $('#install-hint').textContent = installHint();
 
   const today = toISODate();

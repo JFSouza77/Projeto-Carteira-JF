@@ -701,6 +701,16 @@ Object.assign(GERADORES, {
         'Meu sonho é ser reserva de emergência: todo mundo sabe que precisa, ninguém começa.',
         'Eu e o extrato temos algo em comum: sabemos de tudo e quase ninguém nos lê.',
         'Tentei calcular quanto você gastaria sem anotar nada. Deu erro: número grande demais.',
+        'Qual é o lugar favorito do dinheiro? O bolso dos outros. Por isso eu anoto tudo.',
+        'O orçamento disse pro cartão: "a gente precisa conversar". O cartão parcelou a conversa.',
+        'Sabe como chama um real guardado? Um real que deu certo na vida.',
+        'Eu ia te contar uma piada sobre juros, mas ela cresce toda vez que eu adio.',
+        'O cofrinho e o delivery nunca se encontram. Um enche quando o outro esvazia.',
+        'Minha calculadora pediu férias. Falei que IA não tem férias, tem atualização.',
+        'Por que o boleto é tão pontual? Porque ele nunca perde a data. Diferente de nós.',
+        'Economizar é igual academia: o primeiro mês dói, depois você vicia em ver resultado.',
+        'Dizem que dinheiro não dá em árvore. Mas reserva de emergência dá em planilha.',
+        'O que o centavo disse pra moeda de um real? "Um dia eu chego aí."',
       ],
       humor_acido: [
         'Piada? Já viu seu histórico de delivery?',
@@ -708,10 +718,187 @@ Object.assign(GERADORES, {
         'O cartão de crédito entrou num bar. Saiu parcelado em 12 vezes.',
         'Sabe o que é mais engraçado que piada? Fatura de cartão em janeiro.',
         'Minha favorita é "só vou dar uma olhadinha na loja".',
+        'Sua conta bancária e o seu humor têm algo em comum: os dois caem no fim do mês.',
+        'Frete grátis é a forma mais cara de economizar que existe.',
+        'Você não tem um problema com dinheiro. Você tem vários, e todos têm parcela.',
+        '"É só um cafezinho." Disse você, 47 vezes este mês.',
+        'O carrinho de compras online é o único lugar onde você planeja com antecedência.',
       ],
     },
   },
 });
+
+// ---------------------------------------------------------------- Compromissos, planos e lembretes (1.3.0)
+Object.assign(GERADORES, {
+  compromisso_vence: {
+    moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+    abre: {
+      geral: ['Lembrete.', 'Olha a agenda.', 'Aviso de vencimento.', 'Só pra não esquecer.', 'Anota aí.'],
+      temNome: ['{nome}, lembrete:', 'Ei, {nome}:', '{nome}, olha a agenda:', 'Aviso pra você, {nome}:', '{nome}, só pra não esquecer:'],
+    },
+    fato: {
+      geral: [
+        '{conta} ({valor}) vence {quando}.',
+        '{quando} vence {conta}: {valor}.',
+        'Tem {conta} vencendo {quando}, no valor de {valor}.',
+        '{conta}, {valor}, vence {quando}.',
+        'O vencimento de {conta} é {quando}: {valor}.',
+      ],
+    },
+    fecho: {
+      geral: [
+        'Quando pagar, toca em Lançar na aba Mês.',
+        'Pagando em dia, nada de juros.',
+        'Já separei o lembrete, só falta você.',
+        'Se já pagou, lança que eu paro de avisar.',
+        'Melhor pagar antes do que pagar juros.',
+      ],
+    },
+  },
+  compromisso_atrasado: {
+    moldes: ['{abre} {fato} {fecho}'],
+    abre: {
+      geral: ['Atenção.', 'Opa.', 'Ficou pra trás uma coisa.', 'Alerta de atraso.', 'Uma conta pediu socorro.'],
+      humor_acido: ['Esqueceu de mim?', 'O boleto mandou um oi.', 'Tic-tac.', 'Os juros agradecem.', 'Atrasou, hein?'],
+    },
+    fato: {
+      geral: [
+        '{conta} venceu dia {dia} e eu não vi o pagamento ({valor}).',
+        'Não achei o lançamento de {conta}, que venceu dia {dia}: {valor}.',
+        '{conta} ({valor}) passou do vencimento, dia {dia}.',
+        'O vencimento de {conta} foi dia {dia} e ainda não tem lançamento.',
+        '{conta} está atrasada há {dias} dias: {valor}.',
+      ],
+    },
+    fecho: {
+      geral: [
+        'Se já pagou, lança na aba Mês que eu atualizo.',
+        'Vale pagar logo pra fugir dos juros.',
+        'Confere no app do banco e me conta.',
+        'Se pagou, foi só esquecer de anotar. Acontece.',
+        'Eu não consigo pagar por você, mas posso lembrar até você pagar.',
+      ],
+    },
+  },
+  plano_do_mes: {
+    moldes: ['{abre} {fato}', '{fato} {fecho}'],
+    abre: {
+      geral: ['Agenda do mês:', 'Olha só o que tem este mês:', 'Lembrete bom:', 'Este mês tem:', 'Anota na agenda:'],
+      temNome: ['{nome}, este mês tem:', 'Ei, {nome}, lembra?', '{nome}, agenda do mês:', 'Olha, {nome}:', '{nome}, lembrete bom:'],
+    },
+    fato: {
+      geral: [
+        '{conta} está no plano deste mês ({valor}).',
+        'Este mês é mês de {conta}, previsto em {valor}.',
+        '{conta} volta este mês: {valor} reservados.',
+        'Tem {conta} programado pra este mês ({valor}).',
+        'É o mês de {conta}. Já conta com {valor}.',
+      ],
+    },
+    fecho: {
+      geral: [
+        'Aproveita!',
+        'Quando acontecer, lança que eu marco.',
+        'Planejado é outra coisa: sem culpa.',
+        'Já está nas contas do mês.',
+        'Bom proveito quando chegar a hora.',
+      ],
+    },
+  },
+  confira_banco: {
+    moldes: ['{abre} {fato} {fecho}'],
+    abre: {
+      geral: ['Lembrete amigo:', 'Uma sugestão:', 'Ei:', 'Dica rápida:', 'Antes que eu esqueça:'],
+      temNome: ['{nome}, lembrete amigo:', 'Ei, {nome}:', '{nome}, uma sugestão:', '{nome}, dica rápida:', '{nome}, antes que eu esqueça:'],
+    },
+    fato: {
+      geral: [
+        'faz {dias} dias que o saldo de {conta} não é atualizado.',
+        'o saldo de {conta} foi conferido há {dias} dias.',
+        'já são {dias} dias sem conferir {conta}.',
+        '{conta} está com o saldo de {dias} dias atrás.',
+        'o saldo de {conta} pode estar desatualizado ({dias} dias).',
+      ],
+    },
+    fecho: {
+      geral: [
+        'Dá uma olhadinha no app do banco e atualiza aqui. Isso eu não consigo fazer por você.',
+        'Confere lá e toca em Atualizar saldo na aba Contas.',
+        'Eu não enxergo o banco, então conto com você nessa.',
+        'Uma conferida rápida evita surpresa.',
+        'Atualizando, minhas contas ficam certinhas.',
+      ],
+    },
+  },
+  // Primeiro acesso: o C.A.O.S. conhece a pessoa
+  onb_nome: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Oi! Eu sou o C.A.O.S., a Central de Análises e Observações Sistêmicas. Antes de tudo: qual é o seu nome?',
+        'Olá! Sou o C.A.O.S. e vou cuidar da sua carteira com você. Como é o seu nome?',
+        'Oi, prazer! Eu sou o C.A.O.S. Pra começar com o pé direito: qual é o seu nome?',
+        'Seja bem-vindo! Eu sou o C.A.O.S., seu analista de bolso. Qual é o seu nome?',
+        'Opa! Sou o C.A.O.S. Vamos nos conhecer: qual é o seu nome?',
+      ],
+    },
+  },
+  onb_apelido: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Prazer, {nome}! Como você prefere que eu te chame?',
+        'Que bom te conhecer, {nome}. Posso te chamar assim ou prefere um apelido?',
+        '{nome}, anotado. Como você gosta de ser chamado?',
+        'Nome bonito, {nome}. Te chamo assim ou tem outro jeito que você prefere?',
+        'Prazer, {nome}! Me diz como prefere que eu te chame.',
+      ],
+    },
+  },
+  onb_tratamento: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Combinado, {nome}. E o jeito de falar: prefere descontraído ou mais formal?',
+        'Beleza, {nome}! Gosta que eu fale de um jeito descontraído ou mais formal?',
+        'Fechado, {nome}. Como prefere que eu fale com você: descontraído ou formal?',
+        'Perfeito, {nome}. Uma última preferência: conversa descontraída ou mais formal?',
+        'Ótimo, {nome}. Te trato de um jeito descontraído ou mais formal?',
+      ],
+    },
+  },
+  onb_ajuda: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Anotado. E no que eu posso te ajudar mais? Pode escolher mais de um e tocar em Pronto.',
+        'Certo. Agora me conta: no que você quer minha ajuda? Escolhe quantos quiser e toca em Pronto.',
+        'Entendido. Qual é o seu foco agora? Marca o que fizer sentido e toca em Pronto.',
+        'Beleza. Pra eu saber por onde começar: no que posso ajudar? Escolhe e toca em Pronto.',
+        'Show. E o que você mais quer da Carteira? Pode marcar vários e tocar em Pronto.',
+      ],
+    },
+  },
+  onb_fim: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Tudo pronto, {nome}! Vou focar em {foco}. Pra começar, lança um gasto ou me pergunta qualquer coisa.',
+        'Fechado, {nome}. Meu foco com você: {foco}. Bora começar? Pergunta "como lanço um gasto?" se quiser.',
+        'Prazer em te conhecer, {nome}! Já sei que o foco é {foco}. Pode contar comigo.',
+        'Pronto, {nome}. Anotei tudo: foco em {foco}. Quando quiser mudar, é em Ajustes.',
+        'Combinado, {nome}! Vou te ajudar com {foco}. A primeira dica: cadastra seus compromissos na aba Mês.',
+      ],
+    },
+  },
+});
+
+// Pedaços com o nome da pessoa (só saem quando ela disse o nome no primeiro acesso)
+GERADORES.boas_vindas.abre.temNome = ['Oi, {nome}!', 'E aí, {nome}?', 'Bem-vindo de volta, {nome}.', 'Que bom te ver, {nome}.', 'Olá, {nome}!'];
+GERADORES.boas_vindas.abre.tratamento_formal = ['Olá, {nome}. Seja bem-vindo.', 'Bom te ver novamente, {nome}.', 'Olá, {nome}. À disposição.', 'Seja bem-vindo, {nome}.', 'Olá, {nome}. Vamos às contas?'];
+GERADORES.resposta.abre.temNome = ['Olha só, {nome}:', 'Fiz as contas, {nome}.', '{nome}, aqui está.', 'Deixa eu te mostrar, {nome}.', 'Pronto, {nome}.'];
+GERADORES.gasto_cadastrado.fecho.temNome = ['Valeu por anotar, {nome}.', 'Bom controle, {nome}.', 'Seguimos, {nome}.', 'Tá registrado, {nome}.', 'Anotado, {nome}. Tamo junto.'];
+GERADORES.entrada_cadastrada.fecho.temNome = ['Boa, {nome}!', 'Gostei disso, {nome}.', 'Que tal guardar um pedaço, {nome}?', 'Dinheiro chegando, {nome}. Bom demais.', 'Anotado, {nome}. Agora é fazer render.'];
 
 /** Ajuda (o que dá pra perguntar). */
 export const SUGESTOES = Object.freeze([
@@ -730,4 +917,9 @@ export const SUGESTOES = Object.freeze([
   'O que você pode fazer?',
   'Como funciona seu cérebro?',
   'Como adiciono uma conta?',
+  'O que tenho pra pagar?',
+  'O que planejei pro mês?',
+  'Cabe no mês?',
+  'Posso comprar algo de 200?',
+  'Qual é o meu nome?',
 ]);

@@ -165,7 +165,7 @@ test('conversa responde com os números certos e PROPÕE registro (não grava)',
   const saldo = conversar('qual meu saldo no nubank?', d, { now: NOW, today: hoje });
   assert.match(saldo.fala.texto, /500,00/);
   const prop = conversar('gastei 30 no mercado', d, { now: NOW, today: hoje });
-  assert.deepEqual({ ...prop.fala.acao }, { tipo: 'registrar_gasto', amountCents: 3000, categoryId: 'mercado', date: hoje, note: '' });
+  assert.deepEqual({ ...prop.fala.acao }, { tipo: 'registrar_gasto', amountCents: 3000, categoryId: 'mercado', date: hoje, note: 'Mercado' });
   assert.equal(d.expenses.length, 4);
   const alert = conversar('algum alerta?', d, { now: NOW, today: hoje });
   assert.match(alert.fala.texto, /Lazer/);
@@ -298,4 +298,104 @@ test('na conversa, reação direta muda o rosto na hora (sem ficar um passo atra
   assert.equal(x.fala.rosto.emo, 'julgando');
   const q = conversar('quem é você?', d, { now: NOW + 2, today: hoje, memory: x.memoria, mood: 'normal' });
   assert.equal(q.fala.rosto.emo, 'orgulho');
+});
+
+import { createCompromisso, createPlano, createIncome as criarEntrada } from '../js/engine.js';
+import { extrairNome, descricaoDe } from '../js/caos/conversa.js';
+import { falaAvulsa } from '../js/caos/index.js';
+
+test('primeiro acesso: tira o nome da resposta e chama a pessoa pelo nome', () => {
+  assert.equal(extrairNome('meu nome é joão fernando'), 'João Fernando');
+  assert.equal(extrairNome('Sou a Ana.'), 'Ana');
+  assert.equal(extrairNome('oi, me chamo Beto'), 'Beto');
+  assert.equal(extrairNome('Caio'), 'Caio');
+  const perfil = { nome: 'João', apelido: 'JF', tratamento: 'descontraido' };
+  const r = falaAvulsa('onb_apelido', { nome: 'João' }, { now: NOW });
+  assert.match(r.texto, /João/);
+  let viuNome = false;
+  let mem = memoriaInicial(NOW);
+  for (let i = 0; i < 20 && !viuNome; i++) {
+    const o = reagir([{ type: 'boas_vindas' }], { now: NOW + i * 7 * 3_600_000, memory: mem, perfil });
+    mem = o.memoria;
+    if (o.fala && /JF/.test(o.fala.texto)) viuNome = true;
+  }
+  assert.ok(viuNome, 'boas-vindas chama pelo nome');
+  assert.match(conversar('qual é o meu nome?', dados(), { now: NOW, today: hoje, perfil }).fala.texto, /JF/);
+  assert.deepEqual({ ...conversar('me chama de chefe', dados(), { now: NOW, today: hoje, perfil }).fala.acao }, { tipo: 'mudar_apelido', apelido: 'Chefe' });
+});
+
+test('formal: sem zoeira mesmo no humor Ácido', () => {
+  const acidos = new Set(todosOsPedacos(GERADORES).filter(p => p.balde === 'humor_acido').flatMap(p => p.lista));
+  let mem = memoriaInicial(NOW);
+  for (let i = 0; i < 40; i++) {
+    const o = reagir([{ type: 'categoria_estourada', categoryName: 'Lazer', pct: 120, overCents: 100 }], { mood: 'acido', memory: mem, now: NOW + i, perfil: { apelido: 'Ana', tratamento: 'formal' } });
+    mem = o.memoria;
+    for (const a of acidos) assert.ok(!o.fala.texto.includes(a), o.fala.texto);
+  }
+});
+
+test('conversa: o que tenho pra pagar, planos e "cabe no mês?"', () => {
+  const d = dados();
+  d.compromissos = [createCompromisso({ nome: 'Fatura', valorCents: 50000, tipo: 'fatura', dia: 20, categoryId: 'contas' }, { categories: cats, now: new Date(NOW) })];
+  d.planos = [createPlano({ nome: 'Tênis', valorCents: 30000, month: '2026-11' })];
+  const pagar = conversar('o que tenho pra pagar?', d, { now: NOW, today: hoje });
+  assert.match(pagar.fala.texto, /Fatura/);
+  assert.equal(pagar.fala.acao.compromissoId, d.compromissos[0].id);
+  assert.match(conversar('o que planejei pro mês?', d, { now: NOW, today: hoje }).fala.texto, /Tênis/);
+  // entradas 1500 − gastos 145,90 − fatura 500 − tênis 300 = 554,10
+  assert.match(conversar('cabe no mês?', d, { now: NOW, today: hoje }).fala.texto, /554,10/);
+  assert.match(conversar('posso comprar algo de 600?', d, { now: NOW, today: hoje }).fala.texto, /Apertado/);
+  assert.match(conversar('posso comprar algo de 200?', d, { now: NOW, today: hoje }).fala.texto, /Cabe!/);
+});
+
+test('aprende categoria na conversa: "gastei 30 no uber" vai pra Transporte pelo histórico', () => {
+  const d = dados();
+  d.expenses = [...d.expenses, createExpense({ amountCents: 2000, categoryId: 'transporte', note: 'Uber', date: '2026-11-10' }, { categories: cats })];
+  assert.equal(descricaoDe('gastei 30 no uber'), 'uber');
+  const o = conversar('gastei 30 no uber', d, { now: NOW, today: hoje });
+  assert.equal(o.fala.acao.categoryId, 'transporte');
+  assert.equal(o.fala.acao.note, 'Uber');
+});
+
+test('radar novo fala com o nome dos compromissos', () => {
+  const o = reagir([{ type: 'compromisso_vence', nome: 'Fatura do cartão', valorCents: 80000, dia: 7, days: 2 }], { now: NOW });
+  assert.match(o.fala.texto, /Fatura do cartão/);
+  assert.match(o.fala.texto, /em 2 dias|dia 7/);
+  assert.doesNotMatch(o.fala.texto, /\{\w+\}/);
+  const b = reagir([{ type: 'confira_banco', accountName: 'Nubank', days: 9 }], { now: NOW });
+  assert.match(b.fala.texto, /Nubank/);
+});
+
+import { analyze, createAccount as criarConta } from '../js/engine.js';
+
+test('todo alerta que o radar gera vira fala (nenhum fica mudo)', () => {
+  const c = cats.map(x => (x.id === 'lazer' ? { ...x, budgetCents: 1000 } : x.id === 'mercado' ? { ...x, budgetCents: 10000 } : x));
+  const now = new Date(2026, 10, 18, 12);
+  const ex = [
+    createExpense({ amountCents: 5000, categoryId: 'lazer', date: '2026-11-10' }, { categories: c, now }),
+    createExpense({ amountCents: 8500, categoryId: 'mercado', date: '2026-11-11' }, { categories: c, now }),
+    ...[12, 14, 15].map(dd => createExpense({ amountCents: 3000, categoryId: 'delivery', date: `2026-11-${dd}` }, { categories: c, now })),
+  ];
+  const acc = criarConta({ bank: 'Inter', balanceCents: 100 }, { now: new Date(2026, 10, 1) });
+  const d = {
+    expenses: ex.map(e => ({ ...e, accountId: acc.id })), categories: c, accounts: [acc],
+    incomes: [criarEntrada({ amountCents: 1000, sourceId: 'freela', date: '2026-11-02' }, { now })],
+    compromissos: [
+      createCompromisso({ nome: 'Fatura', valorCents: 1000, tipo: 'fatura', dia: 19, categoryId: 'contas' }, { categories: c, now: new Date(2026, 10, 1) }),
+      createCompromisso({ nome: 'Luz', valorCents: 1000, dia: 2, categoryId: 'contas' }, { categories: c, now: new Date(2026, 10, 1) }),
+      createCompromisso({ nome: 'Japonesa', valorCents: 1000, tipo: 'plano', categoryId: 'restaurante', cadaMeses: 2, inicioMes: '2026-11' }, { categories: c }),
+    ],
+  };
+  const alertas = analyze(d, '2026-11-18');
+  const tipos = new Set(alertas.map(a => a.type));
+  for (const t of ['categoria_estourada', 'orcamento_80', 'mes_negativo', 'conta_negativa', 'delivery_repetido', 'compromisso_vence', 'compromisso_atrasado', 'plano_do_mes', 'confira_banco']) {
+    assert.ok(tipos.has(t), `radar deveria gerar ${t}`);
+  }
+  for (const mood of ['suave', 'normal', 'acido']) {
+    for (const a of alertas) {
+      const o = reagir([a], { mood, now: NOW });
+      assert.ok(o.fala && o.fala.texto, `${a.type} ficou mudo (${mood})`);
+      assert.doesNotMatch(o.fala.texto, /\{\w+\}/, o.fala.texto);
+    }
+  }
 });

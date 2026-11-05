@@ -143,3 +143,67 @@ test('alertas: saindo mais do que entrando e conta negativa', () => {
   assert.ok(tipos.includes('mes_negativo'));
   assert.ok(tipos.includes('conta_negativa'));
 });
+
+import { createCompromisso, ocorreNoMes, proximaOcorrencia, situacaoCompromissos, createPlano, analisarPlanejamento, cabeNoMes, sugerirCategoria } from '../js/engine.js';
+
+test('comida japonesa a cada 2 meses: comeram em outubro → novembro não, dezembro sim', () => {
+  const c = createCompromisso({ nome: 'Comida japonesa', valorCents: 25000, tipo: 'plano', categoryId: 'restaurante', cadaMeses: 2, inicioMes: '2026-12' }, { categories: cats });
+  assert.equal(ocorreNoMes(c, '2026-11'), false);
+  assert.equal(ocorreNoMes(c, '2026-12'), true);
+  assert.equal(ocorreNoMes(c, '2027-01'), false);
+  assert.equal(ocorreNoMes(c, '2027-02'), true);
+  assert.equal(proximaOcorrencia(c, '2026-11'), '2026-12');
+  assert.equal(proximaOcorrencia(c, '2027-01'), '2027-02');
+});
+
+test('compromisso: vence em X dias, atrasado, pago e dia 31 em fevereiro', () => {
+  const fatura = createCompromisso({ nome: 'Fatura', valorCents: 80000, tipo: 'fatura', dia: 7, categoryId: 'contas' }, { categories: cats, now: new Date(2026, 10, 1) });
+  const luz = createCompromisso({ nome: 'Luz', valorCents: 15000, dia: 3, categoryId: 'contas' }, { categories: cats, now: new Date(2026, 10, 1) });
+  const s = situacaoCompromissos([fatura, luz], [], '2026-11-05');
+  assert.equal(s.find(x => x.nome === 'Fatura').status, 'aberto');
+  assert.equal(s.find(x => x.nome === 'Fatura').diasParaVencer, 2);
+  assert.equal(s.find(x => x.nome === 'Luz').status, 'atrasado');
+  const pago = createExpense({ amountCents: 15000, categoryId: 'contas', date: '2026-11-04', compromissoId: luz.id }, { categories: cats });
+  assert.equal(situacaoCompromissos([luz], [pago], '2026-11-05')[0].status, 'pago');
+  const aluguel = createCompromisso({ nome: 'Aluguel', valorCents: 100000, dia: 31, categoryId: 'moradia' }, { categories: cats, now: new Date(2027, 1, 1) });
+  assert.equal(situacaoCompromissos([aluguel], [], '2027-02-10')[0].diaNoMes, 28);
+  assert.throws(() => createCompromisso({ nome: 'X', valorCents: 1, dia: 40 }, { categories: cats }));
+});
+
+test('radar avisa vencimento, atraso, plano do mês e "confira seu banco"', () => {
+  const fatura = createCompromisso({ nome: 'Fatura', valorCents: 80000, tipo: 'fatura', dia: 7, categoryId: 'contas' }, { categories: cats, now: new Date(2026, 10, 1) });
+  const jap = createCompromisso({ nome: 'Comida japonesa', valorCents: 25000, tipo: 'plano', categoryId: 'restaurante', cadaMeses: 2, inicioMes: '2026-11' }, { categories: cats });
+  const acc = createAccount({ bank: 'Nubank', balanceCents: 1000 }, { now: new Date(2026, 9, 20) });
+  const tipos = analyze({ expenses: [], categories: cats, compromissos: [fatura, jap], accounts: [acc] }, '2026-11-05').map(a => a.type);
+  assert.ok(tipos.includes('compromisso_vence'));
+  assert.ok(tipos.includes('plano_do_mes'));
+  assert.ok(tipos.includes('confira_banco'));
+  assert.ok(analyze({ expenses: [], categories: cats, compromissos: [fatura] }, '2026-11-09').some(a => a.type === 'compromisso_atrasado'));
+});
+
+test('planejamento do mês: sobra prevista e o que adiar quando falta', () => {
+  const inc = createIncome({ amountCents: 300000, sourceId: 'salario', date: '2026-11-05' });
+  const gasto = exp(50000, 'mercado', '2026-11-03');
+  const aluguel = createCompromisso({ nome: 'Aluguel', valorCents: 150000, dia: 10, categoryId: 'moradia' }, { categories: cats, now: new Date(2026, 10, 1) });
+  const tenis = createPlano({ nome: 'Tênis', valorCents: 40000, month: '2026-11' });
+  const tv = createPlano({ nome: 'TV', valorCents: 120000, month: '2026-11' });
+  const d = { expenses: [gasto], incomes: [inc], categories: cats, compromissos: [aluguel], planos: [tenis, tv] };
+  const a = analisarPlanejamento(d, '2026-11-05');
+  // 3000 − (500 + 1500 + 400 + 1200) = −600 → adiar a TV
+  assert.equal(a.sobraCents, -60000);
+  assert.deepEqual(a.adiar.map(p => p.nome), ['TV']);
+  assert.equal(cabeNoMes({ ...d, planos: [tenis] }, 30000, '2026-11-05').cabe, true);
+  assert.equal(cabeNoMes({ ...d, planos: [tenis] }, 70000, '2026-11-05').cabe, false);
+});
+
+test('aprende categorias pelo histórico', () => {
+  const hist = [
+    createExpense({ amountCents: 2000, categoryId: 'transporte', note: 'Uber', date: '2026-11-01' }, { categories: cats }),
+    createExpense({ amountCents: 2500, categoryId: 'transporte', note: 'uber pro trabalho', date: '2026-11-02' }, { categories: cats }),
+    createExpense({ amountCents: 9000, categoryId: 'mercado', note: 'Atacadão', date: '2026-11-02' }, { categories: cats }),
+  ];
+  assert.equal(sugerirCategoria('Uber', hist).categoryId, 'transporte');
+  assert.equal(sugerirCategoria('uber volta', hist).categoryId, 'transporte');
+  assert.equal(sugerirCategoria('atacadao', hist).categoryId, 'mercado');
+  assert.equal(sugerirCategoria('cinema', hist), null);
+});

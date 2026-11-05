@@ -14,6 +14,11 @@ App de controle de gastos com o C.A.O.S., narrador trazido do Perfil JF (JFSouza
   **Apagar coisa (arquivos, dados): perguntar antes.**
 - **Merge e publicação (JF, 05/11/2026):** o Code pode fazer o merge na `main` e publicar sozinho (a `main` vai pro
   ar no Cloudflare Pages automaticamente), sem esperar o JF. Depois avisa o JF do que foi ao ar.
+- **Nome (JF, 05/11/2026):** neste projeto o JF chama este assistente de **Wally** (de *wallet*), pra não confundir com
+  o Code do Perfil. Assinar como Wally nas mensagens pro JF.
+- **Horário (JF, 05/11/2026):** quando houver trabalho do Code do Perfil marcado, o Wally para no horário que o JF der.
+  Janela fixa liberada: **toda sexta das 06h às 09h** (Brasília) para atualizar o app. Pedidos em aberto:
+  `docs/Pedidos_do_JF.md`.
 - Agenda: pedido urgente do JF vem primeiro. Att grande: quinta a partir das 18h e sexta das 9h às 18h (Brasília).
 
 ## Plataforma
@@ -45,7 +50,7 @@ Mapa do cérebro: `docs/CAOS_Carteira.md`.
 
 ## C.A.O.S.
 
-- **Sobe de versão sempre que for mexido** (`CAOS_VERSAO` em `js/caos/index.js`; hoje 1.2.0).
+- **Sobe de versão sempre que for mexido** (`CAOS_VERSAO` em `js/caos/index.js`; hoje 1.3.0).
 - **Quantidades sempre terminam em 0 ou 5**: cada lista de falas tem 5, 10, 15… (teste confere).
 - **Quem ele é** (nome, sigla, criador, origem, pode/não pode, anatomia): só em `js/caos/identidade.js`. O app e o
   servidor da IA leem dali, pra nunca ficarem diferentes.
