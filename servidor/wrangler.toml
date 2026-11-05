@@ -1,0 +1,33 @@
+# Carteira JF · servidor (Cloudflare Worker, plano grátis)
+# Como publicar: servidor/LEIA-ME.md
+name = "carteira-jf"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Lembretes: confere a cada 15 minutos quem marcou lembrete para agora
+[triggers]
+crons = ["*/15 * * * *"]
+
+# Banco chave-valor (inscrições de lembrete e contador de uso da IA).
+# Crie com: npx wrangler kv namespace create CARTEIRA_KV  e cole o id aqui.
+[[kv_namespaces]]
+binding = "CARTEIRA_KV"
+id = "COLE_AQUI_O_ID_DO_KV"
+
+[vars]
+# Endereço(s) onde o app está publicado, separados por vírgula (ex.: https://carteira-jf.pages.dev)
+ORIGENS = ""
+# Modelo da IA. Padrão: claude-opus-5-5. Mais barato: claude-haiku-5-5.
+IA_MODELO = "claude-opus-5-5"
+# Limites de uso da IA (protegem a conta de custo surpresa)
+IA_LIMITE_DIA = "40"
+IA_TETO_DIA = "300"
+# Chave PÚBLICA dos lembretes (gerada por: node ferramentas/gerar_vapid.js). A privada vai em segredo.
+VAPID_PUBLIC_KEY = ""
+# Contato exigido pelos serviços de push (pode ser um e-mail seu ou o site do app)
+VAPID_CONTATO = "mailto:troque@exemplo.com"
+
+# Segredos (NUNCA aqui; use: npx wrangler secret put NOME):
+#   ANTHROPIC_API_KEY   chave da API da Anthropic
+#   VAPID_PRIVATE_JWK   chave privada dos lembretes (saída do gerar_vapid.js)
