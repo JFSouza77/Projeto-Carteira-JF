@@ -17,7 +17,7 @@ Janelas de trabalho: o que o JF marcar e **toda sexta das 06h às 09h** (Brasíl
 
 ## Para sexta, 06/11 (06h às 09h) e seguintes
 
-- [ ] **Mercado financeiro:** bolsa, dólar, euro e moedas principais, atualizado todo dia na abertura da bolsa (10h).
+- [x] **Mercado financeiro** (C.A.O.S. 1.3.0, adiantado na quinta 05/11; começa a chegar quando o JF publicar o servidor): bolsa, dólar, euro e moedas principais, atualizado todo dia na abertura da bolsa (10h).
   Este ambiente não alcança APIs de mercado, então o **servidor (Cloudflare Worker) busca sozinho num cron às 10h**
   e o app guarda offline (o JF aprovou esse caminho). O C.A.O.S. analisa com base de cálculo (variação, média dos
   últimos dias), em tom de dica/apoio, sempre avisando que não é recomendação de investimento e pode errar, e diz

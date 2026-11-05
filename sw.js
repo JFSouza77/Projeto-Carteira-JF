@@ -1,6 +1,6 @@
 // Service worker: app shell em cache para funcionar offline + lembretes.
 // Mudou algum arquivo abaixo? Suba CACHE_VERSION.
-const CACHE_VERSION = 'v5';
+const CACHE_VERSION = 'v6';
 const CACHE = `carteira-jf-${CACHE_VERSION}`;
 const APP_SHELL = [
   './',
@@ -13,6 +13,7 @@ const APP_SHELL = [
   './js/imagens.js',
   './js/ia.js',
   './js/notificacoes.js',
+  './js/mercado.js',
   './js/caos/index.js',
   './js/caos/espinha.js',
   './js/caos/emocoes.js',

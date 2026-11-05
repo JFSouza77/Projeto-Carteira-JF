@@ -893,6 +893,21 @@ Object.assign(GERADORES, {
   },
 });
 
+Object.assign(GERADORES, {
+  aviso_mercado: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Lembrando: é uma leitura dos últimos dias, não uma previsão garantida nem recomendação de investimento.',
+        'Isso é apoio com base nos números recentes. O mercado pode virar a qualquer hora, então decide com calma.',
+        'Eu calculo com o que já aconteceu; o futuro ninguém garante. Não é recomendação de investimento.',
+        'Use como dica, não como certeza: eu sou uma IA de bolso, não um consultor de investimentos.',
+        'Base de cálculo: variação e médias dos últimos dias. Pode errar, e não substitui um profissional.',
+      ],
+    },
+  },
+});
+
 // Pedaços com o nome da pessoa (só saem quando ela disse o nome no primeiro acesso)
 GERADORES.boas_vindas.abre.temNome = ['Oi, {nome}!', 'E aí, {nome}?', 'Bem-vindo de volta, {nome}.', 'Que bom te ver, {nome}.', 'Olá, {nome}!'];
 GERADORES.boas_vindas.abre.tratamento_formal = ['Olá, {nome}. Seja bem-vindo.', 'Bom te ver novamente, {nome}.', 'Olá, {nome}. À disposição.', 'Seja bem-vindo, {nome}.', 'Olá, {nome}. Vamos às contas?'];
@@ -922,4 +937,9 @@ export const SUGESTOES = Object.freeze([
   'Cabe no mês?',
   'Posso comprar algo de 200?',
   'Qual é o meu nome?',
+  'Como está o dólar?',
+  'A bolsa tende a subir?',
+  'Qual a Selic?',
+  'Como está o mercado?',
+  'Vale investir em dólar?',
 ]);

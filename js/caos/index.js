@@ -165,9 +165,15 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   const intencao = entender(texto, d);
   mem = { ...mem, emocoes: sentir(mem.emocoes, EVENTO_DA_INTENCAO[intencao.intent] || 'pergunta', now) };
   const emocao = emocaoAtual(mem.emocoes, humor, now);
-  const resp = responder(intencao, d, { today: today || toISODate(new Date(now)), emocao: rostoDe(emocao).nome, perfil });
+  const resp = responder(intencao, d, { today: today || toISODate(new Date(now)), emocao: rostoDe(emocao).nome, perfil, now });
 
   let fato = resp.fato;
+  if (resp.aviso && fato) {
+    // mercado: sempre com o lembrete de que é apoio, não recomendação
+    const av = montar('aviso_mercado', {}, { humor, emocao, mem, now, rng, perfil });
+    mem = { ...mem, gerador: av.gerador };
+    fato = `${fato} ${av.texto}`;
+  }
   if (resp.alertas && resp.alertas.length) {
     // o principal alerta vira fala completa do gerador; os outros viram lista curta
     const principal = montar(resp.alertas[0].type, varsDoEvento(resp.alertas[0]), { humor, emocao, mem, now, rng, perfil });

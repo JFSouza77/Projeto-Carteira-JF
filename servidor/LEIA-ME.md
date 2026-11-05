@@ -5,6 +5,9 @@ lembretes no Android (pelo navegador). Com ele, o app também tem:
 
 - **IA online:** lê foto de comprovante e responde perguntas que a conversa offline não entende.
 - **Lembretes no iPhone** (e no horário exato no Android).
+- **Mercado financeiro:** todo dia útil, depois das 10h05 (Brasília), o servidor busca sozinho dólar, euro, libra,
+  peso argentino, bitcoin, Ibovespa, Selic, CDI e IPCA em fontes públicas e gratuitas (AwesomeAPI, Yahoo Finance e
+  Banco Central). O app baixa quando tem internet e guarda pra usar offline. Não precisa de chave nenhuma.
 
 ## O que passa pelo servidor
 
@@ -13,6 +16,7 @@ lembretes no Android (pelo navegador). Com ele, o app também tem:
 | Pergunta livre | A pergunta e os **totais** do mês (por categoria, entradas, saldo somado) | Lista de gastos, descrições, datas, nome de banco |
 | Foto | A foto, só quando você toca em "Ler com IA" | Nada fica guardado no servidor |
 | Lembrete | A inscrição de push do aparelho e o horário | Nenhum dado financeiro: o servidor manda um "toque" vazio e o texto é montado no próprio celular |
+| Mercado | Nada: o app só baixa o resumo público do dia | Seus dados não saem do aparelho |
 
 ## Publicar (uma vez só, uns 15 minutos)
 

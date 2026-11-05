@@ -14,7 +14,8 @@
  *   GET  /push/chave      → { chave } (chave pública VAPID)
  *   POST /push/inscrever  → { inscricao, hora "HH:MM", fuso }
  *   POST /push/sair       → { endpoint }
- *   cron (15 em 15 min)   → manda os lembretes do horário
+ *   GET  /mercado         → resumo do mercado (moedas, Ibovespa, Selic, CDI, IPCA) guardado no KV
+ *   cron (15 em 15 min)   → manda os lembretes do horário e, em dia útil depois das 10h, atualiza o mercado
  *
  * Segredos (npx wrangler secret put NOME): ANTHROPIC_API_KEY, VAPID_PRIVATE_JWK.
  * Variáveis (wrangler.toml): ORIGENS, IA_MODELO, IA_LIMITE_DIA, IA_TETO_DIA, VAPID_PUBLIC_KEY, VAPID_CONTATO.
@@ -22,6 +23,7 @@
  */
 import Anthropic from '@anthropic-ai/sdk';
 import { resumoIdentidade } from '../js/caos/identidade.js';
+import { analisarSerie, MOEDAS } from '../js/mercado.js';
 
 const MODELO_PADRAO = 'claude-opus-5-5';
 const MAX_CORPO = 6 * 1024 * 1024; // foto já chega comprimida pelo app (~300 KB)
@@ -305,6 +307,88 @@ async function mandarLembretes(env, data = new Date()) {
   return { enviados };
 }
 
+// ---------------------------------------------------------------- Mercado (todo dia útil às 10h, Brasília)
+// Fontes públicas e gratuitas. Se uma falhar, as outras seguem (o resumo diz o que veio).
+const FONTES = {
+  moedas: 'https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,GBP-BRL,ARS-BRL,BTC-BRL',
+  historico: m => `https://economia.awesomeapi.com.br/json/daily/${m}-BRL/21`,
+  ibov: 'https://query1.finance.yahoo.com/v8/finance/chart/%5EBVSP?range=2mo&interval=1d',
+  sgs: (serie, n = 1) => `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${serie}/dados/ultimos/${n}?formato=json`,
+};
+const SERIES_BC = { selic: 432, cdi: 4389, ipca12: 13522 };
+
+async function baixarJson(url, f) {
+  const r = await f(url, { headers: { accept: 'application/json', 'user-agent': 'CarteiraJF/1.0 (app pessoal de finanças)' } });
+  if (!r.ok) throw new Error(`${r.status}`);
+  return r.json();
+}
+
+/** Busca tudo e monta o resumo. `f` = fetch (trocado nos testes). */
+export async function buscarMercado(f = fetch, agora = new Date()) {
+  const resumo = { atualizadoEm: agora.toISOString(), fonte: 'AwesomeAPI, Yahoo Finance e Banco Central', moedas: {}, falhas: [] };
+  try {
+    const ult = await baixarJson(FONTES.moedas, f);
+    await Promise.all(Object.keys(MOEDAS).map(async m => {
+      const q = ult[`${m}BRL`];
+      if (!q) return;
+      let serie = [];
+      try {
+        const h = await baixarJson(FONTES.historico(m), f);
+        serie = h.map(x => Number(x.bid)).reverse(); // a API devolve do mais novo pro mais velho
+      } catch { /* sem histórico: só o valor do dia */ }
+      const a = analisarSerie(serie, { atual: Number(q.bid) });
+      if (a) resumo.moedas[m] = { ...MOEDAS[m], ...a, varDia: Number(q.pctChange) || a.varDia, em: q.create_date };
+    }));
+  } catch (e) { resumo.falhas.push(`moedas (${e.message})`); }
+  try {
+    const y = await baixarJson(FONTES.ibov, f);
+    const closes = (y.chart?.result?.[0]?.indicators?.quote?.[0]?.close || []).filter(Number.isFinite);
+    const atual = y.chart?.result?.[0]?.meta?.regularMarketPrice;
+    const a = analisarSerie(closes, { atual: Number.isFinite(atual) ? atual : undefined });
+    if (a) resumo.ibov = { nome: 'Ibovespa', ...a };
+    else resumo.falhas.push('ibovespa (sem dados)');
+  } catch (e) { resumo.falhas.push(`ibovespa (${e.message})`); }
+  await Promise.all(Object.entries(SERIES_BC).map(async ([k, serie]) => {
+    try {
+      const [x] = await baixarJson(FONTES.sgs(serie), f);
+      resumo[k] = { valor: Number(String(x.valor).replace(',', '.')), data: x.data };
+    } catch (e) { resumo.falhas.push(`${k} (${e.message})`); }
+  }));
+  return resumo;
+}
+
+export function horaDeAtualizar(agora = new Date()) {
+  const { dia, minutos } = agoraNoFuso('America/Sao_Paulo', agora);
+  const semana = new Date(`${dia}T12:00:00Z`).getUTCDay();
+  return { dia, pode: semana >= 1 && semana <= 5 && minutos >= 10 * 60 + 5 };
+}
+
+/** Atualiza o mercado uma vez por dia útil, depois das 10h05 (o cron chama de 15 em 15 min). */
+async function atualizarMercadoSeHora(env, agora = new Date(), f = fetch) {
+  if (!env.CARTEIRA_KV) return null;
+  const { dia, pode } = horaDeAtualizar(agora);
+  if (!pode || (await env.CARTEIRA_KV.get('mercado:dia')) === dia) return null;
+  const resumo = await buscarMercado(f, agora);
+  if (Object.keys(resumo.moedas).length || resumo.ibov || resumo.selic) {
+    await env.CARTEIRA_KV.put('mercado:resumo', JSON.stringify(resumo));
+    await env.CARTEIRA_KV.put('mercado:dia', dia);
+  }
+  return resumo;
+}
+
+async function mercadoRota(env, f = fetch) {
+  if (!env.CARTEIRA_KV) throw new ErroHttp(503, 'Mercado não configurado no servidor.');
+  let resumo = JSON.parse((await env.CARTEIRA_KV.get('mercado:resumo')) || 'null');
+  // primeira vez (ainda sem dado): tenta buscar agora, no máximo uma vez por hora
+  if (!resumo && !(await env.CARTEIRA_KV.get('mercado:tentativa'))) {
+    await env.CARTEIRA_KV.put('mercado:tentativa', '1', { expirationTtl: 3600 });
+    resumo = await buscarMercado(f);
+    if (Object.keys(resumo.moedas).length || resumo.ibov) await env.CARTEIRA_KV.put('mercado:resumo', JSON.stringify(resumo));
+  }
+  if (!resumo) throw new ErroHttp(503, 'Ainda sem dados do mercado. Tenta de novo mais tarde.');
+  return resumo;
+}
+
 // ---------------------------------------------------------------- roteador
 export default {
   async fetch(req, env) {
@@ -320,6 +404,7 @@ export default {
         throw new ErroHttp(origensPermitidas(env).length ? 403 : 503,
           origensPermitidas(env).length ? 'Origem não autorizada.' : 'Configure ORIGENS no wrangler.toml com o endereço do app.');
       }
+      if (req.method === 'GET' && url.pathname === '/mercado') return json(await mercadoRota(env), 200, h);
       if (req.method === 'GET' && url.pathname === '/push/chave') {
         if (!env.VAPID_PUBLIC_KEY) throw new ErroHttp(503, 'Lembretes não configurados no servidor.');
         return json({ chave: env.VAPID_PUBLIC_KEY }, 200, h);
@@ -341,8 +426,8 @@ export default {
   },
 
   async scheduled(_evento, env, ctx) {
-    ctx.waitUntil(mandarLembretes(env));
+    ctx.waitUntil(Promise.allSettled([mandarLembretes(env), atualizarMercadoSeHora(env)]));
   },
 };
 
-export { mandarLembretes, endpointValido };
+export { mandarLembretes, endpointValido, atualizarMercadoSeHora, mercadoRota };

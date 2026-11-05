@@ -38,11 +38,12 @@ const state = {
   perfil: null, // { nome, apelido, tratamento, foco[] } (primeiro acesso)
   onboarding: null, // { passo, dados } enquanto o C.A.O.S. está conhecendo a pessoa
   catSugerida: false,
+  mercado: null, // resumo do mercado vindo do servidor (guardado pra usar offline)
 };
 
 const dados = () => ({
   expenses: state.expenses, incomes: state.incomes, categories: state.categories, accounts: state.accounts,
-  compromissos: state.compromissos, planos: state.planos,
+  compromissos: state.compromissos, planos: state.planos, mercado: state.mercado,
 });
 const catById = id => state.categories.find(c => c.id === id);
 const srcById = id => INCOME_SOURCES.find(s => s.id === id);
@@ -973,6 +974,18 @@ function sugerirPelaDescricao() {
   aviso.hidden = false;
 }
 
+/** Mercado: o servidor atualiza todo dia útil às 10h; o app baixa quando tem internet e guarda pra usar offline. */
+async function atualizarMercado() {
+  if (!state.settings.aiUrl || !navigator.onLine) return;
+  try {
+    const m = await ia.baixarMercado(state.settings.aiUrl);
+    if (m?.atualizadoEm && m.atualizadoEm !== state.mercado?.atualizadoEm) {
+      state.mercado = m;
+      await db.setMeta('mercado', m);
+    }
+  } catch { /* sem servidor ou sem dado ainda: o C.A.O.S. usa o último guardado */ }
+}
+
 function toast(msg) {
   const t = $('#toast');
   t.textContent = msg;
@@ -1158,7 +1171,7 @@ async function init() {
       db.getAll(db.STORES.planos),
       db.getMeta('perfil'),
     ]);
-    Object.assign(state, { compromissos, planos, perfil: perfil || null });
+    Object.assign(state, { compromissos, planos, perfil: perfil || null, mercado: await db.getMeta('mercado') });
     if (cats.length === 0) {
       state.categories = DEFAULT_CATEGORIES.map(c => ({ ...c }));
       await db.putMany(db.STORES.categories, state.categories);
@@ -1196,6 +1209,8 @@ async function init() {
 
   db.requestPersistence();
   limparFotosOrfas();
+  atualizarMercado();
+  window.addEventListener('online', atualizarMercado);
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW não registrado', err));
   }

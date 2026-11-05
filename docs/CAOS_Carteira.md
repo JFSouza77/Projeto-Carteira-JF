@@ -48,6 +48,14 @@ não dava pra copiar direto: vieram as **ideias e os motores**, reescritos para 
 | `plano_do_mes` | Plano que se repete (ex.: comida japonesa a cada 2 meses) é deste mês |
 | `confira_banco` | Saldo de uma conta sem atualizar há 7 dias ou mais ("isso eu não consigo fazer por você") |
 
+## Mercado (1.3.0)
+
+O servidor busca as cotações todo dia útil às 10h (`servidor/worker.js`, `buscarMercado`) e calcula, com
+`js/mercado.js`, a variação do dia e de 5 dias, a média de 5 e de 20 dias e a tendência (alta, queda ou estável). O
+app baixa e guarda em `meta/mercado`. O C.A.O.S. responde "como está o dólar?", "a bolsa tende a subir?", "qual a
+Selic?", "vale investir em dólar?" mostrando a conta, a data do dado e sempre um aviso (balde `aviso_mercado`) de que é
+apoio, não recomendação. No "vale investir?", compara com o CDI e lembra da reserva de emergência.
+
 ## Conhecer a pessoa (1.3.0)
 
 No primeiro acesso ele pergunta o nome, como a pessoa quer ser chamada, se prefere jeito descontraído ou formal e no

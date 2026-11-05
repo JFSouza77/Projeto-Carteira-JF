@@ -65,3 +65,8 @@ export async function lerImagem(base, { base64, categorias }) {
 }
 
 export { chamar };
+
+/** Resumo do mercado que o servidor atualiza todo dia útil às 10h (o app guarda pra usar offline). */
+export function baixarMercado(base) {
+  return chamar(base, '/mercado');
+}

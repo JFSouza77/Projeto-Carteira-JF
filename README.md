@@ -18,6 +18,7 @@ os gastos e avisa quando um orçamento aperta, sem nunca alterar os dados.
 - **Planejamento do mês (aba 📅 Mês):** compromissos (contas fixas, faturas, assinaturas e planos que se repetem a
   cada N meses), planos de compra do mês e a sobra prevista; o C.A.O.S. avisa vencimentos e diz se cabe
 - **Primeiro acesso:** o C.A.O.S. pergunta seu nome e como quer ser tratado, e aprende suas categorias pelo histórico
+- **Mercado:** dólar, euro, bolsa, Selic e CDI atualizados todo dia útil às 10h pelo servidor, guardados pra usar offline
 - **Lembretes** para anotar os gastos
 - **IA online opcional** (servidor próprio no Cloudflare): lê foto de comprovante e responde perguntas livres
 - Offline, instala na tela inicial, backup em JSON
