@@ -1,0 +1,41 @@
+{
+  "sobre": "Molde do arquivo de família do C.A.O.S. Cada projeto preenche o seu (fora do código e, se tiver dado de outra pessoa, fora do repositório público). Nome de criança da família nunca vai no código: vem daqui, com o nick que a própria pessoa usa. Os comparativos são feitos sem acento e em minúsculas.",
+  "versao": 1,
+  "pessoas": [
+    {
+      "id": "jf",
+      "papel": "criador",
+      "nome": "João Fernando",
+      "chamarDe": "JF",
+      "nicks": ["JF", "TGP", "JF77", "TGP77"],
+      "jeito": "implicância carinhosa de criatura com criador; pode brincar que os bugs são culpa dele",
+      "humorPadrao": "normal",
+      "permissoes": { "zoar": true, "dicas": true, "sugestoes": true, "analises": true, "falarSozinho": true, "voz": true },
+      "piadasPorSessao": 5
+    },
+    {
+      "id": "exemplo_familia",
+      "papel": "familia",
+      "nome": "(preencher no projeto)",
+      "chamarDe": "(como a pessoa gosta)",
+      "nicks": ["(nick 1)", "(nick 2)"],
+      "idade": "crianca",
+      "jeito": "carinho e incentivo; zoeira só de levinho",
+      "humorPadrao": "familia",
+      "permissoes": { "zoar": false, "dicas": true, "sugestoes": false, "analises": false, "falarSozinho": true, "voz": true },
+      "piadasPorSessao": 3
+    },
+    {
+      "id": "exemplo_amigo",
+      "papel": "amigo",
+      "nome": "(preencher no projeto)",
+      "chamarDe": "(nick)",
+      "nicks": ["(nick)"],
+      "idade": "adulto",
+      "jeito": "piadas internas, com limite por sessão",
+      "humorPadrao": "normal",
+      "permissoes": { "zoar": true, "dicas": true, "sugestoes": true, "analises": false, "falarSozinho": true, "voz": true },
+      "piadasPorSessao": 4
+    }
+  ]
+}
