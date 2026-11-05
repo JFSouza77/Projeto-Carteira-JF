@@ -17,80 +17,196 @@
   <script type="module" src="./js/app.js"></script>
 </head>
 <body>
-  <header class="topbar">
-    <button class="icon-btn" id="prev-month" aria-label="Mês anterior">‹</button>
-    <h1 id="month-label">…</h1>
-    <button class="icon-btn" id="next-month" aria-label="Próximo mês">›</button>
-  </header>
-
-  <main>
-    <section class="card summary" aria-live="polite">
-      <p class="label">Gasto no mês</p>
-      <p class="big" id="total">R$ 0,00</p>
-      <div class="bar" id="total-bar-wrap" hidden><div class="bar-fill" id="total-bar"></div></div>
-      <p class="muted" id="total-sub">Defina orçamentos para ver quanto ainda pode gastar.</p>
-    </section>
-
-    <section class="caos" id="caos" aria-live="polite">
-      <div class="caos-eye" aria-hidden="true"><span></span></div>
-      <div class="caos-body">
-        <p class="caos-name">C.A.O.S.</p>
-        <p class="caos-line" id="caos-line">Iniciando…</p>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Novo gasto</h2>
-      <form id="expense-form" autocomplete="off" novalidate>
-        <label class="amount">
-          <span>R$</span>
-          <input id="amount" name="amount" type="text" inputmode="decimal" placeholder="0,00" aria-label="Valor" required>
-        </label>
-        <div class="chips" id="category-chips" role="radiogroup" aria-label="Categoria"></div>
-        <div class="row">
-          <input id="note" name="note" type="text" maxlength="120" placeholder="Descrição" aria-label="Descrição">
-          <input id="date" name="date" type="date" aria-label="Data">
+  <!-- ============ INÍCIO ============ -->
+  <section class="tela" id="tela-inicio" data-tela="inicio">
+    <header class="topbar">
+      <button class="icon-btn" id="prev-month" aria-label="Mês anterior">‹</button>
+      <h1 id="month-label">…</h1>
+      <button class="icon-btn" id="next-month" aria-label="Próximo mês">›</button>
+    </header>
+    <main>
+      <section class="card summary" aria-live="polite">
+        <p class="label">Gasto no mês</p>
+        <p class="big" id="total">R$ 0,00</p>
+        <div class="bar" id="total-bar-wrap" hidden><div class="bar-fill" id="total-bar"></div></div>
+        <p class="muted" id="total-sub">Defina orçamentos para ver quanto ainda pode gastar.</p>
+        <div class="mini-stats">
+          <div><small>Entradas</small><strong class="num ok" id="stat-in">R$ 0,00</strong></div>
+          <div><small>Saldo do mês</small><strong class="num" id="stat-net">R$ 0,00</strong></div>
+          <div><small>Nas contas</small><strong class="num" id="stat-bank">—</strong></div>
         </div>
-        <p class="error" id="form-error" role="alert" hidden></p>
-        <button class="primary" type="submit">Adicionar</button>
-      </form>
-    </section>
+      </section>
 
-    <section class="card">
-      <h2>Por categoria</h2>
-      <ul class="cat-list" id="cat-list"></ul>
-    </section>
+      <button class="caos" id="caos" aria-live="polite" type="button" aria-label="Conversar com o C.A.O.S.">
+        <div class="caos-eye" aria-hidden="true"><span></span></div>
+        <div class="caos-body">
+          <p class="caos-name">C.A.O.S. <span id="caos-mood"></span></p>
+          <p class="caos-line" id="caos-line">Iniciando…</p>
+        </div>
+      </button>
 
-    <section class="card">
-      <h2>Gastos do mês</h2>
-      <ul class="exp-list" id="exp-list"></ul>
-      <p class="muted" id="exp-empty">Nenhum gasto neste mês.</p>
-    </section>
+      <section class="card" id="alerts-card" hidden>
+        <h2>Alertas</h2>
+        <ul class="alert-list" id="alert-list"></ul>
+      </section>
 
-    <details class="card">
-      <summary><h2>Orçamentos</h2></summary>
-      <p class="muted">Limite mensal por categoria. Deixe vazio para não ter limite.</p>
-      <ul class="budget-list" id="budget-list"></ul>
-    </details>
+      <section class="card">
+        <h2>Por categoria</h2>
+        <ul class="cat-list" id="cat-list"></ul>
+      </section>
 
-    <details class="card">
-      <summary><h2>Ajustes</h2></summary>
-      <fieldset class="mood">
-        <legend>Humor do C.A.O.S.</legend>
-        <div class="segmented" id="mood-options"></div>
-      </fieldset>
-      <label class="switch">
-        <input type="checkbox" id="voice-toggle">
-        <span>Voz do C.A.O.S.</span>
-      </label>
-      <div class="backup">
-        <p class="muted">Seus dados ficam só neste aparelho. Faça backup de vez em quando.</p>
-        <button type="button" id="export-btn">Exportar backup</button>
-        <label class="file-btn">Importar backup<input type="file" id="import-input" accept="application/json,.json" hidden></label>
-      </div>
-      <p class="muted small" id="install-hint"></p>
-    </details>
-  </main>
+      <section class="card">
+        <h2>Lançamentos do mês</h2>
+        <ul class="exp-list" id="exp-list"></ul>
+        <p class="muted" id="exp-empty">Nenhum lançamento neste mês.</p>
+      </section>
+    </main>
+  </section>
+
+  <!-- ============ LANÇAR ============ -->
+  <section class="tela" id="tela-lancar" data-tela="lancar" hidden>
+    <header class="topbar"><h1>Lançar</h1></header>
+    <main>
+      <section class="card">
+        <div class="segmented two" role="tablist" aria-label="Tipo de lançamento">
+          <label><input type="radio" name="kind" value="gasto" checked><span>💸 Gasto</span></label>
+          <label><input type="radio" name="kind" value="entrada"><span>💰 Entrada</span></label>
+        </div>
+        <form id="entry-form" autocomplete="off" novalidate>
+          <label class="amount">
+            <span>R$</span>
+            <input id="amount" name="amount" type="text" inputmode="decimal" placeholder="0,00" aria-label="Valor" required>
+          </label>
+          <div class="chips" id="category-chips" role="radiogroup" aria-label="Categoria"></div>
+          <div class="row">
+            <input id="note" name="note" type="text" maxlength="120" placeholder="Descrição" aria-label="Descrição">
+            <input id="date" name="date" type="date" aria-label="Data">
+          </div>
+          <label class="field" id="account-field" hidden>
+            <span>Conta</span>
+            <select id="account-select" aria-label="Conta"></select>
+          </label>
+          <div class="photo-row">
+            <label class="file-btn">📷 Foto do comprovante<input type="file" id="photo-input" accept="image/*" hidden></label>
+            <button type="button" class="ghost" id="photo-ai" hidden>✨ Ler com IA</button>
+          </div>
+          <div class="photo-preview" id="photo-preview" hidden>
+            <img id="photo-img" alt="Foto anexada">
+            <button type="button" class="icon-btn del" id="photo-remove" aria-label="Remover foto">×</button>
+          </div>
+          <p class="error" id="form-error" role="alert" hidden></p>
+          <button class="primary" type="submit" id="submit-btn">Adicionar gasto</button>
+        </form>
+      </section>
+    </main>
+  </section>
+
+  <!-- ============ C.A.O.S. (conversa) ============ -->
+  <section class="tela" id="tela-conversa" data-tela="conversa" hidden>
+    <header class="topbar chat-top">
+      <div class="caos-eye small" aria-hidden="true"><span></span></div>
+      <h1>C.A.O.S. <small id="chat-mood" class="muted"></small></h1>
+      <button class="icon-btn" id="chat-clear" aria-label="Limpar conversa">🧹</button>
+    </header>
+    <main class="chat">
+      <ol class="chat-log" id="chat-log" aria-live="polite"></ol>
+      <div class="chips scroll" id="chat-suggestions"></div>
+    </main>
+    <form class="chat-bar" id="chat-form" autocomplete="off">
+      <label class="icon-btn" aria-label="Mandar foto">📎<input type="file" id="chat-photo" accept="image/*" hidden></label>
+      <input id="chat-input" type="text" placeholder="Pergunte ao C.A.O.S.…" aria-label="Mensagem" maxlength="500" enterkeyhint="send">
+      <button type="button" class="icon-btn" id="chat-mic" aria-label="Falar" hidden>🎤</button>
+      <button type="submit" class="icon-btn send" aria-label="Enviar">➤</button>
+    </form>
+  </section>
+
+  <!-- ============ CONTAS ============ -->
+  <section class="tela" id="tela-contas" data-tela="contas" hidden>
+    <header class="topbar"><h1>Contas</h1></header>
+    <main>
+      <section class="card summary">
+        <p class="label">Saldo estimado total</p>
+        <p class="big" id="bank-total">R$ 0,00</p>
+        <p class="muted small">O app não acessa seu banco. O saldo é o que você informa, mais o que foi lançado na conta depois disso. Confira no app do banco de vez em quando e atualize aqui.</p>
+      </section>
+      <ul class="account-list" id="account-list"></ul>
+      <section class="card">
+        <h2>Adicionar conta</h2>
+        <form id="account-form" autocomplete="off" novalidate>
+          <label class="field"><span>Banco</span><select id="bank-select" aria-label="Banco"></select></label>
+          <input id="bank-nick" type="text" maxlength="30" placeholder="Apelido (opcional, ex.: conta salário)" aria-label="Apelido">
+          <label class="field"><span>Saldo atual (como está no app do banco)</span>
+            <span class="amount small"><span>R$</span><input id="bank-balance" type="text" inputmode="decimal" placeholder="0,00" aria-label="Saldo atual"></span></label>
+          <p class="error" id="account-error" role="alert" hidden></p>
+          <button class="primary" type="submit">Adicionar conta</button>
+        </form>
+      </section>
+    </main>
+  </section>
+
+  <!-- ============ AJUSTES ============ -->
+  <section class="tela" id="tela-ajustes" data-tela="ajustes" hidden>
+    <header class="topbar"><h1>Ajustes</h1></header>
+    <main>
+      <details class="card" open>
+        <summary><h2>C.A.O.S.</h2></summary>
+        <fieldset class="mood">
+          <legend>Humor</legend>
+          <div class="segmented" id="mood-options"></div>
+        </fieldset>
+        <label class="switch"><input type="checkbox" id="voice-toggle"><span>Voz do C.A.O.S.</span></label>
+        <p class="muted small" id="caos-version"></p>
+      </details>
+
+      <details class="card">
+        <summary><h2>Orçamentos</h2></summary>
+        <p class="muted">Limite mensal por categoria. Deixe vazio para não ter limite.</p>
+        <ul class="budget-list" id="budget-list"></ul>
+      </details>
+
+      <details class="card">
+        <summary><h2>Lembretes</h2></summary>
+        <label class="switch"><input type="checkbox" id="remind-toggle"><span>Lembrar de anotar os gastos</span></label>
+        <label class="field"><span>Horário</span><input type="time" id="remind-time" value="20:30"></label>
+        <p class="muted small" id="remind-status"></p>
+        <button type="button" class="ghost" id="remind-test">Testar notificação</button>
+      </details>
+
+      <details class="card">
+        <summary><h2>IA online</h2></summary>
+        <p class="muted small">Opcional. Com o servidor do projeto, o C.A.O.S. lê fotos de comprovante e responde perguntas livres. Na conversa vão só totais por categoria (nunca a lista de gastos). A foto só vai quando você toca em "Ler com IA". O servidor também envia os lembretes do iPhone.</p>
+        <label class="switch"><input type="checkbox" id="ai-toggle"><span>Usar IA online</span></label>
+        <input id="ai-url" type="url" inputmode="url" placeholder="https://carteira-jf.SEU-USUARIO.workers.dev" aria-label="Endereço do servidor">
+        <div class="backup">
+          <button type="button" class="ghost" id="ai-test">Testar conexão</button>
+          <span class="muted small" id="ai-status"></span>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary><h2>Backup</h2></summary>
+        <div class="backup">
+          <p class="muted">Seus dados ficam só neste aparelho. Faça backup de vez em quando (as fotos não entram no backup).</p>
+          <button type="button" id="export-btn">Exportar backup</button>
+          <label class="file-btn">Importar backup<input type="file" id="import-input" accept="application/json,.json" hidden></label>
+        </div>
+        <p class="muted small" id="install-hint"></p>
+      </details>
+    </main>
+  </section>
+
+  <nav class="tabbar" aria-label="Navegação">
+    <a href="#inicio" data-tab="inicio" aria-current="page"><span aria-hidden="true">🏠</span>Início</a>
+    <a href="#lancar" data-tab="lancar"><span aria-hidden="true">➕</span>Lançar</a>
+    <a href="#conversa" data-tab="conversa"><span aria-hidden="true">💬</span>C.A.O.S.</a>
+    <a href="#contas" data-tab="contas"><span aria-hidden="true">🏦</span>Contas</a>
+    <a href="#ajustes" data-tab="ajustes"><span aria-hidden="true">⚙️</span>Ajustes</a>
+  </nav>
+
+  <dialog id="photo-dialog" class="photo-dialog">
+    <img id="photo-dialog-img" alt="Foto do comprovante">
+    <form method="dialog"><button class="primary">Fechar</button></form>
+  </dialog>
 
   <div class="toast" id="toast" role="status" hidden></div>
 </body>

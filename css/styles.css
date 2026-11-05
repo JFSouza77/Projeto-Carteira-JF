@@ -12,6 +12,7 @@
   --warn: #ffb020;
   --danger: #ff4d4d;
   --radius: 16px;
+  --eye: var(--caos); /* cor do olho do C.A.O.S.: muda com a emoção */
   color-scheme: dark;
 }
 
@@ -22,7 +23,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) calc(env(safe-area-inset-bottom) + 24px) env(safe-area-inset-left);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) calc(env(safe-area-inset-bottom) + 84px) env(safe-area-inset-left);
   -webkit-tap-highlight-color: transparent;
 }
 main { max-width: 560px; margin: 0 auto; padding: 0 16px; display: grid; gap: 14px; }
@@ -35,7 +36,7 @@ small, .small { font-size: .8rem; }
 
 button, input { font: inherit; color: inherit; }
 button { cursor: pointer; }
-input[type="text"], input[type="date"] {
+input[type="text"], input[type="date"], input[type="url"], input[type="time"], select {
   background: var(--card-2);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -73,6 +74,7 @@ details.card[open] > summary h2::after { content: "－"; }
 
 /* C.A.O.S. */
 .caos {
+  width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer;
   display: flex; gap: 12px; align-items: center;
   padding: 14px 16px; border-radius: var(--radius);
   background: linear-gradient(135deg, #1b1020, #14161f);
@@ -87,8 +89,8 @@ details.card[open] > summary h2::after { content: "－"; }
   display: grid; place-items: center; box-shadow: 0 0 18px #ff3d7f55;
 }
 .caos-eye span {
-  width: 14px; height: 14px; border-radius: 50%; background: var(--caos);
-  box-shadow: 0 0 10px var(--caos); animation: blink 5s infinite;
+  width: 14px; height: 14px; border-radius: 50%; background: var(--eye, var(--caos));
+  box-shadow: 0 0 10px var(--eye, var(--caos)); animation: blink 5s infinite; transition: background .4s;
 }
 @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
 .caos-name { margin: 0; font-size: .72rem; letter-spacing: .16em; color: var(--caos); font-weight: 700; }
@@ -155,7 +157,99 @@ fieldset.mood legend { color: var(--muted); margin-bottom: 8px; padding: 0; }
 }
 
 .toast {
-  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 20px); transform: translateX(-50%);
-  background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 99px; font-weight: 600;
-  max-width: calc(100% - 32px); z-index: 10;
+  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 84px); transform: translateX(-50%);
+  background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 16px; font-weight: 600;
+  width: max-content; max-width: min(calc(100% - 32px), 520px); text-align: center; z-index: 10;
+  box-shadow: 0 6px 24px #0008;
 }
+
+/* ---------- Telas e abas ---------- */
+.tela[hidden] { display: none; }
+.topbar h1 small { font-weight: 400; }
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 8;
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  background: color-mix(in srgb, var(--card) 94%, transparent); backdrop-filter: blur(10px);
+  border-top: 1px solid var(--line);
+  padding: 6px max(8px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+}
+.tabbar a {
+  display: grid; justify-items: center; gap: 2px; padding: 4px 0; border-radius: 10px;
+  color: var(--muted); text-decoration: none; font-size: .72rem;
+}
+.tabbar a span { font-size: 1.25rem; line-height: 1; }
+.tabbar a[aria-current="page"] { color: var(--accent); background: var(--card-2); }
+
+select { appearance: none; -webkit-appearance: none; }
+.field { display: grid; gap: 6px; }
+.field > span { color: var(--muted); font-size: .9rem; }
+.ghost {
+  border: 1px solid var(--line); background: var(--card-2); border-radius: 10px; padding: 10px 14px;
+}
+.ok { color: var(--ok); }
+.bad { color: var(--danger); }
+
+.mini-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+.mini-stats div { background: var(--card-2); border-radius: 12px; padding: 8px 8px; display: grid; min-width: 0; }
+.mini-stats small { color: var(--muted); font-size: .72rem; }
+.mini-stats strong { font-size: clamp(.74rem, 3.4vw, .95rem); white-space: nowrap; letter-spacing: -.01em; }
+
+.alert-list { display: grid; gap: 8px; }
+.alert-list li { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: var(--card-2); border-left: 4px solid var(--warn); }
+.alert-list li.alta { border-left-color: var(--danger); }
+.alert-list li.baixa { border-left-color: var(--muted); }
+
+.exp-list .entrada .num { color: var(--ok); }
+.thumb-btn { border: 0; background: none; padding: 0; font-size: 1rem; cursor: pointer; }
+
+.segmented.two { grid-template-columns: repeat(2, 1fr); margin-bottom: 14px; }
+.segmented.two input:checked + span { background: var(--accent); color: var(--accent-ink); }
+
+.photo-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.photo-preview { position: relative; width: 120px; }
+.photo-preview img { width: 120px; height: 120px; object-fit: cover; border-radius: 12px; display: block; border: 1px solid var(--line); }
+.photo-preview .del { position: absolute; top: 4px; right: 4px; background: #000a; color: #fff; }
+.photo-dialog { border: 0; border-radius: var(--radius); background: var(--card); color: var(--text); padding: 12px; max-width: min(92vw, 560px); }
+.photo-dialog img { max-width: 100%; max-height: 70vh; display: block; margin: 0 auto 10px; border-radius: 10px; }
+.photo-dialog::backdrop { background: #000c; }
+
+/* ---------- Conversa ---------- */
+.chat-top { justify-content: flex-start; gap: 10px; }
+.chat-top h1 { flex: 1; }
+.caos-eye.small { width: 32px; height: 32px; }
+.caos-eye.small span { width: 10px; height: 10px; }
+.chat { padding-bottom: 130px; }
+.chat-log { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.msg { max-width: 86%; padding: 10px 14px; border-radius: 16px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg.eu { justify-self: end; background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 4px; }
+.msg.caos-msg { justify-self: start; background: var(--card); border: 1px solid #3a1d2c; border-bottom-left-radius: 4px; }
+.msg.caos-msg .who { display: block; font-size: .7rem; letter-spacing: .14em; color: var(--caos); font-weight: 700; margin-bottom: 2px; }
+.msg img { max-width: 180px; border-radius: 10px; display: block; }
+.msg .acao { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.msg .acao button { border: 0; border-radius: 10px; padding: 8px 12px; font-weight: 600; }
+.msg .acao .sim { background: var(--accent); color: var(--accent-ink); }
+.msg .acao .nao { background: var(--card-2); }
+.msg.pensando { opacity: .7; font-style: italic; }
+.chips.scroll { flex-wrap: nowrap; overflow-x: auto; padding: 10px 0 4px; scrollbar-width: none; }
+.chips.scroll::-webkit-scrollbar { display: none; }
+.chips.scroll .chip { flex: none; }
+.chat-bar {
+  position: fixed; left: 0; right: 0; z-index: 7;
+  bottom: calc(env(safe-area-inset-bottom) + 62px);
+  display: flex; gap: 6px; align-items: center; max-width: 560px; margin: 0 auto;
+  padding: 8px 12px; background: var(--bg);
+}
+.chat-bar input[type="text"] { flex: 1; border-radius: 99px; }
+.chat-bar .send { background: var(--accent); color: var(--accent-ink); font-size: 1.1rem; }
+.chat-bar label.icon-btn { display: grid; place-items: center; cursor: pointer; font-size: 1.15rem; }
+.chat-bar #chat-mic.ouvindo { background: var(--caos); }
+
+/* ---------- Contas ---------- */
+.account-list { display: grid; gap: 10px; }
+.account-list li { background: var(--card); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; }
+.account-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.account-head strong { font-size: 1.05rem; }
+.account-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.account-actions button { font-size: .85rem; padding: 6px 10px; }
+#account-form { display: grid; gap: 10px; }
+#tela-ajustes input[type="url"] { margin: 10px 0; }
