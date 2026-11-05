@@ -32,3 +32,48 @@ Janelas de trabalho: o que o JF marcar e **toda sexta das 06h às 09h** (Brasíl
   montou. Usar como base quando chegar.
 - [ ] **Mais funções e análises no app** em geral (ideias em `docs/Ideias.md`).
 - [ ] **Parte 2 pro JF:** passo a passo de publicar o servidor (IA online, lembretes e mercado): `servidor/LEIA-ME.md`.
+
+# Pedidos do JF (05/11/2026, fim da tarde)
+
+Para a janela de **sexta 06/11, 06h às 09h**, e as seguintes. É muita coisa: fazer na ordem e publicar aos pedaços,
+sempre testado.
+
+## 1. Cadastro com idade e um C.A.O.S. que se adapta (prioridade)
+- [ ] **Data de aniversário** no cadastro (a idade sai dela). É o principal: com a idade o C.A.O.S. ajuda a pessoa a
+  se situar nas finanças. Ele lembra do aniversário.
+- [ ] **Jeito de falar por faixa de idade** (sempre respeitando e ajudando, sem se perder):
+  - até 12 anos (criança): mais jovial, brinca um pouco mais;
+  - 13 a 17 (adolescente): brinca um pouco menos, zoa um pouco mais ácido, sem exagero;
+  - 18 a 25 (jovem adulto): brinca menos e orienta mais ("analisando seu perfil, seria bom…", "pesquisa sobre tal
+    tipo de investimento");
+  - adultos: vai variando conforme a idade.
+- [ ] **Metas que ele monta junto**: "você marcou que quer guardar dinheiro: pra quê?" → "pra um show" → quanto
+  custa, quanto já tem, até quando → ele calcula quanto guardar por mês, acompanha e **comemora as conquistas**.
+  Ele planeja a vida financeira com a pessoa e vai acompanhando conforme ela cresce.
+
+## 2. Cérebro de verdade, não bot de roteiro
+- [ ] Ler bem o que a pessoa escreveu e **tentar interpretar** (erro de digitação, jeito de falar, continuação da
+  conversa como "e no mês passado?"), em vez de "não entendi"/"não fui programado". Se não tiver certeza, dar o
+  melhor palpite e perguntar de volta. Respostas específicas pra pessoa, nada genérico.
+- [ ] **Toda pergunta que ele não souber** vai pra fila do servidor ("ainda não sei, mas guardei e mandei pros meus
+  servidores"). Quando a resposta chegar: "Ei, fulano, sabe aquela sua pergunta? Agora eu consigo responder." (com o
+  rostinho dele). Hoje a fila só existe pra "qual banco rende mais".
+- [ ] **"Não entendi o que o banco falou"**: a pessoa manda o print e o C.A.O.S. explica o que aquilo significa (pelo
+  servidor, com a IA). Sem conexão, entra na fila.
+- [ ] Ele **aprende com a pessoa** e evolui com ela.
+- [ ] O JF vai trazer o arquivo da estrutura do C.A.O.S. feita pelo Code do Perfil: usar como base.
+
+## 3. Cartão de crédito
+- [ ] Registrar o cartão (ex.: PicPay com limite de R$ 100): limite, dia de fechamento e de vencimento. O C.A.O.S.
+  ajuda a controlar a fatura (quanto do limite já foi, quanto vem na fatura, quando vence).
+
+## 4. Visual e acessibilidade (como no Perfil)
+- [ ] **Rostinho combinando com a frase**: a emoção do rosto tem que fazer sentido com o que ele está falando, não é
+  enfeite (no Perfil: "a emoção do balão sai do conteúdo da frase", C.A.O.S. 4.4).
+- [ ] Visual **mais minimalista**, com toques de **neon** parecidos com o Perfil, **ícones bonitos** no lugar de
+  emoji (menos poluído), cores e fontes com boa visibilidade, algumas animações e efeitos.
+- [ ] **Acessibilidade** (olhar como o Perfil faz): letra maior, modo claro e escuro, velocidade da fala do C.A.O.S.,
+  menos movimento.
+- [ ] Botão **"Me ajuda" / "Me pergunte"** sempre à mão: "quero adicionar um gasto, como faço?", "quero registrar meu
+  cartão", e o C.A.O.S. guia.
+- [ ] Simples e intuitivo: qualquer pessoa tem que entender o que está acontecendo e o que precisa fazer.
