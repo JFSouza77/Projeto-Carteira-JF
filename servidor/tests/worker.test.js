@@ -163,3 +163,19 @@ test('a IA online usa a mesma identidade do C.A.O.S. do app', async () => {
   assert.match(SISTEMA_CONVERSA, /criado por JF/);
   assert.match(SISTEMA_CONVERSA, /Projeto Perfil JF/);
 });
+
+test('comparar bancos: só nomes e CDI vão pra IA; responde texto', async () => {
+  const api = simularAPI({ texto: 'Pelo que sei, o Nubank paga 100% do CDI. Confira no app.' });
+  try {
+    const r = await worker.fetch(req('/ia/bancos', { bancos: ['Nubank', 'PicPay'], cdi: 10.65, saldo: 99999 }), envBase());
+    assert.equal(r.status, 200);
+    assert.match((await r.json()).texto, /Nubank/);
+    const conteudo = api.chamadas[0].body.messages[0].content;
+    assert.match(conteudo, /Nubank, PicPay/);
+    assert.match(conteudo, /10\.65%/);
+    assert.doesNotMatch(conteudo, /99999/, 'saldo nunca vai pro servidor da IA');
+    assert.match(api.chamadas[0].body.system, /desatualizadas/);
+  } finally {
+    api.restaurar();
+  }
+});

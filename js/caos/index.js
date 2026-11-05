@@ -203,6 +203,7 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
       emocao, rosto: r.rosto,
       sugestoes: resp.sugestoes || (intencao.intent === 'nao_entendi' ? SUGESTOES.slice(0, 5) : []),
       acao: resp.acao || null,
+      filaIA: resp.filaIA || null, // pergunta que precisa do servidor: o app responde agora ou guarda na fila
       entendeu: intencao.intent !== 'nao_entendi',
     },
     memoria: mem,

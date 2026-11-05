@@ -415,7 +415,7 @@ test('mercado: responde com base de cálculo, data do dado e aviso; sem dado exp
   assert.match(dolar, /média dos últimos 20 dias/);
   assert.match(dolar, /em alta/);
   assert.match(dolar, /Atualizado/);
-  assert.match(dolar, /recomendação|garant|certeza|consultor|errar/i);
+  assert.match(dolar, /apoio|recomendação|garant|certeza|consultor|errar/i);
   assert.match(conversar('a bolsa tende a subir?', d, { now: NOW, today: hoje }).fala.texto, /132\.000 pontos.*em queda/);
   const inv = conversar('vale a pena investir em dólar?', d, { now: NOW, today: hoje }).fala.texto;
   assert.match(inv, /CDI está em 10,65%/);
@@ -424,4 +424,21 @@ test('mercado: responde com base de cálculo, data do dado e aviso; sem dado exp
   assert.match(conversar('como está o mercado?', d, { now: NOW, today: hoje }).fala.texto, /Dólar.*Ibovespa.*Selic/);
   const velho = { ...d, mercado: { ...d.mercado, atualizadoEm: new Date(NOW - 6 * 86_400_000).toISOString() } };
   assert.match(conversar('como está o dólar?', velho, { now: NOW, today: hoje }).fala.texto, /desatualizado/);
+});
+
+test('bancos: ajuda na hora com a conta do CDI e pede o servidor pra comparação (fila)', () => {
+  const d = dados();
+  d.accounts = [...d.accounts, criarConta({ bank: 'PicPay', balanceCents: 100000 }, { now: new Date(NOW - 1) })];
+  d.mercado = { atualizadoEm: new Date(NOW).toISOString(), moedas: {}, cdi: { valor: 12 } };
+  const o = conversar('qual desses bancos rende mais?', d, { now: NOW, today: hoje });
+  assert.match(o.fala.texto, /entre Nubank e PicPay/);
+  assert.match(o.fala.texto, /CDI está em 12% ao ano/);
+  assert.match(o.fala.texto, /% do CDI/);
+  assert.deepEqual([...o.fala.filaIA.bancos], ['Nubank', 'PicPay']);
+  assert.equal(entender('onde eu deixo meu dinheiro?', { categories: cats }).intent, 'bancos');
+  assert.equal(entender('tive rendimentos?', { categories: cats }).intent, 'entradas', 'não confunde com entradas');
+});
+
+test('todas as 5 frases de aviso do mercado deixam claro que não é recomendação garantida', () => {
+  for (const f of GERADORES.aviso_mercado.inteira.geral) assert.match(f, /recomendação|garant|consultor|errar|profissional/i, f);
 });

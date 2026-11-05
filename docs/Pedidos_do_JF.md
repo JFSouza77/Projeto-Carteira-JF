@@ -22,7 +22,7 @@ Janelas de trabalho: o que o JF marcar e **toda sexta das 06h às 09h** (Brasíl
   e o app guarda offline (o JF aprovou esse caminho). O C.A.O.S. analisa com base de cálculo (variação, média dos
   últimos dias), em tom de dica/apoio, sempre avisando que não é recomendação de investimento e pode errar, e diz
   de quando é o dado quando estiver offline.
-- [ ] **Comparar rendimento dos bancos da pessoa** (ex.: Nubank, PicPay, Mercado Pago): offline ele diz "amanhã eu
+- [x] **Comparar rendimento dos bancos da pessoa** (1.3.0, adiantado na quinta 05/11; a comparação pela IA começa quando o JF publicar o servidor) (ex.: Nubank, PicPay, Mercado Pago): offline ele diz "amanhã eu
   trago" e guarda a pergunta numa fila; o servidor responde depois (com a IA) e o C.A.O.S. entrega na próxima
   abertura; online responde na hora.
 - [ ] **Muito mais dinamismo no C.A.O.S.** (começado em 05/11: piadas 15 → 30 e falas novas com o nome da pessoa): muito mais falas e piadas, mais "banco de dados", controle melhor do próprio
