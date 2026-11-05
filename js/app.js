@@ -7,7 +7,7 @@ import {
   shiftMonth, monthLabel, createExpense, createIncome, createAccount, summarizeMonth, detectExpenseEvents,
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
 } from './engine.js';
-import { reagir, conversar, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, memoriaInicial, emocaoDoMomento, nomeAlerta } from './caos/index.js';
+import { reagir, conversar, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, nomeAlerta } from './caos/index.js';
 import { falar, vozDisponivel, ditadoDisponivel, ouvir } from './voz.js';
 import * as imagens from './imagens.js';
 import * as ia from './ia.js';
@@ -347,7 +347,7 @@ function addMsg(msg) {
 function renderChat() {
   const log = $('#chat-log');
   if (!state.chat.length) {
-    log.innerHTML = `<li class="msg caos-msg"><span class="who">C.A.O.S.</span>Pode perguntar sobre gastos, entradas, saldo, orçamento ou alertas. Também dá pra mandar "gastei 30 no mercado" ou uma foto de comprovante.</li>`;
+    log.innerHTML = `<li class="msg caos-msg"><span class="who">C.A.O.S.</span>Oi! Sou o C.A.O.S., a ${esc(IDENTIDADE.sigla)}. Pergunta sobre gastos, entradas, saldo, orçamento ou alertas, manda "gastei 30 no mercado" ou uma foto de comprovante. Se quiser saber mais de mim, pergunta "quem é você?".</li>`;
   } else {
     log.innerHTML = state.chat.map((m, i) => {
       if (m.de === 'eu') {
@@ -531,7 +531,7 @@ async function renderSettings() {
     <label><input type="radio" name="mood" value="${id}" ${state.settings.mood === id ? 'checked' : ''}><span>${label}</span></label>`).join('');
   $('#voice-toggle').checked = state.settings.voice;
   $('#voice-toggle').closest('label').hidden = !vozDisponivel();
-  $('#caos-version').textContent = `C.A.O.S. ${CAOS_VERSAO} · offline, com conversa, emoções e anti-repetição.`;
+  $('#caos-version').textContent = `${IDENTIDADE.nome} ${CAOS_VERSAO} · ${IDENTIDADE.sigla}. Criado por ${IDENTIDADE.criador}, veio do ${IDENTIDADE.origem}.`;
   $('#ai-toggle').checked = state.settings.aiOn;
   $('#ai-url').value = state.settings.aiUrl;
   $('#chat-mic').hidden = !ditadoDisponivel();
