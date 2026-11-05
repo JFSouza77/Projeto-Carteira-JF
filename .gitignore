@@ -147,3 +147,7 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Dados pessoais: nunca commitar
+carteira-backup-*.json
+*.extrato.*
