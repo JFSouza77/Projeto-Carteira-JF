@@ -45,6 +45,9 @@ test('summarizeMonth soma por categoria e só do mês pedido', () => {
   const s = summarizeMonth(list, withBudget('mercado', 3000), '2026-11');
   assert.equal(s.totalCents, 1500);
   assert.equal(s.budgetTotalCents, 3000);
+  const s2 = summarizeMonth([...list, exp(9000, 'lazer', '2026-11-03')], withBudget('mercado', 3000), '2026-11');
+  assert.equal(s2.totalCents, 10500);
+  assert.equal(s2.ratio, 0.5, 'gasto em categoria sem limite não conta contra o orçamento');
   assert.equal(s.rows.find(r => r.id === 'mercado').ratio, 0.5);
   assert.equal(s.rows.find(r => r.id === 'lazer').ratio, null);
 });

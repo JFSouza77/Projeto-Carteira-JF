@@ -124,11 +124,14 @@ export function summarizeMonth(expenses, categories, month) {
   });
   const totalCents = rows.reduce((s, r) => s + r.spentCents, 0);
   const budgetTotalCents = rows.reduce((s, r) => s + r.budgetCents, 0);
+  // Só o que foi gasto em categorias com limite entra na comparação com o orçamento.
+  const budgetedSpentCents = rows.reduce((s, r) => s + (r.budgetCents > 0 ? r.spentCents : 0), 0);
   return {
     month,
     totalCents,
     budgetTotalCents,
-    ratio: budgetTotalCents > 0 ? totalCents / budgetTotalCents : null,
+    budgetedSpentCents,
+    ratio: budgetTotalCents > 0 ? budgetedSpentCents / budgetTotalCents : null,
     count: expenses.filter(e => e.month === month).length,
     rows,
   };
@@ -187,20 +190,20 @@ export function detectExpenseEvents({ expenses, categories, newExpense }) {
 
 /**
  * Evento de fechamento do mês anterior: dispara "mes_verde" se o mês passado teve gastos, havia orçamento
- * e o total ficou dentro dele. Usa os orçamentos atuais (o MVP não guarda histórico de orçamento).
+ * e o gasto nas categorias com limite ficou dentro dele. Usa os orçamentos atuais (o MVP não guarda histórico de orçamento).
  */
 export function detectMonthClose({ expenses, categories, currentMonth }) {
   const prev = shiftMonth(currentMonth, -1);
   const s = summarizeMonth(expenses, categories, prev);
   if (s.count === 0 || s.budgetTotalCents === 0) return [];
-  if (s.totalCents <= s.budgetTotalCents) {
+  if (s.budgetedSpentCents <= s.budgetTotalCents) {
     return [{
       type: 'mes_verde',
       month: prev,
       monthName: monthLabel(prev),
-      totalCents: s.totalCents,
+      totalCents: s.budgetedSpentCents,
       budgetCents: s.budgetTotalCents,
-      savedCents: s.budgetTotalCents - s.totalCents,
+      savedCents: s.budgetTotalCents - s.budgetedSpentCents,
     }];
   }
   return [];
