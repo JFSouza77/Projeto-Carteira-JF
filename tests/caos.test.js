@@ -399,3 +399,29 @@ test('todo alerta que o radar gera vira fala (nenhum fica mudo)', () => {
     }
   }
 });
+
+test('mercado: responde com base de cálculo, data do dado e aviso; sem dado explica de onde vem', () => {
+  const d = dados();
+  assert.match(conversar('como está o dólar?', d, { now: NOW, today: hoje }).fala.texto, /servidor da Carteira/);
+  d.mercado = {
+    atualizadoEm: new Date(NOW - 3_600_000).toISOString(),
+    moedas: { USD: { nome: 'Dólar', atual: 5.48, varDia: 0.42, var5: 2.1, media20: 5.3, dias: 21, tendencia: 'alta' } },
+    ibov: { nome: 'Ibovespa', atual: 132000, varDia: -0.8, var5: -2.3, media20: 135000, dias: 30, tendencia: 'queda' },
+    selic: { valor: 10.75 }, cdi: { valor: 10.65 }, ipca12: { valor: 4.2 },
+  };
+  const dolar = conversar('como está o dólar?', d, { now: NOW, today: hoje }).fala.texto;
+  assert.match(dolar, /5,48/);
+  assert.match(dolar, /\+0,42% no dia/);
+  assert.match(dolar, /média dos últimos 20 dias/);
+  assert.match(dolar, /em alta/);
+  assert.match(dolar, /Atualizado/);
+  assert.match(dolar, /recomendação|garant|certeza|consultor|errar/i);
+  assert.match(conversar('a bolsa tende a subir?', d, { now: NOW, today: hoje }).fala.texto, /132\.000 pontos.*em queda/);
+  const inv = conversar('vale a pena investir em dólar?', d, { now: NOW, today: hoje }).fala.texto;
+  assert.match(inv, /CDI está em 10,65%/);
+  assert.match(inv, /reserva de emergência/);
+  assert.match(conversar('qual a selic?', d, { now: NOW, today: hoje }).fala.texto, /10,75%.*juro real.*6,55%/);
+  assert.match(conversar('como está o mercado?', d, { now: NOW, today: hoje }).fala.texto, /Dólar.*Ibovespa.*Selic/);
+  const velho = { ...d, mercado: { ...d.mercado, atualizadoEm: new Date(NOW - 6 * 86_400_000).toISOString() } };
+  assert.match(conversar('como está o dólar?', velho, { now: NOW, today: hoje }).fala.texto, /desatualizado/);
+});

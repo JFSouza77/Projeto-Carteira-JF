@@ -8,6 +8,7 @@ import {
   spentIn, toISODate, INCOME_SOURCES, situacaoCompromissos, analisarPlanejamento, cabeNoMes, sugerirCategoria, palavrasDe,
 } from '../engine.js';
 import { IDENTIDADE, textoAnatomia, textoPodeNaoPode } from './identidade.js';
+import { textoTendencia, quandoFoi, mercadoVelho } from '../mercado.js';
 
 const norm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   .replace(/\bc\.\s?a\.\s?o\.\s?s\b\.?/g, 'caos') // "C.A.O.S." = "caos"
@@ -86,6 +87,12 @@ export function entender(texto, { categories = [] } = {}) {
   if (/(cabe no (mes|meu bolso|orcamento|bolso)|da pra comprar|posso comprar|consigo comprar|tenho dinheiro pra|vai sobrar|quanto (vai )?sobra)/.test(t)) return { ...r, intent: 'cabe' };
   if (/(o que (eu )?tenho (pra|para) pagar|contas? (do|deste|desse) mes|vencimento|quando vence|o que vence|tenho conta|compromissos?|minhas contas fixas|assinaturas)/.test(t)) return { ...r, intent: 'pagar' };
   if (/(o que (eu )?planejei|meus planos|planejamento|planos? (do|deste|desse|pro|para o) mes|o que (eu )?vou comprar)/.test(t)) return { ...r, intent: 'planos' };
+  // Mercado (1.3.0): moedas, bolsa, juros e "vale investir?"
+  const ativo = /\b(dolar|dolares|usd)\b/.test(t) ? 'USD' : /\beuros?\b/.test(t) ? 'EUR' : /\blibras?\b/.test(t) ? 'GBP'
+    : /\b(bitcoin|btc)\b/.test(t) ? 'BTC' : /peso argentino/.test(t) ? 'ARS' : /\b(bolsa|ibovespa|ibov|b3|acoes)\b/.test(t) ? 'IBOV'
+    : /\bselic\b/.test(t) ? 'SELIC' : /\bcdi\b/.test(t) ? 'CDI' : /\b(ipca|inflacao)\b/.test(t) ? 'IPCA' : null;
+  if (/(vale (a pena )?investir|devo investir|investir em|boa hora (pra|para) (comprar|investir)|compensa (comprar|investir)|tende a (subir|cair|crescer))/.test(t)) return { ...r, intent: 'investir', ativo };
+  if (ativo || /(mercado financeiro|como (esta|ta) o mercado|cotacao|cotacoes|cambio|moedas)/.test(t)) return { ...r, intent: 'mercado', ativo };
   // Quem ele é (identidade): vem antes de tudo que não é registro
   if (/(o que (significa|quer dizer)|significado|sigla).*(caos|seu nome|nome)|caos significa|o que e caos|o que e o caos/.test(t)) return { ...r, intent: 'significado' };
   if (/(quem (te |o )?(criou|fez|programou|inventou|desenvolveu|construiu)|seu criador|seu pai|seu dono|quem e (o )?jf|quem manda em voce)/.test(t)) return { ...r, intent: 'criador' };
@@ -152,6 +159,22 @@ const TUTORIAL = {
   geral: 'O app tem 5 abas: 🏠 Início (resumo e alertas), ➕ Lançar (gastos e entradas), 💬 C.A.O.S. (eu!), 🏦 Contas (bancos e saldos) e ⚙️ Ajustes (orçamentos, humor, lembretes, backup). Pergunta "como lanço um gasto?" ou "como ponho orçamento?" que eu explico cada uma.',
 };
 
+const fmtPct = v => `${String(Math.round(v * 100) / 100).replace('.', ',')}%`;
+const sinal = v => (v == null ? '' : `${v > 0 ? '+' : ''}${fmtPct(v)}`);
+const fmtReal = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: v >= 1000 ? 0 : 2 });
+
+/** Uma linha com o número, a variação e a tendência, mostrando a conta (base de cálculo). */
+function textoAtivo(m, a) {
+  if (a === 'SELIC') return m.selic ? `Selic: ${fmtPct(m.selic.valor)} ao ano${m.ipca12 ? `; com a inflação em 12 meses em ${fmtPct(m.ipca12.valor)}, o juro real fica perto de ${fmtPct(m.selic.valor - m.ipca12.valor)}` : ''}.` : '';
+  if (a === 'CDI') return m.cdi ? `CDI: ${fmtPct(m.cdi.valor)} ao ano. É a referência da renda fixa (um CDB "100% do CDI" rende isso, antes do imposto).` : '';
+  if (a === 'IPCA') return m.ipca12 ? `Inflação (IPCA) em 12 meses: ${fmtPct(m.ipca12.valor)}.` : '';
+  const x = a === 'IBOV' ? m.ibov : m.moedas?.[a];
+  if (!x) return '';
+  const valor = a === 'IBOV' ? `${Math.round(x.atual).toLocaleString('pt-BR')} pontos` : fmtReal(x.atual);
+  const media = x.media20 != null ? ` A média dos últimos ${Math.min(20, x.dias)} dias é ${a === 'IBOV' ? `${Math.round(x.media20).toLocaleString('pt-BR')} pontos` : fmtReal(x.media20)}, e ele está ${x.atual >= x.media20 ? 'acima' : 'abaixo'} dela: ${textoTendencia(x.tendencia)}.` : '';
+  return `${x.nome || 'Ibovespa'}: ${valor}${x.varDia != null ? ` (${sinal(x.varDia)} no dia` : ''}${x.var5 != null ? `, ${sinal(x.var5)} em 5 dias)` : x.varDia != null ? ')' : ''}.${media}`;
+}
+
 function textoSobra(a) {
   const base = a.baseTipo === 'entradas' ? `das entradas (${formatBRL(a.baseCents)})` : `do orçamento (${formatBRL(a.baseCents)})`;
   const partes = `já saiu ${formatBRL(a.gastosCents)}, faltam ${formatBRL(a.compPendentesCents)} de compromissos e ${formatBRL(a.planosPendentesCents)} de planos`;
@@ -186,7 +209,7 @@ const pct = (a, b) => (b > 0 ? Math.round((a / b) * 100) : 0);
  * Monta o FATO da resposta (com os números) para a intenção. Só leitura dos dados.
  * @returns {{ gatilho?: string, fato?: string, sugestoes?: string[], acao?: object, eventos?: string[] }}
  */
-export function responder(intencao, dados, { today = toISODate(), emocao = 'calmo', perfil = null } = {}) {
+export function responder(intencao, dados, { today = toISODate(), emocao = 'calmo', perfil = null, now = Date.now() } = {}) {
   const { expenses = [], incomes = [], categories = [], accounts = [], compromissos = [], planos = [] } = dados;
   const range = periodRange(intencao.periodo, today);
   const mes = monthKey(today);
@@ -388,6 +411,26 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       const a = analisarPlanejamento(dados, today);
       if (a.sobraCents == null) return { fato: semBase() };
       return { fato: textoSobra(a), sugestoes: ['Posso comprar algo de 200?', 'O que tenho pra pagar?'] };
+    }
+    case 'mercado': case 'investir': {
+      const m = dados.mercado;
+      if (!m) {
+        return { fato: 'Ainda não tenho dados do mercado. Eles chegam pelo servidor da Carteira, todo dia útil às 10h: configure o endereço em Ajustes → IA online. Depois que chegarem, eu guardo e respondo até sem internet.' };
+      }
+      const agora = new Date(now);
+      const quando = quandoFoi(m.atualizadoEm, agora);
+      const velho = mercadoVelho(m, agora) ? ' Esse dado já tem alguns dias, pode estar desatualizado.' : '';
+      const linhaAtivo = a => textoAtivo(m, a);
+      let fato;
+      if (intencao.intent === 'investir') {
+        const alvo = intencao.ativo || 'IBOV';
+        fato = `${linhaAtivo(alvo) || 'Não tenho esse dado agora.'}${m.cdi ? ` Pra comparar: o CDI está em ${fmtPct(m.cdi.valor)} ao ano, que é quanto a renda fixa paga com pouco sobe e desce.` : ''} Se for investir, pensa no prazo e não coloca o dinheiro da reserva de emergência em algo que oscila.`;
+      } else if (intencao.ativo) {
+        fato = linhaAtivo(intencao.ativo) || 'Esse dado não veio na última atualização.';
+      } else {
+        fato = ['USD', 'EUR', 'IBOV', 'SELIC'].map(linhaAtivo).filter(Boolean).join(' ');
+      }
+      return { fato: `${fato} (Atualizado ${quando}.)${velho}`, aviso: true, sugestoes: ['Como está o dólar?', 'A bolsa tende a subir?', 'Qual a Selic?'] };
     }
     case 'como_esta':
       return { gatilho: 'como_esta', vars: { emocao } };
