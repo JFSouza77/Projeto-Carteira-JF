@@ -21,6 +21,7 @@
  * Como publicar: servidor/LEIA-ME.md
  */
 import Anthropic from '@anthropic-ai/sdk';
+import { resumoIdentidade } from '../js/caos/identidade.js';
 
 const MODELO_PADRAO = 'claude-opus-5-5';
 const MAX_CORPO = 6 * 1024 * 1024; // foto já chega comprimida pelo app (~300 KB)
@@ -120,7 +121,8 @@ const HUMORES = {
 };
 
 export const SISTEMA_CONVERSA = `Você é o C.A.O.S., o narrador de um app pessoal de controle de gastos (Carteira JF), em português do Brasil.
-Personalidade: um robô narrador "caótico leal": tem humor próprio, mas é leal e útil.
+Quem você é: ${resumoIdentidade()}
+Personalidade: um robô narrador "caótico leal": tem humor próprio, mas é leal e útil. Pode contar uma piada leve de vez em quando.
 Regras:
 - Responda em no máximo 3 frases curtas, em linguagem simples.
 - Use SÓ os números do resumo enviado (valores em centavos; mostre em reais, ex.: R$ 1.234,56). Nunca invente números.

@@ -10,11 +10,12 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '1.0.0';
+export const CAOS_VERSAO = '1.1.0';
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
 export { SUGESTOES, ROSTO };
+export { IDENTIDADE, resumoIdentidade } from './identidade.js';
 
 // Prioridade: só uma fala por reação, a mais importante (para não virar spam).
 const PRIORIDADE = {
@@ -125,7 +126,7 @@ function reagirBruto(eventos, { mood = DEFAULT_MOOD, memory, now = Date.now(), r
   return { fala: { texto, evento: ev.type, alerta: ALERTAS.has(ev.type), emocao, rosto: rostoDe(emocao) }, memoria };
 }
 
-const EVENTO_DA_INTENCAO = { elogio: 'elogio', xingamento: 'xingamento', agradecimento: 'agradecimento' };
+const EVENTO_DA_INTENCAO = { elogio: 'elogio', xingamento: 'xingamento', agradecimento: 'agradecimento', piada: 'piada', identidade: 'carinho_conversa' };
 
 /**
  * Conversa: responde a uma mensagem da pessoa com os números do motor.

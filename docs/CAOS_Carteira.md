@@ -1,4 +1,21 @@
-# Cérebro do C.A.O.S. na Carteira (C.A.O.S. 1.0.0)
+# Cérebro do C.A.O.S. na Carteira (C.A.O.S. 1.1.0)
+
+## Quem ele é (1.1.0)
+
+**C.A.O.S. = Central de Análises e Observações Sistêmicas.** Criado pelo JF, veio do Projeto Perfil JF (onde era o
+apresentador do jogo) e aqui foi refinado pro dia a dia: menos festa, mais conta, mesmo humor. Tudo isso fica em
+`js/caos/identidade.js`, e o app e a IA online leem do mesmo lugar.
+
+| Anatomia | O que é | Onde |
+| --- | --- | --- |
+| **Cérebro** | Monta as falas, sente emoções, entende perguntas | `gerador.js`, `falas.js`, `emocoes.js`, `conversa.js` |
+| **Sistema nervoso** | Radar que percebe gastos, entradas e alertas | `analyze` e `detectExpenseEvents` em `js/engine.js`, prioridades em `index.js` |
+| **Braços** | O motor faz as contas pesadas; a IA online lê fotos e responde perguntas livres | `js/engine.js`, `servidor/worker.js` |
+| **Espinha** | As 3 leis | `espinha.js` |
+
+Ele sabe responder: quem é você, o que significa o nome, quem te criou, de onde veio, como funciona, o que pode e
+não pode fazer, conta piada e ensina a usar cada parte do app ("como faço pra adicionar uma conta?").
+
 
 O C.A.O.S. da Carteira veio do Perfil JF. O código do Perfil depende do jogo (jogadores, cartas, rodada), então
 não dava pra copiar direto: vieram as **ideias e os motores**, reescritos para dinheiro.

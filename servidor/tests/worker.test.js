@@ -156,3 +156,10 @@ test('push: cron manda o toque vazio e apaga inscrição que sumiu', async () =>
     globalThis.fetch = original;
   }
 });
+
+test('a IA online usa a mesma identidade do C.A.O.S. do app', async () => {
+  const { SISTEMA_CONVERSA } = await import('../worker.js');
+  assert.match(SISTEMA_CONVERSA, /Central de Análises e Observações Sistêmicas/);
+  assert.match(SISTEMA_CONVERSA, /criado por JF/);
+  assert.match(SISTEMA_CONVERSA, /Projeto Perfil JF/);
+});

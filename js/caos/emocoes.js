@@ -47,6 +47,8 @@ const EFEITO = {
   elogio: { carinho: 2.5, alegria: 1.5 },
   xingamento: { irritacao: 2.5, carinho: -1 },
   agradecimento: { carinho: 2, alegria: 0.5 },
+  piada: { alegria: 2, tedio: -2 },
+  carinho_conversa: { carinho: 1.5, curiosidade: 0.5 },
 };
 
 export function emocoesIniciais(now = Date.now()) {

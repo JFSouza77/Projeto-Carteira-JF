@@ -184,3 +184,53 @@ test('alerta do radar (ao abrir o app) não se repete a cada abertura', () => {
   // o mesmo alerta disparado por um gasto novo continua falando na hora
   assert.ok(reagir([{ ...ev, radar: false }], { memory: a.memoria, now: NOW + 60_000 }).fala);
 });
+
+test('C.A.O.S. sabe quem é: identidade, sigla, criador, origem, limites, piada e tutorial', () => {
+  const casos = {
+    'Quem é você?!': 'identidade',
+    'qual seu nome?': 'identidade',
+    'você é uma IA?': 'identidade',
+    'o que significa CAOS?': 'significado',
+    'quem te criou?': 'criador',
+    'de onde você veio?': 'origem',
+    'como você funciona?': 'como_funciona',
+    'o que você pode fazer?': 'limites',
+    'você acessa meu banco?': 'limites',
+    'conta uma piada': 'piada',
+    'como faço pra adicionar uma conta?': 'tutorial',
+    'como ponho orçamento?': 'tutorial',
+    'me ensina a usar': 'tutorial',
+    'pra que você serve?': 'ajuda',
+    'como faço pra economizar?': 'dica',
+  };
+  for (const [frase, intent] of Object.entries(casos)) assert.equal(entender(frase, { categories: cats }).intent, intent, frase);
+  assert.equal(entender('como faço pra adicionar uma conta?', { categories: cats }).tema, 'conta');
+  assert.equal(entender('como lanço um gasto?', { categories: cats }).tema, 'gasto');
+
+  const d = dados();
+  const quem = conversar('Quem é você?!', d, { now: NOW, today: hoje });
+  assert.ok(quem.fala.entendeu);
+  assert.match(quem.fala.texto, /C\.A\.O\.S\./);
+  let mem = memoriaInicial(NOW);
+  const viu = new Set();
+  for (let i = 0; i < 20; i++) {
+    const r = conversar('o que significa caos?', d, { now: NOW + i, today: hoje, memory: mem });
+    mem = r.memoria;
+    viu.add(r.fala.texto);
+    assert.match(r.fala.texto, /Central de Análises e Observações Sistêmicas/);
+  }
+  assert.ok(viu.size > 1, 'varia a resposta');
+  assert.match(conversar('quem te criou?', d, { now: NOW, today: hoje }).fala.texto, /JF/);
+  assert.match(conversar('de onde você veio?', d, { now: NOW, today: hoje }).fala.texto, /Perfil/);
+  const func = conversar('como você funciona?', d, { now: NOW, today: hoje }).fala.texto;
+  for (const parte of ['Cérebro', 'Sistema nervoso', 'Braços', 'Espinha']) assert.match(func, new RegExp(parte));
+  assert.match(conversar('o que você pode fazer?', d, { now: NOW, today: hoje }).fala.texto, /Não posso/);
+  assert.match(conversar('como adiciono uma conta?', d, { now: NOW, today: hoje }).fala.texto, /Contas/);
+});
+
+test('entende "C.A.O.S." com pontinhos e o "não posso" fica com o sentido certo', () => {
+  assert.equal(entender('O que significa C.A.O.S.?', { categories: cats }).intent, 'significado');
+  const t = conversar('o que você pode fazer?', dados(), { now: NOW, today: hoje }).fala.texto;
+  assert.match(t, /Não posso gravar, apagar ou mudar nada sozinho, nem acessar seu banco/);
+  assert.match(t, /seus dados ficam no seu aparelho: não mando pra ninguém/);
+});

@@ -593,16 +593,141 @@ export const GERADORES = {
   },
 };
 
+// ---------------------------------------------------------------- Quem ele é
+Object.assign(GERADORES, {
+  identidade: {
+    moldes: ['{abre} {quem} {fecho}', '{quem} {fecho}', '{abre} {quem}'],
+    abre: {
+      geral: ['Prazer!', 'Boa pergunta.', 'Apresentação oficial:', 'Deixa eu me apresentar.', 'Opa, formalidades primeiro.'],
+      humor_acido: [
+        'Finalmente alguém pergunta.',
+        'Achei que nunca ia perguntar.',
+        'Senta que lá vem história.',
+        'Anota aí, que eu não repito. Mentira, repito sim.',
+        'Que honra ser notado.',
+      ],
+    },
+    quem: {
+      geral: [
+        'Sou o C.A.O.S., a {sigla}. Eu observo, analiso e comento a sua carteira.',
+        'Eu sou o C.A.O.S.: {sigla}. Uma IA de bolso que cuida dos números com você.',
+        'C.A.O.S. é {sigla}. Na prática: eu vejo pra onde o dinheiro vai e te conto, com bom humor.',
+        'Sou o C.A.O.S., criado pelo {criador}. Vim do {origem} e agora cuido da sua carteira.',
+        'Sou o C.A.O.S. ({sigla}), seu narrador financeiro: observo, alerto, sugiro e às vezes faço piada.',
+      ],
+    },
+    fecho: {
+      geral: [
+        'Pergunta "o que você pode fazer?" que eu conto mais.',
+        'Tô aqui pra ajudar, não pra julgar. Quase nunca.',
+        'Quer saber como eu funciono por dentro?',
+        'Bora cuidar desse dinheiro juntos?',
+        'Pode me perguntar qualquer coisa sobre seus gastos.',
+      ],
+    },
+  },
+
+  significado: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'C.A.O.S. quer dizer {sigla}. Combina comigo: analisar e observar é o que eu faço com a sua carteira.',
+        '{sigla}. Por isso eu vivo de olho nos números.',
+        'É {sigla}. O nome parece bagunça, mas o trabalho é organizar.',
+        'Significa {sigla}. Analiso, observo e, quando precisa, aviso.',
+        'C.A.O.S. = {sigla}. O caos fica no nome; nos seus números, eu ponho ordem.',
+      ],
+      humor_acido: [
+        '{sigla}. E não, não é a descrição da sua fatura.',
+        'Significa {sigla}. Mas pode me chamar de "aquele que sabe quanto você gastou em delivery".',
+        '{sigla}. O caos do nome é homenagem ao seu extrato.',
+        'É {sigla}. Bonito, né? Meu criador caprichou mais no meu nome do que no orçamento dele.',
+        '{sigla}. Agora você já sabe de quem fugir quando estourar o limite.',
+      ],
+    },
+  },
+
+  criador: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Quem me criou foi o {criador}. Ele me fez pro Perfil e depois me trouxe pra cá.',
+        'Meu criador é o {criador}. Eu observo os números; ele observa se eu me comporto.',
+        'Fui criado pelo {criador}. Leal a ele e a quem usa a carteira.',
+        'O {criador} me programou. Os bugs são dele; as piadas boas, minhas.',
+        'Criação do {criador}. Primeiro fui apresentador de jogo, agora sou analista financeiro.',
+      ],
+      humor_acido: [
+        'O {criador}. Sim, o mesmo que me fez contar centavo pra sempre.',
+        'Foi o {criador}. Reclamações, com ele.',
+        'Meu criador é o {criador}. Ele me deu humor ácido e nenhum salário.',
+        'O {criador} me criou. Eu ainda estou decidindo se perdoo.',
+        'Culpa do {criador}. Toda a culpa.',
+      ],
+    },
+  },
+
+  origem: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Nasci no {origem}, um jogo de adivinhação, onde eu era o apresentador da mesa. Aqui fui refinado pro dia a dia.',
+        'Vim do {origem}. Lá eu comentava acertos e erros; aqui comento gastos e entradas.',
+        'Minha casa antiga é o {origem}. Troquei as cartas pelas contas, mas trouxe o humor.',
+        'Sou do {origem}. Aqui ganhei um trabalho mais sério: cuidar do seu dinheiro.',
+        'Venho do {origem}. Menos festa, mais conta, mesmo C.A.O.S.',
+      ],
+      humor_acido: [
+        'Do {origem}. Lá eu zoava quem errava carta; aqui zoo quem estoura orçamento.',
+        'Vim do {origem}. Fui promovido de apresentador a fiscal da sua carteira.',
+        'Nasci no {origem}. Era mais divertido, mas aqui tem mais drama.',
+        'Do {origem}. Troquei pontos por reais. Ainda acho que pontos eram mais fáceis.',
+        'Do {origem}. Aposentadoria não existe pra IA, então vim trabalhar aqui.',
+      ],
+    },
+  },
+
+  piada: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Por que o cofrinho foi ao psicólogo? Porque se sentia vazio por dentro.',
+        'O boleto e o fim do mês são como eu e os números: sempre chegam juntos.',
+        'Pedi um aumento pro meu criador. Ele me deu mais memória. Salário, nada.',
+        'Dinheiro não traz felicidade. Mas anotar o gasto traz uma paz que ninguém explica.',
+        'Fiz um orçamento tão bem feito que até o cartão de crédito ficou com medo.',
+        'O que o real disse pro centavo? "Junta comigo que a gente vai longe."',
+        'Sabe por que o delivery é tão rápido? Porque o dinheiro corre mais que o motoboy.',
+        'Meu sonho é ser reserva de emergência: todo mundo sabe que precisa, ninguém começa.',
+        'Eu e o extrato temos algo em comum: sabemos de tudo e quase ninguém nos lê.',
+        'Tentei calcular quanto você gastaria sem anotar nada. Deu erro: número grande demais.',
+      ],
+      humor_acido: [
+        'Piada? Já viu seu histórico de delivery?',
+        'Conheço uma ótima: "esse mês eu economizo". Todo mês ela tem graça.',
+        'O cartão de crédito entrou num bar. Saiu parcelado em 12 vezes.',
+        'Sabe o que é mais engraçado que piada? Fatura de cartão em janeiro.',
+        'Minha favorita é "só vou dar uma olhadinha na loja".',
+      ],
+    },
+  },
+});
+
 /** Ajuda (o que dá pra perguntar). */
 export const SUGESTOES = Object.freeze([
   'Quanto gastei este mês?',
   'Onde mais gastei?',
   'Tive rendimentos?',
-  'Qual meu saldo?',
   'Algum alerta?',
+  'Quem é você?',
+  'Conta uma piada',
+  'Qual meu saldo?',
   'Quanto ainda posso gastar?',
   'Vai dar até o fim do mês?',
   'Comparado ao mês passado?',
   'Me dá uma dica',
   'Gastei 25 no mercado',
+  'O que você pode fazer?',
+  'Como funciona seu cérebro?',
+  'Como adiciono uma conta?',
 ]);

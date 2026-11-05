@@ -7,8 +7,10 @@ import {
   incomeIn, monthKey, shiftMonth, monthLabel, accountBalance, accountLabel, totalBalance, analyze,
   spentIn, toISODate, INCOME_SOURCES,
 } from '../engine.js';
+import { IDENTIDADE, textoAnatomia, textoPodeNaoPode } from './identidade.js';
 
 const norm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  .replace(/\bc\.\s?a\.\s?o\.\s?s\b\.?/g, 'caos') // "C.A.O.S." = "caos"
   .replace(/[^\w\s,.$-]/g, ' ').replace(/\s+/g, ' ').trim();
 
 // Palavras que levam a cada categoria (além do próprio nome dela)
@@ -77,7 +79,35 @@ export function entender(texto, { categories = [] } = {}) {
     if (/\b(recebi|ganhei|entrou|caiu|recebemos|me pagaram)\b/.test(t)) return { ...r, intent: 'registrar_entrada' };
     if (/\b(gastei|paguei|comprei|torrei|saiu|pedi|abasteci|gasto de|gastamos)\b/.test(t)) return { ...r, intent: 'registrar_gasto' };
   }
-  if (/\b(ajuda|comandos|o que voce (faz|sabe)|como funciona|o que posso perguntar)\b/.test(t)) return { ...r, intent: 'ajuda' };
+  // Quem ele é (identidade): vem antes de tudo que não é registro
+  if (/(o que (significa|quer dizer)|significado|sigla).*(caos|seu nome|nome)|caos significa|o que e caos|o que e o caos/.test(t)) return { ...r, intent: 'significado' };
+  if (/(quem (te |o )?(criou|fez|programou|inventou|desenvolveu|construiu)|seu criador|seu pai|seu dono|quem e (o )?jf|quem manda em voce)/.test(t)) return { ...r, intent: 'criador' };
+  if (/(de onde (voce )?(veio|vem|surgiu|saiu)|sua origem|sua historia|onde (voce )?nasceu|projeto perfil|veio do perfil)/.test(t)) return { ...r, intent: 'origem' };
+  if (/(como voce funciona|como (e|funciona) (o )?seu cerebro|seu cerebro|sistema nervoso|sua espinha|seus bracos|voce pensa|voce sente|como voce e feito|do que voce e feito)/.test(t)) return { ...r, intent: 'como_funciona' };
+  if (/(o que voce (nao )?pode|o que voce nao faz|seus limites|voce (pode|consegue) (mexer|apagar|alterar|gastar|acessar|ver)|acessa (meu|o) banco|ve minha conta|minhas regras|suas regras|suas leis)/.test(t)) return { ...r, intent: 'limites' };
+  if (/(quem e voce|quem (e|eh) tu|quem es tu|o que (e|eh) voce|se apresent|apresente.se|qual (e )?(o )?seu nome|como (voce )?se chama|voce e (uma )?(ia|inteligencia|robo|humano|gente|pessoa)|^caos\??$)/.test(t)) return { ...r, intent: 'identidade' };
+  if (/(piada|me faz rir|algo engracado|anedota|charada|me alegra)/.test(t)) return { ...r, intent: 'piada' };
+  // Ensinar a usar o app ("como faço pra lançar um gasto?")
+  const verboComo = /\b(como|onde)\b.*\b(faco|faz|fazer|coloco|colocar|cadastro|cadastrar|adiciono|adicionar|lanco|lancar|registro|registrar|anoto|anotar|crio|criar|mudo|mudar|troco|trocar|ativo|ativar|ligo|ligar|uso|usar|mando|mandar|envio|enviar|instalo|instalar|exporto|exportar|importo|importar|defino|definir|ponho|por|vejo|ver|apago|apagar|configuro|configurar)\b/;
+  if (/(economiz|poupar|guardar dinheiro|gastar menos)/.test(t)) return { ...r, intent: 'dica' };
+  if (verboComo.test(t) || /(me ensina|tutorial|passo a passo|como usa(r)? o app|como funciona o app)/.test(t)) {
+    const TEMAS = [
+      ['entrada', /(entrada|salario|rendimento|receita|recebi|ganho)/],
+      ['orcamento', /(orcamento|limite|meta de gasto)/],
+      ['conta', /(\bcontas?\b|banco|saldo|nubank|itau|bradesco|caixa|inter)/],
+      ['foto', /(foto|comprovante|imagem|nota fiscal|recibo|print)/],
+      ['lembrete', /(lembrete|notifica|avis(o|ar) diario|alarme)/],
+      ['instalar', /(instal|tela inicial|celular|iphone|android)/],
+      ['backup', /(backup|exportar|importar|copia|trocar de celular)/],
+      ['ia', /(ia online|inteligencia|servidor|ler foto)/],
+      ['humor', /(humor|voz|falar|acido|suave)/],
+      ['apagar', /(apag|excluir|deletar|remover)/],
+      ['gasto', /(gasto|despesa|compra|lancamento)/],
+    ];
+    const tema = (TEMAS.find(([, rx]) => rx.test(t)) || ['geral'])[0];
+    return { ...r, intent: 'tutorial', tema };
+  }
+  if (/\b(ajuda|comandos|o que voce (faz|sabe)|pra que (voce )?serve|para que (voce )?serve|sua funcao|como voce (me )?ajuda|o que posso perguntar)\b/.test(t)) return { ...r, intent: 'ajuda' };
   if (/\b(obrigad|valeu|vlw|brigad|agradeco)/.test(t)) return { ...r, intent: 'agradecimento' };
   if (/\b(burro|idiota|inutil|lixo|chato|odeio voce|merda|porcaria)\b/.test(t)) return { ...r, intent: 'xingamento' };
   if (/\b(te amo|voce e (o )?(melhor|demais|incrivel|genial|otimo)|gosto de voce|lindo|parabens caos)\b/.test(t)) return { ...r, intent: 'elogio' };
@@ -96,6 +126,24 @@ export function entender(texto, { categories = [] } = {}) {
   if (r.categoria && pergunta) return { ...r, intent: 'gasto_total' };
   return { ...r, intent: 'nao_entendi' };
 }
+
+const SUG_IDENTIDADE = ['O que você pode fazer?', 'Como funciona seu cérebro?', 'Conta uma piada', 'Quanto gastei este mês?'];
+
+// Passo a passo de cada parte do app (o C.A.O.S. também instrui)
+const TUTORIAL = {
+  gasto: 'Pra anotar um gasto: aba ➕ Lançar, deixa em 💸 Gasto, digita o valor, escolhe a categoria e toca em Adicionar. Ou me fala aqui: "gastei 30 no mercado", que eu preparo e você confirma.',
+  entrada: 'Pra anotar uma entrada: aba ➕ Lançar, toca em 💰 Entrada, digita o valor, escolhe de onde veio (salário, freela, rendimentos…) e toca em Adicionar. Ou me fala: "recebi 1500 de salário".',
+  orcamento: 'Pra pôr orçamento: aba ⚙️ Ajustes → Orçamentos, e coloca o limite do mês em cada categoria. Deixa vazio onde não quiser limite. Aí eu aviso em 80% e quando estourar.',
+  conta: 'Pra adicionar uma conta: aba 🏦 Contas, escolhe o banco, coloca o saldo que aparece no app do banco e toca em Adicionar conta. Depois, ao lançar, escolhe a conta e eu acompanho o saldo. De vez em quando, toca em Atualizar saldo pra acertar com o banco.',
+  foto: 'Pra mandar foto: em ➕ Lançar, toca em 📷 Foto do comprovante; ou aqui na conversa, no 📎. Com a IA online ligada (Ajustes), eu leio o valor sozinho e você só confirma.',
+  lembrete: 'Pra ligar os lembretes: ⚙️ Ajustes → Lembretes, liga a chave e escolhe o horário. No iPhone só funciona com o app instalado na tela inicial e o servidor configurado.',
+  instalar: 'Pra instalar: no Android, menu do Chrome → Instalar app. No iPhone, no Safari: Compartilhar → Adicionar à Tela de Início. No PC, o ícone de instalar na barra de endereço.',
+  backup: 'Pra fazer backup: ⚙️ Ajustes → Backup → Exportar backup. Pra levar pra outro aparelho, abre o app lá e usa Importar backup com o arquivo. As fotos não entram no backup.',
+  ia: 'A IA online é opcional: ⚙️ Ajustes → IA online, cola o endereço do servidor, liga e toca em Testar conexão. Ela lê foto de comprovante e responde o que eu não entendo sozinho.',
+  humor: 'Pra mudar meu jeito: ⚙️ Ajustes → C.A.O.S. Humor Suave (gentil, o padrão), Normal ou Ácido (zoeira liberada). Ali também liga a minha voz.',
+  apagar: 'Pra apagar um lançamento: na aba 🏠 Início, em Lançamentos do mês, toca no × do lado dele. Eu mesmo não apago nada: essa é uma das minhas leis.',
+  geral: 'O app tem 5 abas: 🏠 Início (resumo e alertas), ➕ Lançar (gastos e entradas), 💬 C.A.O.S. (eu!), 🏦 Contas (bancos e saldos) e ⚙️ Ajustes (orçamentos, humor, lembretes, backup). Pergunta "como lanço um gasto?" ou "como ponho orçamento?" que eu explico cada uma.',
+};
 
 const pct = (a, b) => (b > 0 ? Math.round((a / b) * 100) : 0);
 
@@ -258,9 +306,18 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
     }
     case 'como_esta':
       return { gatilho: 'como_esta', vars: { emocao } };
+    case 'significado': case 'criador': case 'origem': case 'identidade': case 'piada':
+      return { gatilho: intencao.intent, vars: { sigla: IDENTIDADE.sigla, criador: IDENTIDADE.criador, origem: IDENTIDADE.origem }, sugestoes: SUG_IDENTIDADE };
+    case 'como_funciona':
+      return { fato: `Sou uma IA de bolso, montada em camadas. ${textoAnatomia()} Funciono offline; com a IA online ligada, ganho um reforço pra perguntas livres e fotos.`, sugestoes: SUG_IDENTIDADE };
+    case 'limites':
+      return { fato: textoPodeNaoPode(), sugestoes: SUG_IDENTIDADE };
+    case 'tutorial':
+      return { fato: TUTORIAL[intencao.tema] || TUTORIAL.geral, sugestoes: ['Como adiciono uma conta?', 'Como ponho orçamento?', 'Como mando foto?'] };
     case 'ajuda':
       return {
-        fato: 'Pode me perguntar sobre gastos ("quanto gastei em delivery?"), entradas ("tive rendimentos?"), saldo, orçamento, alertas, previsão do mês ou pedir uma dica. E pode mandar "gastei 30 no mercado" que eu preparo o registro pra você confirmar. Também dá pra mandar foto de comprovante.',
+        fato: 'Eu analiso e observo sua carteira. Pode me perguntar sobre gastos ("quanto gastei em delivery?"), entradas ("tive rendimentos?"), saldo, orçamento, alertas, previsão do mês, pedir uma dica ou uma piada. Pode mandar "gastei 30 no mercado" que eu preparo o registro pra você confirmar, mandar foto de comprovante e perguntar "como faço…" que eu ensino a usar o app.',
+        sugestoes: SUG_IDENTIDADE,
       };
     default:
       return { gatilho: intencao.intent };
