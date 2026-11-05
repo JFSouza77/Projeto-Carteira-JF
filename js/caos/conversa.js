@@ -5,7 +5,7 @@
 import {
   formatBRL, parseAmount, periodRange, sumInRange, topCategories, summarizeMonth, forecastMonth,
   incomeIn, monthKey, shiftMonth, monthLabel, accountBalance, accountLabel, totalBalance, analyze,
-  spentIn, toISODate, INCOME_SOURCES,
+  spentIn, toISODate, INCOME_SOURCES, situacaoCompromissos, analisarPlanejamento, cabeNoMes, sugerirCategoria, palavrasDe,
 } from '../engine.js';
 import { IDENTIDADE, textoAnatomia, textoPodeNaoPode } from './identidade.js';
 
@@ -79,6 +79,13 @@ export function entender(texto, { categories = [] } = {}) {
     if (/\b(recebi|ganhei|entrou|caiu|recebemos|me pagaram)\b/.test(t)) return { ...r, intent: 'registrar_entrada' };
     if (/\b(gastei|paguei|comprei|torrei|saiu|pedi|abasteci|gasto de|gastamos)\b/.test(t)) return { ...r, intent: 'registrar_gasto' };
   }
+  // Compromissos, planos e "cabe no mês?" (1.3.0)
+  if (/(qual (e )?(o )?meu nome|como (e|eh) meu nome|voce sabe (o )?meu nome|lembra (de )?mim|quem sou eu)/.test(t)) return { ...r, intent: 'meu_nome' };
+  const apelido = t.match(/(?:me chama|pode me chamar|me chame) de ([a-z0-9 ]{2,30})$/);
+  if (apelido) return { ...r, intent: 'mudar_apelido', apelido: apelido[1].trim() };
+  if (/(cabe no (mes|meu bolso|orcamento|bolso)|da pra comprar|posso comprar|consigo comprar|tenho dinheiro pra|vai sobrar|quanto (vai )?sobra)/.test(t)) return { ...r, intent: 'cabe' };
+  if (/(o que (eu )?tenho (pra|para) pagar|contas? (do|deste|desse) mes|vencimento|quando vence|o que vence|tenho conta|compromissos?|minhas contas fixas|assinaturas)/.test(t)) return { ...r, intent: 'pagar' };
+  if (/(o que (eu )?planejei|meus planos|planejamento|planos? (do|deste|desse|pro|para o) mes|o que (eu )?vou comprar)/.test(t)) return { ...r, intent: 'planos' };
   // Quem ele é (identidade): vem antes de tudo que não é registro
   if (/(o que (significa|quer dizer)|significado|sigla).*(caos|seu nome|nome)|caos significa|o que e caos|o que e o caos/.test(t)) return { ...r, intent: 'significado' };
   if (/(quem (te |o )?(criou|fez|programou|inventou|desenvolveu|construiu)|seu criador|seu pai|seu dono|quem e (o )?jf|quem manda em voce)/.test(t)) return { ...r, intent: 'criador' };
@@ -145,25 +152,59 @@ const TUTORIAL = {
   geral: 'O app tem 5 abas: 🏠 Início (resumo e alertas), ➕ Lançar (gastos e entradas), 💬 C.A.O.S. (eu!), 🏦 Contas (bancos e saldos) e ⚙️ Ajustes (orçamentos, humor, lembretes, backup). Pergunta "como lanço um gasto?" ou "como ponho orçamento?" que eu explico cada uma.',
 };
 
+function textoSobra(a) {
+  const base = a.baseTipo === 'entradas' ? `das entradas (${formatBRL(a.baseCents)})` : `do orçamento (${formatBRL(a.baseCents)})`;
+  const partes = `já saiu ${formatBRL(a.gastosCents)}, faltam ${formatBRL(a.compPendentesCents)} de compromissos e ${formatBRL(a.planosPendentesCents)} de planos`;
+  if (a.sobraCents >= 0) return `Cabe no mês: ${partes}, e ainda sobram ${formatBRL(a.sobraCents)} ${base}.`;
+  return `Não cabe tudo: ${partes}, e faltariam ${formatBRL(-a.sobraCents)} ${base}.${a.adiar.length ? ` Dá pra adiar ${a.adiar.map(p => `${p.nome} (${formatBRL(p.valorCents)})`).join(', ')}.` : ''}`;
+}
+
+function semBase() {
+  return 'Pra eu calcular se cabe, preciso de uma base: lança suas entradas do mês (salário, extras) ou define orçamentos em Ajustes.';
+}
+
+/** "gastei 30 no uber" → "uber"; "paguei 120 de luz" → "luz". */
+export function descricaoDe(t) {
+  const m = String(t).match(/\b(?:no|na|nos|nas|em|de|do|da|com|pro|pra)\s+([a-z0-9 ]{2,40})$/);
+  if (!m) return '';
+  return palavrasDe(m[1]).slice(0, 3).join(' ');
+}
+
+/** Primeiro acesso: tira o nome de "meu nome é João", "sou a Ana", "João". */
+export function extrairNome(texto) {
+  let t = String(texto || '').trim().replace(/[.!?,;]+$/g, '');
+  t = t.replace(/^(oi|ola|olá|e ai|eai|opa)[,!\s]+/i, '')
+    .replace(/^(o\s+)?meu nome (é|e|eh)\s+/i, '').replace(/^(eu\s+)?(me chamo|sou o|sou a|sou)\s+/i, '')
+    .replace(/^(pode me chamar de|me chama de)\s+/i, '');
+  const nome = t.split(/\s+/).slice(0, 3).join(' ').replace(/[^\p{L}\p{N} '-]/gu, '').trim();
+  return nome ? nome.split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' ').slice(0, 30) : '';
+}
+
 const pct = (a, b) => (b > 0 ? Math.round((a / b) * 100) : 0);
 
 /**
  * Monta o FATO da resposta (com os números) para a intenção. Só leitura dos dados.
  * @returns {{ gatilho?: string, fato?: string, sugestoes?: string[], acao?: object, eventos?: string[] }}
  */
-export function responder(intencao, dados, { today = toISODate(), emocao = 'calmo' } = {}) {
-  const { expenses = [], incomes = [], categories = [], accounts = [] } = dados;
+export function responder(intencao, dados, { today = toISODate(), emocao = 'calmo', perfil = null } = {}) {
+  const { expenses = [], incomes = [], categories = [], accounts = [], compromissos = [], planos = [] } = dados;
   const range = periodRange(intencao.periodo, today);
   const mes = monthKey(today);
 
   switch (intencao.intent) {
     case 'registrar_gasto': {
-      const cat = intencao.categoria || categories.find(c => c.id === 'outros') || categories[0];
+      // descrição: o que vem depois de "no/na/de/em/com" ("gastei 30 no uber" → "Uber")
+      const desc = descricaoDe(intencao.t);
+      // categoria: pela palavra (sinônimos) ou pelo que ele aprendeu com o histórico da pessoa
+      const aprendida = !intencao.categoria && desc ? sugerirCategoria(desc, expenses) : null;
+      const cat = intencao.categoria || (aprendida && categories.find(c => c.id === aprendida.categoryId))
+        || categories.find(c => c.id === 'outros') || categories[0];
       return {
         gatilho: 'proposta_registro',
         vars: { valor: formatBRL(intencao.valor), categoria: cat?.name ?? 'Outros' },
         acao: { tipo: 'registrar_gasto', amountCents: intencao.valor, categoryId: cat?.id ?? 'outros', date: today,
-          note: '' },
+          note: desc ? desc[0].toUpperCase() + desc.slice(1) : '' },
+        aprendeu: !!aprendida,
       };
     }
     case 'registrar_entrada': {
@@ -303,6 +344,50 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       const a = analyze(dados, today);
       if (!a.length) return { fato: 'Nenhum alerta agora. Tudo dentro do esperado.', sugestoes: ['Quanto gastei este mês?', 'Vai dar até o fim do mês?'] };
       return { alertas: a, fato: `Tenho ${a.length} ${a.length === 1 ? 'alerta' : 'alertas'}. O principal:`, sugestoes: ['Onde mais gastei?', 'Me dá uma dica'] };
+    }
+    case 'meu_nome':
+      return perfil?.apelido
+        ? { fato: `Claro! Você é ${perfil.nome && perfil.nome !== perfil.apelido ? `${perfil.nome}, e eu te chamo de ${perfil.apelido}` : perfil.apelido}. Se quiser mudar, é só falar "me chama de…".` }
+        : { fato: 'Ainda não sei seu nome. Me conta? Diz "me chama de" e o seu nome.' };
+    case 'mudar_apelido': {
+      const novo = intencao.apelido.split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
+      return { gatilho: 'proposta_registro', vars: { valor: novo, categoria: 'seu novo nome' },
+        fato: `Quer que eu passe a te chamar de ${novo}?`, acao: { tipo: 'mudar_apelido', apelido: novo } };
+    }
+    case 'pagar': {
+      const sit = situacaoCompromissos(compromissos, expenses, today).filter(c => c.noMes);
+      if (!compromissos.length) return { fato: 'Você ainda não cadastrou compromissos. Na aba 📅 Mês dá pra pôr contas fixas, faturas, assinaturas e planos que se repetem, e eu lembro dos vencimentos.', sugestoes: ['O que planejei pro mês?'] };
+      const abertos = sit.filter(c => c.status !== 'pago');
+      if (!abertos.length) return { fato: `Tudo pago este mês! ${sit.length} ${sit.length === 1 ? 'compromisso' : 'compromissos'} em dia.`, sugestoes: ['Cabe no mês?'] };
+      const lista = abertos.map(c => `${c.nome} ${formatBRL(c.valorCents)}${c.diaNoMes ? ` (${c.status === 'atrasado' ? `venceu dia ${c.diaNoMes}` : `dia ${c.diaNoMes}`})` : ''}`).join('; ');
+      const total = abertos.reduce((a, c) => a + c.valorCents, 0);
+      const prox = abertos.find(c => c.status === 'atrasado') || abertos[0];
+      return {
+        fato: `Falta pagar ${formatBRL(total)} este mês: ${lista}. Já pagou ${prox.nome}? Se sim, confirma que eu lanço.`,
+        acao: { tipo: 'registrar_gasto', amountCents: prox.valorCents, categoryId: prox.categoryId, date: today, note: prox.nome, compromissoId: prox.id, accountId: prox.accountId },
+        sugestoes: ['Cabe no mês?', 'O que planejei pro mês?'],
+      };
+    }
+    case 'planos': {
+      const a = analisarPlanejamento(dados, today);
+      if (!a.planos.length) return { fato: 'Nada planejado ainda pra este mês. Na aba 📅 Mês você lista o que quer comprar ou gastar, com valores, e eu calculo se cabe.', sugestoes: ['O que tenho pra pagar?'] };
+      const lista = a.planos.map(p => `${p.feito ? '✔ ' : ''}${p.nome} ${formatBRL(p.valorCents)}`).join('; ');
+      return { fato: `Planos deste mês: ${lista}. Faltam ${formatBRL(a.planosPendentesCents)}. ${textoSobra(a)}`, sugestoes: ['Cabe no mês?', 'O que tenho pra pagar?'] };
+    }
+    case 'cabe': {
+      if (intencao.valor) {
+        const c = cabeNoMes(dados, intencao.valor, today);
+        if (c.cabe == null) return { fato: semBase() };
+        return {
+          fato: c.cabe
+            ? `Cabe! Somando o que já saiu (${formatBRL(c.gastosCents)}), compromissos (${formatBRL(c.compPendentesCents)}) e planos (${formatBRL(c.planosPendentesCents)}), sobram ${formatBRL(c.sobraCents)}. Depois de ${formatBRL(intencao.valor)}, ficariam ${formatBRL(c.sobraDepois)}.`
+            : `Apertado. Hoje a sobra prevista é ${formatBRL(c.sobraCents)}; com ${formatBRL(intencao.valor)} ficaria ${formatBRL(c.sobraDepois)}. ${c.adiar.length ? `Dá pra adiar ${c.adiar.map(p => p.nome).join(', ')}.` : 'Talvez esperar o próximo mês.'}`,
+          sugestoes: ['O que tenho pra pagar?', 'O que planejei pro mês?'],
+        };
+      }
+      const a = analisarPlanejamento(dados, today);
+      if (a.sobraCents == null) return { fato: semBase() };
+      return { fato: textoSobra(a), sugestoes: ['Posso comprar algo de 200?', 'O que tenho pra pagar?'] };
     }
     case 'como_esta':
       return { gatilho: 'como_esta', vars: { emocao } };

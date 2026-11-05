@@ -36,7 +36,7 @@ small, .small { font-size: .8rem; }
 
 button, input { font: inherit; color: inherit; }
 button { cursor: pointer; }
-input[type="text"], input[type="date"], input[type="url"], input[type="time"], select {
+input[type="text"], input[type="date"], input[type="url"], input[type="time"], input[type="number"], select {
   background: var(--card-2);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -168,7 +168,7 @@ fieldset.mood legend { color: var(--muted); margin-bottom: 8px; padding: 0; }
 .topbar h1 small { font-weight: 400; }
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 8;
-  display: grid; grid-template-columns: repeat(5, 1fr);
+  display: grid; grid-template-columns: repeat(6, 1fr);
   background: color-mix(in srgb, var(--card) 94%, transparent); backdrop-filter: blur(10px);
   border-top: 1px solid var(--line);
   padding: 6px max(8px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
@@ -277,3 +277,41 @@ select { appearance: none; -webkit-appearance: none; }
 .caos { border-color: color-mix(in srgb, var(--emo-cor, #ff3d7f) 45%, #3a1d2c); }
 .caos .caos-name { color: var(--emo-cor, var(--caos)); }
 .msg.caos-msg .who { display: flex; align-items: center; }
+
+/* ---------- Mês: planejamento e compromissos ---------- */
+.plan-linhas { display: grid; gap: 4px; margin: 8px 0 0; font-size: .92rem; }
+.plan-linhas li { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); }
+.plan-linhas li span:last-child { color: var(--text); font-variant-numeric: tabular-nums; }
+.caos-dica { margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--card-2); border-left: 3px solid var(--caos); font-size: .92rem; }
+.caos-dica:empty { display: none; }
+.comp-list, .plan-list { display: grid; gap: 8px; margin-top: 10px; }
+.comp-list li, .plan-list li {
+  display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center;
+  background: var(--card-2); border-radius: 12px; padding: 10px 12px; border-left: 4px solid var(--line);
+}
+.comp-list li.pago { border-left-color: var(--ok); }
+.comp-list li.aberto { border-left-color: var(--warn); }
+.comp-list li.atrasado { border-left-color: var(--danger); }
+.comp-list li.fora { opacity: .65; }
+.comp-list .comp-info, .plan-list .plan-info { display: grid; min-width: 0; }
+.comp-list small, .plan-list small { color: var(--muted); }
+.comp-acoes { display: flex; gap: 6px; grid-column: 1 / -1; flex-wrap: wrap; }
+.comp-acoes button { font-size: .82rem; padding: 6px 10px; border: 1px solid var(--line); background: var(--card); border-radius: 10px; }
+.comp-acoes .lancar { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+.plan-list li.feito .plan-info span { text-decoration: line-through; color: var(--muted); }
+.plan-list label { display: flex; gap: 8px; align-items: center; }
+.plan-list input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); }
+.plan-form { display: grid; grid-template-columns: 1fr 120px auto; gap: 8px; margin-top: 10px; }
+.plan-form .primary { padding: 10px 14px; }
+.sub-form { margin-top: 10px; }
+.sub-form > summary { cursor: pointer; color: var(--accent); font-weight: 600; padding: 6px 0; }
+#comp-form { display: grid; gap: 10px; margin-top: 8px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sugestao { margin: 0; font-size: .85rem; color: var(--caos); }
+.onb-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.onb-chips .chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.onb-chips .pronto { background: var(--caos); color: #fff; border-color: var(--caos); font-weight: 700; }
+@media (max-width: 380px) { .tabbar a { font-size: .64rem; } }
+
+.plan-list label.plan-info { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.plan-list label.plan-info span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

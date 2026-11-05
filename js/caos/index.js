@@ -11,7 +11,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '1.2.0';
+export const CAOS_VERSAO = '1.3.0';
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -20,7 +20,8 @@ export { IDENTIDADE, resumoIdentidade } from './identidade.js';
 
 // Prioridade: só uma fala por reação, a mais importante (para não virar spam).
 const PRIORIDADE = {
-  categoria_estourada: 50, conta_negativa: 48, mes_negativo: 46, orcamento_80: 40, mes_verde: 35,
+  categoria_estourada: 50, compromisso_atrasado: 49, conta_negativa: 48, mes_negativo: 46, compromisso_vence: 44,
+  orcamento_80: 40, mes_verde: 35, plano_do_mes: 25, confira_banco: 9,
   ritmo_alto: 30, delivery_repetido: 20, entrada_cadastrada: 15, gasto_cadastrado: 10, sem_registro: 8, boas_vindas: 5,
 };
 // Cooldown por tipo (ms). Alertas de orçamento e conta não têm: são úteis.
@@ -32,9 +33,11 @@ const COOLDOWN = {
   sem_registro: 24 * 3_600_000,
   mes_negativo: 12 * 3_600_000,
   boas_vindas: 6 * 3_600_000,
+  plano_do_mes: 24 * 3_600_000,
+  confira_banco: 3 * 24 * 3_600_000,
 };
 const RADAR_COOLDOWN = 6 * 3_600_000;
-const ALERTAS = new Set(['categoria_estourada', 'orcamento_80', 'delivery_repetido', 'ritmo_alto', 'mes_negativo', 'conta_negativa']);
+const ALERTAS = new Set(['categoria_estourada', 'orcamento_80', 'delivery_repetido', 'ritmo_alto', 'mes_negativo', 'conta_negativa', 'compromisso_vence', 'compromisso_atrasado']);
 
 export function memoriaInicial(now = Date.now()) {
   return { versao: CAOS_VERSAO, gerador: {}, emocoes: emocoesIniciais(now), lastAt: {}, lastMonthClosed: null, rosto: memoriaRostoInicial(), rostoUltimo: null };
@@ -50,10 +53,15 @@ function periodo(h) {
   return h < 5 ? 'madrugada' : h < 12 ? 'manha' : h < 18 ? 'tarde' : 'noite';
 }
 
-/** Etiquetas de contexto para o gerador (hora, dia, humor, emoção). */
-export function contexto({ humor, emocao, now = Date.now() }) {
+/** Etiquetas de contexto para o gerador (hora, dia, humor, emoção, quem é a pessoa). */
+export function contexto({ humor, emocao, now = Date.now(), perfil }) {
   const d = new Date(now);
   const tags = new Set([`humor_${humor}`, `emo_${emocao}`, `periodo_${periodo(d.getHours())}`]);
+  if (perfil?.apelido) tags.add('temNome');
+  if (perfil?.tratamento === 'formal') {
+    tags.add('tratamento_formal');
+    tags.delete('humor_acido'); // formal: sem zoeira
+  }
   if (d.getDay() === 0 || d.getDay() === 6) tags.add('fimDeSemana');
   const dia = d.getDate();
   const total = daysInMonth(toISODate(d).slice(0, 7));
@@ -69,17 +77,20 @@ function varsDoEvento(ev) {
   const r = v => (v != null ? formatBRL(v) : null);
   const fonte = ev.sourceId ? INCOME_SOURCES.find(s => s.id === ev.sourceId)?.name : null;
   return {
-    categoria: ev.categoryName, valor: r(ev.amountCents), fonte, pct: ev.pct, resta: r(ev.leftCents),
+    categoria: ev.categoryName, valor: r(ev.amountCents ?? ev.valorCents), fonte, pct: ev.pct, resta: r(ev.leftCents),
     passou: r(ev.overCents), qtd: ev.count, dias: ev.days, total: r(ev.totalCents),
     mes: ev.monthName ? ev.monthName[0].toUpperCase() + ev.monthName.slice(1) : null,
     economia: r(ev.savedCents), previsto: r(ev.projectedCents), porDia: r(ev.perDayCents),
     orcamento: r(ev.budgetCents), entradas: r(ev.incomeCents), gastos: r(ev.totalCents),
-    conta: ev.accountName, saldo: r(ev.balanceCents),
+    conta: ev.accountName ?? ev.nome, saldo: r(ev.balanceCents), dia: ev.dia,
+    quando: ev.type === 'compromisso_vence'
+      ? (ev.days === 0 ? 'hoje' : ev.days === 1 ? 'amanhã' : `em ${ev.days} dias (dia ${ev.dia})`) : null,
   };
 }
 
-function montar(gatilho, vars, { humor, emocao, mem, now, rng }) {
-  const ctx = { tags: contexto({ humor, emocao, now }), vars: Object.fromEntries(Object.entries(vars).filter(([, v]) => v != null)) };
+function montar(gatilho, vars, { humor, emocao, mem, now, rng, perfil }) {
+  const todas = { nome: perfil?.apelido || null, ...vars };
+  const ctx = { tags: contexto({ humor, emocao, now, perfil }), vars: Object.fromEntries(Object.entries(todas).filter(([, v]) => v != null)) };
   const { texto, memoria } = gerarFala(GERADORES, gatilho, ctx, mem.gerador, { rng });
   return { texto, gerador: memoria };
 }
@@ -105,7 +116,7 @@ function rostoPara(mem, { emocao, evento, humor, now, rng, direto = false }) {
  * Reage a eventos do motor (gasto cadastrado, alertas, boas-vindas…).
  * @returns {{ fala: null | { texto, evento, alerta, emocao, rosto }, memoria }}
  */
-function reagirBruto(eventos, { mood = DEFAULT_MOOD, memory, now = Date.now(), rng = Math.random } = {}) {
+function reagirBruto(eventos, { mood = DEFAULT_MOOD, memory, now = Date.now(), rng = Math.random, perfil = null } = {}) {
   const humor = MOODS[mood] ? mood : DEFAULT_MOOD;
   let mem = normalizarMem(memory, now);
   const evs = congelar(eventos || []);
@@ -130,7 +141,7 @@ function reagirBruto(eventos, { mood = DEFAULT_MOOD, memory, now = Date.now(), r
   if (!candidatos.length) return { fala: null, memoria: mem };
   const ev = candidatos[0];
   const emocao = emocaoAtual(mem.emocoes, humor, now);
-  const { texto, gerador } = montar(ev.type, varsDoEvento(ev), { humor, emocao, mem, now, rng });
+  const { texto, gerador } = montar(ev.type, varsDoEvento(ev), { humor, emocao, mem, now, rng, perfil });
   if (!texto) return { fala: null, memoria: mem };
   const r = rostoPara(mem, { emocao, evento: ev.type, humor, now, rng });
   const memoria = {
@@ -147,19 +158,19 @@ const EVENTO_DA_INTENCAO = { elogio: 'elogio', xingamento: 'xingamento', agradec
  * Conversa: responde a uma mensagem da pessoa com os números do motor.
  * @returns {{ fala: { texto, emocao, rosto, sugestoes, acao?, entendeu }, memoria }}
  */
-function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.now(), rng = Math.random, today } = {}) {
+function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.now(), rng = Math.random, today, perfil = null } = {}) {
   const humor = MOODS[mood] ? mood : DEFAULT_MOOD;
   let mem = normalizarMem(memory, now);
   const d = congelar(dados);
   const intencao = entender(texto, d);
   mem = { ...mem, emocoes: sentir(mem.emocoes, EVENTO_DA_INTENCAO[intencao.intent] || 'pergunta', now) };
   const emocao = emocaoAtual(mem.emocoes, humor, now);
-  const resp = responder(intencao, d, { today: today || toISODate(new Date(now)), emocao: rostoDe(emocao).nome });
+  const resp = responder(intencao, d, { today: today || toISODate(new Date(now)), emocao: rostoDe(emocao).nome, perfil });
 
   let fato = resp.fato;
   if (resp.alertas && resp.alertas.length) {
     // o principal alerta vira fala completa do gerador; os outros viram lista curta
-    const principal = montar(resp.alertas[0].type, varsDoEvento(resp.alertas[0]), { humor, emocao, mem, now, rng });
+    const principal = montar(resp.alertas[0].type, varsDoEvento(resp.alertas[0]), { humor, emocao, mem, now, rng, perfil });
     mem = { ...mem, gerador: principal.gerador };
     fato = `${fato} ${principal.texto}`;
     if (resp.alertas.length > 1) fato += ` Também: ${resp.alertas.slice(1).map(nomeAlerta).join(', ')}.`;
@@ -167,11 +178,11 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
 
   let saida;
   if (fato) {
-    const r = montar('resposta', { fato }, { humor, emocao, mem, now, rng });
+    const r = montar('resposta', { fato }, { humor, emocao, mem, now, rng, perfil });
     saida = r.texto || fato;
     mem = { ...mem, gerador: r.gerador };
   } else {
-    const r = montar(resp.gatilho || 'nao_entendi', resp.vars || {}, { humor, emocao, mem, now, rng });
+    const r = montar(resp.gatilho || 'nao_entendi', resp.vars || {}, { humor, emocao, mem, now, rng, perfil });
     saida = r.texto;
     mem = { ...mem, gerador: r.gerador };
   }
@@ -201,6 +212,10 @@ function nomeAlerta(a) {
     case 'conta_negativa': return `${a.accountName} no negativo`;
     case 'delivery_repetido': return `${a.count} deliveries na semana`;
     case 'sem_registro': return `${a.days} dias sem anotar`;
+    case 'compromisso_vence': return `${a.nome} vence ${a.days === 0 ? 'hoje' : a.days === 1 ? 'amanhã' : `em ${a.days} dias`}`;
+    case 'compromisso_atrasado': return `${a.nome} venceu dia ${a.dia}`;
+    case 'plano_do_mes': return `este mês tem ${a.nome}`;
+    case 'confira_banco': return `conferir o saldo de ${a.accountName}`;
     default: return a.type;
   }
 }
@@ -224,3 +239,12 @@ export const conversar = protegido('conversar', conversarBruto, (t, d, o = {}) =
   memoria: o.memory ?? memoriaInicial(),
 }));
 export { nomeAlerta };
+
+/** Fala avulsa de um gatilho (ex.: as perguntas do primeiro acesso). Devolve { texto, memoria }. */
+export const falaAvulsa = protegido('falaAvulsa', (gatilho, vars = {}, { mood = DEFAULT_MOOD, memory, now = Date.now(), rng = Math.random, perfil = null } = {}) => {
+  const humor = MOODS[mood] ? mood : DEFAULT_MOOD;
+  const mem = normalizarMem(memory, now);
+  const emocao = emocaoAtual(mem.emocoes, humor, now);
+  const r = montar(gatilho, vars, { humor, emocao, mem, now, rng, perfil });
+  return { texto: r.texto, memoria: { ...mem, gerador: r.gerador } };
+}, (g, v, o = {}) => ({ texto: '', memoria: o.memory ?? memoriaInicial() }));

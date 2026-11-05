@@ -1,4 +1,4 @@
-# Cérebro do C.A.O.S. na Carteira (C.A.O.S. 1.2.0)
+# Cérebro do C.A.O.S. na Carteira (C.A.O.S. 1.3.0)
 
 ## Quem ele é (1.1.0)
 
@@ -44,6 +44,16 @@ não dava pra copiar direto: vieram as **ideias e os motores**, reescritos para 
 | `delivery_repetido` | 3 deliveries em 7 dias |
 | `sem_registro` | 3 dias ou mais sem anotar |
 | `mes_verde` | Mês anterior fechou dentro do orçamento (uma vez) |
+| `compromisso_vence` / `compromisso_atrasado` | Conta fixa, fatura ou assinatura vence em até 3 dias / passou do dia sem lançamento |
+| `plano_do_mes` | Plano que se repete (ex.: comida japonesa a cada 2 meses) é deste mês |
+| `confira_banco` | Saldo de uma conta sem atualizar há 7 dias ou mais ("isso eu não consigo fazer por você") |
+
+## Conhecer a pessoa (1.3.0)
+
+No primeiro acesso ele pergunta o nome, como a pessoa quer ser chamada, se prefere jeito descontraído ou formal e no
+que ele pode ajudar (foco). Guarda em `meta/perfil` (entra no backup) e passa a usar o nome nas falas (balde
+`temNome`). No jeito formal, não sai zoeira nem no humor Ácido (balde `tratamento_formal`). Refazer: Ajustes → Seu
+perfil. Na conversa: "qual é o meu nome?" e "me chama de…" (proposta com Confirmar).
 
 ## O que ele entende na conversa
 

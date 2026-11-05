@@ -1,10 +1,11 @@
 // Persistência local (IndexedDB). Único módulo que lê e grava dados.
 
 const DB_NAME = 'carteira-jf';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 export const STORES = Object.freeze({
   expenses: 'expenses', categories: 'categories', meta: 'meta',
   incomes: 'incomes', accounts: 'accounts', images: 'images',
+  compromissos: 'compromissos', planos: 'planos',
 });
 
 let dbPromise;
@@ -27,6 +28,9 @@ export function openDB() {
       }
       if (!db.objectStoreNames.contains(STORES.accounts)) db.createObjectStore(STORES.accounts, { keyPath: 'id' });
       if (!db.objectStoreNames.contains(STORES.images)) db.createObjectStore(STORES.images, { keyPath: 'id' });
+      // v3: compromissos (contas fixas, faturas, assinaturas, planos que se repetem) e planos do mês
+      if (!db.objectStoreNames.contains(STORES.compromissos)) db.createObjectStore(STORES.compromissos, { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(STORES.planos)) db.createObjectStore(STORES.planos, { keyPath: 'id' }).createIndex('month', 'month');
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -93,11 +97,11 @@ export function setMeta(key, value) {
 }
 
 /** Troca todos os dados financeiros de uma vez (restauração de backup). Tudo ou nada. Fotos ficam como estão. */
-export async function replaceAll({ expenses, categories, incomes = [], accounts = [] }) {
+export async function replaceAll({ expenses, categories, incomes = [], accounts = [], compromissos = [], planos = [] }) {
   const db = await openDB();
-  const names = [STORES.expenses, STORES.categories, STORES.incomes, STORES.accounts];
+  const names = [STORES.expenses, STORES.categories, STORES.incomes, STORES.accounts, STORES.compromissos, STORES.planos];
   const tx = db.transaction(names, 'readwrite');
-  const data = [expenses, categories, incomes, accounts];
+  const data = [expenses, categories, incomes, accounts, compromissos, planos];
   names.forEach((n, i) => {
     const s = tx.objectStore(n);
     s.clear();

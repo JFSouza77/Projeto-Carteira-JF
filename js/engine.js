@@ -78,7 +78,7 @@ function isValidISODate(s) {
 }
 
 /** Valida e monta um gasto novo. Lança Error com mensagem para o usuário se algo estiver errado. */
-export function createExpense({ amountCents, categoryId, note = '', date, accountId = null, imageId = null }, { categories, now = new Date(), id } = {}) {
+export function createExpense({ amountCents, categoryId, note = '', date, accountId = null, imageId = null, compromissoId = null }, { categories, now = new Date(), id } = {}) {
   if (!Number.isInteger(amountCents) || amountCents <= 0) throw new Error('Valor inválido.');
   if (amountCents > 100_000_000_00) throw new Error('Valor alto demais. Confere aí.');
   if (categories && !categories.some(c => c.id === categoryId)) throw new Error('Escolha uma categoria.');
@@ -93,6 +93,7 @@ export function createExpense({ amountCents, categoryId, note = '', date, accoun
     month: monthKey(day),
     accountId: accountId || null,
     imageId: imageId || null,
+    compromissoId: compromissoId || null,
     createdAt: now.getTime(),
   };
 }
@@ -332,7 +333,7 @@ const SEVERITY = { alta: 3, media: 2, baixa: 1 };
  * Alertas do momento (o "radar" do C.A.O.S.). Só leitura: devolve uma lista ordenada por gravidade.
  * Cada alerta tem type, severity e os números que o narrador precisa para falar.
  */
-export function analyze({ expenses, incomes = [], categories, accounts = [] }, today = toISODate()) {
+export function analyze({ expenses, incomes = [], categories, accounts = [], compromissos = [] }, today = toISODate()) {
   const month = monthKey(today);
   const s = summarizeMonth(expenses, categories, month);
   const out = [];
@@ -382,6 +383,23 @@ export function analyze({ expenses, incomes = [], categories, accounts = [] }, t
     if (gap >= 3) out.push({ type: 'sem_registro', severity: 'baixa', days: gap });
   }
 
+  for (const c of situacaoCompromissos(compromissos, expenses, today)) {
+    if (c.status === 'atrasado') {
+      out.push({ type: 'compromisso_atrasado', severity: 'alta', compromissoId: c.id, nome: c.nome, valorCents: c.valorCents, dia: c.diaNoMes, days: -c.diasParaVencer });
+    } else if (c.status === 'aberto' && c.diasParaVencer <= 3) {
+      out.push({ type: 'compromisso_vence', severity: c.diasParaVencer <= 1 ? 'alta' : 'media', compromissoId: c.id, nome: c.nome, valorCents: c.valorCents, dia: c.diaNoMes, days: c.diasParaVencer });
+    } else if (c.status === 'pendente' && c.tipo === 'plano') {
+      out.push({ type: 'plano_do_mes', severity: 'baixa', compromissoId: c.id, nome: c.nome, valorCents: c.valorCents });
+    }
+  }
+
+  // "Confere seu banco": saldo informado há 7 dias ou mais (eu não consigo ver o banco, só lembrar)
+  const velha = accounts.filter(a => (Date.parse(`${today}T12:00:00`) - a.balanceAt) / 86_400_000 >= 7);
+  if (velha.length) {
+    const dias = Math.floor(Math.max(...velha.map(a => (Date.parse(`${today}T12:00:00`) - a.balanceAt) / 86_400_000)));
+    out.push({ type: 'confira_banco', severity: 'baixa', accountName: velha.map(accountLabel).join(', '), days: dias });
+  }
+
   return out.sort((a, b) => SEVERITY[b.severity] - SEVERITY[a.severity]);
 }
 
@@ -394,3 +412,164 @@ export function topCategories(expenses, categories, range) {
 }
 
 export { daysBetween };
+
+// ======================================================================
+// Compromissos (contas fixas, faturas, assinaturas, planos a cada N meses),
+// planos do mês e o "C.A.O.S. aprende categorias" (05/11/2026)
+// ======================================================================
+
+export const TIPOS_COMPROMISSO = Object.freeze({
+  conta: 'Conta fixa', fatura: 'Fatura de cartão', assinatura: 'Assinatura', plano: 'Plano que se repete',
+});
+
+/** Meses entre duas chaves "YYYY-MM" (b − a). */
+export function monthsBetween(a, b) {
+  const [ya, ma] = a.split('-').map(Number);
+  const [yb, mb] = b.split('-').map(Number);
+  return (yb - ya) * 12 + (mb - ma);
+}
+
+/**
+ * Compromisso: algo que se repete. `inicioMes` é o primeiro mês em que acontece; depois, a cada `cadaMeses`.
+ * Ex. do JF: comida japonesa a cada 2 meses; comeram em outubro → inicioMes = dezembro (próxima vez), cadaMeses = 2.
+ * `dia` = dia do vencimento (1–31), opcional pra planos.
+ */
+export function createCompromisso({ nome, valorCents = 0, tipo = 'conta', categoryId = 'contas', dia = null, cadaMeses = 1, inicioMes, accountId = null },
+  { now = new Date(), id, categories } = {}) {
+  const n = String(nome || '').trim();
+  if (!n) throw new Error('Dá um nome pro compromisso.');
+  if (!TIPOS_COMPROMISSO[tipo]) throw new Error('Tipo inválido.');
+  if (!Number.isInteger(valorCents) || valorCents < 0) throw new Error('Valor inválido.');
+  if (categories && !categories.some(c => c.id === categoryId)) throw new Error('Escolha uma categoria.');
+  const d = dia == null || dia === '' ? null : Number(dia);
+  if (d != null && !(Number.isInteger(d) && d >= 1 && d <= 31)) throw new Error('Dia do vencimento entre 1 e 31.');
+  if (tipo !== 'plano' && d == null) throw new Error('Qual o dia do vencimento?');
+  const cada = Number(cadaMeses);
+  if (!(Number.isInteger(cada) && cada >= 1 && cada <= 24)) throw new Error('Repetição inválida.');
+  const inicio = inicioMes || monthKey(toISODate(now));
+  if (!/^\d{4}-\d{2}$/.test(inicio)) throw new Error('Mês inválido.');
+  return {
+    id: id || newId(), nome: n.slice(0, 60), valorCents, tipo, categoryId, dia: d, cadaMeses: cada, inicioMes: inicio,
+    accountId: accountId || null, ativo: true, createdAt: now.getTime(),
+  };
+}
+
+export function ocorreNoMes(c, month) {
+  if (!c.ativo) return false;
+  const diff = monthsBetween(c.inicioMes, month);
+  return diff >= 0 && diff % c.cadaMeses === 0;
+}
+
+/** Próximo mês (a partir de `month`, inclusive) em que o compromisso acontece. */
+export function proximaOcorrencia(c, month) {
+  const diff = monthsBetween(c.inicioMes, month);
+  if (diff <= 0) return c.inicioMes;
+  const resto = diff % c.cadaMeses;
+  return resto === 0 ? month : shiftMonth(month, c.cadaMeses - resto);
+}
+
+/** Dia efetivo no mês (dia 31 em fevereiro vira o último dia). */
+export function diaNoMes(c, month) {
+  return c.dia == null ? null : Math.min(c.dia, daysInMonth(month));
+}
+
+/** Situação de cada compromisso no mês: pago (tem lançamento ligado), vence em X dias, atrasado, ou não é deste mês. */
+export function situacaoCompromissos(compromissos, expenses, today = toISODate()) {
+  const month = monthKey(today);
+  const hoje = Number(today.slice(8, 10));
+  return compromissos.filter(c => c.ativo).map(c => {
+    const noMes = ocorreNoMes(c, month);
+    const pagos = expenses.filter(e => e.compromissoId === c.id && e.month === month);
+    const pagoCents = pagos.reduce((s, e) => s + e.amountCents, 0);
+    const dia = diaNoMes(c, month);
+    let status = 'fora';
+    if (noMes) status = pagos.length ? 'pago' : dia == null ? 'pendente' : dia < hoje ? 'atrasado' : 'aberto';
+    return {
+      ...c, noMes, status, pagoCents, diaNoMes: dia,
+      diasParaVencer: noMes && dia != null ? dia - hoje : null,
+      proximaVez: proximaOcorrencia(c, noMes && pagos.length ? shiftMonth(month, 1) : month),
+    };
+  }).sort((a, b) => (a.noMes === b.noMes ? (a.diaNoMes ?? 99) - (b.diaNoMes ?? 99) : a.noMes ? -1 : 1));
+}
+
+/** Plano do mês: algo que a pessoa planejou comprar/gastar neste mês. */
+export function createPlano({ nome, valorCents, categoryId = 'outros', month }, { now = new Date(), id } = {}) {
+  const n = String(nome || '').trim();
+  if (!n) throw new Error('O que você planejou?');
+  if (!Number.isInteger(valorCents) || valorCents <= 0) throw new Error('Quanto vai custar?');
+  return { id: id || newId(), nome: n.slice(0, 60), valorCents, categoryId, month: month || monthKey(toISODate(now)), feito: false, createdAt: now.getTime() };
+}
+
+/**
+ * Análise do mês planejado: entradas, o que já saiu, compromissos e planos que faltam, e a sobra prevista.
+ * Se faltar dinheiro, sugere o que adiar (os maiores planos ainda não feitos, até cobrir a diferença).
+ */
+export function analisarPlanejamento({ expenses, incomes = [], categories, compromissos = [], planos = [] }, today = toISODate()) {
+  const month = monthKey(today);
+  const entradas = incomeIn(incomes, month);
+  const gastos = spentIn(expenses, month);
+  const sit = situacaoCompromissos(compromissos, expenses, today).filter(c => c.noMes);
+  const compPendentes = sit.filter(c => c.status !== 'pago');
+  const compPendentesCents = compPendentes.reduce((s, c) => s + c.valorCents, 0);
+  const planosMes = planos.filter(p => p.month === month);
+  const planosPendentes = planosMes.filter(p => !p.feito);
+  const planosPendentesCents = planosPendentes.reduce((s, p) => s + p.valorCents, 0);
+  const s = summarizeMonth(expenses, categories, month);
+  const base = entradas > 0 ? entradas : s.budgetTotalCents;
+  const baseTipo = entradas > 0 ? 'entradas' : s.budgetTotalCents > 0 ? 'orcamento' : null;
+  const comprometido = gastos + compPendentesCents + planosPendentesCents;
+  const sobraCents = baseTipo ? base - comprometido : null;
+  const adiar = [];
+  if (sobraCents != null && sobraCents < 0) {
+    let falta = -sobraCents;
+    for (const p of [...planosPendentes].sort((a, b) => b.valorCents - a.valorCents)) {
+      if (falta <= 0) break;
+      adiar.push(p);
+      falta -= p.valorCents;
+    }
+  }
+  return {
+    month, entradasCents: entradas, gastosCents: gastos, baseCents: base, baseTipo,
+    compromissos: sit, compPendentesCents, planos: planosMes, planosPendentesCents, comprometidoCents: comprometido,
+    sobraCents, adiar,
+  };
+}
+
+/** "Cabe no mês?" para uma compra de `valorCents`. */
+export function cabeNoMes(dados, valorCents, today = toISODate()) {
+  const a = analisarPlanejamento(dados, today);
+  if (a.sobraCents == null) return { ...a, valorCents, cabe: null, sobraDepois: null };
+  return { ...a, valorCents, cabe: a.sobraCents - valorCents >= 0, sobraDepois: a.sobraCents - valorCents };
+}
+
+// ---------- C.A.O.S. aprende categorias ----------
+
+const PALAVRAS_VAZIAS = new Set(['de', 'do', 'da', 'dos', 'das', 'no', 'na', 'nos', 'nas', 'em', 'com', 'o', 'a', 'os', 'as',
+  'um', 'uma', 'pra', 'para', 'pro', 'e', 'reais', 'real', 'r']);
+
+export function palavrasDe(texto) {
+  return String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .split(/[^a-z0-9]+/).filter(w => w.length >= 2 && !PALAVRAS_VAZIAS.has(w) && !/^\d+$/.test(w));
+}
+
+/**
+ * Sugere a categoria pela descrição, com base no que a pessoa já lançou antes.
+ * Mesma descrição vale mais; palavra em comum vale menos. Devolve null se não tiver base.
+ */
+export function sugerirCategoria(texto, expenses) {
+  const alvo = palavrasDe(texto);
+  if (!alvo.length) return null;
+  const chave = alvo.join(' ');
+  const votos = {};
+  for (const e of expenses) {
+    if (!e.note) continue;
+    const p = palavrasDe(e.note);
+    if (!p.length) continue;
+    let peso = 0;
+    if (p.join(' ') === chave) peso = 3;
+    else if (p.some(w => alvo.includes(w))) peso = 1;
+    if (peso) votos[e.categoryId] = (votos[e.categoryId] || 0) + peso;
+  }
+  const melhor = Object.entries(votos).sort((a, b) => b[1] - a[1])[0];
+  return melhor && melhor[1] >= 1 ? { categoryId: melhor[0], votos: melhor[1] } : null;
+}
