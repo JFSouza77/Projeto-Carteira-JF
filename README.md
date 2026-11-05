@@ -27,6 +27,11 @@ npm run serve
 
 Abra http://localhost:8080. Testes: `npm test` (Node 18+, sem dependências).
 
+## Publicar o site (Cloudflare Pages)
+
+No Cloudflare Pages: comando de build `npm run build` e pasta de saída `dist`. O build copia só o app
+(sem servidor, testes ou documentos).
+
 ## Instalar no celular
 
 O app precisa estar num endereço `https` (service worker exige). Qualquer hospedagem estática serve,

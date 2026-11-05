@@ -151,3 +151,6 @@ vite.config.ts.timestamp-*
 # Dados pessoais: nunca commitar
 carteira-backup-*.json
 *.extrato.*
+
+# Site montado (npm run build)
+dist/
