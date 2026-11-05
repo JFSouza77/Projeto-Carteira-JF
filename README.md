@@ -7,14 +7,17 @@ os gastos e avisa quando um orçamento aperta, sem nunca alterar os dados.
 
 ## O que já faz
 
-- Cadastrar gasto (valor, categoria, descrição, data) e apagar
-- Total do mês, navegação entre meses, gasto por categoria
-- Orçamento mensal por categoria, com barra verde / amarela (80%) / vermelha (estourou)
-- C.A.O.S. v0: reage a gasto cadastrado, 80% do orçamento, categoria estourada, delivery repetido
-  (3 em 7 dias) e mês fechado no verde. Humores Suave (padrão), Normal e Ácido; anti-repetição,
-  cooldown e voz opcional
-- Dados no aparelho (IndexedDB), funciona sem internet, instala na tela inicial
-- Backup: exportar e importar JSON
+- **Lançar gastos e entradas** (salário, freela, rendimentos…), com conta e foto do comprovante
+- **Contas bancárias:** escolhe o banco, informa o saldo, e o app acompanha o saldo estimado com os lançamentos
+- Total do mês, entradas, saldo do mês, gasto por categoria e **orçamento** com barra verde / amarela / vermelha
+- **Alertas:** orçamento em 80%, categoria estourada, ritmo acima do orçamento, saindo mais do que entrando, conta
+  no negativo, delivery repetido, dias sem anotar
+- **C.A.O.S. 1.0** (trazido do Perfil JF): emoções, falas montadas por contexto sem repetir, 3 humores (Suave é o
+  padrão), voz opcional, e **conversa**: pergunte "quanto gastei em delivery?", "tive rendimentos?", "vai dar até o
+  fim do mês?", ou diga "gastei 30 no mercado" que ele prepara o registro pra você confirmar
+- **Lembretes** para anotar os gastos
+- **IA online opcional** (servidor próprio no Cloudflare): lê foto de comprovante e responde perguntas livres
+- Offline, instala na tela inicial, backup em JSON
 
 ## Rodar no computador
 
@@ -32,4 +35,9 @@ por exemplo Cloudflare Pages apontando para este repositório, sem build e com a
 - **iPhone:** abra no Safari → Compartilhar → Adicionar à Tela de Início.
 - **Android:** abra no Chrome → menu → Instalar app.
 
+## Servidor (opcional)
+
+IA online e lembretes no iPhone: veja [`servidor/LEIA-ME.md`](servidor/LEIA-ME.md).
+
 Regras do projeto para quem for mexer no código (inclusive o Claude Code): veja [`CLAUDE.md`](CLAUDE.md).
+Cérebro do C.A.O.S.: [`docs/CAOS_Carteira.md`](docs/CAOS_Carteira.md). Próximas ideias: [`docs/Ideias.md`](docs/Ideias.md).
