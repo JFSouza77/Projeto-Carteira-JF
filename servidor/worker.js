@@ -14,6 +14,7 @@
  *   GET  /push/chave      → { chave } (chave pública VAPID)
  *   POST /push/inscrever  → { inscricao, hora "HH:MM", fuso }
  *   POST /push/sair       → { endpoint }
+ *   POST /ia/bancos       → { bancos:[nomes], cdi } → { texto } (comparação de rendimento; só nomes, nada de saldo)
  *   GET  /mercado         → resumo do mercado (moedas, Ibovespa, Selic, CDI, IPCA) guardado no KV
  *   cron (15 em 15 min)   → manda os lembretes do horário e, em dia útil depois das 10h, atualiza o mercado
  *
@@ -154,6 +155,34 @@ async function iaPerguntar(req, env) {
   });
   const texto = textoDa(r);
   return { texto: texto || 'Essa eu não posso responder. Pergunta outra coisa sobre a carteira?' };
+}
+
+export const SISTEMA_BANCOS = `Você é o C.A.O.S., do app Carteira JF. ${'Responda em português do Brasil, curto e em linguagem simples.'}
+A pessoa quer comparar quanto rende o dinheiro parado (conta, caixinha, cofrinho) nos bancos dela.
+Regras:
+- Para cada banco, diga o rendimento típico em "% do CDI" que você conhece e se o dinheiro fica disponível na hora.
+- Deixe claro que essas taxas mudam com frequência e que podem estar desatualizadas: a pessoa deve confirmar no app de cada banco.
+- Se não souber de um banco, diga que não sabe. Nunca invente número.
+- Use o CDI informado para mostrar a conta (ex.: 100% do CDI = X% ao ano).
+- No fim, diga qual parece render mais pelo que você sabe, com a ressalva acima. Não recomende outros investimentos.
+- No máximo 6 frases.`;
+
+async function iaBancos(req, env) {
+  const corpo = await lerCorpo(req);
+  const bancos = (Array.isArray(corpo.bancos) ? corpo.bancos : []).map(b => String(b).trim().slice(0, 40)).filter(Boolean).slice(0, 8);
+  if (!bancos.length) throw new ErroHttp(400, 'Faltou a lista de bancos.');
+  const cdi = Number(corpo.cdi);
+  const client = clienteIA(env);
+  await conferirLimite(req, env);
+  const r = await client.beta.messages.create({
+    model: modelo(env),
+    max_tokens: 16000,
+    output_config: { effort: 'low' },
+    system: SISTEMA_BANCOS,
+    messages: [{ role: 'user', content: `Bancos: ${bancos.join(', ')}.${Number.isFinite(cdi) && cdi > 0 ? ` CDI atual: ${cdi}% ao ano.` : ''} Qual rende mais pro dinheiro parado?` }],
+    ...extras(env),
+  });
+  return { texto: textoDa(r) || 'Essa eu não consegui responder agora. Confere o "% do CDI" no app de cada banco.' };
 }
 
 export function esquemaImagem(ids) {
@@ -410,7 +439,7 @@ export default {
         return json({ chave: env.VAPID_PUBLIC_KEY }, 200, h);
       }
       if (req.method === 'POST') {
-        const rotas = { '/ia/perguntar': iaPerguntar, '/ia/imagem': iaImagem, '/push/inscrever': pushInscrever, '/push/sair': pushSair };
+        const rotas = { '/ia/perguntar': iaPerguntar, '/ia/imagem': iaImagem, '/ia/bancos': iaBancos, '/push/inscrever': pushInscrever, '/push/sair': pushSair };
         const rota = rotas[url.pathname];
         if (rota) return json(await rota(req, env), 200, h);
       }

@@ -70,3 +70,9 @@ export { chamar };
 export function baixarMercado(base) {
   return chamar(base, '/mercado');
 }
+
+/** Comparação de rendimento entre bancos: só os NOMES dos bancos e o CDI vão pro servidor (nada de saldo). */
+export async function perguntarBancos(base, { bancos, cdi }) {
+  const j = await chamar(base, '/ia/bancos', { bancos, cdi });
+  return j.texto;
+}

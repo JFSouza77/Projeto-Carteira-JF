@@ -56,6 +56,13 @@ app baixa e guarda em `meta/mercado`. O C.A.O.S. responde "como está o dólar?"
 Selic?", "vale investir em dólar?" mostrando a conta, a data do dado e sempre um aviso (balde `aviso_mercado`) de que é
 apoio, não recomendação. No "vale investir?", compara com o CDI e lembra da reserva de emergência.
 
+## "Amanhã eu trago" (1.3.0)
+
+Pergunta que precisa do servidor (hoje: "qual banco rende mais?") ganha uma ajuda na hora, offline (a conta do CDI
+com o saldo da pessoa), e a comparação vai pro servidor (`POST /ia/bancos`, só os nomes dos bancos e o CDI). Sem
+conexão, a pergunta fica na fila (`meta/fila`); quando o app alcança o servidor, o C.A.O.S. entrega a resposta na
+conversa e avisa no balão.
+
 ## Conhecer a pessoa (1.3.0)
 
 No primeiro acesso ele pergunta o nome, como a pessoa quer ser chamada, se prefere jeito descontraído ou formal e no

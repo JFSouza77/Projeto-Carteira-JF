@@ -899,7 +899,7 @@ Object.assign(GERADORES, {
     inteira: {
       geral: [
         'Lembrando: é uma leitura dos últimos dias, não uma previsão garantida nem recomendação de investimento.',
-        'Isso é apoio com base nos números recentes. O mercado pode virar a qualquer hora, então decide com calma.',
+        'Isso é apoio com base nos números recentes, não recomendação de investimento. O mercado pode virar a qualquer hora.',
         'Eu calculo com o que já aconteceu; o futuro ninguém garante. Não é recomendação de investimento.',
         'Use como dica, não como certeza: eu sou uma IA de bolso, não um consultor de investimentos.',
         'Base de cálculo: variação e médias dos últimos dias. Pode errar, e não substitui um profissional.',

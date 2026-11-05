@@ -461,6 +461,48 @@ async function enviarPergunta(texto) {
   }
   addMsg({ de: 'caos', texto: fala.texto, sugestoes: fala.sugestoes, acao: fala.acao, rosto: fala.rosto });
   if (state.settings.voice) falar(fala.texto, fala.emocao);
+  if (fala.filaIA) await perguntaPraDepois(fala.filaIA);
+}
+
+// ---------- "Amanhã eu trago": perguntas que precisam do servidor ----------
+
+async function perguntaPraDepois(item) {
+  const pronto = state.settings.aiOn && state.settings.aiUrl && navigator.onLine;
+  if (pronto) {
+    const pensando = rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory });
+    addMsg({ de: 'caos', texto: 'Vou buscar a comparação com a IA…', temp: true, rosto: pensando });
+    try {
+      const texto = await ia.perguntarBancos(state.settings.aiUrl, { bancos: item.bancos, cdi: state.mercado?.cdi?.valor });
+      state.chat = state.chat.filter(m => !m.temp);
+      addMsg({ de: 'caos', ia: true, texto });
+      return;
+    } catch {
+      state.chat = state.chat.filter(m => !m.temp);
+    }
+  }
+  const fila = (await db.getMeta('fila', [])).filter(x => x.tipo !== item.tipo);
+  fila.push({ ...item, id: crypto.randomUUID?.() || String(Date.now()), criadoEm: Date.now() });
+  await db.setMeta('fila', fila);
+  addMsg({ de: 'caos', texto: 'Hoje eu não consigo trazer a comparação certinha, mas guardei sua pergunta. Assim que eu tiver conexão com o servidor da Carteira, eu trago a resposta aqui. 😉' });
+}
+
+/** Responde o que ficou na fila, quando o servidor estiver ao alcance; entrega na conversa e no balão. */
+async function processarFila() {
+  if (!(state.settings.aiOn && state.settings.aiUrl && navigator.onLine)) return;
+  const fila = await db.getMeta('fila', []);
+  if (!fila.length) return;
+  const resta = [];
+  for (const item of fila) {
+    try {
+      if (item.tipo !== 'bancos') continue;
+      const texto = await ia.perguntarBancos(state.settings.aiUrl, { bancos: item.bancos, cdi: state.mercado?.cdi?.valor });
+      addMsg({ de: 'caos', ia: true, texto: `Lembra que você perguntou qual banco rende mais? Trouxe: ${texto}` });
+      $('#caos-line').textContent = 'Trouxe a resposta que eu fiquei devendo. Toca aqui pra ver.';
+    } catch {
+      resta.push(item);
+    }
+  }
+  await db.setMeta('fila', resta);
 }
 
 async function confirmarAcao(i, ok) {
@@ -1209,8 +1251,8 @@ async function init() {
 
   db.requestPersistence();
   limparFotosOrfas();
-  atualizarMercado();
-  window.addEventListener('online', atualizarMercado);
+  atualizarMercado().then(processarFila);
+  window.addEventListener('online', () => atualizarMercado().then(processarFila));
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW não registrado', err));
   }
