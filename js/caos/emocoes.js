@@ -90,3 +90,13 @@ export function emocaoAtual(estado, humor = 'suave', now = Date.now()) {
   for (const k of EMOCOES) if (v[k] > max) { max = v[k]; top = k; }
   return top;
 }
+
+// Quanto a emoção do momento está forte (0 a 1): escolhe o nível do rosto.
+const BASE_DA = { radiante: ['alegria', 'orgulho'], protetor: ['preocupacao', 'carinho'], tenso: ['preocupacao', 'irritacao'] };
+export function intensidade(estado, emocao, now = Date.now()) {
+  if (emocao === 'calmo') return 0.2;
+  const e = decair(estado, now);
+  const chaves = BASE_DA[emocao] || [emocao];
+  const v = Math.max(...chaves.map(k => e.v[k] || 0));
+  return Math.max(0, Math.min(1, (v - 3) / 6));
+}

@@ -1,4 +1,4 @@
-# Cérebro do C.A.O.S. na Carteira (C.A.O.S. 1.1.0)
+# Cérebro do C.A.O.S. na Carteira (C.A.O.S. 1.2.0)
 
 ## Quem ele é (1.1.0)
 
@@ -25,6 +25,7 @@ não dava pra copiar direto: vieram as **ideias e os motores**, reescritos para 
 | **Espinha (3 leis)** | 1.7.5.3 | 1ª: nunca mexe nos dados (recebe cópia congelada; registro é só proposta). 2ª: Suave nunca recebe zoeira. 3ª: erro vira silêncio, nunca trava o app. | `js/caos/espinha.js` |
 | **Console de emoções** | 4.x (10 emoções, misturas, decaimento) | 7 emoções (alegria, orgulho, preocupação, irritação, tédio, curiosidade, carinho) e 3 misturas (radiante, protetor, tenso). Voltam ao calmo com o tempo real (meia-vida de 8 h). O olho muda de cor. | `js/caos/emocoes.js` |
 | **Gerador de falas** | 1.7.5.1 e 4.4 | Moldes + pedaços por contexto (hora, início/fim do mês, humor, emoção). Não repete pedaço recente, palavra forte nem as últimas 12 falas. | `js/caos/gerador.js` + `js/caos/falas.js` |
+| **Rosto** | 4.0 (rostos de texto, níveis, escada, misturas) | Os mesmos 243 rostos de 16 emoções do Perfil, animados (quadros, balanço, tremido de raiva). Nível pela intensidade, escada de vizinhos nas mudanças de humor, reação direta na conversa vai na hora. Suave nunca mostra raiva/deboche. | `js/caos/rostos.js` + `rostos-dados.js` (importados por `ferramentas/importar_rostos_perfil.cjs`) |
 | **Tato** | 4.7 | Fala acima de 170 letras é remontada. | `js/caos/gerador.js` |
 | **Voz** | escolha de voz (pt-BR, masculina, local) | Igual, mais tom e velocidade por emoção e leitura de "R$". Ditado (falar com ele) quando o navegador deixa. | `js/voz.js` |
 | **Pulmão / ritmo** | 4.3 | Uma fala por reação, a mais importante. Cooldown por tipo; alertas de orçamento e conta sem cooldown; alerta do radar no máximo a cada 6 h. | `js/caos/index.js` |

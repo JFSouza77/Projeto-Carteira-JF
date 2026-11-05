@@ -7,7 +7,7 @@ import {
   shiftMonth, monthLabel, createExpense, createIncome, createAccount, summarizeMonth, detectExpenseEvents,
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
 } from './engine.js';
-import { reagir, conversar, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, nomeAlerta } from './caos/index.js';
+import { reagir, conversar, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta } from './caos/index.js';
 import { falar, vozDisponivel, ditadoDisponivel, ouvir } from './voz.js';
 import * as imagens from './imagens.js';
 import * as ia from './ia.js';
@@ -46,11 +46,51 @@ function guardarMemoria(memoria) {
   db.setMeta('caosMemory', memoria).catch(console.error);
 }
 
+// ---------- Rosto animado (sistema do Perfil JF) ----------
+
+function setRosto(el, r) {
+  if (!el || !r) return;
+  el._rosto = r;
+  el.dataset.emo = r.emo;
+  el.dataset.fl = r.quadros.some(q => [...q].length > 11) ? '1' : '';
+  el.style.setProperty('--emo-cor', r.cor);
+  el.style.setProperty('--emo-bg', r.bg);
+  el.textContent = r.quadros[0];
+}
+
+/** Pinta o rosto do momento no balão da tela inicial e no topo da conversa. */
+function pintarRosto(rosto) {
+  const r = rosto || emocaoDoMomento(state.caosMemory, state.settings.mood).rosto
+    || rostoAvulso(undefined, { mood: state.settings.mood, memory: state.caosMemory });
+  setRosto($('#caos-face'), r);
+  setRosto($('#chat-face'), r);
+  $('#caos').style.setProperty('--emo-cor', r.cor);
+  $('#caos-mood').textContent = `· ${r.nome}`;
+  $('#chat-mood').textContent = r.nome;
+}
+
+// Anima todos os rostos na tela: troca os quadros, balança de leve, treme quando bravo (como no Perfil)
+const MENOS_MOVIMENTO = matchMedia('(prefers-reduced-motion: reduce)');
+function animarRostos() {
+  if (document.hidden) return;
+  const t = performance.now();
+  for (const el of document.querySelectorAll('.caos-face')) {
+    const r = el._rosto;
+    if (!r || !el.isConnected || el.offsetParent === null) continue;
+    if (MENOS_MOVIMENTO.matches) { if (el.textContent !== r.quadros[0]) el.textContent = r.quadros[0]; continue; }
+    const q = r.quadros[Math.floor(t / r.fr) % r.quadros.length];
+    if (el.textContent !== q) el.textContent = q;
+    const calmo = r.emo === 'calmo';
+    el.style.setProperty('--emo-k', ((r.amp * (1 - Math.cos((t / r.per) * 2 * Math.PI))) / 2).toFixed(3));
+    el.style.setProperty('--face-y', calmo ? '0px' : `${(-1.5 * Math.sin((t / 900) * 2 * Math.PI)).toFixed(2)}px`);
+    el.style.setProperty('--face-r', r.emo === 'raiva' ? `${(2.5 * Math.sin(t / 45)).toFixed(2)}deg`
+      : r.emo === 'deboche' ? `${(4 * Math.sin(t / 700)).toFixed(2)}deg` : '0deg');
+  }
+}
+setInterval(animarRostos, 90);
+
 function pintarOlho() {
-  const { rosto } = emocaoDoMomento(state.caosMemory, state.settings.mood);
-  document.documentElement.style.setProperty('--eye', rosto.cor);
-  $('#caos-mood').textContent = `· ${rosto.nome}`;
-  $('#chat-mood').textContent = rosto.nome;
+  pintarRosto();
 }
 
 function narrate(events, { ignoreCooldown = false } = {}) {
@@ -58,8 +98,8 @@ function narrate(events, { ignoreCooldown = false } = {}) {
   const { fala, memoria } = reagir(events, { mood: state.settings.mood, memory, now: Date.now() });
   // ignorar cooldown nesta fala não pode apagar os cooldowns dos outros eventos
   guardarMemoria({ ...memoria, lastAt: { ...state.caosMemory.lastAt, ...memoria.lastAt } });
-  pintarOlho();
-  if (!fala) return null;
+  if (!fala) { pintarOlho(); return null; }
+  pintarRosto(fala.rosto);
   const box = $('#caos');
   $('#caos-line').textContent = fala.texto;
   box.classList.toggle('alert', fala.alerta);
@@ -338,6 +378,12 @@ async function verFoto(id) {
 // ======================================================================
 
 function addMsg(msg) {
+  if (msg.de === 'caos' && !msg.rosto) {
+    msg.rosto = msg.temp
+      ? rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory })
+      : emocaoDoMomento(state.caosMemory, state.settings.mood).rosto
+        || rostoAvulso(undefined, { mood: state.settings.mood, memory: state.caosMemory });
+  }
   state.chat.push(msg);
   if (state.chat.length > 60) state.chat.splice(0, state.chat.length - 60);
   db.setMeta('chat', state.chat.filter(m => !m.temp).map(({ url, ...m }) => m)).catch(() => {});
@@ -356,8 +402,12 @@ function renderChat() {
       const acao = m.acao && !m.acaoFeita
         ? `<div class="acao"><button class="sim" data-acao="${i}" data-ok="1">✔ Confirmar</button><button class="nao" data-acao="${i}" data-ok="0">Cancelar</button></div>`
         : '';
-      return `<li class="msg caos-msg ${m.temp ? 'pensando' : ''}"><span class="who">C.A.O.S.${m.ia ? ' · IA' : ''}</span>${esc(m.texto)}${acao}</li>`;
+      return `<li class="msg caos-msg ${m.temp ? 'pensando' : ''}"><span class="who"><span class="caos-face mini" data-msg="${i}" aria-hidden="true"></span>C.A.O.S.${m.ia ? ' · IA' : ''}</span>${esc(m.texto)}${acao}</li>`;
     }).join('');
+    for (const el of log.querySelectorAll('[data-msg]')) {
+      const r = state.chat[Number(el.dataset.msg)]?.rosto;
+      if (r) setRosto(el, r); else el.remove();
+    }
   }
   const ult = [...state.chat].reverse().find(m => m.de === 'caos');
   const sug = ult?.sugestoes?.length ? ult.sugestoes : SUGESTOES.slice(0, 6);
@@ -371,23 +421,27 @@ async function enviarPergunta(texto) {
   addMsg({ de: 'eu', texto: t });
   const { fala, memoria } = conversar(t, dados(), { mood: state.settings.mood, memory: state.caosMemory, now: Date.now() });
   guardarMemoria(memoria);
-  pintarOlho();
+  pintarRosto(fala.rosto);
 
   if (!fala.entendeu && state.settings.aiOn && state.settings.aiUrl) {
-    addMsg({ de: 'caos', texto: 'Deixa eu pensar com a IA…', temp: true });
+    const pensando = rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory });
+    pintarRosto(pensando);
+    addMsg({ de: 'caos', texto: 'Deixa eu pensar com a IA…', temp: true, rosto: pensando });
     try {
       const resposta = await ia.perguntar(state.settings.aiUrl, { pergunta: t, humor: state.settings.mood, dados: dados() });
       state.chat = state.chat.filter(m => !m.temp);
-      addMsg({ de: 'caos', texto: resposta, ia: true, sugestoes: SUGESTOES.slice(0, 5) });
+      addMsg({ de: 'caos', texto: resposta, ia: true, sugestoes: SUGESTOES.slice(0, 5), rosto: fala.rosto });
+      pintarRosto(fala.rosto);
       if (state.settings.voice) falar(resposta);
       return;
     } catch (e) {
       state.chat = state.chat.filter(m => !m.temp);
-      addMsg({ de: 'caos', texto: `${fala.texto} (A IA online não respondeu: ${e.message})`, sugestoes: fala.sugestoes });
+      addMsg({ de: 'caos', texto: `${fala.texto} (A IA online não respondeu: ${e.message})`, sugestoes: fala.sugestoes, rosto: fala.rosto });
+      pintarRosto(fala.rosto);
       return;
     }
   }
-  addMsg({ de: 'caos', texto: fala.texto, sugestoes: fala.sugestoes, acao: fala.acao });
+  addMsg({ de: 'caos', texto: fala.texto, sugestoes: fala.sugestoes, acao: fala.acao, rosto: fala.rosto });
   if (state.settings.voice) falar(fala.texto, fala.emocao);
 }
 
@@ -405,7 +459,7 @@ async function confirmarAcao(i, ok) {
       ? await registrarEntrada({ amountCents: a.amountCents, sourceId: a.sourceId, note: a.note, date: a.date })
       : await registrarGasto({ amountCents: a.amountCents, categoryId: a.categoryId, note: a.note, date: a.date, imageId: a.imageId });
     const fala = narrate(events, { ignoreCooldown: true });
-    addMsg({ de: 'caos', texto: fala ? fala.texto : 'Anotado!' });
+    addMsg({ de: 'caos', texto: fala ? fala.texto : 'Anotado!', rosto: fala?.rosto });
     if (state.settings.voice && fala) falar(fala.texto, fala.emocao);
   } catch (e) {
     m.acaoFeita = false;
