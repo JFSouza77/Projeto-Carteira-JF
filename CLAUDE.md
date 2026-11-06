@@ -47,8 +47,8 @@ App de controle de gastos com o C.A.O.S., narrador trazido do Perfil JF (JFSouza
 | Persistência | `js/db.js` | Único lugar que lê e grava no IndexedDB. |
 | Narrador | `js/caos/` | Espinha, emoções, gerador de falas, conversa. Funções puras. |
 | UI | `js/app.js` | Liga tudo. Só ele grava (via `db.js`). |
-| Navegador | `js/voz.js`, `js/imagens.js`, `js/ia.js`, `js/notificacoes.js` | Voz, fotos, IA online, lembretes. |
-| Servidor (opcional) | `servidor/` | Cloudflare Worker: IA online e push dos lembretes. |
+| Navegador | `js/voz.js`, `js/imagens.js`, `js/ia.js`, `js/notificacoes.js`, `js/conta.js` | Voz, fotos, IA online, lembretes, conta. |
+| Servidor (opcional) | `servidor/` | Cloudflare Worker: IA online, push dos lembretes, conta e sincronização. |
 
 **O C.A.O.S. NUNCA altera dados** (1ª lei da espinha, `js/caos/espinha.js`):
 
@@ -84,8 +84,12 @@ Mapa do cérebro: `docs/CAOS_Carteira.md`.
 
 ## Segurança e privacidade (inegociável)
 
-- Repositório **público** (JF, 05/11): mais ainda, **nada de dado real, chave ou senha no repositório**. Os dados da
-  pessoa ficam só no aparelho dela e as chaves só nos segredos do Cloudflare. **Nada de dados reais no commit** (extrato, backup `carteira-backup-*.json`, print com valores
+- Repositório **público** (JF, 05/11): mais ainda, **nada de dado real, chave ou senha no repositório**. As chaves
+  ficam só nos segredos do Cloudflare.
+- **Conta e sincronização (JF, 06/11):** os dados podem ficar no servidor da Carteira, **só na conta da própria pessoa**
+  (apelido + senha), pra funcionar em vários aparelhos. Sem conta, continua tudo só no aparelho. A senha nunca é guardada
+  (só hash PBKDF2 com sal); a sessão é um token cujo hash fica no KV. Fotos não sincronizam. Regras em `js/sincronia.js`
+  (as mesmas no app e no servidor); quem marca e aplica mudanças é o `db.js`; a rede é o `js/conta.js`. **Nada de dados reais no commit** (extrato, backup `carteira-backup-*.json`, print com valores
   reais). Dados de teste são inventados.
 - Chaves (`ANTHROPIC_API_KEY`, `VAPID_PRIVATE_JWK`) ficam **só nos segredos do Cloudflare**. Nunca no código, em arquivo
   do repositório ou no chat. O Code **nunca pede chave ao JF**; teste usa chave de mentira.

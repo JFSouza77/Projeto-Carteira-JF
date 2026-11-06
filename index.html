@@ -241,6 +241,32 @@
     <header class="topbar"><h1>Ajustes</h1></header>
     <main>
       <button type="button" class="card novidades-btn" id="novidades-abrir">🆕 <span><strong>Novidades</strong><small class="muted" id="novidades-versao"></small></span><span aria-hidden="true">›</span></button>
+      <details class="card" id="conta-card">
+        <summary><h2>☁️ Sua conta (usar em vários aparelhos)</h2></summary>
+        <div id="conta-fora">
+          <p class="muted small">Crie uma conta pra ver seus gastos no celular, no tablet e no computador. O que você anota num aparelho aparece nos outros sozinho. Sem internet, ele guarda e manda depois.</p>
+          <label class="field-label" for="conta-apelido">Apelido da conta</label>
+          <input id="conta-apelido" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="30" placeholder="ex.: maria.silva">
+          <label class="field-label" for="conta-senha">Senha <small class="muted">(pelo menos 6 letras ou números)</small></label>
+          <input id="conta-senha" type="password" autocomplete="current-password" maxlength="200">
+          <div class="conta-botoes">
+            <button type="button" class="primary" id="conta-entrar">Entrar</button>
+            <button type="button" class="ghost" id="conta-criar">Criar conta nova</button>
+          </div>
+          <p class="muted small" id="conta-aviso-servidor" hidden>Pra usar a conta, o app precisa do servidor da Carteira (endereço em "IA online e servidor", aqui embaixo).</p>
+        </div>
+        <div id="conta-dentro" hidden>
+          <p><strong id="conta-nome"></strong></p>
+          <p class="muted small" id="conta-status">Sincronizado.</p>
+          <div class="conta-botoes">
+            <button type="button" class="ghost" id="conta-sync">Sincronizar agora</button>
+            <button type="button" class="ghost" id="conta-sair">Sair da conta</button>
+          </div>
+          <p class="muted small">Seus dados ficam neste aparelho e na sua conta no servidor da Carteira. As fotos de comprovante ficam só no aparelho.</p>
+        </div>
+        <p class="error" id="conta-erro" role="alert" hidden></p>
+      </details>
+
       <details class="card">
         <summary><h2>Seu perfil</h2></summary>
         <p class="muted small" id="perfil-resumo">O C.A.O.S. ainda não te conhece.</p>
@@ -297,7 +323,7 @@
       </details>
 
       <details class="card">
-        <summary><h2>IA online</h2></summary>
+        <summary><h2>IA online e servidor</h2></summary>
         <p class="muted small">Opcional. Com o servidor do projeto, o C.A.O.S. lê fotos de comprovante e responde perguntas livres. Na conversa vão só totais por categoria (nunca a lista de gastos). A foto só vai quando você toca em "Ler com IA". O servidor também envia os lembretes do iPhone.</p>
         <label class="switch"><input type="checkbox" id="ai-toggle"><span>Usar IA online</span></label>
         <input id="ai-url" type="url" inputmode="url" placeholder="https://carteira-jf.SEU-USUARIO.workers.dev" aria-label="Endereço do servidor">
