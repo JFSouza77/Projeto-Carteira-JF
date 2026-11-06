@@ -5,7 +5,7 @@
 import {
   formatBRL, parseAmount, periodRange, sumInRange, topCategories, summarizeMonth, forecastMonth,
   incomeIn, monthKey, shiftMonth, monthLabel, accountBalance, accountLabel, totalBalance, analyze,
-  spentIn, toISODate, INCOME_SOURCES, situacaoCompromissos, analisarPlanejamento, cabeNoMes, sugerirCategoria, palavrasDe,
+  spentIn, toISODate, INCOME_SOURCES, situacaoCompromissos, analisarPlanejamento, cabeNoMes, sugerirCategoria, palavrasDe, faturaDoCartao,
 } from '../engine.js';
 import { IDENTIDADE, textoAnatomia, textoPodeNaoPode } from './identidade.js';
 import { textoTendencia, quandoFoi, mercadoVelho } from '../mercado.js';
@@ -188,6 +188,8 @@ function entenderSimples(t, { categories = [] } = {}) {
   const apelido = t.match(/(?:me chama|pode me chamar|me chame) de ([a-z0-9 ]{2,30})$/);
   if (apelido) return { ...r, intent: 'mudar_apelido', apelido: apelido[1].trim() };
   if (/(cabe no (mes|meu bolso|orcamento|bolso)|da pra comprar|posso comprar|consigo comprar|tenho dinheiro pra|vai sobrar|quanto (vai )?sobra)/.test(t)) return { ...r, intent: 'cabe' };
+  // Cartão de crédito (06/11): "como está meu cartão?", "quanto vem na fatura?", "quanto tenho de limite?"
+  if (/(cartao|fatura|limite (do|no) cartao)/.test(t) && !/\b(como|onde)\b.*\b(cadastr|adicion|registr|coloc|ponho|crio|criar)/.test(t)) return { ...r, intent: 'cartao' };
   if (/((o que|quanto) (eu )?(ainda )?tenho (pra|para|de) pagar|falta pagar|contas? (do|deste|desse) mes|vencimento|quando vence|o que vence|tenho conta|compromissos?|minhas contas fixas|assinaturas)/.test(t)) return { ...r, intent: 'pagar' };
   if (/(o que (eu )?planejei|meus planos|planejamento|planos? (do|deste|desse|pro|para o) mes|o que (eu )?vou comprar|planejad|programad|o que (mais )?(eu )?tenho (pra|para) (esse|este|o) mes|o que mais (eu )?(tenho|vou))/.test(t)) return { ...r, intent: 'planos' };
   // Saldo (06/11): "quanto eu tenho guardado no total?", "quanto tem nas contas?", "quanto poupei?"
@@ -215,6 +217,7 @@ function entenderSimples(t, { categories = [] } = {}) {
     const TEMAS = [
       ['entrada', /(entrada|salario|rendimento|receita|recebi|ganho)/],
       ['orcamento', /(orcamento|limite|meta de gasto)/],
+      ['cartao', /(cartao|fatura|credito)/],
       ['conta', /(\bcontas?\b|banco|saldo|nubank|itau|bradesco|caixa|inter)/],
       ['foto', /(foto|comprovante|imagem|nota fiscal|recibo|print)/],
       ['lembrete', /(lembrete|notifica|avis(o|ar) diario|alarme)/],
@@ -256,6 +259,7 @@ const TUTORIAL = {
   entrada: 'Pra anotar uma entrada: aba ➕ Lançar, toca em 💰 Entrada, digita o valor, escolhe de onde veio (salário, freela, rendimentos…) e toca em Adicionar. Ou me fala: "recebi 1500 de salário".',
   orcamento: 'Pra pôr orçamento: aba ⚙️ Ajustes → Orçamentos, e coloca o limite do mês em cada categoria. Deixa vazio onde não quiser limite. Aí eu aviso em 80% e quando estourar.',
   conta: 'Pra adicionar uma conta: aba 🏦 Contas, escolhe o banco, coloca o saldo que aparece no app do banco e toca em Adicionar conta. Depois, ao lançar, escolhe a conta e eu acompanho o saldo. De vez em quando, toca em Atualizar saldo pra acertar com o banco.',
+  cartao: 'Pra registrar um cartão de crédito: aba 🏦 Contas → Adicionar cartão de crédito. Coloca o banco, o limite, o dia que a fatura fecha, o dia que vence e quanto já está usado. Depois, ao lançar um gasto, escolhe o cartão em "Conta" e eu acompanho a fatura e o limite.',
   foto: 'Pra mandar foto: em ➕ Lançar, toca em 📷 Foto do comprovante; ou aqui na conversa, no 📎. Com a IA online ligada (Ajustes), eu leio o valor sozinho e você só confirma.',
   lembrete: 'Pra ligar os lembretes: ⚙️ Ajustes → Lembretes, liga a chave e escolhe o horário. No iPhone só funciona com o app instalado na tela inicial e o servidor configurado.',
   instalar: 'Pra instalar: no Android, menu do Chrome → Instalar app. No iPhone, no Safari: Compartilhar → Adicionar à Tela de Início. No PC, o ícone de instalar na barra de endereço.',
@@ -391,16 +395,28 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         sugestoes: ['Onde mais gastei?', 'Qual meu saldo?'],
       };
     }
+    case 'cartao': {
+      const cartoes = accounts.filter(a => a.tipo === 'cartao');
+      if (!cartoes.length) return { fato: 'Você ainda não cadastrou cartão de crédito. Na aba 🏦 Contas tem "Adicionar cartão de crédito": limite, dia que fecha e dia que vence. Aí eu acompanho a fatura com você.', sugestoes: ['Como registro meu cartão?'] };
+      const partes = cartoes.map(c => {
+        const f = faturaDoCartao(c, expenses, today);
+        const fech = f.diasParaFechar === 0 ? 'fecha hoje' : `fecha em ${f.diasParaFechar} ${f.diasParaFechar === 1 ? 'dia' : 'dias'}`;
+        const venc = f.fechadaCents > 0 ? ` Fatura fechada de ${formatBRL(f.fechadaCents)} vence ${f.diasParaVencer === 0 ? 'hoje' : f.diasParaVencer === 1 ? 'amanhã' : `dia ${Number(f.vencimento.slice(8))}`}.` : '';
+        return `${f.nome}: ${formatBRL(f.usadoCents)} de ${formatBRL(f.limiteCents)} do limite (${f.pct}%), sobram ${formatBRL(f.disponivelCents)}. A fatura aberta está em ${formatBRL(f.abertaCents)} e ${fech}.${venc}`;
+      });
+      return { fato: partes.join(' '), sugestoes: ['O que tenho pra pagar?', 'Cabe no mês?'] };
+    }
     case 'saldo': {
       if (!accounts.length) {
         return { fato: 'Você ainda não cadastrou nenhuma conta. Vai na aba Contas, escolhe o banco e coloca o saldo atual.', sugestoes: ['Quanto gastei este mês?'] };
       }
       const t = intencao.t;
-      const uma = accounts.find(a => t.includes(norm(a.bank)) || (a.nickname && t.includes(norm(a.nickname))));
+      const contas = accounts.filter(a => a.tipo !== 'cartao');
+      const uma = contas.find(a => t.includes(norm(a.bank)) || (a.nickname && t.includes(norm(a.nickname))));
       if (uma) {
         return { fato: `${accountLabel(uma)}: saldo estimado de ${formatBRL(accountBalance(uma, expenses, incomes))}.`, sugestoes: ['Algum alerta?'] };
       }
-      const lista = accounts.map(a => `${accountLabel(a)} ${formatBRL(accountBalance(a, expenses, incomes))}`).join(', ');
+      const lista = contas.map(a => `${accountLabel(a)} ${formatBRL(accountBalance(a, expenses, incomes))}`).join(', ');
       return {
         fato: `Saldo estimado total: ${formatBRL(totalBalance(accounts, expenses, incomes))} (${lista}). É o saldo que você informou mais o que foi lançado depois.`,
         sugestoes: ['Quanto gastei este mês?', 'Tive rendimentos?'],

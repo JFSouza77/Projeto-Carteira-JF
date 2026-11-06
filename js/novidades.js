@@ -9,9 +9,10 @@ export const NOVIDADES = Object.freeze([
   {
     v: '1.5',
     data: '06/11/2026',
-    nome: 'Cérebro que Interpreta',
-    t: 'O C.A.O.S. entende erro de digitação, continua a conversa e nunca deixa pergunta sem resposta.',
+    nome: 'Cartão e Cérebro',
+    t: 'Cartão de crédito com fatura e limite, e um C.A.O.S. que entende melhor o que você escreve.',
     itens: [
+      '💳 Cartão de crédito: cadastre em Contas com limite, dia que fecha e dia que vence. Lance o gasto no cartão e ele acompanha a fatura e avisa perto do limite e do vencimento.',
       '🧠 Continua a conversa: perguntou quanto gastou no mercado? Agora é só mandar "e no mês passado?" ou "e em delivery?".',
       '⌨️ Erro de digitação: "qunto gastie no mercdo" ele entende como "quanto gastei no mercado".',
       '🎯 Melhor palpite: quando não tem certeza, ele responde o que achou que era e pede pra você perguntar de outro jeito se não for.',

@@ -798,6 +798,66 @@ Object.assign(GERADORES, {
 
 // ---------------------------------------------------------------- Compromissos, planos e lembretes (1.3.0)
 Object.assign(GERADORES, {
+  // Cartão de crédito (06/11)
+  cartao_limite: {
+    moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+    abre: {
+      geral: ['Olha o cartão.', 'Aviso do cartão.', 'Atenção no limite.', 'Cartão no radar.', 'Só um toque.'],
+      temNome: ['{nome}, olha o cartão:', 'Ei, {nome}:', '{nome}, atenção no limite:', '{nome}, um toque:', 'Aviso pra você, {nome}:'],
+    },
+    fato: {
+      geral: [
+        '{conta} já usou {pct}% do limite: {valor} de {orcamento}.',
+        'No {conta}, foram {valor} dos {orcamento} de limite ({pct}%).',
+        '{conta}: {pct}% do limite usado. Sobram {resta}.',
+        'O limite do {conta} está em {pct}%: {valor} de {orcamento}.',
+        '{conta} com {pct}% do limite. Disponível: {resta}.',
+      ],
+    },
+    fecho: {
+      geral: [
+        'Segura as compras no cartão até a fatura fechar.',
+        'Cartão perto do limite pede débito ou Pix por uns dias.',
+        'Lembra: o que vai pro cartão sai do mês que vem.',
+        'Se der, paga à vista o que for pequeno.',
+        'Eu sigo de olho na fatura com você.',
+      ],
+      humor_acido: [
+        'O cartão está pedindo férias.',
+        'O limite não é meta, viu?',
+        'Seu cartão mandou um pedido de socorro.',
+        'Calma, o limite não é desafio.',
+        'Mais um pouco e o cartão pede demissão.',
+      ],
+    },
+  },
+
+  cartao_vence: {
+    moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+    abre: {
+      geral: ['Fatura chegando.', 'Lembrete da fatura.', 'Olha a agenda do cartão.', 'Só pra não esquecer.', 'Aviso de vencimento.'],
+      temNome: ['{nome}, fatura chegando:', 'Ei, {nome}:', '{nome}, lembrete da fatura:', '{nome}, só pra não esquecer:', 'Aviso pra você, {nome}:'],
+    },
+    fato: {
+      geral: [
+        'A fatura do {conta} ({valor}) vence {quando}.',
+        '{quando} vence a fatura do {conta}: {valor}.',
+        'Fatura do {conta}, {valor}, vence {quando}.',
+        'O vencimento do {conta} é {quando}: {valor}.',
+        'Tem fatura do {conta} vencendo {quando}, no valor de {valor}.',
+      ],
+    },
+    fecho: {
+      geral: [
+        'Pagar o total evita juros do rotativo, que são altíssimos.',
+        'Se puder, paga a fatura inteira, não só o mínimo.',
+        'Pagando em dia, nada de juros.',
+        'Melhor pagar antes do que pagar juros.',
+        'Já separei o lembrete, só falta você.',
+      ],
+    },
+  },
+
   compromisso_vence: {
     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
     abre: {

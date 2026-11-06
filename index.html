@@ -197,6 +197,23 @@
           <button class="primary" type="submit">Adicionar conta</button>
         </form>
       </section>
+      <details class="card">
+        <summary><h2>💳 Adicionar cartão de crédito</h2></summary>
+        <form id="card-form" autocomplete="off" novalidate>
+          <label class="field"><span>Banco do cartão</span><select id="card-bank" aria-label="Banco do cartão"></select></label>
+          <input id="card-nick" type="text" maxlength="30" placeholder="Apelido (opcional, ex.: cartão roxo)" aria-label="Apelido do cartão">
+          <label class="field"><span>Limite</span>
+            <span class="amount small"><span>R$</span><input id="card-limite" type="text" inputmode="decimal" placeholder="0,00" aria-label="Limite"></span></label>
+          <div class="dois">
+            <label class="field"><span>Fatura fecha dia</span><input id="card-fecha" type="number" min="1" max="31" inputmode="numeric" placeholder="ex.: 25"></label>
+            <label class="field"><span>Vence dia</span><input id="card-vence" type="number" min="1" max="31" inputmode="numeric" placeholder="ex.: 5"></label>
+          </div>
+          <label class="field"><span>Quanto já está usado agora (fatura atual)</span>
+            <span class="amount small"><span>R$</span><input id="card-usado" type="text" inputmode="decimal" placeholder="0,00" aria-label="Já usado"></span></label>
+          <p class="error" id="card-error" role="alert" hidden></p>
+          <button class="primary" type="submit">Adicionar cartão</button>
+        </form>
+      </details>
     </main>
   </section>
 

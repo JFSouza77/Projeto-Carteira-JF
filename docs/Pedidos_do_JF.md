@@ -64,7 +64,7 @@ sempre testado.
 - [ ] O JF vai trazer o arquivo da estrutura do C.A.O.S. feita pelo Code do Perfil: usar como base.
 
 ## 3. Cartão de crédito
-- [ ] Registrar o cartão (ex.: PicPay com limite de R$ 100): limite, dia de fechamento e de vencimento. O C.A.O.S.
+- [x] Registrar o cartão (ex.: PicPay com limite de R$ 100): limite, dia de fechamento e de vencimento. O C.A.O.S.
   ajuda a controlar a fatura (quanto do limite já foi, quanto vem na fatura, quando vence).
 
 ## 4. Visual e acessibilidade (como no Perfil)
