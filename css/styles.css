@@ -42,7 +42,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font: 1rem/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  padding: 0 env(safe-area-inset-right) calc(env(safe-area-inset-bottom) + 84px) env(safe-area-inset-left);
+  padding: 0 env(safe-area-inset-right) calc(env(safe-area-inset-bottom) + 140px) env(safe-area-inset-left); /* espaço pras abas e o Me ajuda */
   -webkit-tap-highlight-color: transparent;
 }
 main { max-width: 560px; margin: 0 auto; padding: 0 16px; display: grid; gap: 14px; }
