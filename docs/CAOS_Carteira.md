@@ -111,3 +111,10 @@ orçamento ("quanto ainda posso gastar?"), alertas, previsão do mês, comparaç
   pergunta de outro jeito." Com IA online, o app pergunta pra ela antes.
 - Fila geral: o que ele não sabe vai pra `meta/fila` (tipo `pergunta`, até 10). Quando o servidor responde, entrega
   "Ei, {nome}, sabe aquela sua pergunta?…". Só a pergunta e os totais agregados vão pro servidor.
+
+## Cartão de crédito (1.7.0, 06/11)
+
+- O cartão é uma conta com `tipo: 'cartao'` (limite, dia de fechamento e de vencimento, "já usado" ao cadastrar). Não
+  entra no saldo guardado. `faturaDoCartao()` no motor: fatura aberta, fechada, limite usado, quando fecha e vence.
+- Gatilhos novos: `cartao_limite` (80% e 100%, também na hora da compra) e `cartao_vence` (3 dias antes). Intenção
+  `cartao` na conversa ("como está meu cartão?", "quanto vem na fatura?") e tutorial de como cadastrar.

@@ -284,7 +284,8 @@ export function accountBalance(account, expenses, incomes) {
 }
 
 export function totalBalance(accounts, expenses, incomes) {
-  return accounts.reduce((s, a) => s + accountBalance(a, expenses, incomes), 0);
+  // cartão de crédito não é dinheiro guardado: fica fora do saldo total
+  return accounts.filter(a => a.tipo !== 'cartao').reduce((s, a) => s + accountBalance(a, expenses, incomes), 0);
 }
 
 export function incomeIn(incomes, month, sourceId) {
@@ -368,7 +369,15 @@ export function analyze({ expenses, incomes = [], categories, accounts = [], com
     out.push({ type: 'mes_negativo', severity: 'alta', incomeCents: inc, totalCents: s.totalCents, overCents: s.totalCents - inc });
   }
 
-  for (const a of accounts) {
+  for (const f of accounts.filter(a => a.tipo === 'cartao').map(a => faturaDoCartao(a, expenses, today))) {
+    if (f.pct >= 100) out.push({ type: 'cartao_limite', severity: 'alta', accountId: f.id, accountName: f.nome, pct: f.pct, amountCents: f.usadoCents, leftCents: f.disponivelCents, budgetCents: f.limiteCents });
+    else if (f.pct >= 80) out.push({ type: 'cartao_limite', severity: 'media', accountId: f.id, accountName: f.nome, pct: f.pct, amountCents: f.usadoCents, leftCents: f.disponivelCents, budgetCents: f.limiteCents });
+    if (f.fechadaCents > 0 && f.diasParaVencer >= 0 && f.diasParaVencer <= 3) {
+      out.push({ type: 'cartao_vence', severity: f.diasParaVencer <= 1 ? 'alta' : 'media', accountId: f.id, accountName: f.nome, amountCents: f.fechadaCents, days: f.diasParaVencer, dia: Number(f.vencimento.slice(8)) });
+    }
+  }
+
+  for (const a of accounts.filter(x => x.tipo !== 'cartao')) {
     const bal = accountBalance(a, expenses, incomes);
     if (bal < 0) out.push({ type: 'conta_negativa', severity: 'alta', accountId: a.id, accountName: accountLabel(a), balanceCents: bal });
   }
@@ -634,7 +643,10 @@ export function validarBackup(bruto) {
 
   accounts.forEach((a, i) => {
     if (!obj(a) || !ID_RE.test(a.id ?? '') || !texto(a.bank, 40, 1) || !textoOuNada(a.nickname, 30)
-      || !Number.isInteger(a.balanceCents) || Math.abs(a.balanceCents) > VALOR_MAX) erro(`Conta ${i + 1} do backup está com dado inválido.`);
+      || !Number.isInteger(a.balanceCents) || Math.abs(a.balanceCents) > VALOR_MAX
+      || !(a.tipo == null || a.tipo === 'cartao')
+      || (a.tipo === 'cartao' && (!centavos(a.limiteCents, 1) || !centavos(a.usadoInicialCents ?? 0, 0)
+        || ![a.fechamentoDia, a.vencimentoDia].every(d => Number.isInteger(d) && d >= 1 && d <= 31)))) erro(`Conta ${i + 1} do backup está com dado inválido.`);
   });
   const contaIds = unicos(accounts.filter(obj), 'conta');
   const contaOk = id => id == null || contaIds.has(id);
@@ -737,4 +749,60 @@ export function lerAniversario(texto, today = toISODate()) {
   const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
   if (!isValidISODate(iso) || iso > today || y < Number(today.slice(0, 4)) - 120) return null;
   return iso;
+}
+
+// ---------- Cartão de crédito (06/11) ----------
+// O cartão fica junto das contas (tipo "cartao"): limite, dia de fechamento e de vencimento. O gasto lançado "no
+// cartão" (accountId) entra na fatura aberta. O app não acessa o cartão: o que já estava usado a pessoa informa.
+
+export function createCartao({ bank, nickname = '', limiteCents, fechamentoDia, vencimentoDia, usadoCents = 0 }, { now = new Date(), id } = {}) {
+  const b = String(bank || '').trim();
+  if (!b) throw new Error('Escolha o banco do cartão.');
+  if (!Number.isInteger(limiteCents) || limiteCents <= 0) throw new Error('Qual o limite do cartão?');
+  const f = Number(fechamentoDia);
+  const v = Number(vencimentoDia);
+  if (!(Number.isInteger(f) && f >= 1 && f <= 31)) throw new Error('Dia de fechamento entre 1 e 31.');
+  if (!(Number.isInteger(v) && v >= 1 && v <= 31)) throw new Error('Dia de vencimento entre 1 e 31.');
+  if (!Number.isInteger(usadoCents) || usadoCents < 0) throw new Error('Valor já usado inválido.');
+  return {
+    id: id || newId(), tipo: 'cartao', bank: b.slice(0, 40), nickname: String(nickname).trim().slice(0, 30),
+    balanceCents: 0, usadoInicialCents: usadoCents, limiteCents, fechamentoDia: f, vencimentoDia: v,
+    balanceAt: now.getTime(), createdAt: now.getTime(),
+  };
+}
+
+/** Data (YYYY-MM-DD) do dia `dia` no mês `month`, ajustando pro último dia (31 em fevereiro = 28/29). */
+function diaDoMes(month, dia) {
+  return `${month}-${String(Math.min(dia, daysInMonth(month))).padStart(2, '0')}`;
+}
+
+/**
+ * Situação do cartão numa data: fatura aberta (compras depois do último fechamento), fatura fechada (a que vai vencer),
+ * quanto do limite já foi e quando fecha e vence.
+ */
+export function faturaDoCartao(cartao, expenses, today = toISODate()) {
+  const mes = monthKey(today);
+  const fechaEsteMes = diaDoMes(mes, cartao.fechamentoDia);
+  const ultimoFech = today > fechaEsteMes ? fechaEsteMes : diaDoMes(shiftMonth(mes, -1), cartao.fechamentoDia);
+  const penultFech = diaDoMes(shiftMonth(ultimoFech.slice(0, 7), -1), cartao.fechamentoDia);
+  const proxFech = diaDoMes(shiftMonth(ultimoFech.slice(0, 7), 1), cartao.fechamentoDia);
+  // vencimento da fatura fechada: o primeiro dia de vencimento depois do fechamento
+  const vencNoMes = diaDoMes(ultimoFech.slice(0, 7), cartao.vencimentoDia);
+  const vencimento = vencNoMes > ultimoFech ? vencNoMes : diaDoMes(shiftMonth(ultimoFech.slice(0, 7), 1), cartao.vencimentoDia);
+  const doCartao = expenses.filter(e => e.accountId === cartao.id);
+  const soma = (de, ate) => doCartao.filter(e => e.date > de && e.date <= ate).reduce((s, e) => s + e.amountCents, 0);
+  const criadoEm = toISODate(new Date(cartao.balanceAt || cartao.createdAt || Date.now()));
+  const inicial = cartao.usadoInicialCents || 0;
+  // o "já usado" informado entra na fatura do ciclo em que o cartão foi cadastrado
+  const abertaCents = soma(ultimoFech, '9999-12-31') + (criadoEm > ultimoFech ? inicial : 0);
+  const fechadaCents = soma(penultFech, ultimoFech) + (criadoEm > penultFech && criadoEm <= ultimoFech ? inicial : 0);
+  const pagaJa = today > vencimento; // depois do vencimento, a fechada já foi (ou devia ter sido) paga
+  const usadoCents = abertaCents + (pagaJa ? 0 : fechadaCents);
+  const limiteCents = cartao.limiteCents || 0;
+  return {
+    id: cartao.id, nome: accountLabel(cartao), limiteCents, usadoCents, disponivelCents: limiteCents - usadoCents,
+    pct: limiteCents ? Math.round((usadoCents / limiteCents) * 100) : 0,
+    abertaCents, fechadaCents: pagaJa ? 0 : fechadaCents, fechamento: proxFech, ultimoFechamento: ultimoFech, vencimento,
+    diasParaFechar: daysBetween(today, proxFech), diasParaVencer: daysBetween(today, vencimento),
+  };
 }

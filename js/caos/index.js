@@ -11,7 +11,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '1.6.0';
+export const CAOS_VERSAO = '1.7.0';
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -20,7 +20,7 @@ export { IDENTIDADE, resumoIdentidade } from './identidade.js';
 
 // Prioridade: só uma fala por reação, a mais importante (para não virar spam).
 const PRIORIDADE = {
-  categoria_estourada: 50, compromisso_atrasado: 49, conta_negativa: 48, mes_negativo: 46, compromisso_vence: 44,
+  categoria_estourada: 50, compromisso_atrasado: 49, conta_negativa: 48, cartao_limite: 47, mes_negativo: 46, cartao_vence: 45, compromisso_vence: 44,
   orcamento_80: 40, mes_verde: 35, plano_do_mes: 25, confira_banco: 9,
   ritmo_alto: 30, delivery_repetido: 20, entrada_cadastrada: 15, gasto_cadastrado: 10, sem_registro: 8, boas_vindas: 5,
 };
@@ -34,10 +34,12 @@ const COOLDOWN = {
   mes_negativo: 12 * 3_600_000,
   boas_vindas: 6 * 3_600_000,
   plano_do_mes: 24 * 3_600_000,
+  cartao_limite: 12 * 3_600_000,
+  cartao_vence: 12 * 3_600_000,
   confira_banco: 3 * 24 * 3_600_000,
 };
 const RADAR_COOLDOWN = 6 * 3_600_000;
-const ALERTAS = new Set(['categoria_estourada', 'orcamento_80', 'delivery_repetido', 'ritmo_alto', 'mes_negativo', 'conta_negativa', 'compromisso_vence', 'compromisso_atrasado']);
+const ALERTAS = new Set(['cartao_limite', 'cartao_vence', 'categoria_estourada', 'orcamento_80', 'delivery_repetido', 'ritmo_alto', 'mes_negativo', 'conta_negativa', 'compromisso_vence', 'compromisso_atrasado']);
 
 export function memoriaInicial(now = Date.now()) {
   return { versao: CAOS_VERSAO, gerador: {}, emocoes: emocoesIniciais(now), lastAt: {}, lastMonthClosed: null, rosto: memoriaRostoInicial(), rostoUltimo: null, conversa: null };
@@ -92,7 +94,7 @@ function varsDoEvento(ev) {
     economia: r(ev.savedCents), previsto: r(ev.projectedCents), porDia: r(ev.perDayCents),
     orcamento: r(ev.budgetCents), entradas: r(ev.incomeCents), gastos: r(ev.totalCents),
     conta: ev.accountName ?? ev.nome, saldo: r(ev.balanceCents), dia: ev.dia,
-    quando: ev.type === 'compromisso_vence'
+    quando: ev.type === 'compromisso_vence' || ev.type === 'cartao_vence'
       ? (ev.days === 0 ? 'hoje' : ev.days === 1 ? 'amanhã' : `em ${ev.days} dias (dia ${ev.dia})`) : null,
   };
 }
@@ -240,6 +242,8 @@ function nomeAlerta(a) {
     case 'compromisso_atrasado': return `${a.nome} venceu dia ${a.dia}`;
     case 'plano_do_mes': return `este mês tem ${a.nome}`;
     case 'confira_banco': return `conferir o saldo de ${a.accountName}`;
+    case 'cartao_limite': return `${a.accountName} com ${a.pct}% do limite`;
+    case 'cartao_vence': return `fatura do ${a.accountName} vence ${a.days === 0 ? 'hoje' : a.days === 1 ? 'amanhã' : `em ${a.days} dias`}`;
     default: return a.type;
   }
 }

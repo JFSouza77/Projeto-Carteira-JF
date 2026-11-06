@@ -6,7 +6,7 @@ import {
   DEFAULT_CATEGORIES, INCOME_SOURCES, BANKS, formatBRL, parseAmount, parseSignedAmount, toISODate, monthKey,
   shiftMonth, monthLabel, createExpense, createIncome, createAccount, summarizeMonth, detectExpenseEvents,
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
-  TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario,
+  TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta } from './caos/index.js';
 import { extrairNome } from './caos/conversa.js';
@@ -158,7 +158,7 @@ function barStyle(ratio) {
 const ICONE_ALERTA = {
   categoria_estourada: '🔴', orcamento_80: '🟡', ritmo_alto: '📈', mes_negativo: '⚠️', conta_negativa: '🏦',
   delivery_repetido: '🛵', sem_registro: '💤', compromisso_vence: '📅', compromisso_atrasado: '⏰', plano_do_mes: '🗓️',
-  confira_banco: '🔎',
+  confira_banco: '🔎', cartao_limite: '💳', cartao_vence: '💳',
 };
 
 function render() {
@@ -250,8 +250,9 @@ function renderLancar() {
   $('#submit-btn').textContent = gasto ? 'Adicionar gasto' : 'Adicionar entrada';
   $('#account-field').hidden = state.accounts.length === 0;
   const atual = $('#account-select').value;
+  // entrada não cai no cartão de crédito: ele só aparece pra gasto
   $('#account-select').innerHTML = '<option value="">Sem conta</option>'
-    + state.accounts.map(a => `<option value="${esc(a.id)}">${esc(accountLabel(a))}</option>`).join('');
+    + state.accounts.filter(a => gasto || a.tipo !== 'cartao').map(a => `<option value="${esc(a.id)}">${a.tipo === 'cartao' ? '💳 ' : ''}${esc(accountLabel(a))}</option>`).join('');
   if (state.accounts.some(a => a.id === atual)) $('#account-select').value = atual;
   $('#photo-ai').hidden = !(state.photo && state.settings.aiOn);
 }
@@ -277,11 +278,18 @@ async function limparFoto({ apagar }) {
 async function registrarGasto({ amountCents, categoryId, note, date, accountId, imageId, compromissoId }) {
   const expense = createExpense({ amountCents, categoryId, note, date, accountId, imageId, compromissoId }, { categories: state.categories });
   const conta = accountId && state.accounts.find(a => a.id === accountId);
-  const antes = conta ? accountBalance(conta, state.expenses, state.incomes) : null;
+  const cartao = conta?.tipo === 'cartao';
+  const antes = conta ? (cartao ? faturaDoCartao(conta, state.expenses, toISODate()).pct : accountBalance(conta, state.expenses, state.incomes)) : null;
   await db.put(db.STORES.expenses, expense);
   state.expenses.push(expense);
   const events = detectExpenseEvents({ expenses: state.expenses, categories: state.categories, newExpense: expense });
-  if (conta) {
+  if (conta && cartao) {
+    // passou de 80% ou de 100% do limite com esta compra: o C.A.O.S. avisa na hora
+    const f = faturaDoCartao(conta, state.expenses, toISODate());
+    if ((antes < 80 && f.pct >= 80) || (antes < 100 && f.pct >= 100)) {
+      events.push({ type: 'cartao_limite', accountName: f.nome, pct: f.pct, amountCents: f.usadoCents, leftCents: f.disponivelCents, budgetCents: f.limiteCents });
+    }
+  } else if (conta) {
     const depois = accountBalance(conta, state.expenses, state.incomes);
     if (antes >= 0 && depois < 0) events.push({ type: 'conta_negativa', accountName: accountLabel(conta), balanceCents: depois });
   }
@@ -615,6 +623,7 @@ async function fotoNoChat(arquivo) {
 function renderContas() {
   $('#bank-total').textContent = formatBRL(totalBalance(state.accounts, state.expenses, state.incomes));
   $('#account-list').innerHTML = state.accounts.map(a => {
+    if (a.tipo === 'cartao') return itemCartao(a);
     const bal = accountBalance(a, state.expenses, state.incomes);
     const desde = new Date(a.balanceAt).toLocaleDateString('pt-BR');
     return `
@@ -629,6 +638,45 @@ function renderContas() {
   }).join('');
   if (!$('#bank-select').options.length) {
     $('#bank-select').innerHTML = BANKS.map(b => `<option>${esc(b)}</option>`).join('');
+    $('#card-bank').innerHTML = BANKS.filter(b => !/dinheiro vivo/.test(b)).map(b => `<option>${esc(b)}</option>`).join('');
+  }
+}
+
+function itemCartao(a) {
+  const f = faturaDoCartao(a, state.expenses, toISODate());
+  const cls = f.pct >= 100 ? 'cheio' : f.pct >= 80 ? 'alto' : '';
+  const dia = iso => `${iso.slice(8)}/${iso.slice(5, 7)}`;
+  return `
+    <li>
+      <div class="account-head"><strong>💳 ${esc(accountLabel(a))}</strong><span class="num ${f.pct >= 100 ? 'bad' : ''}">${formatBRL(f.disponivelCents)} livre</span></div>
+      <div class="limite-bar ${cls}" role="img" aria-label="${f.pct}% do limite usado"><i style="width:${Math.min(100, Math.max(0, f.pct))}%"></i></div>
+      <small class="muted">Usado ${formatBRL(f.usadoCents)} de ${formatBRL(f.limiteCents)} (${f.pct}%). Fatura aberta ${formatBRL(f.abertaCents)}, fecha ${dia(f.fechamento)}.${f.fechadaCents ? ` Fatura fechada ${formatBRL(f.fechadaCents)} vence ${dia(f.vencimento)}.` : ''}</small>
+      <div class="account-actions">
+        <button class="ghost" data-acc-del="${esc(a.id)}">Remover</button>
+      </div>
+    </li>`;
+}
+
+async function onAddCartao(ev) {
+  ev.preventDefault();
+  const err = $('#card-error');
+  err.hidden = true;
+  try {
+    const limite = parseAmount($('#card-limite').value);
+    if (!limite) throw new Error('Qual o limite do cartão?');
+    const usado = $('#card-usado').value.trim() ? parseSignedAmount($('#card-usado').value) : 0;
+    if (usado == null || usado < 0) throw new Error('O valor já usado está estranho.');
+    const c = createCartao({ bank: $('#card-bank').value, nickname: $('#card-nick').value, limiteCents: limite, fechamentoDia: Number($('#card-fecha').value), vencimentoDia: Number($('#card-vence').value), usadoCents: usado });
+    await db.put(db.STORES.accounts, c);
+    state.accounts.push(c);
+    for (const id of ['#card-nick', '#card-limite', '#card-fecha', '#card-vence', '#card-usado']) $(id).value = '';
+    renderContas();
+    renderLancar();
+    render();
+    toast(`Cartão ${accountLabel(c)} adicionado. Ao lançar, escolha ele em "Conta".`);
+  } catch (e) {
+    err.textContent = e.message;
+    err.hidden = false;
   }
 }
 
@@ -1234,6 +1282,7 @@ function bind() {
 
   // Contas
   $('#account-form').addEventListener('submit', onAddAccount);
+  $('#card-form').addEventListener('submit', onAddCartao);
   $('#account-list').addEventListener('click', e => {
     const u = e.target.closest('[data-acc-update]');
     if (u) return onUpdateAccount(u.dataset.accUpdate);

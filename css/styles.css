@@ -348,3 +348,11 @@ select { appearance: none; -webkit-appearance: none; }
 .nov-versao .nov-qol { margin-top: 10px; font-size: .85rem; color: var(--muted); }
 .nov-antigas { justify-self: center; }
 .novidade-aviso[hidden] { display: none; }
+
+/* ---------- Cartão de crédito ---------- */
+.dois { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+#card-form { display: grid; gap: 10px; }
+.limite-bar { height: 8px; border-radius: 99px; background: var(--card-2); overflow: hidden; margin: 8px 0 4px; }
+.limite-bar > i { display: block; height: 100%; background: var(--accent); }
+.limite-bar.alto > i { background: var(--warn, #f5b942); }
+.limite-bar.cheio > i { background: var(--bad, #ff5d73); }
