@@ -1374,23 +1374,44 @@ async function entrarNaConta(criar) {
 
 function itemNovidade(item) {
   const p = partesDoItem(item);
-  return `<li><span aria-hidden="true">${esc(p.icone)}</span><span>${p.titulo ? `<b>${esc(p.titulo)}</b>` : ''}${esc(p.texto)}</span></li>`;
+  if (!p.titulo) return `<li class="nov-solto">${esc(p.texto)}</li>`;
+  const texto = p.texto.charAt(0).toUpperCase() + p.texto.slice(1);
+  return `<li><details class="nov-drop"><summary class="nov-tag">${esc(p.icone)} ${esc(p.titulo)}</summary>`
+    + `<div class="nov-drop-txt">${esc(texto)}</div></details></li>`;
 }
 
-function renderNovidades(todas = false) {
-  const lista = todas ? NOVIDADES : NOVIDADES.slice(0, 3);
-  $('#novidades-lista').innerHTML = lista.map(n => `
-    <section class="nov-versao">
-      <h3>Versão ${esc(n.v)} · ${esc(n.nome)} <small class="muted">${esc(n.data)}</small></h3>
-      <p class="nov-t">${esc(n.t)}</p>
-      ${n.itens.length ? `<ul>${n.itens.map(itemNovidade).join('')}</ul>` : ''}
-      ${n.qol.length ? `<ul class="nov-qol">${n.qol.map(itemNovidade).join('')}</ul>` : ''}
-    </section>`).join('')
-    + (!todas && NOVIDADES.length > 3 ? '<button type="button" class="ghost nov-antigas" id="novidades-antigas">Ver versões antigas</button>' : '');
+function versaoNovidade(n, i) {
+  return `<details class="nov-item"${i === 0 ? ' open' : ''}><summary>`
+    + `<span class="nov-v">Versão ${esc(n.v)}</span>`
+    + (n.nome ? `<span class="nov-nome">${esc(n.nome)}</span>` : '')
+    + (n.data ? `<span class="nov-data">📅 ${esc(n.data)}</span>` : '')
+    + `<span class="nov-t">${esc(n.t)}</span></summary>`
+    + (n.itens.length ? `<ul>${n.itens.map(itemNovidade).join('')}</ul>` : '')
+    + (n.qol.length ? `<div class="nov-qol">🛠️ Ajustes e correções 🛠️</div><ul>${n.qol.map(itemNovidade).join('')}</ul>` : '')
+    + `</details>`;
+}
+
+const NOV_A_MOSTRA = 3;
+function renderNovidades() {
+  const antigas = NOVIDADES.length - NOV_A_MOSTRA;
+  $('#novidades-lista').innerHTML =
+    `<div class="nov-ic" aria-hidden="true">🆕</div><p class="nov-sub">O que mudou nas últimas versões. Toque num item pra ver a explicação.</p>`
+    + NOVIDADES.slice(0, NOV_A_MOSTRA).map(versaoNovidade).join('')
+    + (antigas > 0
+      ? `<button type="button" class="ghost nov-antigas" id="novidades-antigas" aria-expanded="false">📚 Ver versões antigas (${antigas})</button>`
+        + `<div id="novidades-antigas-lista" class="nov-antigas-lista" hidden>${NOVIDADES.slice(NOV_A_MOSTRA).map((n, i) => versaoNovidade(n, i + NOV_A_MOSTRA)).join('')}</div>`
+      : '');
+}
+
+function alternarAntigas(b) {
+  const l = $('#novidades-antigas-lista'), abrir = l.hidden;
+  l.hidden = !abrir;
+  b.setAttribute('aria-expanded', String(abrir));
+  b.textContent = abrir ? '📚 Esconder versões antigas' : `📚 Ver versões antigas (${NOVIDADES.length - NOV_A_MOSTRA})`;
 }
 
 async function abrirNovidades() {
-  renderNovidades(false);
+  renderNovidades();
   const dlg = $('#novidades-dialog');
   if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
   state.novidadesVistas = VERSAO_APP;
@@ -1748,7 +1769,7 @@ function bind() {
     }
   });
   $('#novidades-abrir').addEventListener('click', abrirNovidades);
-  $('#novidades-lista').addEventListener('click', e => { if (e.target.closest('#novidades-antigas')) renderNovidades(true); });
+  $('#novidades-lista').addEventListener('click', e => { const b = e.target.closest('#novidades-antigas'); if (b) alternarAntigas(b); });
   $('#perfil-aniversario').addEventListener('change', async e => {
     const v = e.target.value;
     if (v && !lerAniversario(v)) { toast('Data inválida.'); renderPerfil(); return; }

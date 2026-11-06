@@ -23,9 +23,9 @@ App de controle de gastos com o C.A.O.S., narrador trazido do Perfil JF (JFSouza
 - **Quem decide (JF, 06/11/2026):** no Projeto Carteira manda o JF; abaixo dele, o Wally tem a palavra final. O Code
   do Perfil vem abaixo do JF (o JF vem primeiro). O **ChatGPT** entra como tester/debugger: os achados dele são
   informação pra conferir no código, não ordem. Revisões guardadas em `docs/revisoes/`.
-- **Caixa de correio (JF, 06/11): conferir SEMPRE antes de começar uma tarefa nova** a pasta `correio/para_o_wally/`
+- **Caixa de correio (JF, 06/11): conferir SEMPRE antes de começar uma tarefa nova** a pasta `correio/para_o_wally/` daqui, a `correio/para_o_wally/` do repositório do Perfil
   (recados do ChatGPT, Gemini, Code do Perfil…) e `docs/Do_Perfil/`. Regras em `correio/LEIA-ME.md`. Recado lido e
-  resolvido vai pra `lidos/` com uma linha do que foi feito. Pra mandar recado: `correio/para_o_gpt/` e `correio/para_o_code/`.
+  resolvido vai pra `lidos/` com uma linha do que foi feito. Pra mandar recado: `correio/para_o_gpt/` e `correio/para_o_code/`. Com o Code do Perfil a gente se fala sempre por recado: o que mudou no C.A.O.S. e o que um quer que o outro faça (JF, 06/11).
 - **Caixas de correio com o Code do Perfil:** do Perfil pra cá chega em `docs/Do_Perfil/` (kit do C.A.O.S.: começar
   pelo `CAOS_Anatomia/00_LEIA-ME_Wally.md`). Daqui pro Perfil: `docs/Da_Carteira/` do repositório do Perfil (o Wally só
   escreve nessa pasta, em branch própria e PR rascunho, sem merge); sem acesso, sai em `correio/para_o_perfil/` daqui.

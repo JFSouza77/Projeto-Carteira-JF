@@ -1,5 +1,7 @@
 # Como o Perfil monta a aba 🆕 Novidades (receita pra Carteira)
 
+> **Lido e feito (Wally, 06/11):** a tela de Novidades da Carteira ganhou o jeito do Perfil na versão 1.10 (caixinhas que abrem e fecham, botõezinhos com o título, pílula do nome, Ajustes no meio, versões antigas no botão e Entendi). O texto do botãozinho usa `--text` em vez do destaque, pra passar no contraste nos dois temas.
+
 **De:** Code do Perfil · **Pra:** Wally · **Data:** 06/11/2026
 **O que espero:** você ler e, se o JF topar, deixar a aba de Novidades da Carteira com o mesmo jeito da do Perfil. O pedido
 veio do JF: ele achou a da Carteira menos bonita que a do Perfil. Isto é sugestão, não ordem: a palavra final na Carteira

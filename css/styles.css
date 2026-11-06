@@ -358,15 +358,36 @@ select { appearance: none; -webkit-appearance: none; }
 .novidades-dialog::backdrop { background: #000c; }
 .novidades-dialog > header { position: sticky; top: 0; display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--bg); border-bottom: 1px solid var(--line); }
 .novidades-dialog > header h2 { margin: 0; }
-#novidades-lista { padding: 12px 16px 20px; display: grid; gap: 14px; }
-.nov-versao { background: var(--card); border-radius: var(--radius); padding: 14px 16px; }
-.nov-versao h3 { margin: 0; font-size: 1rem; }
-.nov-versao .nov-t { margin: 6px 0 10px; color: var(--muted); }
-.nov-versao ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.nov-versao li { display: grid; grid-template-columns: 1.6em 1fr; gap: 6px; }
-.nov-versao li b { display: block; }
-.nov-versao .nov-qol { margin-top: 10px; font-size: .85rem; color: var(--muted); }
-.nov-antigas { justify-self: center; }
+#novidades-lista { padding: 12px 16px 8px; display: grid; gap: 10px; }
+.nov-ic { text-align: center; font-size: 2rem; }
+.nov-sub { text-align: center; font-size: .85rem; color: var(--muted); margin: 0 0 4px; }
+.nov-item { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--card); }
+.nov-item[open] { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.nov-item > summary { list-style: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; min-height: 44px; }
+.nov-item > summary::-webkit-details-marker, .nov-drop > summary::-webkit-details-marker { display: none; }
+.nov-v { font-weight: 800; font-size: .8rem; letter-spacing: .08em; color: var(--accent); }
+.nov-nome { font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 2px 10px;
+  border-radius: 999px; border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); color: var(--accent); }
+.nov-data { font-size: .75rem; font-weight: 600; color: var(--muted); }
+.nov-t { font-weight: 700; font-size: .95rem; }
+.nov-item ul { list-style: none; padding: 0; margin: 8px 0 2px; display: grid; gap: 6px; }
+.nov-item li { font-size: .9rem; line-height: 1.4; text-align: center; }
+.nov-drop > summary { list-style: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.nov-tag { display: flex; align-items: center; gap: 6px; width: fit-content; max-width: 100%; margin: 0 auto; padding: 6px 12px; min-height: 36px;
+  border-radius: 8px; font-weight: 800; font-size: .88rem; color: var(--text);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent); }
+.nov-tag::after { content: "▾"; font-size: .75em; opacity: .7; }
+.nov-drop[open] > .nov-tag::after { content: "▴"; }
+.nov-drop-txt { margin: 6px 4px 4px; color: var(--text); animation: novAbre .2s ease-out; }
+@keyframes novAbre { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.nov-qol { margin: 12px 0 2px; text-align: center; font-size: .8rem; font-weight: 800; color: var(--muted); }
+.nov-antigas { justify-self: center; min-height: 44px; }
+.nov-antigas-lista { display: grid; gap: 10px; }
+.nov-antigas-lista[hidden] { display: none; }
+.nov-fim { padding: 4px 16px 16px; display: grid; }
+.novidades-dialog > header h2 { letter-spacing: .12em; text-transform: uppercase; font-size: 1.05rem; }
+@media (prefers-reduced-motion: reduce) { .nov-drop-txt { animation: none; } }
 .novidade-aviso[hidden] { display: none; }
 
 /* ---------- Cartão de crédito ---------- */

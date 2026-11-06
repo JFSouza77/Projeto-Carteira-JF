@@ -7,6 +7,20 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.10',
+    data: '06/11/2026',
+    nome: 'Novidades de Cara Nova',
+    t: 'Esta tela ficou mais bonita e mais fácil de ler.',
+    itens: [
+      '🆕 Novidades em botõezinhos: cada novidade mostra só o título. Toque nela pra ler a explicação.',
+      '📂 Versões que abrem e fecham: a mais nova já vem aberta. Toque numa versão pra abrir ou fechar.',
+      '📚 Versões antigas: ficam guardadas num botão no fim da lista, pra tela não ficar comprida.',
+    ],
+    qol: [
+      '✅ Botão Entendi: fecha esta tela quando você terminar de ler.',
+    ],
+  },
+  {
     v: '1.9',
     data: '06/11/2026',
     nome: 'Mais Esperto',
