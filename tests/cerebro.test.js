@@ -42,3 +42,17 @@ test('sem certeza: melhor palpite e pergunta de volta, em vez de "não entendi"'
   assert.equal(nada.fala.entendeu, false);
   assert.equal(nada.fala.palpite, false);
 });
+
+test('Me ajuda: cada opção leva ao passo a passo certo', () => {
+  const casos = {
+    'Como lanço um gasto?': 'gasto', 'Como registro meu cartão?': 'cartao', 'Como ponho orçamento?': 'orcamento',
+    'Como adiciono uma conta?': 'conta', 'Como planejo o mês?': 'mes', 'Como mando foto do comprovante?': 'foto',
+    'Como ligo os lembretes?': 'lembrete', 'Como faço backup?': 'backup', 'Como instalo o app?': 'instalar',
+    'quero anotar um gasto': 'gasto', 'quero registrar meu cartão': 'cartao',
+  };
+  for (const [frase, tema] of Object.entries(casos)) {
+    const r = entender(frase, { categories: cats });
+    assert.equal(r.intent, 'tutorial', frase);
+    assert.equal(r.tema, tema, frase);
+  }
+});

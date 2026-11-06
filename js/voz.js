@@ -44,6 +44,13 @@ export function textoParaVoz(t) {
     .trim();
 }
 
+// Velocidade escolhida em Ajustes → Acessibilidade (multiplica o jeito de cada emoção)
+let VELOCIDADE = 1;
+export function setVelocidade(v) {
+  const n = Number(v);
+  VELOCIDADE = Number.isFinite(n) ? Math.min(1.6, Math.max(0.6, n)) : 1;
+}
+
 export function falar(texto, emocao = 'calmo') {
   if (!vozDisponivel()) return;
   try {
@@ -55,7 +62,7 @@ export function falar(texto, emocao = 'calmo') {
     const [vel, tom] = JEITO[emocao] || JEITO.calmo;
     // sem voz masculina no aparelho, ele fala um pouco mais grave (como no Perfil)
     u.pitch = Math.max(0.4, Math.min(2, (v && !MASC.test(v.name || '') ? 0.8 : 1) * tom));
-    u.rate = vel;
+    u.rate = Math.min(2, Math.max(0.5, vel * VELOCIDADE));
     speechSynthesis.speak(u);
   } catch {}
 }
