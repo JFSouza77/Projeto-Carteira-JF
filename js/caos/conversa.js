@@ -5,7 +5,7 @@
 import {
   formatBRL, parseAmount, periodRange, sumInRange, topCategories, summarizeMonth, forecastMonth,
   incomeIn, monthKey, shiftMonth, monthLabel, accountBalance, accountLabel, totalBalance, analyze,
-  spentIn, toISODate, INCOME_SOURCES, situacaoCompromissos, analisarPlanejamento, cabeNoMes, sugerirCategoria, palavrasDe, faturaDoCartao, progressoMeta,
+  spentIn, toISODate, INCOME_SOURCES, situacaoCompromissos, analisarPlanejamento, cabeNoMes, sugerirCategoria, palavrasDe, faturaDoCartao, progressoMeta, resumoInvestimentos,
 } from '../engine.js';
 import { IDENTIDADE, textoAnatomia, textoPodeNaoPode } from './identidade.js';
 import { textoTendencia, quandoFoi, mercadoVelho } from '../mercado.js';
@@ -94,7 +94,8 @@ const CONHECIDAS = [
   'obrigada', 'brigado', 'certo', 'errado', 'legal', 'bom', 'boa', 'noite', 'tarde', 'manha', 'cade', 'quem', 'porque',
   'pois', 'entao', 'assim', 'aqui', 'juros', 'renda', 'banca', 'passa', 'passei', 'gastamos', 'ganho', 'ganha', 'mesada',
   'lanche', 'pizza', 'mercados', 'plano', 'planos', 'planejar', 'pagamento', 'pagamentos', 'gastando', 'gostei',
-  'sobra', 'sobrar', 'falta', 'faltam', 'planejo', 'anotar', 'lancar', 'quero', 'semanas', 'meses', 'dias', 'ano', 'anos', 'contar', 'contei', 'conte',
+  'sobra', 'sobrar', 'falta', 'faltam', 'planejo', 'anotar', 'lancar', 'quero', 'investido', 'investida', 'investidos',
+  'investimento', 'investimentos', 'aplicado', 'aplicacao', 'aplicacoes', 'rendeu', 'renderam', 'semanas', 'meses', 'dias', 'ano', 'anos', 'contar', 'contei', 'conte',
 ];
 const VOCAB_SET = new Set([...VOCAB, ...CONHECIDAS]);
 
@@ -216,6 +217,7 @@ function entenderSimples(t, { categories = [] } = {}) {
   if (/((o que|quanto) (eu )?(ainda )?tenho (pra|para|de) pagar|falta pagar|contas? (do|deste|desse) mes|vencimento|quando vence|o que vence|tenho conta|compromissos?|minhas contas fixas|assinaturas)/.test(t)) return { ...r, intent: 'pagar' };
   const querFazer = /\b(quero|preciso|queria|gostaria de) (anotar|lancar|registrar|adicionar|cadastrar|colocar|planejar|fazer|ligar|instalar|mandar)\b/.test(t);
   if (!/^como\b/.test(t) && !querFazer && /(o que (eu )?planejei|meus planos|planejamento|planos? (do|deste|desse|pro|para o) mes|o que (eu )?vou comprar|planejad|programad|o que (mais )?(eu )?tenho (pra|para) (esse|este|o) mes|o que mais (eu )?(tenho|vou))/.test(t)) return { ...r, intent: 'planos' };
+  if (/(quanto (eu )?(tenho )?investido|meus investimentos|minha carteira de investimento|quanto (meus investimentos|meu investimento) (rende|rendeu|renderam)|como (estao|esta) (meus|o meu|os meus) investimentos?)/.test(t)) return { ...r, intent: 'meus_investimentos' };
   // Saldo (06/11): "quanto eu tenho guardado no total?", "quanto tem nas contas?", "quanto poupei?"
   if (!/(pra|para) (pagar|gastar)/.test(t) && /(\bsaldo\b|quanto (eu )?(tenho|tem|ainda tenho|sobrou)\b(?! (pra|para|de) )|tenho guardado|guardad[oa]s?\b|poupad[oa]s?\b|quanto (eu )?(guardei|poupei|juntei)|dinheiro (no|na|nos|nas) (banco|conta)|tenho no banco|nas contas|no total)/.test(t)
     && !/(gast|entrada|recebi|rendimento|planej)/.test(t)) return { ...r, intent: 'saldo' };
@@ -611,6 +613,17 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         fato: `Boa pergunta! Comparar o rendimento ${quais} pede dados que mudam toda hora (o percentual do CDI de cada conta ou caixinha).${conta} O jeito certo de comparar: veja no app de cada banco quanto "% do CDI" ele paga; quanto maior, melhor, e confira se o dinheiro fica disponível na hora.`,
         filaIA: bancos.length ? { tipo: 'bancos', bancos, pergunta: intencao.t } : null,
         sugestoes: ['Qual a Selic?', 'Como está o mercado?'],
+      };
+    }
+    case 'meus_investimentos': {
+      const lista = dados.investimentos || [];
+      if (!lista.length) return { fato: 'Você ainda não cadastrou investimentos. Na aba 🏦 Contas, em "📈 Investimentos", você coloca o que tem (CDB, Tesouro, ações, poupança…), quanto aplicou e quanto está valendo. Aí eu acompanho com você.', sugestoes: ['Como está o mercado?'] };
+      const r = resumoInvestimentos(lista);
+      const sinal = r.ganhoCents >= 0 ? 'rendeu' : 'está abaixo em';
+      const maior = r.porTipo[0];
+      return {
+        fato: `Você tem ${formatBRL(r.atualCents)} investidos em ${r.quantidade} ${r.quantidade === 1 ? 'aplicação' : 'aplicações'}. Aplicou ${formatBRL(r.aplicadoCents)} e ${sinal} ${formatBRL(Math.abs(r.ganhoCents))} (${r.rendimentoPct.toLocaleString('pt-BR')}%). A maior parte está em ${maior.nome} (${maior.pct}%). Lembrando: eu acompanho, mas não recomendo investimento.`,
+        sugestoes: ['Como está o mercado?', 'Quanto tenho guardado no total?'],
       };
     }
     case 'mercado': case 'investir': {

@@ -233,6 +233,27 @@
           <button class="primary" type="submit">Adicionar cartão</button>
         </form>
       </details>
+
+      <section class="card" id="inv-card">
+        <h2>📈 Investimentos</h2>
+        <p class="muted small">Coloque o que você tem investido. O app não acessa banco nem corretora: de vez em quando, olhe o valor no app deles e toque em "Atualizar valor".</p>
+        <div class="inv-resumo" id="inv-resumo" hidden></div>
+        <ul class="account-list" id="inv-list"></ul>
+        <details class="sub-form">
+          <summary>＋ Adicionar investimento</summary>
+          <form id="inv-form" autocomplete="off" novalidate>
+            <input id="inv-nome" type="text" maxlength="60" placeholder="Nome (ex.: CDB do Nubank, Tesouro Selic)" aria-label="Nome do investimento">
+            <label class="field"><span>Tipo</span><select id="inv-tipo" aria-label="Tipo"></select></label>
+            <input id="inv-inst" type="text" maxlength="40" placeholder="Onde está (opcional, ex.: Nubank, XP)" aria-label="Instituição">
+            <div class="dois">
+              <label class="field"><span>Quanto você aplicou</span><span class="amount small"><span>R$</span><input id="inv-aplicado" type="text" inputmode="decimal" placeholder="0,00" aria-label="Quanto aplicou"></span></label>
+              <label class="field"><span>Quanto vale hoje</span><span class="amount small"><span>R$</span><input id="inv-atual" type="text" inputmode="decimal" placeholder="igual" aria-label="Quanto vale hoje"></span></label>
+            </div>
+            <p class="error" id="inv-error" role="alert" hidden></p>
+            <button class="primary" type="submit">Adicionar investimento</button>
+          </form>
+        </details>
+      </section>
     </main>
   </section>
 

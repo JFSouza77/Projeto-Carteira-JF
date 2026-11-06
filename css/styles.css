@@ -425,3 +425,9 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 /* ---------- Conta ---------- */
 .conta-botoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 #conta-card input { width: 100%; }
+
+/* ---------- Investimentos ---------- */
+#inv-form { display: grid; gap: 10px; margin-top: 10px; }
+.inv-resumo { background: var(--card-2); border-radius: 12px; padding: 12px 14px; margin: 10px 0; }
+.inv-resumo .big { font-size: 1.6rem; margin: 2px 0; }
+.ganho { color: var(--ok); } .perda { color: var(--danger); }

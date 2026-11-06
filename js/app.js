@@ -7,6 +7,7 @@ import {
   shiftMonth, monthLabel, createExpense, createIncome, createAccount, summarizeMonth, detectExpenseEvents,
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
   TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
+  TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta } from './caos/index.js';
 import { extrairNome, textoMeta } from './caos/conversa.js';
@@ -39,6 +40,7 @@ const state = {
   planos: [],
   perfil: null, // { nome, apelido, tratamento, foco[] } (primeiro acesso)
   metas: [], // meta/metas (1.8.0)
+  investimentos: [], // meta/investimentos (app 1.8)
   metaFlow: null, // perguntas da meta nova em andamento
   onboarding: null, // { passo, dados } enquanto o C.A.O.S. está conhecendo a pessoa
   catSugerida: false,
@@ -47,7 +49,7 @@ const state = {
 
 const dados = () => ({
   expenses: state.expenses, incomes: state.incomes, categories: state.categories, accounts: state.accounts,
-  compromissos: state.compromissos, planos: state.planos, mercado: state.mercado, metas: state.metas,
+  compromissos: state.compromissos, planos: state.planos, mercado: state.mercado, metas: state.metas, investimentos: state.investimentos,
 });
 const catById = id => state.categories.find(c => c.id === id);
 const srcById = id => INCOME_SOURCES.find(s => s.id === id);
@@ -776,6 +778,7 @@ async function fotoNoChat(arquivo) {
 // ======================================================================
 
 function renderContas() {
+  renderInvestimentos();
   $('#bank-total').textContent = formatBRL(totalBalance(state.accounts, state.expenses, state.incomes));
   $('#account-list').innerHTML = state.accounts.map(a => {
     if (a.tipo === 'cartao') return itemCartao(a);
@@ -794,6 +797,88 @@ function renderContas() {
   if (!$('#bank-select').options.length) {
     $('#bank-select').innerHTML = BANKS.map(b => `<option>${esc(b)}</option>`).join('');
     $('#card-bank').innerHTML = BANKS.filter(b => !/dinheiro vivo/.test(b)).map(b => `<option>${esc(b)}</option>`).join('');
+  }
+}
+
+// ---------- Investimentos (app 1.8, ideia do Bruno Levanti) ----------
+
+function renderInvestimentos() {
+  const lista = state.investimentos || [];
+  const r = resumoInvestimentos(lista);
+  const el = $('#inv-resumo');
+  el.hidden = !lista.length;
+  if (lista.length) {
+    const cls = r.ganhoCents >= 0 ? 'ganho' : 'perda';
+    el.innerHTML = `<p class="label">Total investido hoje</p><p class="big">${formatBRL(r.atualCents)}</p>
+      <p class="small">Você aplicou ${formatBRL(r.aplicadoCents)} · <span class="${cls}">${r.ganhoCents >= 0 ? '+' : '−'}${formatBRL(Math.abs(r.ganhoCents))} (${r.rendimentoPct.toLocaleString('pt-BR')}%)</span></p>`;
+  }
+  const dia = ms => new Date(ms).toLocaleDateString('pt-BR');
+  $('#inv-list').innerHTML = lista.map(i => {
+    const g = i.atualCents - i.aplicadoCents;
+    return `<li>
+      <div class="account-head"><strong>📈 ${esc(i.nome)}</strong><span class="num">${formatBRL(i.atualCents)}</span></div>
+      <small class="muted">${esc(TIPOS_INVESTIMENTO[i.tipo] || 'Outro')}${i.instituicao ? ` · ${esc(i.instituicao)}` : ''} · aplicou ${formatBRL(i.aplicadoCents)} · <span class="${g >= 0 ? 'ganho' : 'perda'}">${g >= 0 ? '+' : '−'}${formatBRL(Math.abs(g))}</span> · valor de ${dia(i.valorEm)}</small>
+      <div class="account-actions">
+        <button class="ghost" data-inv-atualizar="${esc(i.id)}">Atualizar valor</button>
+        <button class="ghost" data-inv-aporte="${esc(i.id)}">＋ Coloquei mais</button>
+        <button class="ghost" data-inv-del="${esc(i.id)}">Remover</button>
+      </div>
+    </li>`;
+  }).join('');
+  if (!$('#inv-tipo').options.length) $('#inv-tipo').innerHTML = Object.entries(TIPOS_INVESTIMENTO).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('');
+}
+
+async function salvarInvestimentos(lista) {
+  state.investimentos = lista;
+  await db.setMeta('investimentos', lista);
+  renderInvestimentos();
+}
+
+async function onAddInvestimento(ev) {
+  ev.preventDefault();
+  const err = $('#inv-error');
+  err.hidden = true;
+  try {
+    const aplicado = parseAmount($('#inv-aplicado').value);
+    const atualTxt = $('#inv-atual').value.trim();
+    const atual = atualTxt ? parseSignedAmount(atualTxt) : null;
+    const inv = createInvestimento({ nome: $('#inv-nome').value, tipo: $('#inv-tipo').value, instituicao: $('#inv-inst').value, aplicadoCents: aplicado, atualCents: atual });
+    await salvarInvestimentos([...(state.investimentos || []), inv]);
+    for (const id of ['#inv-nome', '#inv-inst', '#inv-aplicado', '#inv-atual']) $(id).value = '';
+    toast(`${inv.nome} adicionado. Pergunte pro C.A.O.S.: "como estão meus investimentos?"`);
+  } catch (e) {
+    err.textContent = e.message;
+    err.hidden = false;
+  }
+}
+
+async function acaoInvestimento(e) {
+  const b = e.target.closest('[data-inv-atualizar],[data-inv-aporte],[data-inv-del]');
+  if (!b) return;
+  const id = b.dataset.invAtualizar || b.dataset.invAporte || b.dataset.invDel;
+  const inv = state.investimentos.find(x => x.id === id);
+  if (!inv) return;
+  try {
+    if (b.dataset.invDel) {
+      if (!confirm(`Remover ${inv.nome} da lista? (Não mexe em nada no banco.)`)) return;
+      return salvarInvestimentos(state.investimentos.filter(x => x.id !== id));
+    }
+    if (b.dataset.invAtualizar) {
+      const r = prompt(`Quanto ${inv.nome} vale hoje? (olhe no app do banco)`, (inv.atualCents / 100).toFixed(2).replace('.', ','));
+      if (r == null) return;
+      const v = parseSignedAmount(r);
+      if (v == null || v < 0) return toast('Valor inválido.');
+      await salvarInvestimentos(state.investimentos.map(x => (x.id === id ? atualizarInvestimento(x, { atualCents: v }) : x)));
+      return toast('Valor atualizado.');
+    }
+    const r = prompt(`Quanto você colocou a mais em ${inv.nome}?`);
+    if (r == null) return;
+    const v = parseAmount(r);
+    if (!v) return toast('Valor inválido.');
+    await salvarInvestimentos(state.investimentos.map(x => (x.id === id ? atualizarInvestimento(x, { atualCents: x.atualCents + v, aporteCents: v }) : x)));
+    toast(`Aporte de ${formatBRL(v)} anotado.`);
+  } catch (err) {
+    toast(err.message);
   }
 }
 
@@ -964,7 +1049,7 @@ function exportBackup() {
   const data = {
     app: 'carteira-jf', version: 3, exportedAt: new Date().toISOString(),
     categories: state.categories, expenses: state.expenses, incomes: state.incomes, accounts: state.accounts,
-    compromissos: state.compromissos, planos: state.planos, perfil: state.perfil, metas: state.metas,
+    compromissos: state.compromissos, planos: state.planos, perfil: state.perfil, metas: state.metas, investimentos: state.investimentos,
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -990,6 +1075,7 @@ async function importBackup(file) {
     Object.assign(state, { expenses: d.expenses, categories: d.categories, incomes: d.incomes, accounts: d.accounts, compromissos: d.compromissos, planos: d.planos });
     if (d.perfil) { state.perfil = d.perfil; await db.setMeta('perfil', d.perfil); renderPerfil(); }
     await salvarMetas(d.metas);
+    await salvarInvestimentos(d.investimentos);
     renderLancar();
     renderBudgets();
     render();
@@ -1212,6 +1298,7 @@ async function recarregarDoBanco() {
     db.getAll(db.STORES.categories), db.getAll(db.STORES.expenses), db.getAll(db.STORES.incomes), db.getAll(db.STORES.accounts),
     db.getAll(db.STORES.compromissos), db.getAll(db.STORES.planos), db.getMeta('perfil'), db.getMeta('metas', []),
   ]);
+  state.investimentos = await db.getMeta('investimentos', []);
   const order = DEFAULT_CATEGORIES.map(c => c.id);
   Object.assign(state, {
     categories: cats.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id)), expenses, incomes,
@@ -1562,6 +1649,8 @@ function bind() {
   // Contas
   $('#account-form').addEventListener('submit', onAddAccount);
   $('#card-form').addEventListener('submit', onAddCartao);
+  $('#inv-form').addEventListener('submit', onAddInvestimento);
+  $('#inv-list').addEventListener('click', acaoInvestimento);
   $('#account-list').addEventListener('click', e => {
     const u = e.target.closest('[data-acc-update]');
     if (u) return onUpdateAccount(u.dataset.accUpdate);
@@ -1715,7 +1804,7 @@ async function init() {
       db.getAll(db.STORES.planos),
       db.getMeta('perfil'),
     ]);
-    Object.assign(state, { compromissos, planos, perfil: perfil || null, mercado: await db.getMeta('mercado'), metas: await db.getMeta('metas', []) });
+    Object.assign(state, { compromissos, planos, perfil: perfil || null, mercado: await db.getMeta('mercado'), metas: await db.getMeta('metas', []), investimentos: await db.getMeta('investimentos', []) });
     if (cats.length === 0) {
       state.categories = DEFAULT_CATEGORIES.map(c => ({ ...c }));
       await db.putMany(db.STORES.categories, state.categories, { padrao: true });
