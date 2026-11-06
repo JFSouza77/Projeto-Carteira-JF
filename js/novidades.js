@@ -21,7 +21,7 @@ export const NOVIDADES = Object.freeze([
     ],
     qol: [
       '💬 Fala do seu jeito: o C.A.O.S. entende vc, cê, tbm, q, pq, hj, qnto e outras abreviações.',
-      '🏦 Bancos em ordem alfabética, com Itaú Cartões e mais opções.',
+      '🏦 Bancos de A a Z: em ordem alfabética, com Itaú Cartões e mais opções.',
       '😄 Mais piadas: 15 piadas novas, de todos os humores.',
       '📅 Data de nascimento: o campo cabe direitinho na tela do iPhone.',
     ],
