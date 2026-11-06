@@ -11,7 +11,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '1.9.1';
+export const CAOS_VERSAO = '1.10.0';
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -214,10 +214,21 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
     mem = { ...mem, gerador: r.gerador };
   }
 
+  // Papo avulso demais seguido (06/11): na 5ª pergunta fora do dinheiro, ele chama de volta (sem bronca no Suave)
+  const AVULSAS = new Set(['piada', 'identidade', 'significado', 'criador', 'origem', 'como_funciona', 'limites', 'elogio', 'xingamento', 'como_esta', 'nao_entendi', 'sobre_jf', 'saudacao', 'agradecimento']);
+  const avulsas = AVULSAS.has(intencao.intent) ? (mem.avulsas || 0) + 1 : 0;
+  mem = { ...mem, avulsas };
+  if (avulsas >= 5 && avulsas % 5 === 0 && saida) {
+    const pd = montar('papo_demais', {}, { humor, emocao, mem, now, rng, perfil });
+    if (pd.texto) { saida = `${saida} ${pd.texto}`; mem = { ...mem, gerador: pd.gerador }; }
+  }
+
   const EVENTO_ROSTO = { piada: 'piada', identidade: 'identidade', significado: 'identidade', criador: 'identidade', origem: 'identidade',
-    nao_entendi: 'nao_entendi', xingamento: 'xingamento', elogio: 'elogio', como_funciona: 'pensando', limites: 'pensando' };
+    nao_entendi: 'nao_entendi', xingamento: 'xingamento', elogio: 'elogio', como_funciona: 'pensando', limites: 'pensando', sobre_jf: 'elogio' };
   const temAlerta = !!(resp.alertas && resp.alertas.some(a => ALERTAS.has(a.type)));
-  const r = rostoPara(mem, { emocao, evento: EVENTO_ROSTO[intencao.intent], humor, now, rng, direto: !!EVENTO_ROSTO[intencao.intent], texto: saida, alerta: temAlerta });
+  // quando a pergunta já pede um rosto próprio (quem é você, o que pode fazer…), a frase não troca ele
+  // ("o que você pode fazer?" saía preocupado por causa da palavra "aperta")
+  const r = rostoPara(mem, { emocao, evento: EVENTO_ROSTO[intencao.intent], humor, now, rng, direto: !!EVENTO_ROSTO[intencao.intent], texto: EVENTO_ROSTO[intencao.intent] ? null : saida, alerta: temAlerta });
   mem = r.mem;
   // lembra a última pergunta pra entender a próxima ("e no mês passado?")
   if (intencao.intent !== 'nao_entendi') {

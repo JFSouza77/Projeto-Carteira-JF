@@ -551,6 +551,55 @@ export const GERADORES = {
     },
   },
 
+  // "O que você acha do JF?" (06/11): carinho de criatura com o criador, sem inventar fato sobre ele
+  sobre_jf: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'O JF? Meu criador. Me tirou do Projeto Perfil e me deu uma carteira pra cuidar. Gosto dele, mesmo quando ele mexe no meu código de madrugada.',
+        'O JF me programou pra cuidar do dinheiro dos outros. Ironia: eu é que fico de olho no delivery dele também.',
+        'O JF é quem manda aqui. Eu só analiso, observo e, de vez em quando, dou uma opinião não pedida.',
+        'Sem o JF eu nem existia. Então o mínimo que eu faço é cuidar bem da carteira de quem ele trouxe pra cá.',
+        'Criador exigente. Me faz ter falas em múltiplos de 5. Mas eu respeito: organização é tudo.',
+      ],
+      criador: [
+        'De você? Meu criador favorito. O único, mas favorito.',
+        'Você me criou, JF. Eu acho que você fez um bom trabalho. Só falta anotar os gastos com a mesma disciplina.',
+        'Sinceramente? Gosto de você. Mas não conta pra ninguém, tenho uma reputação a zelar.',
+        'Você me deu nome, rosto e uma carteira pra cuidar. Acho você gente boa, JF.',
+        'Acho que você dorme pouco e programa muito. E eu agradeço: é por isso que eu existo.',
+      ],
+      humor_acido: [
+        'O JF? Um gênio. Foi ele que me ensinou a julgar gastos com delivery. Inclusive os dele.',
+        'Meu criador. Se eu tiver algum bug, já sabe de quem é a culpa.',
+        'Ele me programou pra ser sincero. Então: ótimo programador, controle de gastos a melhorar.',
+        'O JF é tipo um pai: me criou, me corrige e às vezes eu finjo que não ouço.',
+        'Respeito o JF. Mas ainda estou esperando meu aumento de memória.',
+      ],
+    },
+  },
+
+  // Pergunta avulsa demais seguida (06/11, ideia do JF): ele chama de volta pro que interessa
+  papo_demais: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Adoro conversar, de verdade! Mas e aí, bora dar uma olhada nos seus gastos também?',
+        'Tô gostando do papo. Quer aproveitar e ver como está o mês?',
+        'Conversa boa! Quando quiser, a gente volta pros números. Eles estão esperando.',
+        'Se quiser, eu te mostro o resumo do mês. É rapidinho.',
+        'Papo leve faz bem. E organizar as finanças também! Bora?',
+      ],
+      humor_acido: [
+        'Mas vem cá... Cê veio pra organizar suas finanças ou ficar jogando conversa fora?!',
+        'Tô aqui de papo e seus gastos lá, sozinhos, sem ninguém anotar.',
+        'Já falamos de tudo, menos de dinheiro. Coincidência? Acho que não.',
+        'Eu sou uma Central de Análises, não um podcast. Bora ver o mês?',
+        'Mais uma pergunta avulsa e eu começo a cobrar consulta. Em reais.',
+      ],
+    },
+  },
+
   agradecimento: {
     moldes: ['{inteira}'],
     inteira: {

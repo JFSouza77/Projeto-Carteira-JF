@@ -99,3 +99,16 @@ sempre testado.
 - Ele aprender com a pessoa (tato, preferências) e mais análises.
 - Publicar o servidor (passo a passo em `servidor/LEIA-ME.md`): sem ele, IA online, fila, explicar print, mercado e
   lembretes no iPhone ficam esperando.
+
+# 06/11 de manhã (JF testando)
+- [x] Entender abreviações e gírias ("vc", "cê", "tbm", "q", "hj"…).
+- [x] "O que vc acha do JF?" sem resposta.
+- [x] Muitas perguntas avulsas seguidas: o C.A.O.S. chama de volta ("Cê veio pra organizar suas finanças ou ficar
+  jogando conversa fora?!", só no Ácido; no Suave/Normal, convite gentil).
+- [x] Rosto preocupado em "o que você pode fazer?".
+- [x] Campo de aniversário vazando do card no iPhone.
+- [x] Bancos em ordem alfabética; Itaú Cartões e outros.
+- [ ] **Login e memória entre aparelhos** (o JF lançou num aparelho e no outro não aparece): precisa do servidor.
+  Proposta em conversa com o JF (sincronização criptografada no aparelho, o servidor guarda só um pacote fechado).
+- [ ] Debug completo e análise rígida do C.A.O.S. (o JF vai fazer) e refinar ainda mais a IA.
+- [ ] Ele saber mais sobre o criador (o JF vai contar o que pode entrar; sem dado pessoal sensível).

@@ -20,7 +20,10 @@ export const NOVIDADES = Object.freeze([
       '🔍 Explica o print do banco: não entendeu a tela do banco ou a fatura? Peça "explica esse print" e mande a imagem pelo 📎.',
     ],
     qol: [
+      '💬 Fala do seu jeito: o C.A.O.S. entende vc, cê, tbm, q, pq, hj, qnto e outras abreviações.',
+      '🏦 Bancos em ordem alfabética, com Itaú Cartões e mais opções.',
       '😄 Mais piadas: 15 piadas novas, de todos os humores.',
+      '📅 Data de nascimento: o campo cabe direitinho na tela do iPhone.',
     ],
   },
   {
