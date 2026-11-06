@@ -410,8 +410,41 @@ export const GERADORES = {
         'Os números não mentem. Eu às vezes exagero.',
       ],
       emo_preocupacao: ['Hmm.', 'Vou ser sincero.', 'Com carinho:', 'Atenção nesse número.', 'Olha com calma:'],
+      // Jeito de falar por idade (06/11): até 12 jovial; 13–17 um tiquinho ácido; 18–25 orienta; adulto varia.
+      idade_crianca: ['Olha que legal!', 'Bora ver juntos!', 'Fiz a conta rapidinho!', 'Achei!', 'Prontinho, olha só:'],
+      idade_adolescente: ['Sem enrolação:', 'Direto ao ponto:', 'Lá vai, sem sermão:', 'Saca só:', 'Na real:'],
+      idade_jovem: ['Bora entender:', 'Vou te mostrar o caminho:', 'Fiz as contas pra você:', 'Olha o retrato:', 'Pra você decidir melhor:'],
+      idade_adulto: ['Resumindo:', 'Aqui o número:', 'Conferi pra você:', 'Os números do momento:', 'Direto:'],
     },
     fecho: {
+      idade_crianca: [
+        'Você tá mandando bem!',
+        'Guardar um pouquinho já é uma vitória.',
+        'Quer ver mais alguma coisa comigo?',
+        'Tô aqui pra te ajudar, viu?',
+        'Bora continuar assim!',
+      ],
+      idade_adolescente: [
+        'Sem drama, só número.',
+        'Você que manda, eu só faço a conta.',
+        'Nada de sermão, prometo.',
+        'Se quiser o atalho, pergunta.',
+        'Tá no controle, é isso.',
+      ],
+      idade_jovem: [
+        'Se der, separa um pouco pra reserva antes de gastar.',
+        'Começar a reserva cedo faz uma diferença enorme.',
+        'Anotar tudo agora vira hábito pra vida toda.',
+        'Quer que eu te ajude a montar um plano?',
+        'Pergunta qualquer dúvida, sem vergonha.',
+      ],
+      idade_adulto: [
+        'Quer que eu detalhe?',
+        'Se precisar, eu comparo com o mês passado.',
+        'Posso ajudar a planejar o resto do mês.',
+        'Qualquer coisa, tô aqui.',
+        'Seguimos de olho juntos.',
+      ],
       geral: [
         'Quer saber mais alguma coisa?',
         'Pergunta o que quiser.',
@@ -452,6 +485,20 @@ export const GERADORES = {
   saudacao: {
     moldes: ['{inteira}'],
     inteira: {
+      aniversario: [
+        'Feliz aniversário, {nome}! Hoje o presente é você se cuidar.',
+        'Parabéns, {nome}! Um ano a mais de experiência financeira.',
+        'Hoje é seu dia, {nome}! Feliz aniversário. Comemora sem culpa, mas anota.',
+        'Feliz aniversário, {nome}! Eu lembrei, viu? Tá na memória.',
+        'Parabéns pelo seu dia, {nome}! Que venha um ano de bolso cheio.',
+      ],
+      idade_crianca: [
+        'Oi, {nome}! Bora ver o seu dinheirinho?',
+        'Oiê! Quer saber quanto você já guardou?',
+        'Olá! Tô aqui pra te ajudar a cuidar da sua grana.',
+        'Oi! Vamos anotar juntos?',
+        'E aí, {nome}! Pronto pra cuidar do cofrinho?',
+      ],
       geral: [
         'Oi! Quer saber como estão os gastos?',
         'Olá. Tô aqui, de olho nos números.',
@@ -465,6 +512,27 @@ export const GERADORES = {
         'E aí. Já sei o que você gastou, só pra avisar.',
         'Oi. Eu estava aqui fazendo nada, como sempre.',
         'Fala. Sou todo circuitos.',
+      ],
+    },
+  },
+
+  // Ele lembra do aniversário (06/11): uma vez por ano, no dia.
+  aniversario: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Feliz aniversário, {nome}! Eu anotei a data, então pode contar comigo todo ano.',
+        'Parabéns, {nome}! Hoje o melhor investimento é comemorar com quem você gosta.',
+        'Hoje é seu dia, {nome}! Feliz aniversário. Se rolar gasto de festa, eu não julgo.',
+        'Feliz aniversário, {nome}! Mais um ano juntos cuidando da carteira.',
+        'Parabéns, {nome}! Que este ano venha com bolso cheio e conta no verde.',
+      ],
+      idade_crianca: [
+        'Feliz aniversário, {nome}! Ganhou presente? Se ganhou dinheiro, bora guardar um pouquinho?',
+        'Parabéns, {nome}! Hoje é dia de festa. Eu tô muito feliz por você!',
+        'Feliz aniversário, {nome}! Você tá crescendo e cuidando do seu dinheiro. Que orgulho!',
+        'Oba, {nome}, é seu aniversário! Parabéns! Hoje eu deixo você comemorar à vontade.',
+        'Parabéns, {nome}! Um ano a mais e muito mais esperto com o dinheiro!',
       ],
     },
   },
@@ -855,6 +923,32 @@ Object.assign(GERADORES, {
       ],
     },
   },
+  onb_aniversario: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        '{nome}, quando é seu aniversário? Pode mandar tipo 05/03/1998. Assim eu ajusto meu jeito de falar e lembro do seu dia.',
+        'Me conta sua data de nascimento, {nome}? Ex.: 12/08/2001. Uso só pra ajustar o papo e te dar parabéns.',
+        'Qual a sua data de nascimento, {nome}? (dia/mês/ano) Fica só no seu aparelho.',
+        '{nome}, me diz seu aniversário com o ano? Ex.: 30/11/1995. Prometo lembrar do dia.',
+        'Pra eu falar do jeito certo com você, {nome}: qual sua data de nascimento? Ex.: 01/02/2010.',
+      ],
+    },
+  },
+
+  onb_aniversario_ok: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Anotado, {nome}! Fica só aqui no seu aparelho, e no seu dia eu apareço.',
+        'Guardei, {nome}. No seu aniversário tem parabéns meu.',
+        'Pronto, {nome}! Data na memória.',
+        'Valeu, {nome}! Agora eu sei falar do seu jeito e lembro do seu dia.',
+        'Anotadíssimo, {nome}. Pode cobrar o parabéns depois!',
+      ],
+    },
+  },
+
   onb_tratamento: {
     moldes: ['{inteira}'],
     inteira: {

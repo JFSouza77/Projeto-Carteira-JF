@@ -690,3 +690,51 @@ export function validarBackup(bruto) {
     },
   };
 }
+
+// ---------- Aniversário e idade (06/11) ----------
+
+/** Idade completa em anos numa data (YYYY-MM-DD), ou null se não tiver aniversário. */
+export function idadeDe(aniversario, today = toISODate()) {
+  if (!aniversario || !isValidISODate(aniversario) || aniversario > today) return null;
+  const [ya, ma, da] = aniversario.split('-').map(Number);
+  const [yt, mt, dt] = today.split('-').map(Number);
+  return yt - ya - (mt < ma || (mt === ma && dt < da) ? 1 : 0);
+}
+
+/** Faixa do jeito de falar: até 12 · 13 a 17 · 18 a 25 · adulto. */
+export function faixaEtaria(idade) {
+  if (idade == null) return null;
+  return idade <= 12 ? 'crianca' : idade <= 17 ? 'adolescente' : idade <= 25 ? 'jovem' : 'adulto';
+}
+
+/** Hoje é aniversário? (29/02 comemora em 28/02 nos anos que não são bissextos) */
+export function ehAniversario(aniversario, today = toISODate()) {
+  if (!aniversario || !isValidISODate(aniversario)) return false;
+  const md = aniversario.slice(5);
+  const hoje = today.slice(5);
+  if (md === hoje) return true;
+  return md === '02-29' && hoje === '02-28' && !isValidISODate(`${today.slice(0, 4)}-02-29`);
+}
+
+const MESES_NOMES = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+
+/** Data de aniversário digitada → "YYYY-MM-DD" ou null. Aceita 05/03/1998, 5-3-98, 1998-03-05, "5 de março de 1998". */
+export function lerAniversario(texto, today = toISODate()) {
+  const t = String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  let d, m, y;
+  let r = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (r) [, y, m, d] = r.map(Number);
+  else if ((r = t.match(/(\d{1,2})\s*[/.-]\s*(\d{1,2})\s*[/.-]\s*(\d{2,4})/))) [, d, m, y] = r.map(Number);
+  else if ((r = t.match(/(\d{1,2})\s*(?:de\s+)?([a-z]+)\s*(?:de\s+)?(\d{2,4})/))) {
+    d = Number(r[1]); m = MESES_NOMES.findIndex(n => n.startsWith(r[2].slice(0, 3))) + 1; y = Number(r[3]);
+    if (!m) return null;
+  } else return null;
+  if (y < 100) {
+    const ano = Number(today.slice(0, 4));
+    y += 2000;
+    if (y > ano) y -= 100;
+  }
+  const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  if (!isValidISODate(iso) || iso > today || y < Number(today.slice(0, 4)) - 120) return null;
+  return iso;
+}

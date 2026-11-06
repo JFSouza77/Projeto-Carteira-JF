@@ -1,0 +1,69 @@
+// Aniversário e jeito de falar por idade (06/11). Datas inventadas.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { idadeDe, faixaEtaria, ehAniversario, lerAniversario } from '../js/engine.js';
+import { contexto, falaAvulsa, memoriaInicial } from '../js/caos/index.js';
+import { GERADORES } from '../js/caos/falas.js';
+
+test('idade e faixa', () => {
+  assert.equal(idadeDe('2000-11-06', '2026-11-06'), 26);
+  assert.equal(idadeDe('2000-11-07', '2026-11-06'), 25);
+  assert.equal(idadeDe(null, '2026-11-06'), null);
+  assert.equal(idadeDe('2030-01-01', '2026-11-06'), null);
+  assert.deepEqual([5, 12, 13, 17, 18, 25, 26, 70].map(faixaEtaria), ['crianca', 'crianca', 'adolescente', 'adolescente', 'jovem', 'jovem', 'adulto', 'adulto']);
+});
+
+test('lê a data do jeito que a pessoa escreve', () => {
+  const hoje = '2026-11-06';
+  assert.equal(lerAniversario('05/03/1998', hoje), '1998-03-05');
+  assert.equal(lerAniversario('5-3-98', hoje), '1998-03-05');
+  assert.equal(lerAniversario('1998-03-05', hoje), '1998-03-05');
+  assert.equal(lerAniversario('nasci em 5 de março de 1998', hoje), '1998-03-05');
+  assert.equal(lerAniversario('10/01/15', hoje), '2015-01-10');
+  assert.equal(lerAniversario('31/02/2000', hoje), null);
+  assert.equal(lerAniversario('01/01/2030', hoje), null);
+  assert.equal(lerAniversario('sei lá', hoje), null);
+});
+
+test('aniversário no dia (29/02 vale em 28/02 fora do bissexto)', () => {
+  assert.equal(ehAniversario('1998-11-06', '2026-11-06'), true);
+  assert.equal(ehAniversario('1998-11-07', '2026-11-06'), false);
+  assert.equal(ehAniversario('2004-02-29', '2027-02-28'), true);
+  assert.equal(ehAniversario('2004-02-29', '2028-02-28'), false);
+});
+
+test('faixa vira balde de contexto; criança nunca recebe zoeira', () => {
+  const now = new Date(2026, 10, 6, 10).getTime();
+  const t = a => contexto({ humor: 'acido', emocao: 'calmo', now, perfil: { apelido: 'Fulano', aniversario: a } });
+  assert.ok(t('2016-01-01').has('idade_crianca'));
+  assert.ok(!t('2016-01-01').has('humor_acido'));
+  assert.ok(t('2010-01-01').has('idade_adolescente'));
+  assert.ok(t('2010-01-01').has('humor_acido'));
+  assert.ok(t('2004-01-01').has('idade_jovem'));
+  assert.ok(t('1980-01-01').has('idade_adulto'));
+  assert.ok(t('1980-11-06').has('aniversario'));
+  assert.ok(!t('1980-11-07').has('aniversario'));
+});
+
+test('baldes novos fecham em 0 ou 5, e criança no Ácido não ouve zoeira em mil montagens', () => {
+  for (const [g, def] of Object.entries(GERADORES)) {
+    for (const [slot, baldes] of Object.entries(def)) {
+      if (slot === 'moldes') continue;
+      for (const [b, l] of Object.entries(baldes)) assert.equal(l.length % 5, 0, `${g}.${slot}.${b}`);
+    }
+  }
+  const zoeira = new Set(Object.values(GERADORES).flatMap(d => Object.entries(d).filter(([k]) => k !== 'moldes').flatMap(([, b]) => b.humor_acido || [])));
+  let mem = memoriaInicial();
+  const now = new Date(2026, 10, 6, 10).getTime();
+  for (let i = 0; i < 1000; i++) {
+    const r = falaAvulsa('resposta', { fato: 'Você gastou R$ 10,00.' }, { mood: 'acido', memory: mem, now, perfil: { apelido: 'Pequeno', aniversario: '2017-05-05' } });
+    mem = r.memoria;
+    for (const z of zoeira) assert.ok(!r.texto.includes(z), r.texto);
+  }
+});
+
+test('parabéns no dia, com o nome', () => {
+  const r = falaAvulsa('aniversario', { nome: 'Fulano' }, { mood: 'suave', memory: memoriaInicial(), now: new Date(2026, 10, 6, 10).getTime(), perfil: { apelido: 'Fulano', aniversario: '1990-11-06' } });
+  assert.match(r.texto, /Fulano/);
+  assert.match(r.texto, /anivers|Parab/i);
+});

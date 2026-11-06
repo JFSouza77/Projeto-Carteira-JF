@@ -324,3 +324,4 @@ select { appearance: none; -webkit-appearance: none; }
 
 .plan-list label.plan-info { display: flex; gap: 10px; align-items: center; min-width: 0; }
 .plan-list label.plan-info span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.field-label { display: block; margin: 12px 0 6px; font-size: .9rem; }
