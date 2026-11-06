@@ -496,6 +496,7 @@ async function enviarPergunta(texto) {
   if (state.settings.voice) falar(fala.texto, fala.emocao);
   if (fala.filaIA) await perguntaPraDepois(fala.filaIA);
   if (fala.fluxoMeta) iniciarMeta(fala.fluxoMeta.nome, { jaFalou: true });
+  if (fala.modoFoto) state.modoFoto = { tipo: fala.modoFoto, duvida: t, ate: Date.now() + 10 * 60_000 };
 }
 
 // ---------- Metas montadas junto (1.8.0) ----------
@@ -658,6 +659,15 @@ async function processarFila() {
         $('#caos-line').textContent = 'Lembra daquela pergunta? Agora eu sei responder. Toca aqui pra ver.';
         continue;
       }
+      if (item.tipo === 'explicar') {
+        const img = await imagens.pegar(item.imagemId);
+        if (!img) continue; // a foto foi apagada: tira da fila
+        const texto = await ia.explicarImagem(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob), duvida: item.duvida, humor: state.settings.mood });
+        const nome = state.perfil?.apelido;
+        addMsg({ de: 'caos', ia: true, texto: `Ei${nome ? `, ${nome}` : ''}, sabe aquele print do banco que você me mandou? Agora eu consigo explicar: ${texto}` });
+        $('#caos-line').textContent = 'Expliquei aquele print do banco. Toca aqui pra ver.';
+        continue;
+      }
       if (item.tipo !== 'bancos') continue;
       const texto = await ia.perguntarBancos(state.settings.aiUrl, { bancos: item.bancos, cdi: state.mercado?.cdi?.valor });
       addMsg({ de: 'caos', ia: true, texto: `Lembra que você perguntou qual banco rende mais? Trouxe: ${texto}` });
@@ -708,10 +718,35 @@ async function confirmarAcao(i, ok) {
   }
 }
 
+/** "Explica esse print": a pessoa pediu, então a imagem vai pro servidor; sem conexão, fica na fila (a foto fica no aparelho). */
+async function explicarPrint(img, duvida) {
+  const pronto = state.settings.aiOn && state.settings.aiUrl && navigator.onLine;
+  if (pronto) {
+    await respiro('Deixa eu olhar com calma o que o banco quis dizer.');
+    addMsg({ de: 'caos', texto: 'Olhando o print com a IA…', temp: true, rosto: rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory }) });
+    try {
+      const texto = await ia.explicarImagem(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob), duvida, humor: state.settings.mood });
+      state.chat = state.chat.filter(m => !m.temp);
+      addMsg({ de: 'caos', ia: true, texto });
+      if (state.settings.voice) falar(texto);
+      return;
+    } catch {
+      state.chat = state.chat.filter(m => !m.temp);
+    }
+  }
+  const fila = await db.getMeta('fila', []);
+  fila.push({ tipo: 'explicar', imagemId: img.id, duvida: String(duvida || '').slice(0, 300), id: crypto.randomUUID?.() || String(Date.now()), criadoEm: Date.now() });
+  await db.setMeta('fila', fila);
+  addMsg({ de: 'caos', texto: 'Agora eu não consigo falar com o servidor da Carteira, mas guardei o print aqui no aparelho. Assim que tiver conexão, eu explico e te aviso.' });
+}
+
 async function fotoNoChat(arquivo) {
   try {
     const img = await imagens.guardar(arquivo, 'chat');
     addMsg({ de: 'eu', texto: '', url: URL.createObjectURL(img.blob), imagemId: img.id });
+    const explicar = state.modoFoto?.tipo === 'explicar' && state.modoFoto.ate > Date.now() ? state.modoFoto : null;
+    state.modoFoto = null;
+    if (explicar) return explicarPrint(img, explicar.duvida);
     if (!(state.settings.aiOn && state.settings.aiUrl)) {
       addMsg({ de: 'caos', texto: 'Guardei a foto. Pra eu ler o valor sozinho, ative a IA online em Ajustes. Ou me diz: "gastei 30 no mercado".' });
       return;
@@ -1155,7 +1190,7 @@ function renderPerfil() {
 const AJUDAS = [
   'Como lanço um gasto?', 'Como registro meu cartão?', 'Como ponho orçamento?', 'Como adiciono uma conta?',
   'Como planejo o mês?', 'Como mando foto do comprovante?', 'Como ligo os lembretes?', 'Como faço backup?',
-  'Como instalo o app?', 'O que você pode fazer?',
+  'Como instalo o app?', 'Explica um print do banco', 'O que você pode fazer?',
 ];
 
 function meAjuda() {
@@ -1543,6 +1578,7 @@ async function limparFotosOrfas() {
   try {
     const usadas = new Set(state.expenses.map(e => e.imageId).filter(Boolean));
     for (const m of state.chat) if (m.imagemId) usadas.add(m.imagemId);
+    for (const f of await db.getMeta('fila', [])) if (f.imagemId) usadas.add(f.imagemId); // print esperando explicação
     const todas = await db.getAll(db.STORES.images);
     for (const img of todas) {
       if (!usadas.has(img.id) && Date.now() - img.createdAt > 86_400_000) await db.remove(db.STORES.images, img.id);

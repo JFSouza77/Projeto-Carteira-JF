@@ -207,6 +207,38 @@ async function iaBancos(req, env) {
   return { texto: textoDa(r) || 'Essa eu não consegui responder agora. Confere o "% do CDI" no app de cada banco.' };
 }
 
+const SISTEMA_EXPLICAR = `Você é o C.A.O.S., assistente do app Carteira JF. A pessoa mandou um print do app do banco, de uma fatura ou de um extrato porque não entendeu o que está escrito.
+Explique em português simples, em até 6 frases curtas: o que é a tela, o que significam os termos e números principais (ex.: fatura fechada, pagamento mínimo, rotativo, limite disponível, IOF, juros, saldo bloqueado, CDI) e o que a pessoa deveria olhar com atenção.
+Nunca recomende investimento ou produto específico. Não repita números de conta, cartão, CPF ou nomes que aparecerem. Se a imagem não for de banco ou estiver ilegível, diga isso com gentileza.`;
+
+/** "Explica o print do banco" (06/11): devolve um texto curto explicando a tela. A imagem só chega aqui quando a pessoa pede. */
+async function iaExplicar(req, env) {
+  const corpo = await lerCorpo(req);
+  const imagem = String(corpo.imagem || '');
+  const tipo = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(corpo.tipo) ? corpo.tipo : null;
+  if (!imagem || !tipo) throw new ErroHttp(400, 'Mande a imagem (base64) e o tipo.');
+  if (imagem.length > MAX_IMAGEM_B64 || !/^[A-Za-z0-9+/=]+$/.test(imagem)) throw new ErroHttp(400, 'Imagem inválida ou grande demais.');
+  const humor = HUMORES[corpo.humor] ? corpo.humor : 'suave';
+  const duvida = String(corpo.duvida || '').trim().slice(0, 300);
+  const client = clienteIA(env);
+  await conferirLimite(req, env);
+  const r = await client.beta.messages.create({
+    model: modelo(env),
+    max_tokens: 16000,
+    output_config: { effort: 'medium' },
+    system: `${SISTEMA_EXPLICAR}\n${HUMORES[humor]}`,
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'image', source: { type: 'base64', media_type: tipo, data: imagem } },
+        { type: 'text', text: duvida ? `Minha dúvida: ${duvida}` : 'Não entendi o que o banco quis dizer aqui. Me explica?' },
+      ],
+    }],
+    ...extras(env),
+  });
+  return { texto: textoDa(r) || 'Não consegui entender essa imagem. Tenta um print mais nítido?' };
+}
+
 export function esquemaImagem(ids) {
   return {
     type: 'object',
@@ -461,7 +493,7 @@ export default {
         return json({ chave: env.VAPID_PUBLIC_KEY }, 200, h);
       }
       if (req.method === 'POST') {
-        const rotas = { '/ia/perguntar': iaPerguntar, '/ia/imagem': iaImagem, '/ia/bancos': iaBancos, '/push/inscrever': pushInscrever, '/push/sair': pushSair };
+        const rotas = { '/ia/perguntar': iaPerguntar, '/ia/imagem': iaImagem, '/ia/explicar': iaExplicar, '/ia/bancos': iaBancos, '/push/inscrever': pushInscrever, '/push/sair': pushSair };
         const rota = rotas[url.pathname];
         if (rota) return json(await rota(req, env), 200, h);
       }

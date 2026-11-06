@@ -218,3 +218,23 @@ test('sem KV a IA falha fechado (503) e nem chama a API', async () => {
     api.restaurar();
   }
 });
+
+test('explicar print: vai a imagem e a dúvida, volta só texto; sem KV não chama', async () => {
+  const api = simularAPI({ texto: 'Essa é a fatura fechada. O pagamento mínimo evita atraso, mas cobra juros do rotativo.' });
+  try {
+    const env = envBase();
+    const r = await worker.fetch(req('/ia/explicar', { imagem: 'aGVsbG8=', tipo: 'image/png', duvida: 'o que é rotativo?', humor: 'suave' }), env);
+    assert.equal(r.status, 200);
+    assert.match((await r.json()).texto, /rotativo/);
+    const c = api.chamadas[0];
+    assert.equal(c.body.messages[0].content[0].type, 'image');
+    assert.match(c.body.messages[0].content[1].text, /rotativo/);
+    assert.match(c.body.system, /Nunca recomende investimento/);
+    const sem = await worker.fetch(req('/ia/explicar', { tipo: 'image/png' }), envBase());
+    assert.equal(sem.status, 400);
+    const semKv = envBase(); delete semKv.CARTEIRA_KV;
+    assert.equal((await worker.fetch(req('/ia/explicar', { imagem: 'aGVsbG8=', tipo: 'image/png' }), semKv)).status, 503);
+  } finally {
+    api.restaurar();
+  }
+});
