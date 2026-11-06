@@ -93,3 +93,10 @@ orçamento ("quanto ainda posso gastar?"), alertas, previsão do mês, comparaç
   menos, um tiquinho ácido), `idade_jovem` (18–25, orienta mais), `idade_adulto` (varia). **Criança nunca recebe
   `humor_acido`**, mesmo no humor Ácido.
 - No dia, o gatilho `aniversario` dá parabéns uma vez por ano (`parabensAno`).
+
+## Rosto combinando com a frase (1.5.0, 06/11)
+
+- `emocaoDoTexto()` em `js/caos/rostos.js` (do Perfil: `caosEmocaoDoTexto`, C.A.O.S. 4.4): a frase escolhe o rosto
+  (festa, preocupado, deboche, orgulho, carinho, surpresa, pensando). Frase neutra: fica com o evento/emoção.
+- Travas: alerta nunca sai com festa/orgulho/carinho/alívio; piada nunca sai com preocupado/triste/raiva/tédio.
+  Suave continua sem raiva, deboche nem julgando. Teste com mil montagens de cada.

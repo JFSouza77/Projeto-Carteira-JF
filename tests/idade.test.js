@@ -67,3 +67,42 @@ test('parabéns no dia, com o nome', () => {
   assert.match(r.texto, /Fulano/);
   assert.match(r.texto, /anivers|Parab/i);
 });
+
+// ---------- Rosto combinando com a frase (1.5.0) ----------
+import { reagir, conversar } from '../js/caos/index.js';
+import { emocaoDoTexto, escolherRosto } from '../js/caos/rostos.js';
+import { DEFAULT_CATEGORIES, createExpense } from '../js/engine.js';
+
+test('a frase escolhe o rosto', () => {
+  assert.equal(emocaoDoTexto('Feliz aniversário, Fulano!'), 'festa');
+  assert.equal(emocaoDoTexto('Mercado estourou o limite em R$ 50,00.'), 'preocupado');
+  assert.equal(emocaoDoTexto('Anotado: R$ 10,00 em Mercado. Bom controle.'), 'orgulho');
+  assert.equal(emocaoDoTexto('Saldo estimado total: R$ 150,00.'), null);
+  assert.equal(escolherRosto({ texto: 'Feliz aniversário!', humor: 'suave' }).rosto.emo, 'festa');
+});
+
+test('alerta nunca sai com rosto de festa; piada nunca sai com rosto preocupado (mil vezes cada)', () => {
+  const cats = DEFAULT_CATEGORIES.map(c => ({ ...c, budgetCents: c.id === 'mercado' ? 10000 : 0 }));
+  const festivos = new Set(['festa', 'orgulho', 'carinho', 'alivio']);
+  const tristes = new Set(['preocupado', 'triste', 'raiva', 'recompondo', 'tedio']);
+  const tipos = ['categoria_estourada', 'orcamento_80', 'conta_negativa', 'mes_negativo', 'ritmo_alto', 'compromisso_atrasado'];
+  let mem;
+  let t0 = new Date(2026, 10, 6, 10).getTime();
+  for (let i = 0; i < 1000; i++) {
+    const mood = ['suave', 'normal', 'acido'][i % 3];
+    const type = tipos[i % tipos.length];
+    const ev = { type, categoryName: 'Mercado', amountCents: 1000, pct: 90, leftCents: 100, overCents: 500, accountName: 'Conta', balanceCents: -100, totalCents: 9000, incomeCents: 5000, projectedCents: 20000, budgetCents: 10000, nome: 'Luz', valorCents: 9000, dia: 3, days: 2, monthName: 'novembro' };
+    const r = reagir([ev], { mood, memory: mem, now: t0 + i * 86_400_000 });
+    if (!r.fala) continue;
+    mem = r.memoria;
+    assert.ok(!festivos.has(r.fala.rosto.emo), `${type} (${mood}) saiu ${r.fala.rosto.emo}: ${r.fala.texto}`);
+  }
+  mem = undefined;
+  const dados = { expenses: [createExpense({ amountCents: 1000, categoryId: 'mercado', date: '2026-11-05' }, { categories: cats })], incomes: [], categories: cats, accounts: [], compromissos: [], planos: [] };
+  for (let i = 0; i < 1000; i++) {
+    const mood = ['suave', 'normal', 'acido'][i % 3];
+    const r = conversar('me conta uma piada', dados, { mood, memory: mem, now: t0 + i * 60_000, today: '2026-11-06' });
+    mem = r.memoria;
+    assert.ok(!tristes.has(r.fala.rosto.emo), `piada (${mood}) saiu ${r.fala.rosto.emo}: ${r.fala.texto}`);
+  }
+});

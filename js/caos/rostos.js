@@ -26,6 +26,29 @@ const DO_EVENTO = {
 const DO_EVENTO_ACIDO = { categoria_estourada: 'deboche', delivery_repetido: 'julgando', xingamento: 'deboche', piada: 'deboche' };
 
 const PROIBIDOS_SUAVE = new Set(['raiva', 'deboche', 'julgando']);
+
+// Rosto combinando com a frase (06/11; no Perfil: caosEmocaoDoTexto, C.A.O.S. 4.4): a emoção sai do que ele
+// está dizendo. A ordem importa: a primeira que bater manda. Sem nada marcante, fica com o evento/emoção.
+const DO_TEXTO = [
+  ['festa', /feliz anivers|parab[eé]ns|bateu a meta|conquist|comemor|m[eê]s no verde|fechou no verde/i],
+  ['preocupado', /estour|passou do limite|negativ|venceu|atrasad|apert|cuidado|aten[cç][aã]o|faltariam|n[aã]o cabe|acima do (limite|or[cç]amento)|ritmo (alto|forte)|no vermelho/i],
+  ['deboche', /sobrancelha|fascinante|suspir|pode chorar|n[aã]o atire|escolha de vida/i],
+  ['orgulho', /bom controle|mandando bem|disciplina|economizou|organizad|cabe!|t[aá] indo bem|vit[oó]ria/i],
+  ['carinho', /obrigad|valeu|prazer|que bom te|bem-vind|com carinho|t[oô] por aqui|tudo bem!|sem problema|tudo bem,|orgulho de voc/i],
+  ['surpresa', /\buau\b|caramba|nossa!|de madrugada|a essa hora/i],
+  ['pensando', /deixa eu (ver|pensar)|\bhmm\b|ainda n[aã]o sei|n[aã]o peguei|consultei|vou buscar|fiz as contas/i],
+];
+
+/** Emoção de rosto que a frase pede (ou null se a frase é neutra). */
+export function emocaoDoTexto(texto) {
+  const t = String(texto || '');
+  for (const [e, re] of DO_TEXTO) if (re.test(t)) return e;
+  return null;
+}
+
+// Coerência: alerta nunca sai com cara de festa; piada nunca sai com cara de preocupação.
+const NUNCA_NO_ALERTA = new Set(['festa', 'orgulho', 'carinho', 'alivio']);
+const NUNCA_NA_PIADA = new Set(['preocupado', 'triste', 'raiva', 'recompondo', 'tedio']);
 const LEVES_SUAVE = new Set(['triste', 'preocupado', 'recompondo']);
 
 export function memoriaRostoInicial() {
@@ -60,15 +83,19 @@ export function escada(antes, alvo) {
  *   livre = pula a escada (momentos fortes, como no Perfil: mês verde, estouro)
  * @returns {{ rosto: {emo, nome, cor, bg, fr, per, amp, quadros, mistura}, memoria }}
  */
-export function escolherRosto({ emocao = 'calmo', evento, humor = 'suave', intensidade = 0.3, memoria, rng = Math.random, livre = false } = {}) {
+export function escolherRosto({ emocao = 'calmo', evento, humor = 'suave', intensidade = 0.3, memoria, rng = Math.random, livre = false, texto = null, alerta = false } = {}) {
   const mem = { atual: memoria?.atual || 'calmo', ult: { ...(memoria?.ult || {}) } };
-  let alvo = (humor === 'acido' && DO_EVENTO_ACIDO[evento]) || DO_EVENTO[evento] || DA_EMOCAO[emocao] || 'calmo';
+  const doTexto = emocaoDoTexto(texto);
+  let alvo = doTexto || (humor === 'acido' && DO_EVENTO_ACIDO[evento]) || DO_EVENTO[evento] || DA_EMOCAO[emocao] || 'calmo';
+  if (alerta && NUNCA_NO_ALERTA.has(alvo)) alvo = 'preocupado';
+  if (evento === 'piada' && NUNCA_NA_PIADA.has(alvo)) alvo = humor === 'acido' ? 'deboche' : 'festa';
+  if (doTexto || alerta || evento === 'piada') livre = true; // a frase manda: o rosto vai direto
   if (humor === 'suave' && PROIBIDOS_SUAVE.has(alvo)) alvo = alvo === 'raiva' ? 'preocupado' : 'pensando';
   if (!EMOS[alvo]) alvo = 'calmo';
 
   // Mistura (como no Perfil: só fora do Suave, e só às vezes)
   const mist = MISTURA_DA[emocao];
-  if (mist && humor !== 'suave' && MISTURAS[mist] && !evento && rng() < 0.55) {
+  if (mist && humor !== 'suave' && MISTURAS[mist] && !evento && !doTexto && !alerta && rng() < 0.55) {
     const lista = MISTURAS[mist];
     const chave = `mist:${mist}`;
     const usados = mem.ult[chave] || [];

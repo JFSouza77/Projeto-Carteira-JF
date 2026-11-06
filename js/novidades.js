@@ -18,9 +18,10 @@ export const NOVIDADES = Object.freeze([
       '💳 Pagamento em partes: pagou só um pedaço de uma conta? Ela continua aberta com o que falta, e a sobra do mês conta o resto.',
       '🛡️ Backup mais seguro: um arquivo estragado ou mexido é recusado antes de mudar qualquer coisa nos seus dados.',
       '🏦 Mais bancos: Banestes, BRB, Banco do Nordeste, Agibank, Will Bank e outros. Conta em "Outro" mostra só o apelido.',
-      '🆕 Novidades: esta tela. Quando o app mudar, aparece um aviso no Início.',
+      '😶 Rosto que combina: a cara do C.A.O.S. sai do que ele está dizendo. Aviso sério nunca vem com cara de festa.',
     ],
     qol: [
+      '🆕 Novidades: esta tela. Quando o app mudar, aparece um aviso no Início.',
       '📱 Tela mais limpa: o topo e a barra de digitar ficaram sólidos, sem nada aparecendo cortado por baixo.',
       '✅ Plano do mês: se você cancelar o lançamento, o plano continua pendente.',
     ],

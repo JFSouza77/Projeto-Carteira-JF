@@ -1007,7 +1007,7 @@ async function parabensSeForODia() {
 function caosDiz(gatilho, vars, sugestoes) {
   const r = falaAvulsa(gatilho, vars, { mood: state.settings.mood, memory: state.caosMemory, perfil: state.perfil });
   guardarMemoria(r.memoria);
-  const rosto = rostoAvulso(gatilho === 'onb_fim' ? 'identidade' : 'surpresa', { mood: state.settings.mood, memory: state.caosMemory });
+  const rosto = rostoAvulso(gatilho === 'onb_fim' ? 'identidade' : gatilho === 'aniversario' ? 'piada' : 'surpresa', { mood: state.settings.mood, memory: state.caosMemory, texto: r.texto });
   pintarRosto(rosto);
   addMsg({ de: 'caos', texto: r.texto, sugestoes, rosto });
   if (state.settings.voice) falar(r.texto);
