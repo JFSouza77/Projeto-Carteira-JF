@@ -47,7 +47,7 @@ sempre testado.
   - 18 a 25 (jovem adulto): brinca menos e orienta mais ("analisando seu perfil, seria bom…", "pesquisa sobre tal
     tipo de investimento");
   - adultos: vai variando conforme a idade.
-- [ ] **Metas que ele monta junto**: "você marcou que quer guardar dinheiro: pra quê?" → "pra um show" → quanto
+- [x] **Metas que ele monta junto**: "você marcou que quer guardar dinheiro: pra quê?" → "pra um show" → quanto
   custa, quanto já tem, até quando → ele calcula quanto guardar por mês, acompanha e **comemora as conquistas**.
   Ele planeja a vida financeira com a pessoa e vai acompanhando conforme ela cresce.
 
