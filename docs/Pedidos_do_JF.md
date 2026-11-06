@@ -28,7 +28,7 @@ Janelas de trabalho: o que o JF marcar e **toda sexta das 06h às 09h** (Brasíl
 - [ ] **Muito mais dinamismo no C.A.O.S.** (começado em 05/11: piadas 15 → 30 e falas novas com o nome da pessoa): muito mais falas e piadas, mais "banco de dados", controle melhor do próprio
   sistema e autonomia pra auxiliar (sempre ter uma solução ou ideia), mas **nunca fazendo pelo usuário** (1ª lei:
   ele propõe, a pessoa confirma).
-- [ ] **Estrutura do C.A.O.S. do Perfil:** o JF vai trazer um arquivo com a estrutura completa que o Code do Perfil
+- [x] **Estrutura do C.A.O.S. do Perfil** (chegou na caixa de correio `docs/Do_Perfil/`, lida em 06/11): o JF vai trazer um arquivo com a estrutura completa que o Code do Perfil
   montou. Usar como base quando chegar.
 - [ ] **Mais funções e análises no app** em geral (ideias em `docs/Ideias.md`).
 - [ ] **Parte 2 pro JF:** passo a passo de publicar o servidor (IA online, lembretes e mercado): `servidor/LEIA-ME.md`.
@@ -61,7 +61,7 @@ sempre testado.
 - [x] **"Não entendi o que o banco falou"**: a pessoa manda o print e o C.A.O.S. explica o que aquilo significa (pelo
   servidor, com a IA). Sem conexão, entra na fila.
 - [ ] Ele **aprende com a pessoa** e evolui com ela.
-- [ ] O JF vai trazer o arquivo da estrutura do C.A.O.S. feita pelo Code do Perfil: usar como base.
+- [x] O JF vai trazer o arquivo da estrutura do C.A.O.S. feita pelo Code do Perfil: usar como base (chegou em `docs/Do_Perfil/`).
 
 ## 3. Cartão de crédito
 - [x] Registrar o cartão (ex.: PicPay com limite de R$ 100): limite, dia de fechamento e de vencimento. O C.A.O.S.
@@ -92,3 +92,10 @@ sempre testado.
 ## Novidades
 - [x] Aba/tela **Novidades** como a do Perfil: o que mudou em cada versão, em linguagem de quem usa, e aviso quando tem
   coisa nova.
+
+## Ficou pra próxima (06/11, fim da janela)
+- Ícones SVG também nas categorias e no resto do app (hoje só abas e Me ajuda).
+- Voz natural (Azure), perfil de tratamento com permissões e 👍/👎 nas falas (kit do Perfil, `06_Remontagem_na_Carteira.md`).
+- Ele aprender com a pessoa (tato, preferências) e mais análises.
+- Publicar o servidor (passo a passo em `servidor/LEIA-ME.md`): sem ele, IA online, fila, explicar print, mercado e
+  lembretes no iPhone ficam esperando.
