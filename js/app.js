@@ -419,6 +419,7 @@ function renderChat() {
       const acao = m.acao && !m.acaoFeita
         ? `<div class="acao"><button class="sim" data-acao="${i}" data-ok="1">✔ Confirmar</button><button class="nao" data-acao="${i}" data-ok="0">Cancelar</button></div>`
         : '';
+      if (m.digitando) return `<li class="msg caos-msg pensando digitando" aria-label="C.A.O.S. está digitando"><span class="who"><span class="caos-face mini" data-msg="${i}" aria-hidden="true"></span>C.A.O.S.</span><span class="pontos" aria-hidden="true"><i></i><i></i><i></i></span> digitando</li>`;
       return `<li class="msg caos-msg ${m.temp ? 'pensando' : ''}"><span class="who"><span class="caos-face mini" data-msg="${i}" aria-hidden="true"></span>C.A.O.S.${m.ia ? ' · IA' : ''}</span>${esc(m.texto)}${acao}</li>`;
     }).join('');
     for (const el of log.querySelectorAll('[data-msg]')) {
@@ -459,9 +460,25 @@ async function enviarPergunta(texto) {
       return;
     }
   }
+  await respiro(fala.texto);
   addMsg({ de: 'caos', texto: fala.texto, sugestoes: fala.sugestoes, acao: fala.acao, rosto: fala.rosto });
+  pintarRosto(fala.rosto);
   if (state.settings.voice) falar(fala.texto, fala.emocao);
   if (fala.filaIA) await perguntaPraDepois(fala.filaIA);
+}
+
+// Respiro antes da resposta (pedido do JF, 06/11): instantâneo demais "dá medo e quebra a imersão".
+// 0,6 a 1,8 s conforme o tamanho da resposta; com "menos movimento", espera curta e sem animação. Não trava nada.
+const tempoDePensar = (texto, menosMovimento = false) =>
+  menosMovimento ? 300 : Math.round(Math.min(1800, Math.max(600, 450 + String(texto || '').length * 9)));
+
+async function respiro(texto) {
+  const id = `d${Date.now()}${Math.random()}`;
+  const pensando = rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory });
+  pintarRosto(pensando);
+  addMsg({ de: 'caos', texto: 'digitando…', temp: id, digitando: true, rosto: pensando });
+  await new Promise(r => setTimeout(r, tempoDePensar(texto, MENOS_MOVIMENTO.matches)));
+  state.chat = state.chat.filter(m => m.temp !== id);
 }
 
 // ---------- "Amanhã eu trago": perguntas que precisam do servidor ----------

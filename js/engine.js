@@ -228,6 +228,7 @@ export const INCOME_SOURCES = Object.freeze([
 export const BANKS = Object.freeze([
   'Nubank', 'Itaú', 'Bradesco', 'Banco do Brasil', 'Caixa', 'Santander', 'Inter', 'C6 Bank', 'PicPay',
   'Mercado Pago', 'PagBank', 'BTG Pactual', 'XP', 'Sicoob', 'Sicredi', 'Neon', 'Next', 'Banrisul',
+  'Banestes', 'BRB', 'Banco do Nordeste', 'Agibank', 'Will Bank', 'Original', 'Safra', 'Banco Pan', 'Digio', 'Cora',
   'Carteira (dinheiro vivo)', 'Outro',
 ]);
 
@@ -266,6 +267,8 @@ export function parseSignedAmount(input) {
 }
 
 export function accountLabel(a) {
+  // Banco "Outro" com apelido: mostra só o apelido (06/11). "Outro · Cofrinho" não diz nada.
+  if (a.bank === 'Outro') return a.nickname || 'Outro banco';
   return a.nickname ? `${a.bank} · ${a.nickname}` : a.bank;
 }
 

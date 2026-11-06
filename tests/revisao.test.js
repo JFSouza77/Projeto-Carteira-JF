@@ -115,3 +115,38 @@ test('alerta de vencimento de compromisso parcial avisa só o que falta', () => 
   assert.ok(a);
   assert.equal(a.valorCents, 30000);
 });
+
+// ---------- O que o JF achou testando (05/11 à noite) ----------
+import { entender, responder } from '../js/caos/conversa.js';
+import { BANKS, accountLabel } from '../js/engine.js';
+
+test('ele entende "guardado no total" e "o que mais tenho planejado"', () => {
+  const casos = {
+    'Quanto eu tenho guardado no total?!': 'saldo',
+    'quanto poupei?': 'saldo',
+    'quanto tem nas contas': 'saldo',
+    'O que mais eu tenho planejado para esse mês?!': 'planos',
+    'o que tenho programado pro mes': 'planos',
+    'quanto tenho pra pagar?': 'pagar',
+    'quanto gastei este mês?': 'gasto_total',
+    'como guardar dinheiro?': 'dica',
+  };
+  for (const [frase, intent] of Object.entries(casos)) assert.equal(entender(frase, { categories: cats }).intent, intent, frase);
+});
+
+test('"o que mais tenho planejado" traz planos e compromissos que faltam', () => {
+  const planos = [createPlano({ nome: 'Tênis', valorCents: 20000, categoryId: 'compras', month: '2026-11' }, { now, id: 'p-9' })];
+  const r = responder(entender('O que mais eu tenho planejado para esse mês?!', { categories: cats }),
+    { expenses: [], incomes: [], categories: cats, accounts: [], compromissos: [fatura], planos }, { today: '2026-11-05' });
+  assert.match(r.fato, /Tênis/);
+  assert.match(r.fato, /Fatura de teste/);
+});
+
+test('banco "Outro" mostra só o apelido; lista de bancos em múltiplo de 5 com os que faltavam', () => {
+  assert.equal(accountLabel({ bank: 'Outro', nickname: 'Cofrinho' }), 'Cofrinho');
+  assert.equal(accountLabel({ bank: 'Outro', nickname: '' }), 'Outro banco');
+  assert.equal(accountLabel({ bank: 'Nubank', nickname: 'Principal' }), 'Nubank · Principal');
+  assert.equal(BANKS.length % 5, 0);
+  for (const b of ['Banestes', 'BRB', 'Banco do Nordeste', 'Agibank', 'Will Bank']) assert.ok(BANKS.includes(b), b);
+  assert.equal(new Set(BANKS).size, BANKS.length);
+});
