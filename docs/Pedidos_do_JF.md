@@ -68,7 +68,7 @@ sempre testado.
   ajuda a controlar a fatura (quanto do limite já foi, quanto vem na fatura, quando vence).
 
 ## 4. Visual e acessibilidade (como no Perfil)
-- [ ] **Rostinho combinando com a frase**: a emoção do rosto tem que fazer sentido com o que ele está falando, não é
+- [x] **Rostinho combinando com a frase**: a emoção do rosto tem que fazer sentido com o que ele está falando, não é
   enfeite (no Perfil: "a emoção do balão sai do conteúdo da frase", C.A.O.S. 4.4).
 - [ ] Visual **mais minimalista**, com toques de **neon** parecidos com o Perfil, **ícones bonitos** no lugar de
   emoji (menos poluído), cores e fontes com boa visibilidade, algumas animações e efeitos.
