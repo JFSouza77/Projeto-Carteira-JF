@@ -19,7 +19,7 @@ const SINONIMOS = {
   mercado: ['mercado', 'supermercado', 'feira', 'acougue', 'padaria', 'hortifruti', 'atacadao', 'compras do mes'],
   delivery: ['delivery', 'ifood', 'i food', 'rappi', 'pedido de comida', 'pedi comida', 'lanche em casa'],
   restaurante: ['restaurante', 'almoco', 'jantar', 'lanche', 'lanchonete', 'bar', 'cafe', 'pizzaria', 'hamburguer'],
-  transporte: ['transporte', 'uber', 'onibus', 'metro', 'gasolina', 'combustivel', 'estacionamento', 'pedagio', 'taxi', 'carro'],
+  transporte: ['transporte', 'uber', '99', 'onibus', 'metro', 'gasolina', 'combustivel', 'estacionamento', 'pedagio', 'taxi', 'carro', 'posto', 'etanol', 'alcool', 'diesel'],
   moradia: ['moradia', 'aluguel', 'condominio', 'iptu', 'casa'],
   contas: ['contas', 'conta de luz', 'luz', 'agua', 'internet', 'celular', 'telefone', 'gas', 'energia', 'boleto'],
   saude: ['saude', 'farmacia', 'remedio', 'medico', 'consulta', 'exame', 'dentista', 'plano de saude', 'academia'],
@@ -28,7 +28,7 @@ const SINONIMOS = {
   streaming: ['streaming', 'netflix', 'mercado play', 'disney', 'disney plus', 'hbo', 'hbo max', 'max', 'paramount',
     'paramount plus', 'prime video', 'amazon prime', 'globoplay', 'apple tv', 'crunchyroll', 'spotify', 'deezer',
     'youtube premium', 'star plus', 'telecine', 'assinatura de filme'],
-  compras: ['compras', 'roupa', 'tenis', 'sapato', 'shopping', 'presente', 'eletronico', 'loja', 'shopee', 'amazon'],
+  compras: ['compras', 'roupa', 'tenis', 'sapato', 'shopping', 'presente', 'eletronico', 'loja', 'shopee', 'amazon', 'mercado livre', 'shein', 'aliexpress'],
   outros: ['outros', 'outro', 'diversos'],
 };
 
@@ -167,6 +167,8 @@ const GIRIAS = {
   qnto: 'quanto', qnd: 'quando', qdo: 'quando', n: 'nao', naum: 'nao', nn: 'nao', eh: 'e', dps: 'depois', agr: 'agora',
   cmg: 'comigo', ctg: 'contigo', pfv: 'por favor', pf: 'por favor', sla: 'sei la', tlgd: 'ta ligado', mn: 'mano', vdd: 'verdade',
   grana: 'dinheiro', bufunfa: 'dinheiro', din: 'dinheiro', gastano: 'gastando', torrei: 'gastei', rango: 'comida',
+  // atalhos de finanças do brasileiro (sugestão do Gemini, 06/11)
+  cc: 'cartao', vr: 'restaurante', va: 'mercado', xopi: 'shopee', chopi: 'shopee', xopee: 'shopee', mercadolivre: 'mercado livre', ml: 'mercado livre',
 };
 export function expandirGirias(t) {
   return String(t).split(' ').map(w => GIRIAS[w] ?? w).join(' ');
@@ -199,7 +201,10 @@ function entenderSimples(t, { categories = [] } = {}) {
   // Registro ("gastei 30 no mercado", "paguei 120 de luz", "recebi 1500 de salario")
   if (r.valor && !/\bquanto\b/.test(t)) {
     if (/\b(recebi|ganhei|entrou|caiu|recebemos|me pagaram)\b/.test(t)) return { ...r, intent: 'registrar_entrada' };
-    if (/\b(gastei|paguei|comprei|torrei|saiu|pedi|abasteci|gasto de|gastamos)\b/.test(t)) return { ...r, intent: 'registrar_gasto' };
+    if (/\b(gastei|paguei|comprei|torrei|saiu|pedi|abasteci|gasto de|gastamos|passei|deixei|foram|foi)\b/.test(t)) return { ...r, intent: 'registrar_gasto' };
+    // Anotação curta, sem verbo, do jeito de quem anota num papel: "uber 30", "50 no posto" (achado do Gemini, 06/11)
+    const curtinha = t.split(' ').length <= 5 && !pergunta && !/\b(meta|guardei|juntei|poupei|investi)\b/.test(t);
+    if (curtinha && (r.categoria || descricaoDe(t) || /^[a-z]+ \d/.test(t) || /^\d+([.,]\d+)? [a-z]/.test(t))) return { ...r, intent: 'registrar_gasto' };
   }
   // Metas (1.8.0): montar junto, ver o progresso e guardar dinheiro nelas
   if (r.valor && /\b(guardei|juntei|separei|coloquei|poupei|depositei)\b/.test(t) && /\b(meta|pr[oa]|para o|para a|no|na)\b/.test(t)) return { ...r, intent: 'meta_guardar' };
@@ -209,6 +214,8 @@ function entenderSimples(t, { categories = [] } = {}) {
   if (/(qual (e )?(o )?meu nome|como (e|eh) meu nome|voce sabe (o )?meu nome|lembra (de )?mim|quem sou eu)/.test(t)) return { ...r, intent: 'meu_nome' };
   const apelido = t.match(/(?:me chama|pode me chamar|me chame) de ([a-z0-9 ]{2,30})$/);
   if (apelido) return { ...r, intent: 'mudar_apelido', apelido: apelido[1].trim() };
+  // "quanto sobra do orçamento de mercado?" é orçamento, não "cabe no mês" (achado do Gemini, 06/11)
+  if (/(orcamento|limite)/.test(t) && /(sobra|resta|falta|quanto (ainda )?posso)/.test(t) && !/cabe no/.test(t)) return { ...r, intent: 'orcamento' };
   if (/(cabe no (mes|meu bolso|orcamento|bolso)|da pra comprar|posso comprar|consigo comprar|tenho dinheiro pra|vai sobrar|quanto (vai )?sobra)/.test(t)) return { ...r, intent: 'cabe' };
   // "Explica o print do banco" (06/11): a pessoa manda o print e ele explica pelo servidor
   if (/(explica|explicar|nao entendi|o que (significa|quer dizer)|me ajuda a entender).*(print|tela|banco|fatura|extrato|app do banco|imagem|foto)|(print|tela) do banco/.test(t)) return { ...r, intent: 'explicar_print' };
@@ -231,6 +238,10 @@ function entenderSimples(t, { categories = [] } = {}) {
   // Quem ele é (identidade): vem antes de tudo que não é registro
   if (/(o que (significa|quer dizer)|significado|sigla).*(caos|seu nome|nome)|caos significa|o que e caos|o que e o caos/.test(t)) return { ...r, intent: 'significado' };
   if (/(o que (voce )?(acha|pensa|me diz|fala) (do|de|sobre o|sobre) (jf|joao|joao fernando|tgp|seu criador|criador|seu pai)|voce gosta (do|de) (jf|seu criador)|como e o jf|fala (do|sobre o) jf|(fala|falar|falando) (mal|bem) (do|de|sobre o) (jf|seu criador|criador)|o que voce tem a dizer sobre (o jf|seu criador))/.test(t)) return { ...r, intent: 'sobre_jf' };
+  // Brincadeira com o criador: "quanto ele te deve de salário?" (06/11)
+  if (/((quanto|qual).*(te deve|seu salario|teu salario|voce ganha|ce ganha)|(ele|jf|criador).*(paga|deve|pagar).*(salario|voce)|seu salario|voce recebe salario)/.test(t) && !r.valor) return { ...r, intent: 'salario_caos' };
+  // Memória da conversa: "e agora?", "já sabe responder essa?" voltam na última pergunta que ficou sem resposta
+  if (/^(e agora|e ai|e entao|ja (sabe|consegue|saber|sabes) (responder|me responder)|ja sabe|conseguiu (responder)?|lembra (da|daquela) (minha )?pergunta)\b/.test(t)) return { ...r, intent: 'retomar' };
   if (/(quem (te |o )?(criou|fez|programou|inventou|desenvolveu|construiu)|seu criador|seu pai|seu dono|quem e (o )?jf|quem manda em voce)/.test(t)) return { ...r, intent: 'criador' };
   if (/(de onde (voce )?(veio|vem|surgiu|saiu)|sua origem|sua historia|onde (voce )?nasceu|projeto perfil|veio do perfil)/.test(t)) return { ...r, intent: 'origem' };
   if (/(como voce funciona|como (e|funciona) (o )?seu cerebro|seu cerebro|sistema nervoso|sua espinha|seus bracos|voce pensa|voce sente|como voce e feito|do que voce e feito)/.test(t)) return { ...r, intent: 'como_funciona' };
@@ -539,11 +550,13 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       const alertas = analyze(dados, today);
       if (alertas.some(a => a.type === 'delivery_repetido')) return { fato: 'Dica da semana: o delivery está pesando. Cozinhar duas vezes por semana já faz diferença no fim do mês.' };
       if (!top.length) return { fato: 'Primeira dica: anota tudo por uma semana, até o cafezinho. Depois eu te mostro onde dá pra cortar.' };
-      const c = top[0];
+      // corte de 15% na maior categoria que dá pra segurar (delivery, lazer, compras…), não em moradia ou saúde
+      const ESSENCIAIS = new Set(['moradia', 'saude', 'contas', 'mercado', 'transporte']);
+      const c = top.find(x => !ESSENCIAIS.has(x.id)) || top[0];
       const corte = Math.round(c.totalCents * 0.15);
       const semOrc = categories.filter(x => !x.budgetCents).length;
       return {
-        fato: `Sua maior categoria no mês é ${c.emoji} ${c.name} (${formatBRL(c.totalCents)}). Cortar 15% dela daria ${formatBRL(corte)} de folga.${semOrc ? ` E ${semOrc} categorias estão sem orçamento: definir um limite ajuda a segurar.` : ''}`,
+        fato: `${c === top[0] ? 'Sua maior categoria no mês' : 'Onde dá pra segurar mais fácil'} é ${c.emoji} ${c.name} (${formatBRL(c.totalCents)}). Cortar 15% dela daria ${formatBRL(corte)} de folga.${semOrc ? ` E ${semOrc} categorias estão sem orçamento: definir um limite ajuda a segurar.` : ''}`,
       };
     }
     case 'alertas': {
@@ -648,6 +661,10 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
     }
     case 'como_esta':
       return { gatilho: 'como_esta', vars: { emocao } };
+    case 'retomar':
+      return {};
+    case 'salario_caos':
+      return { gatilho: 'salario_caos', vars: {}, sugestoes: ['O que vc acha do JF?', 'Quanto gastei este mês?'] };
     case 'sobre_jf':
       return { gatilho: 'sobre_jf', vars: { criador: IDENTIDADE.criador }, sugestoes: SUG_IDENTIDADE };
     case 'significado': case 'criador': case 'origem': case 'identidade': case 'piada':

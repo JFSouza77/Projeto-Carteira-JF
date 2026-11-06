@@ -11,7 +11,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '1.11.0';
+export const CAOS_VERSAO = '1.12.0';
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -67,7 +67,11 @@ export function contexto({ humor, emocao, now = Date.now(), perfil }) {
   const tags = new Set([`humor_${humor}`, `emo_${emocao}`, `periodo_${periodo(d.getHours())}`]);
   if (perfil?.apelido) tags.add('temNome');
   // o JF é reconhecido como criador (João Fernando, JF, TGP, JF77, TGP77), comparando sem acento e em minúsculas
-  if (ehCriador(perfil)) tags.add('criador');
+  if (ehCriador(perfil)) {
+    tags.add('criador');
+    // o JF pediu (06/11): com ele o C.A.O.S. é ácido como no Perfil, em qualquer humor
+    tags.add('humor_acido');
+  }
   if (perfil?.tratamento === 'formal') {
     tags.add('tratamento_formal');
     tags.delete('humor_acido'); // formal: sem zoeira
@@ -181,12 +185,19 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   const humor = MOODS[mood] ? mood : DEFAULT_MOOD;
   let mem = normalizarMem(memory, now);
   const d = congelar(dados);
-  const intencao = entender(texto, { ...d, anterior: mem.conversa || null });
+  let intencao = entender(texto, { ...d, anterior: mem.conversa || null });
+  // Memória (06/11): "e agora?", "já sabe responder?" voltam na última pergunta que ficou sem resposta
+  let retomada = null;
+  if (intencao.intent === 'retomar' && mem.semResposta) {
+    const de_novo = entender(mem.semResposta, { ...d, anterior: null });
+    if (de_novo.intent !== 'nao_entendi' && !de_novo.palpite && de_novo.intent !== 'retomar') { intencao = de_novo; retomada = mem.semResposta; }
+  }
   mem = { ...mem, emocoes: sentir(mem.emocoes, EVENTO_DA_INTENCAO[intencao.intent] || 'pergunta', now) };
   const emocao = emocaoAtual(mem.emocoes, humor, now);
   const resp = responder(intencao, d, { today: today || toISODate(new Date(now)), emocao: rostoDe(emocao).nome, perfil, now });
 
   let fato = resp.fato;
+  if (retomada && fato) fato = `Sobre aquela sua pergunta ("${retomada}"): ${fato}`;
   // Melhor palpite (1.6.0): responde o que achou que era e pergunta de volta, em vez de "não entendi"
   if (intencao.palpite && fato) fato = `Acho que você quis saber isto: ${fato} Se não for, me pergunta de outro jeito.`;
   if (resp.aviso && fato) {
@@ -209,7 +220,9 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
     saida = r.texto || fato;
     mem = { ...mem, gerador: r.gerador };
   } else {
-    const r = montar(resp.gatilho || 'nao_entendi', resp.vars || {}, { humor, emocao, mem, now, rng, perfil });
+    const varsR = intencao.intent === 'retomar' ? { pergunta: mem.semResposta ? `"${mem.semResposta}"` : null } : {};
+    const gat = intencao.intent === 'retomar' ? (mem.semResposta ? 'retomar_nao' : 'retomar_vazio') : (resp.gatilho || 'nao_entendi');
+    const r = montar(gat, { ...(resp.vars || {}), ...Object.fromEntries(Object.entries(varsR).filter(([, v]) => v != null)) }, { humor, emocao, mem, now, rng, perfil });
     saida = r.texto;
     mem = { ...mem, gerador: r.gerador };
   }
@@ -230,8 +243,11 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   // ("o que você pode fazer?" saía preocupado por causa da palavra "aperta")
   const r = rostoPara(mem, { emocao, evento: EVENTO_ROSTO[intencao.intent], humor, now, rng, direto: !!EVENTO_ROSTO[intencao.intent], texto: EVENTO_ROSTO[intencao.intent] ? null : saida, alerta: temAlerta });
   mem = r.mem;
+  // guarda a pergunta que ficou sem resposta (pra "e agora?"); some quando ela é respondida
+  if (intencao.intent === 'nao_entendi') mem = { ...mem, semResposta: String(texto).trim().slice(0, 160) };
+  else if (retomada) mem = { ...mem, semResposta: null };
   // lembra a última pergunta pra entender a próxima ("e no mês passado?")
-  if (intencao.intent !== 'nao_entendi') {
+  if (intencao.intent !== 'nao_entendi' && intencao.intent !== 'retomar') {
     mem = { ...mem, conversa: { intent: intencao.intent, categoryId: intencao.categoria?.id || null, periodo: intencao.periodo || 'mes' } };
   }
   return {
@@ -243,7 +259,7 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
       fluxoMeta: resp.fluxoMeta || null,
       modoFoto: resp.modoFoto || null, // a próxima foto é pra explicar (não pra lançar) // "quero juntar pra…": o app conduz as perguntas e propõe a meta
       filaIA: resp.filaIA || null, // pergunta que precisa do servidor: o app responde agora ou guarda na fila
-      entendeu: intencao.intent !== 'nao_entendi' && !intencao.palpite,
+      entendeu: intencao.intent !== 'nao_entendi' && !intencao.palpite && !(intencao.intent === 'retomar' && !retomada),
       palpite: !!intencao.palpite,
     },
     memoria: mem,

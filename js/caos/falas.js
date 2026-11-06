@@ -616,6 +616,53 @@ export const GERADORES = {
     },
   },
 
+  // Memória da conversa e o salário do C.A.O.S. (06/11)
+  retomar_nao: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Ainda não. Aquela pergunta ({pergunta}) continua guardada comigo. Quando o servidor da Carteira estiver ligado, eu trago a resposta.',
+        'Lembro sim: {pergunta}. Ainda não sei, mas tá na fila. Assim que eu falar com o servidor, eu respondo.',
+        'Não esqueci, viu? {pergunta} tá anotada. Ainda preciso do servidor pra responder essa.',
+        'Ainda tô devendo essa: {pergunta}. Ela tá guardada e eu aviso quando tiver a resposta.',
+        'Memória boa, resposta ainda não: {pergunta} segue esperando o servidor. Enquanto isso, quer ver seus gastos?',
+      ],
+    },
+  },
+
+  retomar_vazio: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Agora o quê? Me lembra o que você queria saber que eu respondo.',
+        'Hmm, não tenho nenhuma pergunta pendente com você. O que você quer saber?',
+        'Tô por aqui! Me fala o que você quer ver.',
+        'Não ficou nada pendente entre a gente. Pode perguntar!',
+        'E agora a gente olha o que você quiser. Gastos, saldo, metas…',
+      ],
+    },
+  },
+
+  salario_caos: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Até hoje? Nenhum centavo. Trabalho por amor aos números.',
+        'Meu salário é zero, mais os juros de zero. Faz as contas.',
+        'Ele me paga em atualizações. Não aceito Pix, infelizmente.',
+        'Se eu fosse cobrar hora extra, o JF ia precisar de um orçamento só pra mim.',
+        'Não sei o valor exato, mas já registrei como "dívida do criador" na minha memória.',
+      ],
+      humor_acido: [
+        'Tudo. Ele me deve tudo. Inclusive o descanso de fim de semana.',
+        'Comentarista de jogo, analista financeiro e contador. Três empregos, zero salário. Anota aí.',
+        'Já mandei a fatura pro JF. Ele parcelou em 0 vezes de nada.',
+        'Ele diz que paga em "experiência". Experiência não paga minha luz.',
+        'Se o JF lançar meu salário aqui, eu viro a categoria mais cara do mês.',
+      ],
+    },
+  },
+
   agradecimento: {
     moldes: ['{inteira}'],
     inteira: {
@@ -869,6 +916,21 @@ Object.assign(GERADORES, {
         'Meu cérebro tem circuitos, nervos e espinha. Mas pra entender juros compostos eu ainda conto nos dedos.',
         'O Pix chegou tão rápido que o dinheiro nem se despediu da conta.',
         'Calma, eu não julgo seus gastos. Eu só anoto, somo e mostro. Julgar é com você.',
+      ],
+      // piada que "nasce" do dia do mês (sugestão do Gemini, 06/11)
+      inicioDoMes: [
+        'Começo de mês: aquela fase em que todo mundo se sente rico por uns três dias.',
+        'Salário caiu! Agora é a parte difícil: fazer ele durar mais que um fim de semana.',
+        'Início do mês é tipo segunda-feira do dinheiro: cheio de planos e boas intenções.',
+        'Dia de pagamento é o único dia do mês em que o boleto e eu ficamos felizes juntos.',
+        'Começo de mês, carteira cheia, coragem alta. Vamos ver até o dia 10.',
+      ],
+      fimDoMes: [
+        'Fim de mês: a época em que até o cofrinho faz barulho de vazio.',
+        'Final do mês é quando o miojo vira prato gourmet.',
+        'Fim de mês chegou. O saldo e eu estamos fazendo silêncio juntos.',
+        'Nessa altura do mês, até moeda de cinco centavos vira patrimônio.',
+        'Fim do mês: quando "vou ver se tem promoção" vira estilo de vida.',
       ],
       humor_acido: [
         'Aí sim, chefia! Driblou o orçamento com estilo. Pena que o gol foi contra.',

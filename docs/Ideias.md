@@ -22,3 +22,7 @@ Sugestões do Code (05/11/2026), da mais útil para a menos. Nada disso está fe
 - Medir o tamanho real das respostas da IA e baixar o `max_tokens` (hoje 16000) sem cortar o JSON.
 - Restringir os hosts de push a nomes exatos depois de conferir os endpoints de Chrome, Firefox, Safari e Edge.
 - Os contadores do KV são aproximados: em rajada podem passar um pouco do limite. Se virar problema, usar Durable Object.
+
+## Do Gemini (06/11)
+- Emoção que some mais devagar quando o assunto é grave (conta no vermelho) e mais rápido quando é leve (piada).
+- Elogio quando a pessoa fecha 2 ou 3 meses seguidos no verde.
