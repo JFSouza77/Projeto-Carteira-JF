@@ -64,6 +64,12 @@ export async function lerImagem(base, { base64, categorias }) {
   });
 }
 
+/** Explica um print do banco/fatura. A imagem só vai quando a pessoa pede ("explica esse print"). */
+export async function explicarImagem(base, { base64, duvida, humor }) {
+  const j = await chamar(base, '/ia/explicar', { imagem: base64, tipo: 'image/jpeg', duvida: String(duvida || '').slice(0, 300), humor });
+  return j.texto;
+}
+
 export { chamar };
 
 /** Resumo do mercado que o servidor atualiza todo dia útil às 10h (o app guarda pra usar offline). */

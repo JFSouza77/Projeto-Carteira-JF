@@ -11,7 +11,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '1.8.0';
+export const CAOS_VERSAO = '1.9.0';
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -221,7 +221,8 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
       emocao, rosto: r.rosto,
       sugestoes: resp.sugestoes || (intencao.intent === 'nao_entendi' ? SUGESTOES.slice(0, 5) : []),
       acao: resp.acao || null,
-      fluxoMeta: resp.fluxoMeta || null, // "quero juntar pra…": o app conduz as perguntas e propõe a meta
+      fluxoMeta: resp.fluxoMeta || null,
+      modoFoto: resp.modoFoto || null, // a próxima foto é pra explicar (não pra lançar) // "quero juntar pra…": o app conduz as perguntas e propõe a meta
       filaIA: resp.filaIA || null, // pergunta que precisa do servidor: o app responde agora ou guarda na fila
       entendeu: intencao.intent !== 'nao_entendi' && !intencao.palpite,
       palpite: !!intencao.palpite,

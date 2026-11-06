@@ -9,14 +9,15 @@ export const NOVIDADES = Object.freeze([
   {
     v: '1.6',
     data: '06/11/2026',
-    nome: 'Metas',
-    t: 'Monte metas com o C.A.O.S.: pra quê, quanto, até quando. Ele calcula, acompanha e comemora.',
+    nome: 'Metas e Explicações',
+    t: 'Metas montadas com o C.A.O.S., visual novo e explicação do print do banco.',
     itens: [
       '🎯 Metas montadas junto: fale "quero juntar dinheiro pra um show" e o C.A.O.S. pergunta quanto custa, quanto você já tem e até quando.',
       '📆 Quanto guardar por mês: ele faz a conta pra você chegar lá no prazo.',
       '💰 Guardei na meta: fale "guardei 50 na meta do show" ou toque em Guardar, na aba Mês.',
       '🏆 Meta batida: quando chegar a 100%, ele comemora com você.',
       '✨ Visual novo: ícones próprios nas abas, mais limpos, com um brilho neon na aba aberta.',
+      '🔍 Explica o print do banco: não entendeu a tela do banco ou a fatura? Peça "explica esse print" e mande a imagem pelo 📎.',
     ],
     qol: [],
   },

@@ -192,6 +192,8 @@ function entenderSimples(t, { categories = [] } = {}) {
   const apelido = t.match(/(?:me chama|pode me chamar|me chame) de ([a-z0-9 ]{2,30})$/);
   if (apelido) return { ...r, intent: 'mudar_apelido', apelido: apelido[1].trim() };
   if (/(cabe no (mes|meu bolso|orcamento|bolso)|da pra comprar|posso comprar|consigo comprar|tenho dinheiro pra|vai sobrar|quanto (vai )?sobra)/.test(t)) return { ...r, intent: 'cabe' };
+  // "Explica o print do banco" (06/11): a pessoa manda o print e ele explica pelo servidor
+  if (/(explica|explicar|nao entendi|o que (significa|quer dizer)|me ajuda a entender).*(print|tela|banco|fatura|extrato|app do banco|imagem|foto)|(print|tela) do banco/.test(t)) return { ...r, intent: 'explicar_print' };
   // Cartão de crédito (06/11): "como está meu cartão?", "quanto vem na fatura?", "quanto tenho de limite?"
   if (/(cartao|fatura|limite (do|no) cartao)/.test(t) && !/\b(como|onde|quero|preciso|queria)\b.*\b(cadastr|adicion|registr|coloc|ponho|crio|criar)/.test(t)) return { ...r, intent: 'cartao' };
   if (/((o que|quanto) (eu )?(ainda )?tenho (pra|para|de) pagar|falta pagar|contas? (do|deste|desse) mes|vencimento|quando vence|o que vence|tenho conta|compromissos?|minhas contas fixas|assinaturas)/.test(t)) return { ...r, intent: 'pagar' };
@@ -417,6 +419,8 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         sugestoes: ['Onde mais gastei?', 'Qual meu saldo?'],
       };
     }
+    case 'explicar_print':
+      return { fato: 'Manda o print aqui pelo 📎 que eu te explico o que o banco quis dizer. A imagem só vai pro servidor da Carteira pra isso, e eu não repito números de conta nem de cartão.', modoFoto: 'explicar', sugestoes: [] };
     case 'meta_nova':
       return { gatilho: 'meta_pra_que', fluxoMeta: { nome: intencao.metaNome || null } };
     case 'metas': {

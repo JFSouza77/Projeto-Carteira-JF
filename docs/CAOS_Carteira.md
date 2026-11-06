@@ -126,3 +126,10 @@ orçamento ("quanto ainda posso gastar?"), alertas, previsão do mês, comparaç
   até quando) e termina numa **proposta** com Confirmar. `metas` lista o progresso; `meta_guardar` ("guardei 50 na meta
   do show") também é proposta. Gatilhos `meta_pra_que`, `meta_quanto`, `meta_tem`, `meta_ate`, `meta_guardou`,
   `meta_batida` (comemora com rosto de festa).
+
+## Explica o print do banco (1.9.0, 06/11)
+
+- Intenção `explicar_print` ("explica esse print", "não entendi o que o banco falou"): ele pede a imagem e marca
+  `modoFoto: 'explicar'` (10 min). A próxima foto do 📎 vai pra rota nova `/ia/explicar` do servidor, que devolve só
+  texto. Sem conexão, o print fica no aparelho e entra na fila (`tipo: 'explicar'`); a entrega é "Ei, {nome}, sabe
+  aquele print do banco…". O servidor não repete números de conta/cartão e não recomenda investimento.

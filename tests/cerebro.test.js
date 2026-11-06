@@ -56,3 +56,10 @@ test('Me ajuda: cada opção leva ao passo a passo certo', () => {
     assert.equal(r.tema, tema, frase);
   }
 });
+
+test('"explica o print do banco" pede a foto e marca o modo explicar (sem mandar nada sozinho)', () => {
+  const r = conversar('não entendi o que o banco falou nessa tela', dados(), { now: NOW, today: hoje });
+  assert.equal(r.fala.modoFoto, 'explicar');
+  assert.match(r.fala.texto, /📎/);
+  assert.equal(r.fala.filaIA, null);
+});

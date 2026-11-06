@@ -58,7 +58,7 @@ sempre testado.
 - [x] **Toda pergunta que ele não souber** vai pra fila do servidor ("ainda não sei, mas guardei e mandei pros meus
   servidores"). Quando a resposta chegar: "Ei, fulano, sabe aquela sua pergunta? Agora eu consigo responder." (com o
   rostinho dele). Hoje a fila só existe pra "qual banco rende mais".
-- [ ] **"Não entendi o que o banco falou"**: a pessoa manda o print e o C.A.O.S. explica o que aquilo significa (pelo
+- [x] **"Não entendi o que o banco falou"**: a pessoa manda o print e o C.A.O.S. explica o que aquilo significa (pelo
   servidor, com a IA). Sem conexão, entra na fila.
 - [ ] Ele **aprende com a pessoa** e evolui com ela.
 - [ ] O JF vai trazer o arquivo da estrutura do C.A.O.S. feita pelo Code do Perfil: usar como base.
