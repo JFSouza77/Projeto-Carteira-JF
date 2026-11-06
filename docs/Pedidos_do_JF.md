@@ -39,9 +39,9 @@ Para a janela de **sexta 06/11, 06h às 09h**, e as seguintes. É muita coisa: f
 sempre testado.
 
 ## 1. Cadastro com idade e um C.A.O.S. que se adapta (prioridade)
-- [ ] **Data de aniversário** no cadastro (a idade sai dela). É o principal: com a idade o C.A.O.S. ajuda a pessoa a
+- [x] **Data de aniversário** no cadastro (a idade sai dela). É o principal: com a idade o C.A.O.S. ajuda a pessoa a
   se situar nas finanças. Ele lembra do aniversário.
-- [ ] **Jeito de falar por faixa de idade** (sempre respeitando e ajudando, sem se perder):
+- [x] **Jeito de falar por faixa de idade** (sempre respeitando e ajudando, sem se perder):
   - até 12 anos (criança): mais jovial, brinca um pouco mais;
   - 13 a 17 (adolescente): brinca um pouco menos, zoa um pouco mais ácido, sem exagero;
   - 18 a 25 (jovem adulto): brinca menos e orienta mais ("analisando seu perfil, seria bom…", "pesquisa sobre tal

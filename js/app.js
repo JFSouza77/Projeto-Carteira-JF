@@ -6,7 +6,7 @@ import {
   DEFAULT_CATEGORIES, INCOME_SOURCES, BANKS, formatBRL, parseAmount, parseSignedAmount, toISODate, monthKey,
   shiftMonth, monthLabel, createExpense, createIncome, createAccount, summarizeMonth, detectExpenseEvents,
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
-  TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup,
+  TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta } from './caos/index.js';
 import { extrairNome } from './caos/conversa.js';
@@ -940,9 +940,34 @@ const FOCOS = ['Controlar o dia a dia', 'Sair do vermelho', 'Juntar dinheiro', '
 
 function renderPerfil() {
   const p = state.perfil;
+  const idade = idadeDe(p?.aniversario, toISODate());
   $('#perfil-resumo').textContent = p?.apelido
-    ? `O C.A.O.S. te chama de ${p.apelido}${p.nome && p.nome !== p.apelido ? ` (${p.nome})` : ''}, num jeito ${p.tratamento === 'formal' ? 'mais formal' : 'descontraído'}.${p.foco?.length ? ` Foco: ${p.foco.join(', ').toLowerCase()}.` : ''}`
+    ? `O C.A.O.S. te chama de ${p.apelido}${p.nome && p.nome !== p.apelido ? ` (${p.nome})` : ''}, num jeito ${p.tratamento === 'formal' ? 'mais formal' : 'descontraído'}.${idade != null ? ` ${idade} anos.` : ''}${p.foco?.length ? ` Foco: ${p.foco.join(', ').toLowerCase()}.` : ''}`
     : 'O C.A.O.S. ainda não te conhece.';
+  $('#perfil-aniversario').value = p?.aniversario || '';
+  $('#perfil-aniversario').max = toISODate();
+}
+
+/** Quem já tinha cadastro sem data de aniversário: ele pergunta UMA vez na conversa. */
+async function perguntarAniversarioUmaVez() {
+  const p = state.perfil;
+  if (!p || p.pulou || !p.apelido || p.aniversario || p.aniversarioPerguntado || state.onboarding) return;
+  state.perfil = { ...p, aniversarioPerguntado: true };
+  await db.setMeta('perfil', state.perfil);
+  state.onboarding = { passo: 'aniversario', unico: true, dados: { apelido: p.apelido, foco: [] } };
+  caosDiz('onb_aniversario', { nome: p.apelido }, ['Prefiro não dizer']);
+}
+
+/** No dia do aniversário, ele dá parabéns uma vez por ano. */
+async function parabensSeForODia() {
+  const p = state.perfil;
+  const hoje = toISODate();
+  if (!p?.aniversario || !ehAniversario(p.aniversario, hoje) || p.parabensAno === hoje.slice(0, 4)) return;
+  state.perfil = { ...p, parabensAno: hoje.slice(0, 4) };
+  await db.setMeta('perfil', state.perfil);
+  caosDiz('aniversario', { nome: p.apelido || 'pessoa querida' }, SUGESTOES.slice(0, 6));
+  const ult = [...state.chat].reverse().find(m => m.de === 'caos');
+  if (ult) $('#caos-line').textContent = ult.texto;
 }
 
 function caosDiz(gatilho, vars, sugestoes) {
@@ -981,7 +1006,7 @@ async function onboardingResposta(t) {
     const limpo = t.replace(/^✓\s*/, '');
     if (/^pronto$/i.test(limpo)) {
       addMsg({ de: 'eu', texto: d.foco.length ? d.foco.join(', ') : 'Pronto' });
-      state.perfil = { nome: d.nome, apelido: d.apelido, tratamento: d.tratamento, foco: d.foco, criadoEm: Date.now() };
+      state.perfil = { nome: d.nome, apelido: d.apelido, tratamento: d.tratamento, foco: d.foco, aniversario: d.aniversario || null, aniversarioPerguntado: true, criadoEm: Date.now() };
       state.onboarding = null;
       await db.setMeta('perfil', state.perfil);
       renderPerfil();
@@ -1007,6 +1032,27 @@ async function onboardingResposta(t) {
     caosDiz('onb_apelido', { nome: primeiro }, [...new Set([primeiro, nome])]);
   } else if (o.passo === 'apelido') {
     d.apelido = extrairNome(t) || d.nome.split(' ')[0];
+    o.passo = 'aniversario';
+    caosDiz('onb_aniversario', { nome: d.apelido }, ['Prefiro não dizer']);
+  } else if (o.passo === 'aniversario') {
+    const nao = /(prefiro n|nao quero|não quero|pular|depois|n[aã]o digo)/i.test(t);
+    const data = nao ? null : lerAniversario(t);
+    if (!data && !nao && !o.tentouData) {
+      o.tentouData = true;
+      addMsg({ de: 'caos', texto: 'Não peguei a data. Manda no jeito dia/mês/ano, tipo 05/03/1998. Ou toca em "Prefiro não dizer".', sugestoes: ['Prefiro não dizer'] });
+      return;
+    }
+    d.aniversario = data || null;
+    if (o.unico) {
+      // quem já tinha cadastro: só faltava a data (pergunta uma vez só)
+      state.perfil = { ...state.perfil, aniversario: d.aniversario, aniversarioPerguntado: true };
+      state.onboarding = null;
+      await db.setMeta('perfil', state.perfil);
+      renderPerfil();
+      if (data) caosDiz('onb_aniversario_ok', { nome: state.perfil.apelido }, SUGESTOES.slice(0, 6));
+      else addMsg({ de: 'caos', texto: 'Tudo bem! Se mudar de ideia, é só ir em Ajustes → Seu perfil.', sugestoes: SUGESTOES.slice(0, 6) });
+      return;
+    }
     o.passo = 'tratamento';
     caosDiz('onb_tratamento', { nome: d.apelido }, ['Descontraído', 'Mais formal']);
   } else if (o.passo === 'tratamento') {
@@ -1187,6 +1233,14 @@ function bind() {
     if (d) removerPlano(d.dataset.planDel);
   });
   $('#perfil-refazer').addEventListener('click', () => iniciarOnboarding());
+  $('#perfil-aniversario').addEventListener('change', async e => {
+    const v = e.target.value;
+    if (v && !lerAniversario(v)) { toast('Data inválida.'); renderPerfil(); return; }
+    state.perfil = { ...(state.perfil || { nome: null, apelido: null, tratamento: 'descontraido', foco: [] }), aniversario: v || null, aniversarioPerguntado: true };
+    await db.setMeta('perfil', state.perfil);
+    renderPerfil();
+    toast(v ? 'Aniversário salvo.' : 'Aniversário apagado.');
+  });
   $('#note').addEventListener('input', sugerirPelaDescricao);
 
   $('#export-btn').addEventListener('click', exportBackup);
@@ -1259,6 +1313,7 @@ async function init() {
   irPara(location.hash.slice(1));
   // Primeiro acesso: o C.A.O.S. se apresenta e conhece a pessoa
   if (!state.perfil) iniciarOnboarding();
+  else { await parabensSeForODia(); await perguntarAniversarioUmaVez(); }
   $('#install-hint').textContent = installHint();
 
   const today = toISODate();

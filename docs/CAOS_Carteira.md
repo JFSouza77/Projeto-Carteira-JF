@@ -83,3 +83,13 @@ orçamento ("quanto ainda posso gastar?"), alertas, previsão do mês, comparaç
 2. Gatilho novo: crie o gerador em `falas.js`, a prioridade e o cooldown em `js/caos/index.js` e o efeito nas emoções
    em `js/caos/emocoes.js`.
 3. Suba `CAOS_VERSAO` e rode `npm test`.
+
+## Idade e aniversário (1.4.0, 06/11)
+
+- A data de nascimento fica em `meta/perfil.aniversario` (só no aparelho). Perguntada no primeiro acesso, em Ajustes →
+  Seu perfil, e **uma vez** na conversa pra quem já tinha cadastro (`aniversarioPerguntado`).
+- `idadeDe`, `faixaEtaria`, `ehAniversario` e `lerAniversario` ficam no motor (`js/engine.js`).
+- A faixa vira balde de contexto no gerador: `idade_crianca` (até 12, jovial), `idade_adolescente` (13–17, brinca
+  menos, um tiquinho ácido), `idade_jovem` (18–25, orienta mais), `idade_adulto` (varia). **Criança nunca recebe
+  `humor_acido`**, mesmo no humor Ácido.
+- No dia, o gatilho `aniversario` dá parabéns uma vez por ano (`parabensAno`).

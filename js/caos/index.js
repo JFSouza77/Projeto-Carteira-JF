@@ -2,7 +2,7 @@
 // REGRA: o narrador NUNCA altera dados. Não importa db.js, não toca em DOM nem em storage.
 // Recebe cópias congeladas e devolve { fala, memoria } novos; quem grava a memória é o app.
 
-import { formatBRL, INCOME_SOURCES, daysInMonth, toISODate } from '../engine.js';
+import { formatBRL, INCOME_SOURCES, daysInMonth, toISODate, idadeDe, faixaEtaria, ehAniversario } from '../engine.js';
 import { congelar, protegido } from './espinha.js';
 import { sentir, emocaoAtual, emocoesIniciais, intensidade, ROSTO } from './emocoes.js';
 import { escolherRosto, memoriaRostoInicial } from './rostos.js';
@@ -11,7 +11,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '1.3.1';
+export const CAOS_VERSAO = '1.4.0';
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -62,6 +62,15 @@ export function contexto({ humor, emocao, now = Date.now(), perfil }) {
     tags.add('tratamento_formal');
     tags.delete('humor_acido'); // formal: sem zoeira
   }
+  // Idade (06/11): a faixa vira balde de contexto. Criança nunca recebe zoeira (2ª lei, com cuidado redobrado).
+  const hoje = toISODate(d);
+  const idade = idadeDe(perfil?.aniversario, hoje);
+  if (idade != null) {
+    const faixa = faixaEtaria(idade);
+    tags.add(`idade_${faixa}`);
+    if (faixa === 'crianca') tags.delete('humor_acido');
+  }
+  if (ehAniversario(perfil?.aniversario, hoje)) tags.add('aniversario');
   if (d.getDay() === 0 || d.getDay() === 6) tags.add('fimDeSemana');
   const dia = d.getDate();
   const total = daysInMonth(toISODate(d).slice(0, 7));
