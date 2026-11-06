@@ -5,7 +5,7 @@
 import {
   formatBRL, parseAmount, periodRange, sumInRange, topCategories, summarizeMonth, forecastMonth,
   incomeIn, monthKey, shiftMonth, monthLabel, accountBalance, accountLabel, totalBalance, analyze,
-  spentIn, toISODate, INCOME_SOURCES, situacaoCompromissos, analisarPlanejamento, cabeNoMes, sugerirCategoria, palavrasDe, faturaDoCartao,
+  spentIn, toISODate, INCOME_SOURCES, situacaoCompromissos, analisarPlanejamento, cabeNoMes, sugerirCategoria, palavrasDe, faturaDoCartao, progressoMeta,
 } from '../engine.js';
 import { IDENTIDADE, textoAnatomia, textoPodeNaoPode } from './identidade.js';
 import { textoTendencia, quandoFoi, mercadoVelho } from '../mercado.js';
@@ -183,6 +183,10 @@ function entenderSimples(t, { categories = [] } = {}) {
     if (/\b(recebi|ganhei|entrou|caiu|recebemos|me pagaram)\b/.test(t)) return { ...r, intent: 'registrar_entrada' };
     if (/\b(gastei|paguei|comprei|torrei|saiu|pedi|abasteci|gasto de|gastamos)\b/.test(t)) return { ...r, intent: 'registrar_gasto' };
   }
+  // Metas (1.8.0): montar junto, ver o progresso e guardar dinheiro nelas
+  if (r.valor && /\b(guardei|juntei|separei|coloquei|poupei|depositei)\b/.test(t) && /\b(meta|pr[oa]|para o|para a|no|na)\b/.test(t)) return { ...r, intent: 'meta_guardar' };
+  if (/((criar|montar|nova|fazer|comecar) (uma )?meta|quero (guardar|juntar|economizar|poupar)( dinheiro)? (pra|para)|juntar dinheiro (pra|para)|me ajuda a (guardar|juntar)|quero (ter|fazer) uma reserva)/.test(t)) return { ...r, intent: 'meta_nova', metaNome: nomeDaMeta(t) };
+  if (/(minhas metas|minha meta|\bmetas?\b.*(como|quanto|esta|estao|vai)|(como|quanto).*\bmetas?\b|quanto falta (pra|para) (a )?meta)/.test(t)) return { ...r, intent: 'metas' };
   // Compromissos, planos e "cabe no mês?" (1.3.0)
   if (/(qual (e )?(o )?meu nome|como (e|eh) meu nome|voce sabe (o )?meu nome|lembra (de )?mim|quem sou eu)/.test(t)) return { ...r, intent: 'meu_nome' };
   const apelido = t.match(/(?:me chama|pode me chamar|me chame) de ([a-z0-9 ]{2,30})$/);
@@ -251,6 +255,21 @@ function entenderSimples(t, { categories = [] } = {}) {
   if (/^(oi|ola|e ai|eai|opa|bom dia|boa tarde|boa noite|salve|hey|alo)\b/.test(t)) return { ...r, intent: 'saudacao' };
   if (r.categoria && pergunta) return { ...r, intent: 'gasto_total' };
   return { ...r, intent: 'nao_entendi' };
+}
+
+/** "quero juntar dinheiro pra um show do Coldplay" → "Show do Coldplay" */
+export function nomeDaMeta(t) {
+  const m = String(t).match(/(?:pra|para)\s+(?:um|uma|o|a|os|as|meu|minha)?\s*([a-z0-9 ]{3,40})$/);
+  if (!m) return null;
+  const n = m[1].replace(/\s+(ate|em|no|na)\s.*$/, '').trim();
+  return n ? n[0].toUpperCase() + n.slice(1) : null;
+}
+
+/** Resumo da meta que a pessoa montou (pra proposta e pra lista). */
+export function textoMeta(p) {
+  const prazo = p.ate ? ` até ${monthLabel(p.ate)}` : '';
+  const porMes = p.porMesCents ? ` Guardando ${formatBRL(p.porMesCents)} por mês, você chega lá${prazo}.` : '';
+  return `${p.nome}: ${formatBRL(p.guardadoCents)} de ${formatBRL(p.alvoCents)} (${p.pct}%), faltam ${formatBRL(p.faltaCents)}.${porMes}`;
 }
 
 const SUG_IDENTIDADE = ['O que você pode fazer?', 'Como funciona seu cérebro?', 'Conta uma piada', 'Quanto gastei este mês?'];
@@ -397,6 +416,20 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         fato: `Entrou ${formatBRL(totalCents)} ${range.label} (${porFonte}). Saiu ${formatBRL(gastos)}, então o saldo do período está ${saldo >= 0 ? 'positivo em' : 'negativo em'} ${formatBRL(Math.abs(saldo))}.`,
         sugestoes: ['Onde mais gastei?', 'Qual meu saldo?'],
       };
+    }
+    case 'meta_nova':
+      return { gatilho: 'meta_pra_que', fluxoMeta: { nome: intencao.metaNome || null } };
+    case 'metas': {
+      const metas = (dados.metas || []).map(m => progressoMeta(m, today));
+      if (!metas.length) return { fato: 'Você ainda não tem metas. Quer montar uma comigo? É só falar "quero juntar dinheiro pra…" ou tocar em Nova meta, na aba 📅 Mês.', sugestoes: ['Quero montar uma meta'] };
+      return { fato: metas.map(m => (m.batida ? `${m.nome}: meta batida! 🎉` : textoMeta(m))).join(' '), sugestoes: ['Quero montar uma meta', 'Cabe no mês?'] };
+    }
+    case 'meta_guardar': {
+      const metas = (dados.metas || []).filter(m => !m.conquistadaEm);
+      if (!metas.length) return { fato: 'Você ainda não tem meta aberta pra guardar dinheiro. Quer montar uma? Fala "quero juntar dinheiro pra…".', sugestoes: ['Quero montar uma meta'] };
+      const meta = metas.find(m => intencao.t.includes(norm(m.nome))) || (metas.length === 1 ? metas[0] : null);
+      if (!meta) return { fato: `Em qual meta? Você tem: ${metas.map(m => m.nome).join(', ')}. Fala tipo "guardei 50 na meta ${metas[0].nome}".`, sugestoes: metas.map(m => `Guardei ${(intencao.valor / 100).toFixed(0)} na meta ${m.nome}`) };
+      return { fato: `Quer que eu some ${formatBRL(intencao.valor)} na meta ${meta.nome}?`, acao: { tipo: 'meta_guardar', metaId: meta.id, valorCents: intencao.valor } };
     }
     case 'cartao': {
       const cartoes = accounts.filter(a => a.tipo === 'cartao');

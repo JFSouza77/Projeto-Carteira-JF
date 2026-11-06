@@ -1009,6 +1009,85 @@ Object.assign(GERADORES, {
     },
   },
 
+  // Metas montadas junto (06/11)
+  meta_pra_que: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Bora montar sua meta! Pra que você quer juntar dinheiro? (ex.: um show, uma viagem, reserva de emergência)',
+        'Adoro meta. Me conta: é pra quê? Um show, um celular novo, uma reserva…',
+        'Vamos nessa! Qual é o sonho? Fala o que você quer conquistar.',
+        'Meta boa começa com um motivo. Pra que vai ser esse dinheiro?',
+        'Fechado, eu te ajudo. Primeiro: pra que é a meta?',
+      ],
+    },
+  },
+
+  meta_quanto: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        '{meta}, que legal! Quanto custa, mais ou menos?',
+        'Boa escolha: {meta}. Quanto você precisa juntar no total?',
+        '{meta} anotado. E quanto custa isso?',
+        'Gostei: {meta}. Me diz o valor total que você precisa.',
+        '{meta}! Quanto vai custar, chutando por cima?',
+      ],
+    },
+  },
+
+  meta_tem: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Você já tem alguma parte guardada pra isso? Se não tiver, manda 0.',
+        'Já começou a juntar? Quanto já tem? (pode ser 0)',
+        'Quanto você já tem separado pra essa meta? Se for nada ainda, tudo bem: manda 0.',
+        'E já tem um pouco guardado? Me diz quanto (ou 0).',
+        'Já existe um começo? Quanto já está guardado pra isso?',
+      ],
+    },
+  },
+
+  meta_ate: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Até quando você quer chegar lá? Pode ser "dezembro", "em 6 meses" ou "04/2027".',
+        'E pra quando é? (ex.: "fim do ano", "em 8 meses", "março")',
+        'Qual o prazo? Me fala o mês: "julho", "em 1 ano"…',
+        'Quando você quer ter esse dinheiro? Um mês ou "em X meses".',
+        'Prazo: até quando? Assim eu calculo quanto guardar por mês.',
+      ],
+    },
+  },
+
+  meta_batida: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'META BATIDA, {nome}! {meta} conquistada. Que orgulho de você!',
+        'Conseguiu, {nome}! A meta {meta} chegou a 100%. Comemora, você merece!',
+        '{nome}, você bateu a meta {meta}! Isso é disciplina de verdade.',
+        'Parabéns, {nome}! {meta}: completa. Eu sabia que você conseguia.',
+        'Missão cumprida, {nome}! {meta} está garantida. Bora pra próxima?',
+      ],
+    },
+  },
+
+  meta_guardou: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Mais {valor} na meta {meta}! Já está em {pct}%.',
+        'Boa! {meta} subiu pra {pct}%. Faltam {resta}.',
+        '{valor} guardados pra {meta}. Agora são {pct}% do caminho.',
+        'Anotado: {meta} em {pct}%. Cada pouquinho conta!',
+        'Isso aí! {meta} já tem {pct}%. Faltam só {resta}.',
+      ],
+    },
+  },
+
   onb_tratamento: {
     moldes: ['{inteira}'],
     inteira: {

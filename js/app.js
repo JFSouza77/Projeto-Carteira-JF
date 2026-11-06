@@ -6,10 +6,10 @@ import {
   DEFAULT_CATEGORIES, INCOME_SOURCES, BANKS, formatBRL, parseAmount, parseSignedAmount, toISODate, monthKey,
   shiftMonth, monthLabel, createExpense, createIncome, createAccount, summarizeMonth, detectExpenseEvents,
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
-  TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao,
+  TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta } from './caos/index.js';
-import { extrairNome } from './caos/conversa.js';
+import { extrairNome, textoMeta } from './caos/conversa.js';
 import { NOVIDADES, VERSAO_APP, temNovidade, partesDoItem } from './novidades.js';
 import { falar, vozDisponivel, ditadoDisponivel, ouvir, setVelocidade } from './voz.js';
 import * as imagens from './imagens.js';
@@ -37,6 +37,8 @@ const state = {
   compromissos: [],
   planos: [],
   perfil: null, // { nome, apelido, tratamento, foco[] } (primeiro acesso)
+  metas: [], // meta/metas (1.8.0)
+  metaFlow: null, // perguntas da meta nova em andamento
   onboarding: null, // { passo, dados } enquanto o C.A.O.S. está conhecendo a pessoa
   catSugerida: false,
   mercado: null, // resumo do mercado vindo do servidor (guardado pra usar offline)
@@ -44,7 +46,7 @@ const state = {
 
 const dados = () => ({
   expenses: state.expenses, incomes: state.incomes, categories: state.categories, accounts: state.accounts,
-  compromissos: state.compromissos, planos: state.planos, mercado: state.mercado,
+  compromissos: state.compromissos, planos: state.planos, mercado: state.mercado, metas: state.metas,
 });
 const catById = id => state.categories.find(c => c.id === id);
 const srcById = id => INCOME_SOURCES.find(s => s.id === id);
@@ -459,6 +461,7 @@ async function enviarPergunta(texto) {
   const t = String(texto || '').trim();
   if (!t) return;
   if (state.onboarding) return onboardingResposta(t);
+  if (state.metaFlow) return metaResposta(t);
   addMsg({ de: 'eu', texto: t });
   const { fala, memoria } = conversar(t, dados(), { mood: state.settings.mood, memory: state.caosMemory, now: Date.now(), perfil: state.perfil });
   guardarMemoria(memoria);
@@ -492,6 +495,100 @@ async function enviarPergunta(texto) {
   pintarRosto(fala.rosto);
   if (state.settings.voice) falar(fala.texto, fala.emocao);
   if (fala.filaIA) await perguntaPraDepois(fala.filaIA);
+  if (fala.fluxoMeta) iniciarMeta(fala.fluxoMeta.nome, { jaFalou: true });
+}
+
+// ---------- Metas montadas junto (1.8.0) ----------
+// O C.A.O.S. pergunta (pra quê, quanto, quanto já tem, até quando) e PROPÕE; a meta só é gravada no Confirmar (1ª lei).
+
+function iniciarMeta(nome = null, { jaFalou = false } = {}) {
+  state.metaFlow = { passo: nome ? 'quanto' : 'pra_que', dados: { nome } };
+  if (location.hash.slice(1) !== 'conversa') location.hash = 'conversa';
+  if (nome) caosDiz('meta_quanto', { meta: nome }, ['Cancelar']);
+  else if (!jaFalou) caosDiz('meta_pra_que', {}, ['Reserva de emergência', 'Uma viagem', 'Um show', 'Cancelar']);
+  else {
+    const ult = [...state.chat].reverse().find(m => m.de === 'caos');
+    if (ult) { ult.sugestoes = ['Reserva de emergência', 'Uma viagem', 'Um show', 'Cancelar']; renderChat(); }
+  }
+}
+
+async function metaResposta(t) {
+  const f = state.metaFlow;
+  const d = f.dados;
+  addMsg({ de: 'eu', texto: t });
+  if (/^(cancela|cancelar|deixa|esquece|depois)/i.test(t)) {
+    state.metaFlow = null;
+    addMsg({ de: 'caos', texto: 'Sem problema, deixei pra lá. Quando quiser, é só falar "quero montar uma meta".', sugestoes: SUGESTOES.slice(0, 5) });
+    return;
+  }
+  if (f.passo === 'pra_que') {
+    d.nome = t.replace(/^(pra|para)\s+(um|uma|o|a)?\s*/i, '').trim().slice(0, 60);
+    d.nome = d.nome ? d.nome[0].toUpperCase() + d.nome.slice(1) : 'Minha meta';
+    f.passo = 'quanto';
+    caosDiz('meta_quanto', { meta: d.nome }, ['Cancelar']);
+  } else if (f.passo === 'quanto') {
+    const v = parseAmount(t.replace(/[a-z]/gi, ' '));
+    if (!v) return addMsg({ de: 'caos', texto: 'Não peguei o valor. Manda só o número, tipo 600 ou 1.500,00.', sugestoes: ['Cancelar'] });
+    d.alvoCents = v;
+    f.passo = 'tem';
+    caosDiz('meta_tem', {}, ['0', 'Cancelar']);
+  } else if (f.passo === 'tem') {
+    const v = /^\s*(0|zero|nada|nenhum)/i.test(t) ? 0 : parseAmount(t.replace(/[a-z]/gi, ' '));
+    if (v == null) return addMsg({ de: 'caos', texto: 'Manda só o número que já tem guardado (ou 0).', sugestoes: ['0', 'Cancelar'] });
+    d.guardadoCents = Math.min(v, d.alvoCents);
+    f.passo = 'ate';
+    caosDiz('meta_ate', {}, ['Em 6 meses', 'Fim do ano', 'Em 1 ano', 'Sem prazo']);
+  } else if (f.passo === 'ate') {
+    const semPrazo = /sem prazo|nao sei|não sei|tanto faz/i.test(t);
+    const ate = semPrazo ? null : lerMesAlvo(t, toISODate());
+    if (!ate && !semPrazo) return addMsg({ de: 'caos', texto: 'Não entendi o prazo. Pode ser "dezembro", "em 6 meses", "04/2027" ou "sem prazo".', sugestoes: ['Em 6 meses', 'Fim do ano', 'Sem prazo'] });
+    state.metaFlow = null;
+    try {
+      const meta = createMeta({ nome: d.nome, alvoCents: d.alvoCents, guardadoCents: d.guardadoCents, ate });
+      const p = progressoMeta(meta, toISODate());
+      addMsg({ de: 'caos', texto: `Montei assim: ${textoMeta(p)} Posso salvar essa meta?`, acao: { tipo: 'criar_meta', meta } });
+    } catch (e) {
+      addMsg({ de: 'caos', texto: `Não consegui montar: ${e.message}`, sugestoes: ['Quero montar uma meta'] });
+    }
+  }
+}
+
+async function salvarMetas(lista) {
+  state.metas = lista;
+  await db.setMeta('metas', lista);
+  renderMetas();
+}
+
+function renderMetas() {
+  const el = $('#meta-list');
+  if (!el) return;
+  const hoje = toISODate();
+  el.innerHTML = state.metas.map(m => {
+    const p = progressoMeta(m, hoje);
+    return `<li>
+      <div class="account-head"><strong>${p.batida ? '🏆' : '🎯'} ${esc(m.nome)}</strong><span class="num">${p.pct}%</span></div>
+      <div class="limite-bar" role="img" aria-label="${p.pct}% da meta"><i style="width:${p.pct}%"></i></div>
+      <small class="muted">${esc(p.batida ? `Meta batida! ${formatBRL(m.alvoCents)} guardados.` : textoMeta(p))}</small>
+      <div class="account-actions">
+        ${p.batida ? '' : `<button class="ghost" data-meta-guardar="${esc(m.id)}">＋ Guardar</button>`}
+        <button class="ghost" data-meta-del="${esc(m.id)}">Remover</button>
+      </div>
+    </li>`;
+  }).join('') || '<li class="muted small">Nenhuma meta ainda. Monta uma com o C.A.O.S.!</li>';
+}
+
+async function guardarEmMeta(id, valorCents) {
+  const m = state.metas.find(x => x.id === id);
+  if (!m) return;
+  const { meta, batidaAgora } = guardarNaMeta(m, valorCents);
+  await salvarMetas(state.metas.map(x => (x.id === id ? meta : x)));
+  const p = progressoMeta(meta, toISODate());
+  if (batidaAgora) {
+    caosDiz('meta_batida', { meta: meta.nome, nome: state.perfil?.apelido || 'você' }, ['Quero montar uma meta']);
+    $('#caos-line').textContent = `Meta ${meta.nome} batida! 🎉`;
+  } else {
+    caosDiz('meta_guardou', { meta: meta.nome, valor: formatBRL(valorCents), pct: p.pct, resta: formatBRL(p.faltaCents) });
+  }
 }
 
 // Respiro antes da resposta (pedido do JF, 06/11): instantâneo demais "dá medo e quebra a imersão".
@@ -582,6 +679,15 @@ async function confirmarAcao(i, ok) {
   }
   try {
     const a = m.acao;
+    if (a.tipo === 'criar_meta') {
+      await salvarMetas([...state.metas, a.meta]);
+      addMsg({ de: 'caos', texto: `Meta ${a.meta.nome} salva! Ela fica na aba 📅 Mês. Quando guardar dinheiro, me fala "guardei 50 na meta ${a.meta.nome}" que eu somo.` });
+      return;
+    }
+    if (a.tipo === 'meta_guardar') {
+      await guardarEmMeta(a.metaId, a.valorCents);
+      return;
+    }
     if (a.tipo === 'mudar_apelido') {
       state.perfil = { ...(state.perfil || {}), apelido: a.apelido, nome: state.perfil?.nome || a.apelido };
       await db.setMeta('perfil', state.perfil);
@@ -822,7 +928,7 @@ function exportBackup() {
   const data = {
     app: 'carteira-jf', version: 3, exportedAt: new Date().toISOString(),
     categories: state.categories, expenses: state.expenses, incomes: state.incomes, accounts: state.accounts,
-    compromissos: state.compromissos, planos: state.planos, perfil: state.perfil,
+    compromissos: state.compromissos, planos: state.planos, perfil: state.perfil, metas: state.metas,
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -847,6 +953,7 @@ async function importBackup(file) {
     await db.replaceAll({ expenses: d.expenses, categories: d.categories, incomes: d.incomes, accounts: d.accounts, compromissos: d.compromissos, planos: d.planos });
     Object.assign(state, { expenses: d.expenses, categories: d.categories, incomes: d.incomes, accounts: d.accounts, compromissos: d.compromissos, planos: d.planos });
     if (d.perfil) { state.perfil = d.perfil; await db.setMeta('perfil', d.perfil); renderPerfil(); }
+    await salvarMetas(d.metas);
     renderLancar();
     renderBudgets();
     render();
@@ -885,6 +992,7 @@ function textoStatus(c) {
 }
 
 function renderMes() {
+  renderMetas();
   const hoje = toISODate();
   const a = analisarPlanejamento(dados(), hoje);
   $('#mes-titulo').textContent = `Planejamento · ${nomeMes(a.month)}`;
@@ -1114,7 +1222,7 @@ async function parabensSeForODia() {
 function caosDiz(gatilho, vars, sugestoes) {
   const r = falaAvulsa(gatilho, vars, { mood: state.settings.mood, memory: state.caosMemory, perfil: state.perfil });
   guardarMemoria(r.memoria);
-  const rosto = rostoAvulso(gatilho === 'onb_fim' ? 'identidade' : gatilho === 'aniversario' ? 'piada' : 'surpresa', { mood: state.settings.mood, memory: state.caosMemory, texto: r.texto });
+  const rosto = rostoAvulso(gatilho === 'onb_fim' ? 'identidade' : ['aniversario', 'meta_batida'].includes(gatilho) ? 'piada' : gatilho === 'meta_guardou' ? 'elogio' : 'surpresa', { mood: state.settings.mood, memory: state.caosMemory, texto: r.texto });
   pintarRosto(rosto);
   addMsg({ de: 'caos', texto: r.texto, sugestoes, rosto });
   if (state.settings.voice) falar(r.texto);
@@ -1152,7 +1260,8 @@ async function onboardingResposta(t) {
       await db.setMeta('perfil', state.perfil);
       renderPerfil();
       const foco = d.foco.length ? d.foco.join(', ').toLowerCase() : 'cuidar da carteira no dia a dia';
-      caosDiz('onb_fim', { nome: d.apelido, foco }, SUGESTOES.slice(0, 6));
+      // quem quer juntar dinheiro já sai com a sugestão de montar a meta junto
+      caosDiz('onb_fim', { nome: d.apelido, foco }, d.foco.includes('Juntar dinheiro') ? ['Quero montar uma meta', ...SUGESTOES.slice(0, 5)] : SUGESTOES.slice(0, 6));
       return;
     }
     if (FOCOS.includes(limpo)) d.foco = d.foco.includes(limpo) ? d.foco.filter(x => x !== limpo) : [...d.foco, limpo];
@@ -1386,6 +1495,21 @@ function bind() {
   $('#perfil-refazer').addEventListener('click', () => iniciarOnboarding());
   $('#novidade-aviso').addEventListener('click', abrirNovidades);
   $('#me-ajuda').addEventListener('click', meAjuda);
+  $('#meta-nova').addEventListener('click', () => { if (!state.onboarding) iniciarMeta(); });
+  $('#meta-list').addEventListener('click', async e => {
+    const g = e.target.closest('[data-meta-guardar]');
+    const del = e.target.closest('[data-meta-del]');
+    if (g) {
+      const r = prompt('Quanto você guardou pra essa meta?');
+      if (r == null) return;
+      const v = parseAmount(r);
+      if (!v) return toast('Valor inválido.');
+      await guardarEmMeta(g.dataset.metaGuardar, v);
+    } else if (del) {
+      const m = state.metas.find(x => x.id === del.dataset.metaDel);
+      if (m && confirm(`Remover a meta ${m.nome}?`)) await salvarMetas(state.metas.filter(x => x.id !== m.id));
+    }
+  });
   $('#novidades-abrir').addEventListener('click', abrirNovidades);
   $('#novidades-lista').addEventListener('click', e => { if (e.target.closest('#novidades-antigas')) renderNovidades(true); });
   $('#perfil-aniversario').addEventListener('change', async e => {
@@ -1442,7 +1566,7 @@ async function init() {
       db.getAll(db.STORES.planos),
       db.getMeta('perfil'),
     ]);
-    Object.assign(state, { compromissos, planos, perfil: perfil || null, mercado: await db.getMeta('mercado') });
+    Object.assign(state, { compromissos, planos, perfil: perfil || null, mercado: await db.getMeta('mercado'), metas: await db.getMeta('metas', []) });
     if (cats.length === 0) {
       state.categories = DEFAULT_CATEGORIES.map(c => ({ ...c }));
       await db.putMany(db.STORES.categories, state.categories);

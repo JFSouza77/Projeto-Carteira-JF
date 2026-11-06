@@ -118,3 +118,11 @@ orçamento ("quanto ainda posso gastar?"), alertas, previsão do mês, comparaç
   entra no saldo guardado. `faturaDoCartao()` no motor: fatura aberta, fechada, limite usado, quando fecha e vence.
 - Gatilhos novos: `cartao_limite` (80% e 100%, também na hora da compra) e `cartao_vence` (3 dias antes). Intenção
   `cartao` na conversa ("como está meu cartão?", "quanto vem na fatura?") e tutorial de como cadastrar.
+
+## Metas (1.8.0, 06/11)
+
+- `meta/metas` (só no aparelho, entra no backup). `createMeta`, `progressoMeta`, `guardarNaMeta`, `lerMesAlvo` no motor.
+- Conversa: `meta_nova` ("quero juntar dinheiro pra…") abre as perguntas no app (pra quê → quanto → quanto já tem →
+  até quando) e termina numa **proposta** com Confirmar. `metas` lista o progresso; `meta_guardar` ("guardei 50 na meta
+  do show") também é proposta. Gatilhos `meta_pra_que`, `meta_quanto`, `meta_tem`, `meta_ate`, `meta_guardou`,
+  `meta_batida` (comemora com rosto de festa).

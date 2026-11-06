@@ -624,6 +624,7 @@ export function validarBackup(bruto) {
   const accounts = lista('accounts', false);
   const compromissos = lista('compromissos', false);
   const planos = lista('planos', false);
+  const metas = lista('metas', false);
   const obj = o => o && typeof o === 'object' && !Array.isArray(o);
   const unicos = (itens, nome) => {
     const ids = new Set();
@@ -683,6 +684,12 @@ export function validarBackup(bruto) {
   });
   unicos(planos.filter(obj), 'plano');
 
+  metas.forEach((m, i) => {
+    if (!obj(m) || !ID_RE.test(m.id ?? '') || !texto(m.nome, 60, 1) || !centavos(m.alvoCents, 1) || !centavos(m.guardadoCents ?? 0, 0)
+      || !(m.ate == null || MES_RE.test(m.ate))) erro(`Meta ${i + 1} do backup está com dado inválido.`);
+  });
+  unicos(metas.filter(obj), 'meta');
+
   let perfil = null;
   if (bruto.perfil != null) {
     const p = bruto.perfil;
@@ -698,7 +705,7 @@ export function validarBackup(bruto) {
     ok: true, erros: [],
     dados: {
       categories: copia(categories), expenses: copia(expenses), incomes: copia(incomes), accounts: copia(accounts),
-      compromissos: copia(compromissos), planos: copia(planos), perfil,
+      compromissos: copia(compromissos), planos: copia(planos), metas: copia(metas), perfil,
     },
   };
 }
@@ -805,4 +812,64 @@ export function faturaDoCartao(cartao, expenses, today = toISODate()) {
     abertaCents, fechadaCents: pagaJa ? 0 : fechadaCents, fechamento: proxFech, ultimoFechamento: ultimoFech, vencimento,
     diasParaFechar: daysBetween(today, proxFech), diasParaVencer: daysBetween(today, vencimento),
   };
+}
+
+// ---------- Metas (06/11) ----------
+// Meta = pra quê, quanto custa, quanto já tem, até quando. Fica em meta/metas (só no aparelho).
+
+export function createMeta({ nome, alvoCents, guardadoCents = 0, ate }, { now = new Date(), id } = {}) {
+  const n = String(nome || '').trim();
+  if (!n) throw new Error('Pra que é a meta?');
+  if (!Number.isInteger(alvoCents) || alvoCents <= 0 || alvoCents > 100_000_000_00) throw new Error('Quanto custa a meta?');
+  if (!Number.isInteger(guardadoCents) || guardadoCents < 0) throw new Error('Valor já guardado inválido.');
+  const hoje = monthKey(toISODate(now));
+  if (ate != null && !(/^\d{4}-(0[1-9]|1[0-2])$/.test(ate) && ate >= hoje)) throw new Error('Até quando? (um mês de agora em diante)');
+  return { id: id || newId(), nome: n.slice(0, 60), alvoCents, guardadoCents, ate: ate || null, criadaEm: now.getTime(), conquistadaEm: null };
+}
+
+/** Progresso: quanto falta, quantos meses sobram e quanto guardar por mês pra chegar lá. */
+export function progressoMeta(meta, today = toISODate()) {
+  const falta = Math.max(0, meta.alvoCents - meta.guardadoCents);
+  const pct = Math.min(100, Math.round((meta.guardadoCents / meta.alvoCents) * 100));
+  const meses = meta.ate ? Math.max(1, monthsBetween(monthKey(today), meta.ate) + 1) : null;
+  return {
+    ...meta, faltaCents: falta, pct, batida: falta === 0, mesesRestantes: meses,
+    porMesCents: meses ? Math.ceil(falta / meses) : null,
+  };
+}
+
+/** "Guardei X na meta": devolve a meta nova (não grava nada) e se ela acabou de ser batida. */
+export function guardarNaMeta(meta, valorCents, now = new Date()) {
+  if (!Number.isInteger(valorCents) || valorCents === 0) throw new Error('Valor inválido.');
+  const guardado = Math.max(0, meta.guardadoCents + valorCents);
+  const nova = { ...meta, guardadoCents: guardado };
+  const batidaAgora = !meta.conquistadaEm && guardado >= meta.alvoCents;
+  if (batidaAgora) nova.conquistadaEm = now.getTime();
+  return { meta: nova, batidaAgora };
+}
+
+/** Lê "dezembro", "12/2026", "em 6 meses", "até o fim do ano" → "YYYY-MM" (ou null). */
+export function lerMesAlvo(texto, today = toISODate()) {
+  const t = String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const mes = monthKey(today);
+  let r = t.match(/(\d{1,2})\s*\/\s*(\d{2,4})/);
+  if (r) {
+    let y = Number(r[2]); if (y < 100) y += 2000;
+    const k = `${y}-${String(Number(r[1])).padStart(2, '0')}`;
+    return /^\d{4}-(0[1-9]|1[0-2])$/.test(k) && k >= mes ? k : null;
+  }
+  r = t.match(/(?:em|daqui a|daqui)\s+(\d{1,2})\s+mes/);
+  if (r) return shiftMonth(mes, Number(r[1]));
+  r = t.match(/(?:em|daqui a)\s+(\d{1,2})\s+ano/);
+  if (r) return shiftMonth(mes, Number(r[1]) * 12);
+  if (/fim do ano|final do ano|natal|dezembro/.test(t) && !/\d{4}/.test(t)) return `${mes.slice(0, 4)}-12` >= mes ? `${mes.slice(0, 4)}-12` : null;
+  const NOMES = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  const i = NOMES.findIndex(n => t.includes(n));
+  if (i >= 0) {
+    const ano = (t.match(/\b(20\d{2})\b/) || [])[1];
+    let k = `${ano || mes.slice(0, 4)}-${String(i + 1).padStart(2, '0')}`;
+    if (!ano && k < mes) k = `${Number(mes.slice(0, 4)) + 1}-${String(i + 1).padStart(2, '0')}`;
+    return k >= mes ? k : null;
+  }
+  return null;
 }

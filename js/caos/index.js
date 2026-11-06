@@ -11,7 +11,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '1.7.1';
+export const CAOS_VERSAO = '1.8.0';
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -93,7 +93,7 @@ function varsDoEvento(ev) {
     mes: ev.monthName ? ev.monthName[0].toUpperCase() + ev.monthName.slice(1) : null,
     economia: r(ev.savedCents), previsto: r(ev.projectedCents), porDia: r(ev.perDayCents),
     orcamento: r(ev.budgetCents), entradas: r(ev.incomeCents), gastos: r(ev.totalCents),
-    conta: ev.accountName ?? ev.nome, saldo: r(ev.balanceCents), dia: ev.dia,
+    conta: ev.accountName ?? ev.nome, saldo: r(ev.balanceCents), dia: ev.dia, meta: ev.metaNome,
     quando: ev.type === 'compromisso_vence' || ev.type === 'cartao_vence'
       ? (ev.days === 0 ? 'hoje' : ev.days === 1 ? 'amanhã' : `em ${ev.days} dias (dia ${ev.dia})`) : null,
   };
@@ -221,6 +221,7 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
       emocao, rosto: r.rosto,
       sugestoes: resp.sugestoes || (intencao.intent === 'nao_entendi' ? SUGESTOES.slice(0, 5) : []),
       acao: resp.acao || null,
+      fluxoMeta: resp.fluxoMeta || null, // "quero juntar pra…": o app conduz as perguntas e propõe a meta
       filaIA: resp.filaIA || null, // pergunta que precisa do servidor: o app responde agora ou guarda na fila
       entendeu: intencao.intent !== 'nao_entendi' && !intencao.palpite,
       palpite: !!intencao.palpite,
