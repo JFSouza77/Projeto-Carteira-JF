@@ -1,0 +1,1 @@
+Origem: Vercel (vercel-labs/agent-skills, web-design-guidelines), recebido do JF em zip. Busca as regras em raw.githubusercontent.com/vercel-labs/web-interface-guidelines.

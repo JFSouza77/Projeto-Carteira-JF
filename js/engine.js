@@ -385,9 +385,9 @@ export function analyze({ expenses, incomes = [], categories, accounts = [], com
 
   for (const c of situacaoCompromissos(compromissos, expenses, today)) {
     if (c.status === 'atrasado') {
-      out.push({ type: 'compromisso_atrasado', severity: 'alta', compromissoId: c.id, nome: c.nome, valorCents: c.valorCents, dia: c.diaNoMes, days: -c.diasParaVencer });
+      out.push({ type: 'compromisso_atrasado', severity: 'alta', compromissoId: c.id, nome: c.nome, valorCents: c.faltaCents || c.valorCents, dia: c.diaNoMes, days: -c.diasParaVencer });
     } else if (c.status === 'aberto' && c.diasParaVencer <= 3) {
-      out.push({ type: 'compromisso_vence', severity: c.diasParaVencer <= 1 ? 'alta' : 'media', compromissoId: c.id, nome: c.nome, valorCents: c.valorCents, dia: c.diaNoMes, days: c.diasParaVencer });
+      out.push({ type: 'compromisso_vence', severity: c.diasParaVencer <= 1 ? 'alta' : 'media', compromissoId: c.id, nome: c.nome, valorCents: c.faltaCents || c.valorCents, dia: c.diaNoMes, days: c.diasParaVencer });
     } else if (c.status === 'pendente' && c.tipo === 'plano') {
       out.push({ type: 'plano_do_mes', severity: 'baixa', compromissoId: c.id, nome: c.nome, valorCents: c.valorCents });
     }
@@ -473,7 +473,7 @@ export function diaNoMes(c, month) {
   return c.dia == null ? null : Math.min(c.dia, daysInMonth(month));
 }
 
-/** Situação de cada compromisso no mês: pago (tem lançamento ligado), vence em X dias, atrasado, ou não é deste mês. */
+/** Situação de cada compromisso no mês: pago (lançamentos ligados cobrem o valor), vence em X dias, atrasado, ou não é deste mês. Pagamento parcial: `parcial` e `faltaCents`. */
 export function situacaoCompromissos(compromissos, expenses, today = toISODate()) {
   const month = monthKey(today);
   const hoje = Number(today.slice(8, 10));
@@ -483,11 +483,14 @@ export function situacaoCompromissos(compromissos, expenses, today = toISODate()
     const pagoCents = pagos.reduce((s, e) => s + e.amountCents, 0);
     const dia = diaNoMes(c, month);
     let status = 'fora';
-    if (noMes) status = pagos.length ? 'pago' : dia == null ? 'pendente' : dia < hoje ? 'atrasado' : 'aberto';
+    // Pago só quando o total lançado cobre o valor (revisão 06/11). Pagou um pedaço: continua aberto, com o que falta.
+    const quitado = pagos.length > 0 && pagoCents >= c.valorCents;
+    if (noMes) status = quitado ? 'pago' : dia == null ? 'pendente' : dia < hoje ? 'atrasado' : 'aberto';
+    const faltaCents = noMes && !quitado ? Math.max(0, c.valorCents - pagoCents) : 0;
     return {
-      ...c, noMes, status, pagoCents, diaNoMes: dia,
+      ...c, noMes, status, pagoCents, faltaCents, parcial: noMes && !quitado && pagoCents > 0, diaNoMes: dia,
       diasParaVencer: noMes && dia != null ? dia - hoje : null,
-      proximaVez: proximaOcorrencia(c, noMes && pagos.length ? shiftMonth(month, 1) : month),
+      proximaVez: proximaOcorrencia(c, noMes && quitado ? shiftMonth(month, 1) : month),
     };
   }).sort((a, b) => (a.noMes === b.noMes ? (a.diaNoMes ?? 99) - (b.diaNoMes ?? 99) : a.noMes ? -1 : 1));
 }
@@ -510,7 +513,7 @@ export function analisarPlanejamento({ expenses, incomes = [], categories, compr
   const gastos = spentIn(expenses, month);
   const sit = situacaoCompromissos(compromissos, expenses, today).filter(c => c.noMes);
   const compPendentes = sit.filter(c => c.status !== 'pago');
-  const compPendentesCents = compPendentes.reduce((s, c) => s + c.valorCents, 0);
+  const compPendentesCents = compPendentes.reduce((s, c) => s + c.faltaCents, 0); // só o que falta pagar
   const planosMes = planos.filter(p => p.month === month);
   const planosPendentes = planosMes.filter(p => !p.feito);
   const planosPendentesCents = planosPendentes.reduce((s, p) => s + p.valorCents, 0);
@@ -572,4 +575,115 @@ export function sugerirCategoria(texto, expenses) {
   }
   const melhor = Object.entries(votos).sort((a, b) => b[1] - a[1])[0];
   return melhor && melhor[1] >= 1 ? { categoryId: melhor[0], votos: melhor[1] } : null;
+}
+
+// ---------- Backup: validar ANTES de gravar (revisão 06/11) ----------
+// Mesmas regras do motor. Se qualquer coisa estiver errada, nada é gravado.
+
+const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+const CAT_ID_RE = /^[a-z0-9_-]{1,30}$/;
+const MES_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+const VALOR_MAX = 100_000_000_00;
+const texto = (v, max, min = 0) => typeof v === 'string' && v.trim().length >= min && v.length <= max;
+const textoOuNada = (v, max) => v == null || texto(v, max);
+const centavos = (v, min) => Number.isInteger(v) && v >= min && v <= VALOR_MAX;
+const LIMITE_ITENS = 50_000;
+
+/**
+ * Confere um backup inteiro. Devolve { ok, erros, dados }.
+ * `dados` só vem quando ok: listas prontas para gravar (categories, expenses, incomes, accounts, compromissos, planos, perfil).
+ */
+export function validarBackup(bruto) {
+  const erros = [];
+  const erro = msg => { if (erros.length < 5) erros.push(msg); };
+  if (!bruto || typeof bruto !== 'object' || Array.isArray(bruto) || bruto.app !== 'carteira-jf') {
+    return { ok: false, erros: ['Esse arquivo não parece um backup da Carteira JF.'], dados: null };
+  }
+  const lista = (nome, obrigatoria) => {
+    const v = bruto[nome];
+    if (v == null && !obrigatoria) return [];
+    if (!Array.isArray(v)) { erro(`A parte "${nome}" do backup está estragada.`); return []; }
+    if (v.length > LIMITE_ITENS) { erro(`A parte "${nome}" do backup é grande demais.`); return []; }
+    return v;
+  };
+  const categories = lista('categories', true);
+  const expenses = lista('expenses', true);
+  const incomes = lista('incomes', false);
+  const accounts = lista('accounts', false);
+  const compromissos = lista('compromissos', false);
+  const planos = lista('planos', false);
+  const obj = o => o && typeof o === 'object' && !Array.isArray(o);
+  const unicos = (itens, nome) => {
+    const ids = new Set();
+    for (const o of itens) {
+      if (ids.has(o.id)) { erro(`Tem ${nome} repetido no backup.`); break; }
+      ids.add(o.id);
+    }
+    return ids;
+  };
+
+  if (!categories.length) erro('O backup não tem categorias.');
+  categories.forEach((c, i) => {
+    if (!obj(c) || !CAT_ID_RE.test(c.id ?? '') || !texto(c.name, 30, 1) || !texto(c.emoji ?? '', 8) || /[<>"'&`]/.test(c.emoji ?? '')
+      || !centavos(c.budgetCents ?? 0, 0)) erro(`Categoria ${i + 1} do backup está com dado inválido.`);
+  });
+  const catIds = unicos(categories.filter(obj), 'categoria');
+
+  accounts.forEach((a, i) => {
+    if (!obj(a) || !ID_RE.test(a.id ?? '') || !texto(a.bank, 40, 1) || !textoOuNada(a.nickname, 30)
+      || !Number.isInteger(a.balanceCents) || Math.abs(a.balanceCents) > VALOR_MAX) erro(`Conta ${i + 1} do backup está com dado inválido.`);
+  });
+  const contaIds = unicos(accounts.filter(obj), 'conta');
+  const contaOk = id => id == null || contaIds.has(id);
+
+  compromissos.forEach((c, i) => {
+    const dia = c?.dia;
+    if (!obj(c) || !ID_RE.test(c.id ?? '') || !texto(c.nome, 60, 1) || !centavos(c.valorCents, 0) || !TIPOS_COMPROMISSO[c.tipo]
+      || !catIds.has(c.categoryId) || !(dia == null || (Number.isInteger(dia) && dia >= 1 && dia <= 31))
+      || !(Number.isInteger(c.cadaMeses) && c.cadaMeses >= 1 && c.cadaMeses <= 24) || !MES_RE.test(c.inicioMes ?? '')
+      || !contaOk(c.accountId) || typeof (c.ativo ?? true) !== 'boolean') erro(`Compromisso ${i + 1} do backup está com dado inválido.`);
+  });
+  const compIds = unicos(compromissos.filter(obj), 'compromisso');
+
+  expenses.forEach((e, i) => {
+    if (!obj(e) || !ID_RE.test(e.id ?? '') || !centavos(e.amountCents, 1) || !isValidISODate(e.date ?? '') || e.month !== monthKey(e.date)
+      || !catIds.has(e.categoryId) || !textoOuNada(e.note, 120) || !contaOk(e.accountId)
+      || !(e.compromissoId == null || compIds.has(e.compromissoId)) || !(e.imageId == null || ID_RE.test(e.imageId))) {
+      erro(`Gasto ${i + 1} do backup está com dado inválido (valor, data ou categoria).`);
+    }
+  });
+  unicos(expenses.filter(obj), 'gasto');
+
+  incomes.forEach((r, i) => {
+    if (!obj(r) || !ID_RE.test(r.id ?? '') || !centavos(r.amountCents, 1) || !isValidISODate(r.date ?? '') || r.month !== monthKey(r.date)
+      || !INCOME_SOURCES.some(s => s.id === r.sourceId) || !textoOuNada(r.note, 120) || !contaOk(r.accountId)) {
+      erro(`Entrada ${i + 1} do backup está com dado inválido.`);
+    }
+  });
+  unicos(incomes.filter(obj), 'entrada');
+
+  planos.forEach((p, i) => {
+    if (!obj(p) || !ID_RE.test(p.id ?? '') || !texto(p.nome, 60, 1) || !centavos(p.valorCents, 1) || !catIds.has(p.categoryId)
+      || !MES_RE.test(p.month ?? '') || typeof (p.feito ?? false) !== 'boolean') erro(`Plano ${i + 1} do backup está com dado inválido.`);
+  });
+  unicos(planos.filter(obj), 'plano');
+
+  let perfil = null;
+  if (bruto.perfil != null) {
+    const p = bruto.perfil;
+    if (!obj(p) || !textoOuNada(p.nome, 40) || !textoOuNada(p.apelido, 40) || !['descontraido', 'formal', undefined].includes(p.tratamento)
+      || !(p.foco == null || (Array.isArray(p.foco) && p.foco.length <= 10 && p.foco.every(f => texto(f, 40))))
+      || !(p.aniversario == null || isValidISODate(p.aniversario))) erro('O perfil do backup está com dado inválido.');
+    else perfil = { ...p };
+  }
+
+  if (erros.length) return { ok: false, erros, dados: null };
+  const copia = l => l.map(o => ({ ...o }));
+  return {
+    ok: true, erros: [],
+    dados: {
+      categories: copia(categories), expenses: copia(expenses), incomes: copia(incomes), accounts: copia(accounts),
+      compromissos: copia(compromissos), planos: copia(planos), perfil,
+    },
+  };
 }

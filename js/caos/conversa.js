@@ -383,12 +383,12 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       if (!compromissos.length) return { fato: 'Você ainda não cadastrou compromissos. Na aba 📅 Mês dá pra pôr contas fixas, faturas, assinaturas e planos que se repetem, e eu lembro dos vencimentos.', sugestoes: ['O que planejei pro mês?'] };
       const abertos = sit.filter(c => c.status !== 'pago');
       if (!abertos.length) return { fato: `Tudo pago este mês! ${sit.length} ${sit.length === 1 ? 'compromisso' : 'compromissos'} em dia.`, sugestoes: ['Cabe no mês?'] };
-      const lista = abertos.map(c => `${c.nome} ${formatBRL(c.valorCents)}${c.diaNoMes ? ` (${c.status === 'atrasado' ? `venceu dia ${c.diaNoMes}` : `dia ${c.diaNoMes}`})` : ''}`).join('; ');
-      const total = abertos.reduce((a, c) => a + c.valorCents, 0);
+      const lista = abertos.map(c => `${c.nome} ${formatBRL(c.faltaCents)}${c.parcial ? ' que falta' : ''}${c.diaNoMes ? ` (${c.status === 'atrasado' ? `venceu dia ${c.diaNoMes}` : `dia ${c.diaNoMes}`})` : ''}`).join('; ');
+      const total = abertos.reduce((a, c) => a + c.faltaCents, 0);
       const prox = abertos.find(c => c.status === 'atrasado') || abertos[0];
       return {
         fato: `Falta pagar ${formatBRL(total)} este mês: ${lista}. Já pagou ${prox.nome}? Se sim, confirma que eu lanço.`,
-        acao: { tipo: 'registrar_gasto', amountCents: prox.valorCents, categoryId: prox.categoryId, date: today, note: prox.nome, compromissoId: prox.id, accountId: prox.accountId },
+        acao: { tipo: 'registrar_gasto', amountCents: prox.faltaCents || prox.valorCents, categoryId: prox.categoryId, date: today, note: prox.nome, compromissoId: prox.id, accountId: prox.accountId },
         sugestoes: ['Cabe no mês?', 'O que planejei pro mês?'],
       };
     }

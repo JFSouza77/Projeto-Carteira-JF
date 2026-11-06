@@ -56,13 +56,34 @@ function json(dados, status, headers) {
 async function lerCorpo(req) {
   const tam = Number(req.headers.get('content-length') || 0);
   if (tam > MAX_CORPO) throw new ErroHttp(413, 'Conteúdo grande demais.');
-  const txt = await req.text();
-  if (txt.length > MAX_CORPO) throw new ErroHttp(413, 'Conteúdo grande demais.');
+  // Conta BYTES enquanto lê: para no limite, sem guardar o resto na memória.
+  const partes = [];
+  let bytes = 0;
+  if (req.body) {
+    const leitor = req.body.getReader();
+    for (;;) {
+      const { done, value } = await leitor.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > MAX_CORPO) {
+        await leitor.cancel().catch(() => {});
+        throw new ErroHttp(413, 'Conteúdo grande demais.');
+      }
+      partes.push(value);
+    }
+  }
+  const junto = new Uint8Array(bytes);
+  let pos = 0;
+  for (const p of partes) { junto.set(p, pos); pos += p.byteLength; }
+  let corpo;
   try {
-    return JSON.parse(txt);
+    corpo = JSON.parse(new TextDecoder().decode(junto));
   } catch {
     throw new ErroHttp(400, 'JSON inválido.');
   }
+  // JSON válido mas que não é objeto (null, número, lista): pedido mal formado (revisão 06/11).
+  if (!corpo || typeof corpo !== 'object' || Array.isArray(corpo)) throw new ErroHttp(400, 'O pedido precisa ser um objeto JSON.');
+  return corpo;
 }
 
 class ErroHttp extends Error {
@@ -76,7 +97,8 @@ const hojeUTC = () => new Date().toISOString().slice(0, 10);
 
 /** Limite de uso da IA por endereço e por dia (KV é aproximado, mas segura abuso e custo surpresa). */
 async function conferirLimite(req, env) {
-  if (!env.CARTEIRA_KV) return;
+  // Sem KV não há como contar: as rotas pagas falham fechado em vez de rodar sem limite (revisão 06/11).
+  if (!env.CARTEIRA_KV) throw new ErroHttp(503, 'Servidor sem o armazenamento de limites (CARTEIRA_KV). A IA fica desligada até configurar.');
   const ip = req.headers.get('cf-connecting-ip') || 'sem-ip';
   const dia = hojeUTC();
   const kIp = `lim:${dia}:${await sha256(ip)}`;

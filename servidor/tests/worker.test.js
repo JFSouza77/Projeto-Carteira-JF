@@ -179,3 +179,42 @@ test('comparar bancos: só nomes e CDI vão pra IA; responde texto', async () =>
     api.restaurar();
   }
 });
+
+// ---------- Revisão do ChatGPT (06/11) ----------
+const reqCru = (rota, txt) => new Request(`https://srv.exemplo${rota}`, {
+  method: 'POST', headers: { origin: ORIGEM, 'content-type': 'application/json', 'cf-connecting-ip': '1.2.3.4' }, body: txt,
+});
+
+test('JSON que não é objeto (null, lista, número) vira 400, não 500', async () => {
+  for (const txt of ['null', '[]', '42', '"oi"', 'true']) {
+    for (const rota of ['/ia/perguntar', '/ia/bancos', '/push/inscrever']) {
+      const r = await worker.fetch(reqCru(rota, txt), envBase());
+      assert.equal(r.status, 400, `${rota} com ${txt}`);
+    }
+  }
+  // objeto vazio também é recusado com 400 (falta a pergunta), não estoura
+  const r = await worker.fetch(reqCru('/ia/perguntar', '{}'), envBase());
+  assert.equal(r.status, 400);
+});
+
+test('corpo grande demais é cortado pela contagem de bytes, mesmo sem content-length', async () => {
+  const grande = JSON.stringify({ pergunta: 'é'.repeat(4_000_000) }); // 4 milhões de letras, 8 MB: passava na conta antiga por letras
+  const r = await worker.fetch(new Request('https://srv.exemplo/ia/perguntar', {
+    method: 'POST', headers: { origin: ORIGEM, 'cf-connecting-ip': '1.2.3.4' },
+    body: new Blob([grande]).stream(), duplex: 'half',
+  }), envBase());
+  assert.equal(r.status, 413);
+});
+
+test('sem KV a IA falha fechado (503) e nem chama a API', async () => {
+  const api = simularAPI({ texto: 'não devia chegar aqui' });
+  try {
+    const env = envBase();
+    delete env.CARTEIRA_KV;
+    const r = await worker.fetch(req('/ia/perguntar', { pergunta: 'como estou?', resumo: {} }), env);
+    assert.equal(r.status, 503);
+    assert.equal(api.chamadas.length, 0);
+  } finally {
+    api.restaurar();
+  }
+});
