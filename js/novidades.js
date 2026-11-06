@@ -19,7 +19,9 @@ export const NOVIDADES = Object.freeze([
       '✨ Visual novo: ícones próprios nas abas, mais limpos, com um brilho neon na aba aberta.',
       '🔍 Explica o print do banco: não entendeu a tela do banco ou a fatura? Peça "explica esse print" e mande a imagem pelo 📎.',
     ],
-    qol: [],
+    qol: [
+      '😄 Mais piadas: 15 piadas novas, de todos os humores.',
+    ],
   },
   {
     v: '1.5',

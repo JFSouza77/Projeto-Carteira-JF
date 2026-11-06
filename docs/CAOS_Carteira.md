@@ -133,3 +133,10 @@ orçamento ("quanto ainda posso gastar?"), alertas, previsão do mês, comparaç
   `modoFoto: 'explicar'` (10 min). A próxima foto do 📎 vai pra rota nova `/ia/explicar` do servidor, que devolve só
   texto. Sem conexão, o print fica no aparelho e entra na fila (`tipo: 'explicar'`); a entrega é "Ei, {nome}, sabe
   aquele print do banco…". O servidor não repete números de conta/cartão e não recomenda investimento.
+
+## Mais falas e o criador (1.9.1, 06/11)
+
+- Piadas: 30 gerais + 15 ácidas (os estilos "piada esquecida", "técnico de TI", "narrador esportivo", "malandro" e
+  "autoconsciência" vieram das amostras do Perfil, na caixa de correio, adaptados pro dinheiro).
+- `ehCriador(perfil)`: o JF (João Fernando, JF, TGP, JF77, TGP77) ganha o balde `criador` (carinhoso, sem zoeira) na
+  saudação e no gasto anotado. Nome de criança nunca entra aqui.
