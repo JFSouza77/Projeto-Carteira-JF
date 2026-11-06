@@ -11,7 +11,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '1.5.0';
+export const CAOS_VERSAO = '1.6.0';
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -40,7 +40,7 @@ const RADAR_COOLDOWN = 6 * 3_600_000;
 const ALERTAS = new Set(['categoria_estourada', 'orcamento_80', 'delivery_repetido', 'ritmo_alto', 'mes_negativo', 'conta_negativa', 'compromisso_vence', 'compromisso_atrasado']);
 
 export function memoriaInicial(now = Date.now()) {
-  return { versao: CAOS_VERSAO, gerador: {}, emocoes: emocoesIniciais(now), lastAt: {}, lastMonthClosed: null, rosto: memoriaRostoInicial(), rostoUltimo: null };
+  return { versao: CAOS_VERSAO, gerador: {}, emocoes: emocoesIniciais(now), lastAt: {}, lastMonthClosed: null, rosto: memoriaRostoInicial(), rostoUltimo: null, conversa: null };
 }
 
 function normalizarMem(m, now) {
@@ -171,12 +171,14 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   const humor = MOODS[mood] ? mood : DEFAULT_MOOD;
   let mem = normalizarMem(memory, now);
   const d = congelar(dados);
-  const intencao = entender(texto, d);
+  const intencao = entender(texto, { ...d, anterior: mem.conversa || null });
   mem = { ...mem, emocoes: sentir(mem.emocoes, EVENTO_DA_INTENCAO[intencao.intent] || 'pergunta', now) };
   const emocao = emocaoAtual(mem.emocoes, humor, now);
   const resp = responder(intencao, d, { today: today || toISODate(new Date(now)), emocao: rostoDe(emocao).nome, perfil, now });
 
   let fato = resp.fato;
+  // Melhor palpite (1.6.0): responde o que achou que era e pergunta de volta, em vez de "não entendi"
+  if (intencao.palpite && fato) fato = `Acho que você quis saber isto: ${fato} Se não for, me pergunta de outro jeito.`;
   if (resp.aviso && fato) {
     // mercado: sempre com o lembrete de que é apoio, não recomendação
     const av = montar('aviso_mercado', {}, { humor, emocao, mem, now, rng, perfil });
@@ -207,6 +209,10 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   const temAlerta = !!(resp.alertas && resp.alertas.some(a => ALERTAS.has(a.type)));
   const r = rostoPara(mem, { emocao, evento: EVENTO_ROSTO[intencao.intent], humor, now, rng, direto: !!EVENTO_ROSTO[intencao.intent], texto: saida, alerta: temAlerta });
   mem = r.mem;
+  // lembra a última pergunta pra entender a próxima ("e no mês passado?")
+  if (intencao.intent !== 'nao_entendi') {
+    mem = { ...mem, conversa: { intent: intencao.intent, categoryId: intencao.categoria?.id || null, periodo: intencao.periodo || 'mes' } };
+  }
   return {
     fala: {
       texto: saida || 'Hmm.',
@@ -214,7 +220,8 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
       sugestoes: resp.sugestoes || (intencao.intent === 'nao_entendi' ? SUGESTOES.slice(0, 5) : []),
       acao: resp.acao || null,
       filaIA: resp.filaIA || null, // pergunta que precisa do servidor: o app responde agora ou guarda na fila
-      entendeu: intencao.intent !== 'nao_entendi',
+      entendeu: intencao.intent !== 'nao_entendi' && !intencao.palpite,
+      palpite: !!intencao.palpite,
     },
     memoria: mem,
   };
