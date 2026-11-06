@@ -112,3 +112,14 @@ sempre testado.
   Proposta em conversa com o JF (sincronização criptografada no aparelho, o servidor guarda só um pacote fechado).
 - [ ] Debug completo e análise rígida do C.A.O.S. (o JF vai fazer) e refinar ainda mais a IA.
 - [ ] Ele saber mais sobre o criador (o JF vai contar o que pode entrar; sem dado pessoal sensível).
+
+# 06/11, 07h06 (JF indo trabalhar)
+- [x] Categoria **Streaming** explícita (Netflix, Mercado Play, Disney+, HBO Max, Paramount+…).
+- [x] Não sugerir apelido pra quem já digitou um apelido (nome de uma palavra só); pra nome completo, sugerir
+  primeiro nome, iniciais e um curto (ex.: Gustavo Lima → Gustavo, GL, Gu).
+- [x] Zoeira com o criador do jeito do JF ("me peça pra falar mal", "manda ele pagar meu salário"…).
+- [x] Rostinho como assinatura dos balões (sem o nome parado do lado).
+- [ ] **Login e sincronização entre aparelhos no servidor** (JF aprovou guardar no servidor). Começa depois do debug
+  do ChatGPT (9h).
+- [ ] App intuitivo pra qualquer idade (3 a 86 anos): revisar cada tela com dicas e passos explicados.
+- [ ] O JF vai explicar melhor quem ele é pra o C.A.O.S. zoar com mais assunto.

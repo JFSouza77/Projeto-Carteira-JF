@@ -79,7 +79,7 @@ test('abreviações e gírias: "vc", "cê", "tbm", "q", "hj", "qnto"…', () => 
 test('"O que vc acha do JF?" tem resposta (e é diferente quando quem pergunta é o JF)', () => {
   const r = conversar('O que vc acha do JF?', dados(), { now: NOW, today: hoje });
   assert.equal(r.fala.entendeu, true);
-  assert.match(r.fala.texto, /JF|criador|Perfil/i);
+  assert.match(r.fala.texto, /JF|criador|Perfil|fale bem/i);
   const jf = conversar('O que você acha do JF?', dados(), { now: NOW, today: hoje, perfil: { apelido: 'JF' }, rng: () => 0 });
   assert.equal(jf.fala.entendeu, true);
 });
@@ -110,4 +110,13 @@ test('bancos em ordem alfabética, com Itaú Cartões; "dinheiro vivo" e "Outro"
   assert.deepEqual(meio, [...meio].sort((a, b) => a.localeCompare(b, 'pt-BR')));
   assert.deepEqual(BANKS.slice(-2), ['Carteira (dinheiro vivo)', 'Outro']);
   for (const b of ['Itaú Cartões', 'Bradesco', 'Sicredi', 'Banco do Brasil']) assert.ok(BANKS.includes(b), b);
+});
+
+test('streaming tem categoria própria e "fala mal do JF" é entendido', async () => {
+  const { DEFAULT_CATEGORIES: CATS } = await import('../js/engine.js');
+  assert.ok(CATS.some(c => c.id === 'streaming'));
+  for (const q of ['gastei 30 na netflix', 'paguei 40 do disney plus', 'gastei 25 no hbo max']) {
+    assert.equal(entender(q, { categories: CATS }).categoria?.id, 'streaming', q);
+  }
+  assert.equal(entender('fala mal do JF', { categories: CATS }).intent, 'sobre_jf');
 });

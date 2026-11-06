@@ -23,7 +23,11 @@ const SINONIMOS = {
   moradia: ['moradia', 'aluguel', 'condominio', 'iptu', 'casa'],
   contas: ['contas', 'conta de luz', 'luz', 'agua', 'internet', 'celular', 'telefone', 'gas', 'energia', 'boleto'],
   saude: ['saude', 'farmacia', 'remedio', 'medico', 'consulta', 'exame', 'dentista', 'plano de saude', 'academia'],
-  lazer: ['lazer', 'cinema', 'jogo', 'game', 'show', 'festa', 'viagem', 'streaming', 'netflix', 'spotify', 'passeio'],
+  lazer: ['lazer', 'cinema', 'jogo', 'game', 'show', 'festa', 'viagem', 'passeio'],
+  // Streaming (06/11, pedido do JF): fica explícito, separado de Lazer e de Contas
+  streaming: ['streaming', 'netflix', 'mercado play', 'disney', 'disney plus', 'hbo', 'hbo max', 'max', 'paramount',
+    'paramount plus', 'prime video', 'amazon prime', 'globoplay', 'apple tv', 'crunchyroll', 'spotify', 'deezer',
+    'youtube premium', 'star plus', 'telecine', 'assinatura de filme'],
   compras: ['compras', 'roupa', 'tenis', 'sapato', 'shopping', 'presente', 'eletronico', 'loja', 'shopee', 'amazon'],
   outros: ['outros', 'outro', 'diversos'],
 };
@@ -224,7 +228,7 @@ function entenderSimples(t, { categories = [] } = {}) {
   if (ativo || /(mercado financeiro|como (esta|ta) o mercado|cotacao|cotacoes|cambio|moedas)/.test(t)) return { ...r, intent: 'mercado', ativo };
   // Quem ele é (identidade): vem antes de tudo que não é registro
   if (/(o que (significa|quer dizer)|significado|sigla).*(caos|seu nome|nome)|caos significa|o que e caos|o que e o caos/.test(t)) return { ...r, intent: 'significado' };
-  if (/(o que (voce )?(acha|pensa|me diz|fala) (do|de|sobre o|sobre) (jf|joao|joao fernando|tgp|seu criador|criador|seu pai)|voce gosta (do|de) (jf|seu criador)|como e o jf|fala (do|sobre o) jf)/.test(t)) return { ...r, intent: 'sobre_jf' };
+  if (/(o que (voce )?(acha|pensa|me diz|fala) (do|de|sobre o|sobre) (jf|joao|joao fernando|tgp|seu criador|criador|seu pai)|voce gosta (do|de) (jf|seu criador)|como e o jf|fala (do|sobre o) jf|(fala|falar|falando) (mal|bem) (do|de|sobre o) (jf|seu criador|criador)|o que voce tem a dizer sobre (o jf|seu criador))/.test(t)) return { ...r, intent: 'sobre_jf' };
   if (/(quem (te |o )?(criou|fez|programou|inventou|desenvolveu|construiu)|seu criador|seu pai|seu dono|quem e (o )?jf|quem manda em voce)/.test(t)) return { ...r, intent: 'criador' };
   if (/(de onde (voce )?(veio|vem|surgiu|saiu)|sua origem|sua historia|onde (voce )?nasceu|projeto perfil|veio do perfil)/.test(t)) return { ...r, intent: 'origem' };
   if (/(como voce funciona|como (e|funciona) (o )?seu cerebro|seu cerebro|sistema nervoso|sua espinha|seus bracos|voce pensa|voce sente|como voce e feito|do que voce e feito)/.test(t)) return { ...r, intent: 'como_funciona' };

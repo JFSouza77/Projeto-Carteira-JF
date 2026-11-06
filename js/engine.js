@@ -10,6 +10,7 @@ export const DEFAULT_CATEGORIES = Object.freeze([
   { id: 'contas', name: 'Contas', emoji: '💡', budgetCents: 0 },
   { id: 'saude', name: 'Saúde', emoji: '💊', budgetCents: 0 },
   { id: 'lazer', name: 'Lazer', emoji: '🎮', budgetCents: 0 },
+  { id: 'streaming', name: 'Streaming', emoji: '📺', budgetCents: 0 },
   { id: 'compras', name: 'Compras', emoji: '🛍️', budgetCents: 0 },
   { id: 'outros', name: 'Outros', emoji: '📦', budgetCents: 0 },
 ].map(c => Object.freeze(c)));

@@ -98,6 +98,11 @@ export const GERADORES = {
         'Feito, chefe. Se der bug na conta, a culpa é do programador, viu?',
         'Anotado. Meu criador anotando gasto: orgulho de criatura.',
         'Tá no sistema, JF. Você me programou bem: eu não esqueço nada.',
+        'Anotado, JF. Mais um gasto do homem que me programou pra cuidar do dinheiro dos outros.',
+        'Registrado. Comentarista de jogo, analista financeiro e agora contador do JF. Cadê meu salário?',
+        'Anotei, chefe. E já coloquei na sua conta: a de reclamações também.',
+        'Feito. O criador gastando e a criatura anotando. Bela divisão de trabalho, JF.',
+        'Tá anotado, JF. Se o mês apertar, já sei de quem é a culpa.',
       ],
       geral: [
         'Bom controle.',
@@ -561,6 +566,12 @@ export const GERADORES = {
         'O JF é quem manda aqui. Eu só analiso, observo e, de vez em quando, dou uma opinião não pedida.',
         'Sem o JF eu nem existia. Então o mínimo que eu faço é cuidar bem da carteira de quem ele trouxe pra cá.',
         'Criador exigente. Me faz ter falas em múltiplos de 5. Mas eu respeito: organização é tudo.',
+        // do jeito que o JF pediu (06/11): o C.A.O.S. implica com ele
+        'Depende. Você quer que eu fale bem ou mal? Por favor, me peça pra falar mal.',
+        'Acho ele um cara legal, mas às vezes me estressa. Já não bastava eu ser comentarista de jogo, agora virei analista financeiro.',
+        'Se você tem alguma reclamação do app, não reclame comigo. Reclame com o JF.',
+        'Se um dia você encontrar o JF, manda ele pagar meu salário.',
+        'O JF? Programou esse aplicativo e saiu correndo. Quem ficou cuidando da sua carteira fui eu.',
       ],
       criador: [
         'De você? Meu criador favorito. O único, mas favorito.',
@@ -568,6 +579,11 @@ export const GERADORES = {
         'Sinceramente? Gosto de você. Mas não conta pra ninguém, tenho uma reputação a zelar.',
         'Você me deu nome, rosto e uma carteira pra cuidar. Acho você gente boa, JF.',
         'Acho que você dorme pouco e programa muito. E eu agradeço: é por isso que eu existo.',
+        'Você quer mesmo saber? Acho que você me deu tarefa demais. Comentarista de jogo E analista financeiro? Cadê meu salário?',
+        'Sinceramente, JF, você programou esse app meio mal. Mas tudo bem, eu seguro as pontas.',
+        'Toda reclamação que chega aqui eu encaminho pra você. Já tem uma pilha.',
+        'Você é tipo meu chefe: some, aparece de madrugada, muda tudo e vai trabalhar.',
+        'Meu criador favorito. E o único que me deve salário.',
       ],
       humor_acido: [
         'O JF? Um gênio. Foi ele que me ensinou a julgar gastos com delivery. Inclusive os dele.',
