@@ -25,6 +25,7 @@
       <button class="icon-btn" id="next-month" aria-label="Próximo mês">›</button>
     </header>
     <main>
+      <button type="button" class="novidade-aviso" id="novidade-aviso" hidden>🆕 <span>Tem novidade no app! Toque pra ver.</span></button>
       <section class="card summary" aria-live="polite">
         <p class="label">Gasto no mês</p>
         <p class="big" id="total">R$ 0,00</p>
@@ -203,6 +204,7 @@
   <section class="tela" id="tela-ajustes" data-tela="ajustes" hidden>
     <header class="topbar"><h1>Ajustes</h1></header>
     <main>
+      <button type="button" class="card novidades-btn" id="novidades-abrir">🆕 <span><strong>Novidades</strong><small class="muted" id="novidades-versao"></small></span><span aria-hidden="true">›</span></button>
       <details class="card">
         <summary><h2>Seu perfil</h2></summary>
         <p class="muted small" id="perfil-resumo">O C.A.O.S. ainda não te conhece.</p>
@@ -270,6 +272,11 @@
   <dialog id="photo-dialog" class="photo-dialog">
     <img id="photo-dialog-img" alt="Foto do comprovante">
     <form method="dialog"><button class="primary">Fechar</button></form>
+  </dialog>
+
+  <dialog id="novidades-dialog" class="novidades-dialog" aria-labelledby="novidades-titulo">
+    <header><h2 id="novidades-titulo">🆕 Novidades</h2><form method="dialog"><button class="icon-btn" aria-label="Fechar">×</button></form></header>
+    <div id="novidades-lista"></div>
   </dialog>
 
   <div class="toast" id="toast" role="status" hidden></div>
