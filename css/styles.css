@@ -421,3 +421,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 /* Balão do chat (06/11, pedido do JF): o rostinho animado É a assinatura do C.A.O.S., como no Perfil; sem nome parado do lado */
 .msg.caos-msg .who .caos-face.mini { font-size: .78rem; padding: 2px 8px; margin-right: 6px; }
 .msg.caos-msg .who .tag-ia, .msg.caos-msg .who .nome-caos { font-size: .7rem; letter-spacing: .14em; color: var(--caos); font-weight: 700; }
+
+/* ---------- Conta ---------- */
+.conta-botoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+#conta-card input { width: 100%; }

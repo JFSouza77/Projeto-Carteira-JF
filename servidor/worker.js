@@ -16,6 +16,10 @@
  *   POST /push/sair       → { endpoint }
  *   POST /ia/bancos       → { bancos:[nomes], cdi } → { texto } (comparação de rendimento; só nomes, nada de saldo)
  *   GET  /mercado         → resumo do mercado (moedas, Ibovespa, Selic, CDI, IPCA) guardado no KV
+ *   POST /conta/criar     → { apelido, senha } → { apelido, token }      (06/11: login e sincronização)
+ *   POST /conta/entrar    → { apelido, senha } → { apelido, token }
+ *   POST /conta/sair      → (Authorization: Bearer token) → { ok }
+ *   POST /sync            → (Authorization) { desde, mudancas:[{store,id,em,rec}] } → { versao, mudancas }
  *   cron (15 em 15 min)   → manda os lembretes do horário e, em dia útil depois das 10h, atualiza o mercado
  *
  * Segredos (npx wrangler secret put NOME): ANTHROPIC_API_KEY, VAPID_PRIVATE_JWK.
@@ -25,6 +29,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { resumoIdentidade } from '../js/caos/identidade.js';
 import { analisarSerie, MOEDAS } from '../js/mercado.js';
+import { mesclar, mudancasDesde, estadoVazio, normalizarApelido, SENHA_MINIMA, LIMITE_MUDANCAS } from '../js/sincronia.js';
 
 const MODELO_PADRAO = 'claude-opus-5-5';
 const MAX_CORPO = 6 * 1024 * 1024; // foto já chega comprimida pelo app (~300 KB)
@@ -43,7 +48,7 @@ function cors(req, env) {
   return ok ? {
     'access-control-allow-origin': origem,
     'access-control-allow-methods': 'GET, POST, OPTIONS',
-    'access-control-allow-headers': 'content-type',
+    'access-control-allow-headers': 'content-type, authorization',
     'access-control-max-age': '86400',
     vary: 'origin',
   } : { vary: 'origin' };
@@ -472,6 +477,113 @@ async function mercadoRota(env, f = fetch) {
   return resumo;
 }
 
+// ---------------------------------------------------------------- conta e sincronização (06/11)
+// A conta é apelido + senha. A senha nunca é guardada: só um hash PBKDF2 (SHA-256, 100 mil voltas) com sal aleatório.
+// A sessão é um token aleatório; o servidor guarda só o hash dele. Os dados da carteira ficam em dados:{apelido}.
+// KV é aproximado: duas gravações no mesmo segundo de aparelhos diferentes podem precisar de mais um sync pra acertar.
+
+const ITERACOES = 100_000;
+const SESSAO_DIAS = 90;
+const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+const deHex = t => new Uint8Array(String(t).match(/../g).map(h => parseInt(h, 16)));
+
+async function hashSenha(senha, salHex) {
+  const chave = await crypto.subtle.importKey('raw', new TextEncoder().encode(senha), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: deHex(salHex), iterations: ITERACOES }, chave, 256);
+  return hex(bits);
+}
+
+function igual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}
+
+function precisaKV(env) {
+  if (!env.CARTEIRA_KV) throw new ErroHttp(503, 'Servidor sem o armazenamento (CARTEIRA_KV). A conta fica desligada até configurar.');
+}
+
+/** Limite de tentativas de login/criação por endereço (contra quem tenta adivinhar senha). */
+async function limiteTentativas(req, env, apelido) {
+  const hora = new Date().toISOString().slice(0, 13);
+  const kIp = `tent:${hora}:${await sha256(req.headers.get('cf-connecting-ip') || 'sem-ip')}`;
+  const kAp = `tent:${hora}:a:${apelido}`;
+  const [nIp, nAp] = await Promise.all([env.CARTEIRA_KV.get(kIp), env.CARTEIRA_KV.get(kAp)]);
+  if (Number(nIp || 0) >= 20 || Number(nAp || 0) >= 10) throw new ErroHttp(429, 'Muitas tentativas. Espera um pouco e tenta de novo.');
+  await Promise.all([
+    env.CARTEIRA_KV.put(kIp, String(Number(nIp || 0) + 1), { expirationTtl: 7200 }),
+    env.CARTEIRA_KV.put(kAp, String(Number(nAp || 0) + 1), { expirationTtl: 7200 }),
+  ]);
+}
+
+function lerCredenciais(corpo) {
+  const apelido = normalizarApelido(corpo.apelido);
+  if (!apelido) throw new ErroHttp(400, 'Apelido de 3 a 30 letras ou números (pode ponto, traço e sublinhado).');
+  const senha = typeof corpo.senha === 'string' ? corpo.senha : '';
+  if (senha.length < SENHA_MINIMA || senha.length > 200) throw new ErroHttp(400, `A senha precisa ter pelo menos ${SENHA_MINIMA} caracteres.`);
+  return { apelido, senha };
+}
+
+async function novaSessao(env, apelido) {
+  const token = hex(crypto.getRandomValues(new Uint8Array(32)));
+  await env.CARTEIRA_KV.put(`sessao:${await sha256(token)}`, JSON.stringify({ apelido, criada: Date.now() }), { expirationTtl: SESSAO_DIAS * 86400 });
+  return { apelido, token };
+}
+
+async function contaCriar(req, env) {
+  precisaKV(env);
+  const corpo = await lerCorpo(req);
+  const { apelido, senha } = lerCredenciais(corpo);
+  await limiteTentativas(req, env, apelido);
+  if (await env.CARTEIRA_KV.get(`conta:${apelido}`)) throw new ErroHttp(409, 'Esse apelido já tem conta. Se for seu, toque em Entrar.');
+  const sal = hex(crypto.getRandomValues(new Uint8Array(16)));
+  await env.CARTEIRA_KV.put(`conta:${apelido}`, JSON.stringify({ apelido, sal, hash: await hashSenha(senha, sal), iteracoes: ITERACOES, criada: Date.now() }));
+  return novaSessao(env, apelido);
+}
+
+async function contaEntrar(req, env) {
+  precisaKV(env);
+  const corpo = await lerCorpo(req);
+  const { apelido, senha } = lerCredenciais(corpo);
+  await limiteTentativas(req, env, apelido);
+  const conta = JSON.parse((await env.CARTEIRA_KV.get(`conta:${apelido}`)) || 'null');
+  // mesma mensagem pra apelido que não existe e senha errada (não entrega quem tem conta)
+  if (!conta || !igual(await hashSenha(senha, conta.sal), conta.hash)) throw new ErroHttp(401, 'Apelido ou senha não conferem.');
+  return novaSessao(env, apelido);
+}
+
+async function sessaoDe(req, env) {
+  precisaKV(env);
+  const m = /^Bearer ([a-f0-9]{64})$/.exec(req.headers.get('authorization') || '');
+  if (!m) throw new ErroHttp(401, 'Entre na sua conta de novo.');
+  const chave = `sessao:${await sha256(m[1])}`;
+  const s = JSON.parse((await env.CARTEIRA_KV.get(chave)) || 'null');
+  if (!s?.apelido) throw new ErroHttp(401, 'Sessão expirada. Entre na sua conta de novo.');
+  return { ...s, chave };
+}
+
+async function contaSair(req, env) {
+  const s = await sessaoDe(req, env);
+  await env.CARTEIRA_KV.delete(s.chave);
+  return { ok: true };
+}
+
+async function sincronizar(req, env) {
+  const s = await sessaoDe(req, env);
+  const corpo = await lerCorpo(req);
+  const desde = Number.isInteger(corpo.desde) && corpo.desde >= 0 ? corpo.desde : 0;
+  const mudancas = Array.isArray(corpo.mudancas) ? corpo.mudancas : [];
+  if (mudancas.length > LIMITE_MUDANCAS) throw new ErroHttp(413, 'Mudanças demais de uma vez.');
+  const chave = `dados:${s.apelido}`;
+  const atual = JSON.parse((await env.CARTEIRA_KV.get(chave)) || 'null') || estadoVazio();
+  const { estado, aceitas } = mesclar(atual, mudancas);
+  if (aceitas) await env.CARTEIRA_KV.put(chave, JSON.stringify(estado));
+  // se o aparelho diz que viu uma versão maior que a do servidor (conta recriada, servidor zerado), manda tudo
+  const base = desde > estado.versao ? 0 : desde;
+  return { versao: estado.versao, aceitas, mudancas: mudancasDesde(estado, base) };
+}
+
 // ---------------------------------------------------------------- roteador
 export default {
   async fetch(req, env) {
@@ -493,7 +605,8 @@ export default {
         return json({ chave: env.VAPID_PUBLIC_KEY }, 200, h);
       }
       if (req.method === 'POST') {
-        const rotas = { '/ia/perguntar': iaPerguntar, '/ia/imagem': iaImagem, '/ia/explicar': iaExplicar, '/ia/bancos': iaBancos, '/push/inscrever': pushInscrever, '/push/sair': pushSair };
+        const rotas = { '/ia/perguntar': iaPerguntar, '/ia/imagem': iaImagem, '/ia/explicar': iaExplicar, '/ia/bancos': iaBancos, '/push/inscrever': pushInscrever, '/push/sair': pushSair,
+          '/conta/criar': contaCriar, '/conta/entrar': contaEntrar, '/conta/sair': contaSair, '/sync': sincronizar };
         const rota = rotas[url.pathname];
         if (rota) return json(await rota(req, env), 200, h);
       }

@@ -7,6 +7,20 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.7',
+    data: '06/11/2026',
+    nome: 'Vários Aparelhos',
+    t: 'Crie uma conta e use a Carteira no celular, no tablet e no computador, tudo junto e sozinho.',
+    itens: [
+      '☁️ Sua conta: em Ajustes, crie uma conta com apelido e senha. O que você anota num aparelho aparece nos outros sem fazer nada.',
+      '📴 Sem internet tudo bem: o app guarda o que você fez e manda quando a conexão voltar.',
+      '📲 Aparelho novo: no primeiro acesso, toque em "Já tenho conta" e seus dados chegam.',
+    ],
+    qol: [
+      '🔒 Senha protegida: o servidor não guarda sua senha, só uma versão embaralhada dela. As fotos ficam só no aparelho.',
+    ],
+  },
+  {
     v: '1.6',
     data: '06/11/2026',
     nome: 'Metas e Explicações',

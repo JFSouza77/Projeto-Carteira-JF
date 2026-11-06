@@ -108,8 +108,7 @@ sempre testado.
 - [x] Rosto preocupado em "o que você pode fazer?".
 - [x] Campo de aniversário vazando do card no iPhone.
 - [x] Bancos em ordem alfabética; Itaú Cartões e outros.
-- [ ] **Login e memória entre aparelhos** (o JF lançou num aparelho e no outro não aparece): precisa do servidor.
-  Proposta em conversa com o JF (sincronização criptografada no aparelho, o servidor guarda só um pacote fechado).
+- [x] **Login e memória entre aparelhos**: feito em 06/11 à tarde (conta com apelido + senha no servidor).
 - [ ] Debug completo e análise rígida do C.A.O.S. (o JF vai fazer) e refinar ainda mais a IA.
 - [ ] Ele saber mais sobre o criador (o JF vai contar o que pode entrar; sem dado pessoal sensível).
 
@@ -119,7 +118,12 @@ sempre testado.
   primeiro nome, iniciais e um curto (ex.: Gustavo Lima → Gustavo, GL, Gu).
 - [x] Zoeira com o criador do jeito do JF ("me peça pra falar mal", "manda ele pagar meu salário"…).
 - [x] Rostinho como assinatura dos balões (sem o nome parado do lado).
-- [ ] **Login e sincronização entre aparelhos no servidor** (JF aprovou guardar no servidor). Começa depois do debug
-  do ChatGPT (9h).
+- [x] **Login e sincronização entre aparelhos no servidor** (06/11 à tarde). Falta só o JF publicar o servidor.
 - [ ] App intuitivo pra qualquer idade (3 a 86 anos): revisar cada tela com dicas e passos explicados.
 - [ ] O JF vai explicar melhor quem ele é pra o C.A.O.S. zoar com mais assunto.
+
+# 06/11, 09h46 (sugestão do Bruno Levanti)
+- [ ] **Aba Investimentos**: cadastrar o que a pessoa tem investido (CDB, Tesouro, ações, poupança), quanto aplicou e
+  quanto está; total, rendimento do mês, comparação com o CDI; cotações do servidor (já existe a busca do mercado).
+  Sem recomendar investimento. Widgets do Investing.com: não usar como base (o C.A.O.S. não lê dentro do iframe, não
+  funciona offline, traz rastreamento); dá pra pôr um, opcional, só online.

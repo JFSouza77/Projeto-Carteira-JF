@@ -149,3 +149,9 @@ orçamento ("quanto ainda posso gastar?"), alertas, previsão do mês, comparaç
 - `memoria.avulsas`: conta perguntas seguidas fora do dinheiro; na 5ª (e a cada 5), o gatilho `papo_demais` chama de
   volta. A frase do JF ("Cê veio pra organizar suas finanças ou ficar jogando conversa fora?!") fica no balde ácido.
 - Rosto: quando a intenção já tem rosto próprio (identidade, limites, piada…), a frase não troca.
+
+## Conta e sincronização (app 1.7, 06/11)
+
+- Não é do C.A.O.S. (ele continua sem tocar em dados), mas muda de onde os dados vêm: com conta, o `db.js` marca cada
+  gravação como "mudança pendente" e o `js/conta.js` manda e recebe pelo `/sync` do servidor. Quem mudou por último
+  ganha, registro por registro (`js/sincronia.js`). A memória do C.A.O.S. e a conversa ficam só no aparelho.

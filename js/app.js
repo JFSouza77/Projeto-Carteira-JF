@@ -15,6 +15,7 @@ import { falar, vozDisponivel, ditadoDisponivel, ouvir, setVelocidade } from './
 import * as imagens from './imagens.js';
 import * as ia from './ia.js';
 import * as lembretes from './notificacoes.js';
+import * as conta from './conta.js';
 
 const $ = sel => document.querySelector(sel);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -1199,6 +1200,89 @@ function meAjuda() {
   addMsg({ de: 'caos', texto: `${nome ? `${nome}, ` : ''}tô aqui pra ajudar! Toca no que você quer fazer, ou escreve com suas palavras ("quero anotar um gasto", "como funciona o cartão"…).`, sugestoes: AJUDAS, rosto: rostoAvulso('elogio', { mood: state.settings.mood, memory: state.caosMemory }) });
 }
 
+// ---------- Conta e sincronização (06/11) ----------
+
+let syncRodando = false;
+let syncTimer = null;
+const servidor = () => (state.settings.aiUrl || '').trim();
+
+/** Relê tudo do banco e redesenha (quando chegam mudanças de outro aparelho). */
+async function recarregarDoBanco() {
+  const [cats, expenses, incomes, accounts, compromissos, planos, perfil, metas] = await Promise.all([
+    db.getAll(db.STORES.categories), db.getAll(db.STORES.expenses), db.getAll(db.STORES.incomes), db.getAll(db.STORES.accounts),
+    db.getAll(db.STORES.compromissos), db.getAll(db.STORES.planos), db.getMeta('perfil'), db.getMeta('metas', []),
+  ]);
+  const order = DEFAULT_CATEGORIES.map(c => c.id);
+  Object.assign(state, {
+    categories: cats.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id)), expenses, incomes,
+    accounts: accounts.sort((a, b) => a.createdAt - b.createdAt), compromissos, planos, perfil: perfil || state.perfil, metas: metas || [],
+  });
+  renderLancar(); renderBudgets(); renderPerfil(); renderContas(); renderMes(); render();
+}
+
+function quandoFoi(ms) {
+  if (!ms) return 'ainda não sincronizou';
+  const d = new Date(ms);
+  const hoje = toISODate() === toISODate(d);
+  return `sincronizado ${hoje ? 'hoje' : d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+async function renderConta() {
+  const c = await conta.contaAtual().catch(() => null);
+  $('#conta-fora').hidden = !!c;
+  $('#conta-dentro').hidden = !c;
+  $('#conta-aviso-servidor').hidden = !!servidor();
+  if (c) {
+    $('#conta-nome').textContent = `Conectado como ${c.apelido}`;
+    const pend = (await db.pegarPendentes().catch(() => [])).length;
+    $('#conta-status').textContent = `${cap(quandoFoi(c.ultimaSync))}.${pend ? ` ${pend} ${pend === 1 ? 'mudança espera' : 'mudanças esperam'} a internet.` : ''}`;
+  }
+}
+
+/** Manda e recebe mudanças. Silenciosa (não incomoda sem internet); `avisar` mostra o resultado. */
+async function sincronizarAgora({ avisar = false } = {}) {
+  if (syncRodando || !servidor()) return;
+  const c = await conta.contaAtual().catch(() => null);
+  if (!c) return;
+  if (!navigator.onLine) { if (avisar) toast('Sem internet agora. Eu guardo e mando quando voltar.'); return; }
+  syncRodando = true;
+  try {
+    const r = await conta.sincronizar(servidor());
+    if (r.recebidas) await recarregarDoBanco();
+    if (avisar) toast(r.recebidas ? `Pronto! Chegaram ${r.recebidas} ${r.recebidas === 1 ? 'mudança' : 'mudanças'} dos outros aparelhos.` : 'Tudo em dia com a sua conta.');
+  } catch (e) {
+    if (avisar) toast(e.message || 'Não deu pra sincronizar agora.');
+  } finally {
+    syncRodando = false;
+    renderConta();
+  }
+}
+
+function sincronizarLogo() {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => sincronizarAgora(), 3000);
+}
+
+async function entrarNaConta(criar) {
+  const err = $('#conta-erro');
+  err.hidden = true;
+  const apelido = $('#conta-apelido').value.trim();
+  const senha = $('#conta-senha').value;
+  if (!servidor()) { err.textContent = 'Primeiro coloque o endereço do servidor da Carteira em "IA online e servidor".'; err.hidden = false; return; }
+  if (apelido.length < 3) { err.textContent = 'Escolha um apelido com pelo menos 3 letras.'; err.hidden = false; return; }
+  if (senha.length < 6) { err.textContent = 'A senha precisa ter pelo menos 6 letras ou números.'; err.hidden = false; return; }
+  try {
+    const nome = await conta.entrar(servidor(), { apelido, senha, criar });
+    $('#conta-senha').value = '';
+    toast(criar ? `Conta ${nome} criada! Agora seus aparelhos ficam juntos.` : `Bem-vindo de volta, ${nome}! Buscando seus dados…`);
+    await sincronizarAgora({ avisar: !criar });
+  } catch (e) {
+    err.textContent = e.message;
+    err.hidden = false;
+  }
+  renderConta();
+}
+
 // ---------- Novidades (1.4) ----------
 
 function itemNovidade(item) {
@@ -1266,7 +1350,7 @@ function caosDiz(gatilho, vars, sugestoes) {
 function iniciarOnboarding() {
   state.onboarding = { passo: 'nome', dados: { foco: [] } };
   if (location.hash.slice(1) !== 'conversa') location.hash = 'conversa';
-  caosDiz('onb_nome', {}, ['Pular por enquanto']);
+  caosDiz('onb_nome', {}, ['Pular por enquanto', 'Já tenho conta']);
 }
 
 function sugestoesFoco() {
@@ -1277,6 +1361,15 @@ function sugestoesFoco() {
 async function onboardingResposta(t) {
   const o = state.onboarding;
   const d = o.dados;
+  if (/^j[aá] tenho conta/i.test(t)) {
+    // conta em outro aparelho: vai pro login; o perfil vem junto com os dados
+    addMsg({ de: 'eu', texto: t });
+    state.onboarding = null;
+    addMsg({ de: 'caos', texto: 'Boa! Entra na sua conta em Ajustes → Sua conta, que eu trago tudo do outro aparelho.' });
+    location.hash = 'ajustes';
+    setTimeout(() => { $('#conta-card').open = true; $('#conta-apelido').focus(); }, 300);
+    return;
+  }
   if (/^pular/i.test(t)) {
     addMsg({ de: 'eu', texto: t });
     state.perfil = { nome: null, apelido: null, tratamento: 'descontraido', foco: [], pulou: true, criadoEm: Date.now() };
@@ -1541,6 +1634,15 @@ function bind() {
   $('#perfil-refazer').addEventListener('click', () => iniciarOnboarding());
   $('#novidade-aviso').addEventListener('click', abrirNovidades);
   $('#me-ajuda').addEventListener('click', meAjuda);
+  $('#conta-entrar').addEventListener('click', () => entrarNaConta(false));
+  $('#conta-criar').addEventListener('click', () => entrarNaConta(true));
+  $('#conta-sync').addEventListener('click', () => sincronizarAgora({ avisar: true }));
+  $('#conta-sair').addEventListener('click', async () => {
+    if (!confirm('Sair da conta neste aparelho? Seus dados continuam aqui e na conta; só param de sincronizar.')) return;
+    await conta.sair(servidor());
+    toast('Você saiu da conta neste aparelho.');
+    renderConta();
+  });
   $('#meta-nova').addEventListener('click', () => { if (!state.onboarding) iniciarMeta(); });
   $('#meta-list').addEventListener('click', async e => {
     const g = e.target.closest('[data-meta-guardar]');
@@ -1616,11 +1718,11 @@ async function init() {
     Object.assign(state, { compromissos, planos, perfil: perfil || null, mercado: await db.getMeta('mercado'), metas: await db.getMeta('metas', []) });
     if (cats.length === 0) {
       state.categories = DEFAULT_CATEGORIES.map(c => ({ ...c }));
-      await db.putMany(db.STORES.categories, state.categories);
+      await db.putMany(db.STORES.categories, state.categories, { padrao: true });
     } else {
       // categoria nova do app (ex.: Streaming, 06/11) entra pra quem já usava, sem mexer nas que a pessoa tem
       const faltam = DEFAULT_CATEGORIES.filter(d => !cats.some(c => c.id === d.id)).map(c => ({ ...c }));
-      if (faltam.length) { await db.putMany(db.STORES.categories, faltam); cats.push(...faltam); }
+      if (faltam.length) { await db.putMany(db.STORES.categories, faltam, { padrao: true }); cats.push(...faltam); }
       const order = DEFAULT_CATEGORIES.map(c => c.id);
       state.categories = cats.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
     }
@@ -1657,6 +1759,15 @@ async function init() {
   narrate([...closing, ...radar, { type: 'boas_vindas' }]);
   if ($('#caos-line').textContent === 'Iniciando…') $('#caos-line').textContent = 'De olho nos seus gastos. Toque aqui pra conversar.';
   pintarOlho();
+
+  // Conta: liga o registro de mudanças, sincroniza ao abrir, quando a internet volta, ao voltar pro app e a cada minuto
+  if (await conta.contaAtual().catch(() => null)) db.setRastrear(true);
+  db.setAoMarcar(sincronizarLogo);
+  renderConta();
+  sincronizarAgora();
+  window.addEventListener('online', () => sincronizarAgora());
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) sincronizarAgora(); });
+  setInterval(() => { if (!document.hidden) sincronizarAgora(); }, 60_000);
 
   db.requestPersistence();
   limparFotosOrfas();
