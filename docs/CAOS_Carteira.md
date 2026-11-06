@@ -140,3 +140,12 @@ orçamento ("quanto ainda posso gastar?"), alertas, previsão do mês, comparaç
   "autoconsciência" vieram das amostras do Perfil, na caixa de correio, adaptados pro dinheiro).
 - `ehCriador(perfil)`: o JF (João Fernando, JF, TGP, JF77, TGP77) ganha o balde `criador` (carinhoso, sem zoeira) na
   saudação e no gasto anotado. Nome de criança nunca entra aqui.
+
+## Gírias, o criador e papo demais (1.10.0, 06/11)
+
+- `expandirGirias()` antes de tudo: vc/cê → você, tbm → também, q → que, pq → por que, hj → hoje, qnto → quanto…
+- Intenção `sobre_jf` ("o que você acha do JF?"), com balde `criador` quando quem pergunta é o JF. Só carinho e o que
+  está em `identidade.js`: nada de inventar fato sobre ele.
+- `memoria.avulsas`: conta perguntas seguidas fora do dinheiro; na 5ª (e a cada 5), o gatilho `papo_demais` chama de
+  volta. A frase do JF ("Cê veio pra organizar suas finanças ou ficar jogando conversa fora?!") fica no balde ácido.
+- Rosto: quando a intenção já tem rosto próprio (identidade, limites, piada…), a frase não troca.

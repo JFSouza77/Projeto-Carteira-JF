@@ -225,12 +225,14 @@ export const INCOME_SOURCES = Object.freeze([
 ].map(s => Object.freeze(s)));
 
 // Bancos mais usados no Brasil. Só o nome: o app não se conecta ao banco, o saldo é você que informa.
-export const BANKS = Object.freeze([
-  'Nubank', 'Itaú', 'Bradesco', 'Banco do Brasil', 'Caixa', 'Santander', 'Inter', 'C6 Bank', 'PicPay',
-  'Mercado Pago', 'PagBank', 'BTG Pactual', 'XP', 'Sicoob', 'Sicredi', 'Neon', 'Next', 'Banrisul',
-  'Banestes', 'BRB', 'Banco do Nordeste', 'Agibank', 'Will Bank', 'Original', 'Safra', 'Banco Pan', 'Digio', 'Cora',
-  'Carteira (dinheiro vivo)', 'Outro',
-]);
+const BANCOS_AZ = [
+  'Nubank', 'Itaú', 'Itaú Cartões', 'Bradesco', 'Banco do Brasil', 'Caixa', 'Santander', 'Inter', 'C6 Bank', 'PicPay',
+  'Mercado Pago', 'PagBank', 'BTG Pactual', 'XP', 'Sicoob', 'Sicredi', 'Neon', 'Next', 'Banrisul', 'Banestes', 'BRB',
+  'Banco do Nordeste', 'Agibank', 'Will Bank', 'Original', 'Safra', 'Banco Pan', 'Digio', 'Cora', 'BV', 'Mercantil',
+  'Sofisa Direto', 'Nomad',
+].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+// Em ordem alfabética (pedido do JF, 06/11) pra achar fácil; "dinheiro vivo" e "Outro" sempre no fim.
+export const BANKS = Object.freeze([...BANCOS_AZ, 'Carteira (dinheiro vivo)', 'Outro']);
 
 /** Valida e monta uma entrada (rendimento). */
 export function createIncome({ amountCents, sourceId, note = '', date, accountId = null }, { now = new Date(), id } = {}) {

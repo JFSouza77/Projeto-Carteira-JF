@@ -154,8 +154,21 @@ function palpite(t) {
  * Descobre a intenção. Função pura e testável.
  * `anterior` = a última pergunta entendida ({ intent, categoryId, periodo }), pra continuar a conversa.
  */
+// Abreviações e gírias (06/11, pedido do JF): "vc", "cê", "tbm", "q", "pq", "hj", "qnto"… viram a palavra inteira.
+const GIRIAS = {
+  vc: 'voce', vcs: 'voces', ce: 'voce', oce: 'voce', tb: 'tambem', tbm: 'tambem', tmb: 'tambem', q: 'que', oq: 'o que',
+  pq: 'por que', pk: 'por que', ta: 'esta', tao: 'estao', to: 'estou', td: 'tudo', tds: 'todos', mt: 'muito', mto: 'muito',
+  mta: 'muita', blz: 'beleza', obg: 'obrigado', vlw: 'valeu', msm: 'mesmo', hj: 'hoje', qnt: 'quanto', qto: 'quanto',
+  qnto: 'quanto', qnd: 'quando', qdo: 'quando', n: 'nao', naum: 'nao', nn: 'nao', eh: 'e', dps: 'depois', agr: 'agora',
+  cmg: 'comigo', ctg: 'contigo', pfv: 'por favor', pf: 'por favor', sla: 'sei la', tlgd: 'ta ligado', mn: 'mano', vdd: 'verdade',
+  grana: 'dinheiro', bufunfa: 'dinheiro', din: 'dinheiro', gastano: 'gastando', torrei: 'gastei', rango: 'comida',
+};
+export function expandirGirias(t) {
+  return String(t).split(' ').map(w => GIRIAS[w] ?? w).join(' ');
+}
+
 export function entender(texto, { categories = [], anterior = null } = {}) {
-  const r0 = entenderSimples(corrigirDigitacao(norm(texto), categories.map(c => norm(c.name))), { categories });
+  const r0 = entenderSimples(corrigirDigitacao(expandirGirias(norm(texto)), categories.map(c => norm(c.name))), { categories });
   const t = r0.t;
   const curta = t.split(' ').length <= 6;
   const continua = anterior && REUSAVEIS.has(anterior.intent) && curta
@@ -211,6 +224,7 @@ function entenderSimples(t, { categories = [] } = {}) {
   if (ativo || /(mercado financeiro|como (esta|ta) o mercado|cotacao|cotacoes|cambio|moedas)/.test(t)) return { ...r, intent: 'mercado', ativo };
   // Quem ele é (identidade): vem antes de tudo que não é registro
   if (/(o que (significa|quer dizer)|significado|sigla).*(caos|seu nome|nome)|caos significa|o que e caos|o que e o caos/.test(t)) return { ...r, intent: 'significado' };
+  if (/(o que (voce )?(acha|pensa|me diz|fala) (do|de|sobre o|sobre) (jf|joao|joao fernando|tgp|seu criador|criador|seu pai)|voce gosta (do|de) (jf|seu criador)|como e o jf|fala (do|sobre o) jf)/.test(t)) return { ...r, intent: 'sobre_jf' };
   if (/(quem (te |o )?(criou|fez|programou|inventou|desenvolveu|construiu)|seu criador|seu pai|seu dono|quem e (o )?jf|quem manda em voce)/.test(t)) return { ...r, intent: 'criador' };
   if (/(de onde (voce )?(veio|vem|surgiu|saiu)|sua origem|sua historia|onde (voce )?nasceu|projeto perfil|veio do perfil)/.test(t)) return { ...r, intent: 'origem' };
   if (/(como voce funciona|como (e|funciona) (o )?seu cerebro|seu cerebro|sistema nervoso|sua espinha|seus bracos|voce pensa|voce sente|como voce e feito|do que voce e feito)/.test(t)) return { ...r, intent: 'como_funciona' };
@@ -242,7 +256,7 @@ function entenderSimples(t, { categories = [] } = {}) {
   if (/\b(ajuda|comandos|o que voce (faz|sabe)|pra que (voce )?serve|para que (voce )?serve|sua funcao|como voce (me )?ajuda|o que posso perguntar)\b/.test(t)) return { ...r, intent: 'ajuda' };
   if (/\b(obrigad|valeu|vlw|brigad|agradeco)/.test(t)) return { ...r, intent: 'agradecimento' };
   if (/\b(burro|idiota|inutil|lixo|chato|odeio voce|merda|porcaria)\b/.test(t)) return { ...r, intent: 'xingamento' };
-  if (/\b(te amo|voce e (o )?(melhor|demais|incrivel|genial|otimo)|gosto de voce|lindo|parabens caos)\b/.test(t)) return { ...r, intent: 'elogio' };
+  if (/\b(te amo|voce e (o )?(muito )?(melhor|demais|incrivel|genial|otimo|legal|top|brabo|foda)|gosto de voce|lindo|parabens caos)\b/.test(t)) return { ...r, intent: 'elogio' };
   if (/(como voce (esta|ta)|tudo bem com voce|como (vai|ta) voce|seu humor|voce esta bem)/.test(t)) return { ...r, intent: 'como_esta' };
   if (/\b(alerta|alertas|problema|como estou|como to|como esta (minha|a) (situacao|carteira)|situacao|resumo|radar)\b/.test(t)) return { ...r, intent: 'alertas' };
   if (/(rendimento|recebi|entrada|entradas|salario|ganhei|renda|entrou|receita|dividendo|juros)/.test(t)) return { ...r, intent: 'entradas' };
@@ -617,6 +631,8 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
     }
     case 'como_esta':
       return { gatilho: 'como_esta', vars: { emocao } };
+    case 'sobre_jf':
+      return { gatilho: 'sobre_jf', vars: { criador: IDENTIDADE.criador }, sugestoes: SUG_IDENTIDADE };
     case 'significado': case 'criador': case 'origem': case 'identidade': case 'piada':
       return { gatilho: intencao.intent, vars: { sigla: IDENTIDADE.sigla, criador: IDENTIDADE.criador, origem: IDENTIDADE.origem }, sugestoes: SUG_IDENTIDADE };
     case 'como_funciona':

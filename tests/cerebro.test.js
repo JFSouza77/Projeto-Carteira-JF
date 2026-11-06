@@ -63,3 +63,51 @@ test('"explica o print do banco" pede a foto e marca o modo explicar (sem mandar
   assert.match(r.fala.texto, /📎/);
   assert.equal(r.fala.filaIA, null);
 });
+
+// ---------- O que o JF achou de manhã (06/11) ----------
+import { expandirGirias } from '../js/caos/conversa.js';
+import { BANKS } from '../js/engine.js';
+
+test('abreviações e gírias: "vc", "cê", "tbm", "q", "hj", "qnto"…', () => {
+  assert.equal(expandirGirias('de onde vc veio'), 'de onde voce veio');
+  assert.equal(entender('De onde vc veio??', { categories: cats }).intent, 'origem');
+  assert.equal(entender('qnto eu gastei hj?', { categories: cats }).intent, 'gasto_total');
+  assert.equal(entender('o q vc pode fazer?', { categories: cats }).intent, 'limites');
+  assert.equal(entender('cê tem piada?', { categories: cats }).intent, 'piada');
+});
+
+test('"O que vc acha do JF?" tem resposta (e é diferente quando quem pergunta é o JF)', () => {
+  const r = conversar('O que vc acha do JF?', dados(), { now: NOW, today: hoje });
+  assert.equal(r.fala.entendeu, true);
+  assert.match(r.fala.texto, /JF|criador|Perfil/i);
+  const jf = conversar('O que você acha do JF?', dados(), { now: NOW, today: hoje, perfil: { apelido: 'JF' }, rng: () => 0 });
+  assert.equal(jf.fala.entendeu, true);
+});
+
+test('"o que você pode fazer?" não sai com rosto preocupado', () => {
+  for (let i = 0; i < 50; i++) {
+    const r = conversar('O que você pode fazer?', dados(), { now: NOW + i, today: hoje, mood: ['suave', 'normal', 'acido'][i % 3] });
+    assert.notEqual(r.fala.rosto.emo, 'preocupado');
+  }
+});
+
+test('pergunta avulsa demais: na 5ª seguida ele chama de volta pros números', () => {
+  let mem = memoriaInicial(NOW);
+  const qs = ['quem é você?', 'conta uma piada', 'de onde você veio?', 'você é legal demais', 'como você está?'];
+  let ultima;
+  for (const [i, q] of qs.entries()) {
+    ultima = conversar(q, dados(), { now: NOW + i, today: hoje, memory: mem, mood: 'acido', rng: () => 0 });
+    mem = ultima.memoria;
+  }
+  assert.equal(mem.avulsas, 5);
+  assert.match(ultima.fala.texto, /finanças|gastos|mês|dinheiro|números/);
+  const volta = conversar('quanto gastei este mês?', dados(), { now: NOW + 9, today: hoje, memory: mem });
+  assert.equal(volta.memoria.avulsas, 0);
+});
+
+test('bancos em ordem alfabética, com Itaú Cartões; "dinheiro vivo" e "Outro" no fim', () => {
+  const meio = BANKS.slice(0, -2);
+  assert.deepEqual(meio, [...meio].sort((a, b) => a.localeCompare(b, 'pt-BR')));
+  assert.deepEqual(BANKS.slice(-2), ['Carteira (dinheiro vivo)', 'Outro']);
+  for (const b of ['Itaú Cartões', 'Bradesco', 'Sicredi', 'Banco do Brasil']) assert.ok(BANKS.includes(b), b);
+});
