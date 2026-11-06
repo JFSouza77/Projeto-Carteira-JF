@@ -17,3 +17,8 @@ Sugestões do Code (05/11/2026), da mais útil para a menos. Nada disso está fe
    parcelamento de fim de ano".
 9. **Gráfico dos últimos 6 meses** por categoria.
 10. **Senha/biometria pra abrir o app** (WebAuthn), já que tem dado financeiro.
+
+## Da revisão do ChatGPT (06/11), pra quando o servidor estiver no ar
+- Medir o tamanho real das respostas da IA e baixar o `max_tokens` (hoje 16000) sem cortar o JSON.
+- Restringir os hosts de push a nomes exatos depois de conferir os endpoints de Chrome, Firefox, Safari e Edge.
+- Os contadores do KV são aproximados: em rajada podem passar um pouco do limite. Se virar problema, usar Durable Object.

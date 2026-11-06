@@ -6,7 +6,7 @@ import {
   DEFAULT_CATEGORIES, INCOME_SOURCES, BANKS, formatBRL, parseAmount, parseSignedAmount, toISODate, monthKey,
   shiftMonth, monthLabel, createExpense, createIncome, createAccount, summarizeMonth, detectExpenseEvents,
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
-  TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria,
+  TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta } from './caos/index.js';
 import { extrairNome } from './caos/conversa.js';
@@ -197,7 +197,7 @@ function render() {
   $('#cat-list').innerHTML = rows.length ? rows.map(r => `
     <li>
       <div class="cat-head">
-        <span>${r.emoji} ${esc(r.name)}</span>
+        <span>${esc(r.emoji)} ${esc(r.name)}</span>
         <span class="num">${formatBRL(r.spentCents)}${r.budgetCents ? `<small> / ${formatBRL(r.budgetCents)}</small>` : ''}</span>
       </div>
       ${r.budgetCents ? `<div class="bar"><div class="bar-fill" style="${barStyle(r.ratio)}"></div></div>` : ''}
@@ -215,7 +215,7 @@ function render() {
       const s2 = srcById(x.sourceId);
       return `
       <li class="entrada">
-        <span class="exp-emoji" aria-hidden="true">${s2?.emoji ?? '💰'}</span>
+        <span class="exp-emoji" aria-hidden="true">${esc(s2?.emoji ?? '💰')}</span>
         <span class="exp-main"><span>${esc(x.note || s2?.name || 'Entrada')}</span>
           <small>${d}/${m} · entrada${conta ? ` · ${esc(accountLabel(conta))}` : ''}</small></span>
         <span class="num">+${formatBRL(x.amountCents)}</span>
@@ -225,7 +225,7 @@ function render() {
     const c = catById(x.categoryId);
     return `
     <li>
-      <span class="exp-emoji" aria-hidden="true">${c?.emoji ?? '📦'}</span>
+      <span class="exp-emoji" aria-hidden="true">${esc(c?.emoji ?? '📦')}</span>
       <span class="exp-main"><span>${esc(x.note || c?.name || x.categoryId)}</span>
         <small>${d}/${m}${x.note && c ? ` · ${esc(c.name)}` : ''}${conta ? ` · ${esc(accountLabel(conta))}` : ''}
         ${x.imageId ? `<button class="thumb-btn" data-photo="${esc(x.imageId)}" aria-label="Ver foto">📷</button>` : ''}</small></span>
@@ -245,7 +245,7 @@ function renderLancar() {
   const sel = gasto ? state.selectedCategory : state.selectedSource;
   $('#category-chips').setAttribute('aria-label', gasto ? 'Categoria' : 'De onde veio');
   $('#category-chips').innerHTML = opcoes.map(c => `
-    <button type="button" class="chip" role="radio" aria-checked="${c.id === sel}" data-cat="${c.id}">${c.emoji} ${esc(c.name)}</button>`).join('');
+    <button type="button" class="chip" role="radio" aria-checked="${c.id === sel}" data-cat="${esc(c.id)}">${esc(c.emoji)} ${esc(c.name)}</button>`).join('');
   $('#submit-btn').textContent = gasto ? 'Adicionar gasto' : 'Adicionar entrada';
   $('#account-field').hidden = state.accounts.length === 0;
   const atual = $('#account-select').value;
@@ -641,9 +641,9 @@ async function onRemoveAccount(id) {
 function renderBudgets() {
   $('#budget-list').innerHTML = state.categories.map(c => `
     <li>
-      <label for="b-${c.id}">${c.emoji} ${esc(c.name)}</label>
+      <label for="b-${esc(c.id)}">${esc(c.emoji)} ${esc(c.name)}</label>
       <span class="amount small"><span>R$</span>
-        <input id="b-${c.id}" data-budget="${c.id}" type="text" inputmode="decimal" placeholder="sem limite" value="${centsToInput(c.budgetCents)}">
+        <input id="b-${esc(c.id)}" data-budget="${esc(c.id)}" type="text" inputmode="decimal" placeholder="sem limite" value="${centsToInput(c.budgetCents)}">
       </span>
     </li>`).join('');
 }
@@ -724,25 +724,17 @@ function exportBackup() {
 
 async function importBackup(file) {
   try {
-    const data = JSON.parse(await file.text());
-    if (data?.app !== 'carteira-jf' || !Array.isArray(data.expenses) || !Array.isArray(data.categories)) {
-      throw new Error('Arquivo não parece um backup da Carteira JF.');
-    }
-    const okE = data.expenses.every(e => e && typeof e.id === 'string' && Number.isInteger(e.amountCents)
-      && typeof e.date === 'string' && typeof e.month === 'string' && typeof e.categoryId === 'string');
-    const incomes = Array.isArray(data.incomes) ? data.incomes : [];
-    const accounts = Array.isArray(data.accounts) ? data.accounts : [];
-    const okI = incomes.every(i => i && typeof i.id === 'string' && Number.isInteger(i.amountCents) && typeof i.month === 'string');
-    const okA = accounts.every(a => a && typeof a.id === 'string' && Number.isInteger(a.balanceCents));
-    const compromissos = Array.isArray(data.compromissos) ? data.compromissos : [];
-    const planos = Array.isArray(data.planos) ? data.planos : [];
-    const okC = compromissos.every(c => c && typeof c.id === 'string' && Number.isInteger(c.valorCents) && /^\d{4}-\d{2}$/.test(c.inicioMes) && Number.isInteger(c.cadaMeses));
-    const okP = planos.every(p => p && typeof p.id === 'string' && Number.isInteger(p.valorCents) && typeof p.month === 'string');
-    if (!okE || !okI || !okA || !okC || !okP) throw new Error('Backup com dados inválidos.');
-    if (!confirm(`Substituir os dados atuais por ${data.expenses.length} gastos, ${incomes.length} entradas, ${accounts.length} contas e ${compromissos.length} compromissos do backup?`)) return;
-    await db.replaceAll({ expenses: data.expenses, categories: data.categories, incomes, accounts, compromissos, planos });
-    Object.assign(state, { expenses: data.expenses, categories: data.categories, incomes, accounts, compromissos, planos });
-    if (data.perfil && typeof data.perfil === 'object') { state.perfil = data.perfil; await db.setMeta('perfil', data.perfil); renderPerfil(); }
+    if (file.size > 20 * 1024 * 1024) throw new Error('Arquivo grande demais para ser um backup.');
+    let bruto;
+    try { bruto = JSON.parse(await file.text()); } catch { throw new Error('Esse arquivo não parece um backup da Carteira JF.'); }
+    // Valida TUDO antes de perguntar e antes de gravar: se algo estiver errado, nada muda.
+    const v = validarBackup(bruto);
+    if (!v.ok) throw new Error(`Não importei: ${v.erros[0]}`);
+    const d = v.dados;
+    if (!confirm(`Substituir os dados atuais por ${d.expenses.length} gastos, ${d.incomes.length} entradas, ${d.accounts.length} contas e ${d.compromissos.length} compromissos do backup?`)) return;
+    await db.replaceAll({ expenses: d.expenses, categories: d.categories, incomes: d.incomes, accounts: d.accounts, compromissos: d.compromissos, planos: d.planos });
+    Object.assign(state, { expenses: d.expenses, categories: d.categories, incomes: d.incomes, accounts: d.accounts, compromissos: d.compromissos, planos: d.planos });
+    if (d.perfil) { state.perfil = d.perfil; await db.setMeta('perfil', d.perfil); renderPerfil(); }
     renderLancar();
     renderBudgets();
     render();
@@ -765,7 +757,7 @@ function prepararFormCompromisso() {
     const k = shiftMonth(hoje, i);
     return `<option value="${k}">${i === 0 ? 'este mês' : i === 1 ? 'mês que vem' : nomeMes(k)}</option>`;
   }).join('');
-  $('#comp-cat').innerHTML = state.categories.map(c => `<option value="${c.id}" ${c.id === 'contas' ? 'selected' : ''}>${c.emoji} ${esc(c.name)}</option>`).join('');
+  $('#comp-cat').innerHTML = state.categories.map(c => `<option value="${esc(c.id)}" ${c.id === 'contas' ? 'selected' : ''}>${esc(c.emoji)} ${esc(c.name)}</option>`).join('');
   $('#comp-conta-field').hidden = !state.accounts.length;
   $('#comp-conta').innerHTML = '<option value="">Sem conta</option>' + state.accounts.map(a => `<option value="${esc(a.id)}">${esc(accountLabel(a))}</option>`).join('');
 }
@@ -773,7 +765,9 @@ function prepararFormCompromisso() {
 function textoStatus(c) {
   if (!c.noMes) return `próxima vez: ${nomeMes(c.proximaVez).toLowerCase()}`;
   if (c.status === 'pago') return `✔ pago este mês (${formatBRL(c.pagoCents)})`;
-  if (c.status === 'atrasado') return `⏰ venceu dia ${c.diaNoMes}`;
+  const parcial = c.parcial ? ` · pagou ${formatBRL(c.pagoCents)}, falta ${formatBRL(c.faltaCents)}` : '';
+  if (c.status === 'atrasado') return `⏰ venceu dia ${c.diaNoMes}${parcial}`;
+  if (c.parcial) return `${c.diaNoMes ? `vence dia ${c.diaNoMes}` : 'é deste mês'}${parcial}`;
   if (c.status === 'pendente') return 'é deste mês';
   return c.diasParaVencer === 0 ? 'vence hoje' : c.diasParaVencer === 1 ? 'vence amanhã' : `vence dia ${c.diaNoMes} (em ${c.diasParaVencer} dias)`;
 }
@@ -852,7 +846,8 @@ async function onAddCompromisso(ev) {
 async function lancarCompromisso(id) {
   const c = state.compromissos.find(x => x.id === id);
   if (!c) return;
-  let valor = c.valorCents;
+  const sit = situacaoCompromissos([c], state.expenses, toISODate())[0];
+  let valor = sit?.faltaCents || c.valorCents;
   const r = prompt(`Quanto foi ${c.nome}? (confira o valor)`, (valor / 100).toFixed(2).replace('.', ','));
   if (r == null) return;
   valor = parseAmount(r);
@@ -894,9 +889,17 @@ async function onAddPlano(ev) {
 async function marcarPlano(id, feito) {
   const p = state.planos.find(x => x.id === id);
   if (!p) return;
-  if (feito && confirm(`Lançar ${formatBRL(p.valorCents)} de ${p.nome} como gasto agora?`)) {
-    const events = await registrarGasto({ amountCents: p.valorCents, categoryId: p.categoryId, note: p.nome, date: toISODate() });
-    narrate(events);
+  if (feito) {
+    // Cancelou? Nada muda: o plano continua pendente e nenhum gasto é gravado (revisão 06/11).
+    if (!confirm(`Lançar ${formatBRL(p.valorCents)} de ${p.nome} como gasto agora?`)) { renderMes(); return; }
+    try {
+      const events = await registrarGasto({ amountCents: p.valorCents, categoryId: p.categoryId, note: p.nome, date: toISODate() });
+      narrate(events);
+    } catch (e) {
+      toast(e.message || 'Não deu pra lançar. O plano continua pendente.');
+      renderMes();
+      return;
+    }
   }
   const upd = { ...p, feito };
   await db.put(db.STORES.planos, upd);

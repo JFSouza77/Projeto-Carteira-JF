@@ -77,3 +77,18 @@ sempre testado.
 - [ ] Botão **"Me ajuda" / "Me pergunte"** sempre à mão: "quero adicionar um gasto, como faço?", "quero registrar meu
   cartão", e o C.A.O.S. guia.
 - [ ] Simples e intuitivo: qualquer pessoa tem que entender o que está acontecendo e o que precisa fazer.
+
+# 05/11 à noite e 06/11 de madrugada
+
+## Correções (primeiro de tudo)
+- [ ] Revisão do ChatGPT (06/11, `docs/revisoes/2026-11-06_chatgpt.md`): backup que roda código, backup com dado
+  inválido, plano marcado como feito ao cancelar, pagamento parcial contado como pago, servidor com JSON estranho e
+  servidor sem limite de uso.
+- [ ] O cabeçalho "come a tela": o conteúdo aparece cortado por baixo dele ao rolar.
+- [ ] Ele não entendeu "Quanto eu tenho guardado no total?!" nem "O que mais eu tenho planejado para esse mês?!".
+- [ ] Resposta instantânea demais "dá medo e quebra a imersão": ele precisa de um respiro ("digitando…").
+- [ ] Conta com banco "Outro" aparece "Outro · Apelido": mostrar só o apelido. Faltam bancos (ex.: Banestes).
+
+## Novidades
+- [ ] Aba/tela **Novidades** como a do Perfil: o que mudou em cada versão, em linguagem de quem usa, e aviso quando tem
+  coisa nova.

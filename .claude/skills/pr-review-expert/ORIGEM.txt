@@ -1,0 +1,3 @@
+Origem: https://github.com/alirezarezvani/claude-skills (engineering/skills/pr-review-expert), commit 19392f7a08264ed00486a251f5b2098321771f94
+Licença: MIT (Alireza Rezvani), cópia em LICENSE. Instalada a pedido do JF em 17/10/2026.
+Neste projeto não existe gh CLI: use as ferramentas do GitHub (mcp__github__*) no lugar dos comandos "gh pr ...".

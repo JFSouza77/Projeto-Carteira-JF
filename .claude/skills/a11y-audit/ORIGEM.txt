@@ -1,0 +1,4 @@
+Origem: https://github.com/alirezarezvani/claude-skills (engineering-team/a11y-audit/skills/a11y-audit), commit 19392f7a08264ed00486a251f5b2098321771f94
+Licença: MIT (Alireza Rezvani), cópia em LICENSE. Instalada a pedido do JF em 17/10/2026.
+Neste projeto o contraste dos botões já tem auditor próprio (ferramentas/auditar_botoes.js, entende color-mix e o tema
+Claro); os scripts Python desta skill leem arquivos locais e não usam rede.
