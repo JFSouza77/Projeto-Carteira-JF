@@ -106,3 +106,13 @@ test('alerta nunca sai com rosto de festa; piada nunca sai com rosto preocupado 
     assert.ok(!tristes.has(r.fala.rosto.emo), `piada (${mood}) saiu ${r.fala.rosto.emo}: ${r.fala.texto}`);
   }
 });
+
+test('reconhece o JF como criador (sem acento, minúsculas) e só ele', async () => {
+  const { ehCriador } = await import('../js/caos/index.js');
+  assert.equal(ehCriador({ apelido: 'JF' }), true);
+  assert.equal(ehCriador({ nome: 'João Fernando', apelido: 'Jão' }), true);
+  assert.equal(ehCriador({ apelido: 'tgp77' }), true);
+  assert.equal(ehCriador({ apelido: 'Fulano' }), false);
+  const now = new Date(2026, 10, 6, 10).getTime();
+  assert.ok(contexto({ humor: 'suave', emocao: 'calmo', now, perfil: { apelido: 'JF' } }).has('criador'));
+});

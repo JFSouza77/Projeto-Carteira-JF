@@ -11,7 +11,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '1.9.0';
+export const CAOS_VERSAO = '1.9.1';
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -51,6 +51,12 @@ function normalizarMem(m, now) {
   return { ...base, ...m, gerador: m.gerador || {}, lastAt: m.lastAt || {}, emocoes: m.emocoes || base.emocoes, rosto: m.rosto || base.rosto };
 }
 
+const NOMES_DO_CRIADOR = new Set(['joao fernando', 'jf', 'tgp', 'jf77', 'tgp77']);
+export function ehCriador(perfil) {
+  const n = x => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  return !!perfil && [perfil.apelido, perfil.nome].some(x => NOMES_DO_CRIADOR.has(n(x)));
+}
+
 function periodo(h) {
   return h < 5 ? 'madrugada' : h < 12 ? 'manha' : h < 18 ? 'tarde' : 'noite';
 }
@@ -60,6 +66,8 @@ export function contexto({ humor, emocao, now = Date.now(), perfil }) {
   const d = new Date(now);
   const tags = new Set([`humor_${humor}`, `emo_${emocao}`, `periodo_${periodo(d.getHours())}`]);
   if (perfil?.apelido) tags.add('temNome');
+  // o JF é reconhecido como criador (João Fernando, JF, TGP, JF77, TGP77), comparando sem acento e em minúsculas
+  if (ehCriador(perfil)) tags.add('criador');
   if (perfil?.tratamento === 'formal') {
     tags.add('tratamento_formal');
     tags.delete('humor_acido'); // formal: sem zoeira

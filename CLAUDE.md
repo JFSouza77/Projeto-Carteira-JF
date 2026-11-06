@@ -61,7 +61,7 @@ Mapa do cérebro: `docs/CAOS_Carteira.md`.
 
 ## C.A.O.S.
 
-- **Sobe de versão sempre que for mexido** (`CAOS_VERSAO` em `js/caos/index.js`; hoje 1.9.0).
+- **Sobe de versão sempre que for mexido** (`CAOS_VERSAO` em `js/caos/index.js`; hoje 1.9.1).
 - **Quantidades sempre terminam em 0 ou 5**: cada lista de falas tem 5, 10, 15… (teste confere).
 - **Quem ele é** (nome, sigla, criador, origem, pode/não pode, anatomia): só em `js/caos/identidade.js`. O app e o
   servidor da IA leem dali, pra nunca ficarem diferentes.

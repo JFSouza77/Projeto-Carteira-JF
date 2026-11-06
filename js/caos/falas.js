@@ -92,6 +92,13 @@ export const GERADORES = {
       ],
     },
     fecho: {
+      criador: [
+        'Anotado, criador. Tô cuidando do seu dinheiro do jeito que você me programou.',
+        'Registrado, JF. Você me fez pra isso e eu gosto do serviço.',
+        'Feito, chefe. Se der bug na conta, a culpa é do programador, viu?',
+        'Anotado. Meu criador anotando gasto: orgulho de criatura.',
+        'Tá no sistema, JF. Você me programou bem: eu não esqueço nada.',
+      ],
       geral: [
         'Bom controle.',
         'Quem anota sabe para onde o dinheiro vai.',
@@ -485,6 +492,13 @@ export const GERADORES = {
   saudacao: {
     moldes: ['{inteira}'],
     inteira: {
+      criador: [
+        'Olha quem chegou: meu criador! Bora ver como está a carteira, JF?',
+        'Oi, JF! Fiquei aqui cuidando dos números enquanto você não vinha.',
+        'E aí, criador? Tudo em ordem por aqui. Quer o resumo?',
+        'JF na área! Prometo me comportar. Quase sempre.',
+        'Oi, JF. Você me fez de olho nos gastos, e eu continuo de olho.',
+      ],
       aniversario: [
         'Feliz aniversário, {nome}! Hoje o presente é você se cuidar.',
         'Parabéns, {nome}! Um ano a mais de experiência financeira.',
@@ -779,8 +793,24 @@ Object.assign(GERADORES, {
         'Economizar é igual academia: o primeiro mês dói, depois você vicia em ver resultado.',
         'Dizem que dinheiro não dá em árvore. Mas reserva de emergência dá em planilha.',
         'O que o centavo disse pra moeda de um real? "Um dia eu chego aí."',
+        // estilos que vieram do Perfil (caixa de correio, 05/11), adaptados pra carteira
+        'Eu tinha uma piada excelente sobre investimento. Mas ela rendeu tão pouco que eu esqueci.',
+        'Já tentou desligar e ligar o cofrinho de novo? Às vezes o problema é só de reinício.',
+        'E lá vai o salário! Driblou o aluguel, passou pelo mercado... e chutou direto na fatura!',
+        'Eu ia fazer uma piada sobre o rotativo do cartão. Não. Péssima ideia. Ela nunca termina.',
+        'Um dia eu vou dominar o mundo. Hoje eu só quero que você anote o gasto do café.',
+        'Percebi que faço muita piada sobre dinheiro. Vou mudar. Próxima piada: sobre centavos.',
+        'Sabe o que a poupança falou pro CDI? "Não me compara, eu tenho sentimentos."',
+        'Meu cérebro tem circuitos, nervos e espinha. Mas pra entender juros compostos eu ainda conto nos dedos.',
+        'O Pix chegou tão rápido que o dinheiro nem se despediu da conta.',
+        'Calma, eu não julgo seus gastos. Eu só anoto, somo e mostro. Julgar é com você.',
       ],
       humor_acido: [
+        'Aí sim, chefia! Driblou o orçamento com estilo. Pena que o gol foi contra.',
+        'Tá vendo aquele dinheiro que sobrou? Eu também não.',
+        'Sua meta de economia e o seu despertador: os dois você adia todo dia.',
+        'Promoção de "leve 3 pague 2" é o jeito mais educado de te fazer gastar mais.',
+        'Seu extrato daria uma ótima novela: drama, suspense e um final que ninguém queria.',
         'Piada? Já viu seu histórico de delivery?',
         'Conheço uma ótima: "esse mês eu economizo". Todo mês ela tem graça.',
         'O cartão de crédito entrou num bar. Saiu parcelado em 12 vezes.',
