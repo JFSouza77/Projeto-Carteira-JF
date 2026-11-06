@@ -72,9 +72,9 @@ sempre testado.
   enfeite (no Perfil: "a emoção do balão sai do conteúdo da frase", C.A.O.S. 4.4).
 - [ ] Visual **mais minimalista**, com toques de **neon** parecidos com o Perfil, **ícones bonitos** no lugar de
   emoji (menos poluído), cores e fontes com boa visibilidade, algumas animações e efeitos.
-- [ ] **Acessibilidade** (olhar como o Perfil faz): letra maior, modo claro e escuro, velocidade da fala do C.A.O.S.,
+- [x] **Acessibilidade** (olhar como o Perfil faz): letra maior, modo claro e escuro, velocidade da fala do C.A.O.S.,
   menos movimento.
-- [ ] Botão **"Me ajuda" / "Me pergunte"** sempre à mão: "quero adicionar um gasto, como faço?", "quero registrar meu
+- [x] Botão **"Me ajuda" / "Me pergunte"** sempre à mão: "quero adicionar um gasto, como faço?", "quero registrar meu
   cartão", e o C.A.O.S. guia.
 - [ ] Simples e intuitivo: qualquer pessoa tem que entender o que está acontecendo e o que precisa fazer.
 

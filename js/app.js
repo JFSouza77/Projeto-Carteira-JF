@@ -11,7 +11,7 @@ import {
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta } from './caos/index.js';
 import { extrairNome } from './caos/conversa.js';
 import { NOVIDADES, VERSAO_APP, temNovidade, partesDoItem } from './novidades.js';
-import { falar, vozDisponivel, ditadoDisponivel, ouvir } from './voz.js';
+import { falar, vozDisponivel, ditadoDisponivel, ouvir, setVelocidade } from './voz.js';
 import * as imagens from './imagens.js';
 import * as ia from './ia.js';
 import * as lembretes from './notificacoes.js';
@@ -26,7 +26,7 @@ const state = {
   expenses: [],
   incomes: [],
   accounts: [],
-  settings: { mood: DEFAULT_MOOD, voice: false, aiOn: false, aiUrl: '' },
+  settings: { mood: DEFAULT_MOOD, voice: false, aiOn: false, aiUrl: '', letra: 'normal', tema: 'auto', vozVel: 1, menosMov: null },
   caosMemory: memoriaInicial(),
   viewMonth: monthKey(toISODate()),
   kind: 'gasto',
@@ -82,7 +82,19 @@ function pintarRosto(rosto) {
 }
 
 // Anima todos os rostos na tela: troca os quadros, balança de leve, treme quando bravo (como no Perfil)
-const MENOS_MOVIMENTO = matchMedia('(prefers-reduced-motion: reduce)');
+const MOV_APARELHO = matchMedia('(prefers-reduced-motion: reduce)');
+// "Menos movimento": o que a pessoa escolheu em Ajustes; se nunca escolheu, segue o aparelho
+const MENOS_MOVIMENTO = { get matches() { return state.settings.menosMov ?? MOV_APARELHO.matches; } };
+
+/** Aplica letra, cores, velocidade da voz e menos movimento (Ajustes → Acessibilidade). */
+function aplicarAcessibilidade() {
+  const s = state.settings;
+  const raiz = document.documentElement;
+  raiz.dataset.letra = ['grande', 'maior'].includes(s.letra) ? s.letra : 'normal';
+  if (s.tema === 'claro' || s.tema === 'escuro') raiz.dataset.theme = s.tema; else delete raiz.dataset.theme;
+  raiz.classList.toggle('menos-mov', MENOS_MOVIMENTO.matches);
+  setVelocidade(s.vozVel ?? 1);
+}
 function animarRostos() {
   if (document.hidden) return;
   const t = performance.now();
@@ -135,6 +147,7 @@ function irPara(tela) {
     if (a.dataset.tab === t) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   }
+  $('#me-ajuda').hidden = t === 'conversa';
   if (t === 'conversa') {
     renderChat();
     setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 0);
@@ -747,6 +760,11 @@ async function renderSettings() {
   $('#mood-options').innerHTML = Object.entries(MOODS).map(([id, label]) => `
     <label><input type="radio" name="mood" value="${id}" ${state.settings.mood === id ? 'checked' : ''}><span>${label}</span></label>`).join('');
   $('#voice-toggle').checked = state.settings.voice;
+  for (const r of document.querySelectorAll('input[name="letra"]')) r.checked = r.value === (state.settings.letra || 'normal');
+  for (const r of document.querySelectorAll('input[name="tema"]')) r.checked = r.value === (state.settings.tema || 'auto');
+  $('#voz-vel').value = state.settings.vozVel ?? 1;
+  $('#voz-vel-out').textContent = `${Number(state.settings.vozVel ?? 1).toFixed(1).replace('.', ',')}×`;
+  $('#menos-mov').checked = MENOS_MOVIMENTO.matches;
   $('#voice-toggle').closest('label').hidden = !vozDisponivel();
   $('#caos-version').textContent = `${IDENTIDADE.nome} ${CAOS_VERSAO} · ${IDENTIDADE.sigla}. Criado por ${IDENTIDADE.criador}, veio do ${IDENTIDADE.origem}.`;
   $('#ai-toggle').checked = state.settings.aiOn;
@@ -1025,6 +1043,19 @@ function renderPerfil() {
   $('#perfil-aniversario').max = toISODate();
 }
 
+// ---------- Me ajuda: o C.A.O.S. guia (1.5) ----------
+const AJUDAS = [
+  'Como lanço um gasto?', 'Como registro meu cartão?', 'Como ponho orçamento?', 'Como adiciono uma conta?',
+  'Como planejo o mês?', 'Como mando foto do comprovante?', 'Como ligo os lembretes?', 'Como faço backup?',
+  'Como instalo o app?', 'O que você pode fazer?',
+];
+
+function meAjuda() {
+  location.hash = 'conversa';
+  const nome = state.perfil?.apelido;
+  addMsg({ de: 'caos', texto: `${nome ? `${nome}, ` : ''}tô aqui pra ajudar! Toca no que você quer fazer, ou escreve com suas palavras ("quero anotar um gasto", "como funciona o cartão"…).`, sugestoes: AJUDAS, rosto: rostoAvulso('elogio', { mood: state.settings.mood, memory: state.caosMemory }) });
+}
+
 // ---------- Novidades (1.4) ----------
 
 function itemNovidade(item) {
@@ -1298,6 +1329,15 @@ function bind() {
     const fala = narrate([{ type: 'boas_vindas' }], { ignoreCooldown: true });
     if (fala) toast(fala.texto);
   });
+  $('#letra-options').addEventListener('change', e => { state.settings.letra = e.target.value; saveSettings(); aplicarAcessibilidade(); });
+  $('#tema-options').addEventListener('change', e => { state.settings.tema = e.target.value; saveSettings(); aplicarAcessibilidade(); });
+  $('#voz-vel').addEventListener('input', e => {
+    state.settings.vozVel = Number(e.target.value);
+    $('#voz-vel-out').textContent = `${Number(e.target.value).toFixed(1).replace('.', ',')}×`;
+    aplicarAcessibilidade();
+  });
+  $('#voz-vel').addEventListener('change', () => { saveSettings(); if (state.settings.voice) falar('Assim que eu vou falar.'); });
+  $('#menos-mov').addEventListener('change', e => { state.settings.menosMov = e.target.checked; saveSettings(); aplicarAcessibilidade(); });
   $('#voice-toggle').addEventListener('change', e => {
     state.settings.voice = e.target.checked;
     saveSettings();
@@ -1345,6 +1385,7 @@ function bind() {
   });
   $('#perfil-refazer').addEventListener('click', () => iniciarOnboarding());
   $('#novidade-aviso').addEventListener('click', abrirNovidades);
+  $('#me-ajuda').addEventListener('click', meAjuda);
   $('#novidades-abrir').addEventListener('click', abrirNovidades);
   $('#novidades-lista').addEventListener('click', e => { if (e.target.closest('#novidades-antigas')) renderNovidades(true); });
   $('#perfil-aniversario').addEventListener('change', async e => {
@@ -1411,6 +1452,7 @@ async function init() {
     }
     Object.assign(state, { expenses, incomes, accounts: accounts.sort((a, b) => a.createdAt - b.createdAt) });
     if (settings) state.settings = { ...state.settings, ...settings };
+    aplicarAcessibilidade();
     if (memory) state.caosMemory = memory;
     // fotos da conversa antiga não voltam (o link da imagem é da sessão); o texto volta
     state.chat = Array.isArray(chat) ? chat.map(m => ({ ...m, texto: m.texto || (m.imagemId ? '📷 (foto)' : '') })) : [];
