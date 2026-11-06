@@ -68,6 +68,13 @@ Mapa do cérebro: `docs/CAOS_Carteira.md`.
 - Humores: `suave` (**padrão**), `normal`, `acido`. Zoeira só no balde `humor_acido` (2ª lei).
 - Alerta sempre traz o número e, quando der, um empurrão útil.
 
+## Novidades (tela 🆕 do app)
+
+- **Toda versão nova do app ganha sua entrada** em `js/novidades.js` (a mais nova em cima). Escrita pra quem usa:
+  "emoji Título: explicação", título até 34 letras, nada de bastidores, o mais importante primeiro, no máximo 7 itens
+  (e 7 ajustes no `qol`). O aviso "tem novidade" aparece no Início quando a versão muda. O teste `tests/novidades.test.js`
+  confere.
+
 ## Dinheiro
 
 - Valores sempre em **centavos inteiros**. Datas `YYYY-MM-DD` (hora local); mês `YYYY-MM`.

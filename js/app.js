@@ -10,6 +10,7 @@ import {
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta } from './caos/index.js';
 import { extrairNome } from './caos/conversa.js';
+import { NOVIDADES, VERSAO_APP, temNovidade, partesDoItem } from './novidades.js';
 import { falar, vozDisponivel, ditadoDisponivel, ouvir } from './voz.js';
 import * as imagens from './imagens.js';
 import * as ia from './ia.js';
@@ -948,6 +949,39 @@ function renderPerfil() {
   $('#perfil-aniversario').max = toISODate();
 }
 
+// ---------- Novidades (1.4) ----------
+
+function itemNovidade(item) {
+  const p = partesDoItem(item);
+  return `<li><span aria-hidden="true">${esc(p.icone)}</span><span>${p.titulo ? `<b>${esc(p.titulo)}</b>` : ''}${esc(p.texto)}</span></li>`;
+}
+
+function renderNovidades(todas = false) {
+  const lista = todas ? NOVIDADES : NOVIDADES.slice(0, 3);
+  $('#novidades-lista').innerHTML = lista.map(n => `
+    <section class="nov-versao">
+      <h3>Versão ${esc(n.v)} · ${esc(n.nome)} <small class="muted">${esc(n.data)}</small></h3>
+      <p class="nov-t">${esc(n.t)}</p>
+      ${n.itens.length ? `<ul>${n.itens.map(itemNovidade).join('')}</ul>` : ''}
+      ${n.qol.length ? `<ul class="nov-qol">${n.qol.map(itemNovidade).join('')}</ul>` : ''}
+    </section>`).join('')
+    + (!todas && NOVIDADES.length > 3 ? '<button type="button" class="ghost nov-antigas" id="novidades-antigas">Ver versões antigas</button>' : '');
+}
+
+async function abrirNovidades() {
+  renderNovidades(false);
+  const dlg = $('#novidades-dialog');
+  if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+  state.novidadesVistas = VERSAO_APP;
+  $('#novidade-aviso').hidden = true;
+  await db.setMeta('novidadesVistas', VERSAO_APP).catch(() => {});
+}
+
+function renderAvisoNovidade() {
+  $('#novidade-aviso').hidden = !temNovidade(state.novidadesVistas);
+  $('#novidades-versao').textContent = `Versão ${VERSAO_APP} · o que mudou no app`;
+}
+
 /** Quem já tinha cadastro sem data de aniversário: ele pergunta UMA vez na conversa. */
 async function perguntarAniversarioUmaVez() {
   const p = state.perfil;
@@ -1233,6 +1267,9 @@ function bind() {
     if (d) removerPlano(d.dataset.planDel);
   });
   $('#perfil-refazer').addEventListener('click', () => iniciarOnboarding());
+  $('#novidade-aviso').addEventListener('click', abrirNovidades);
+  $('#novidades-abrir').addEventListener('click', abrirNovidades);
+  $('#novidades-lista').addEventListener('click', e => { if (e.target.closest('#novidades-antigas')) renderNovidades(true); });
   $('#perfil-aniversario').addEventListener('change', async e => {
     const v = e.target.value;
     if (v && !lerAniversario(v)) { toast('Data inválida.'); renderPerfil(); return; }
@@ -1309,6 +1346,10 @@ async function init() {
   renderBudgets();
   await renderSettings();
   renderPerfil();
+  state.novidadesVistas = await db.getMeta('novidadesVistas').catch(() => null);
+  // Primeiro acesso não precisa de aviso: tudo é novidade. Marca a versão atual como vista.
+  if (!state.perfil && !state.novidadesVistas) { state.novidadesVistas = VERSAO_APP; db.setMeta('novidadesVistas', VERSAO_APP).catch(() => {}); }
+  renderAvisoNovidade();
   render();
   irPara(location.hash.slice(1));
   // Primeiro acesso: o C.A.O.S. se apresenta e conhece a pessoa

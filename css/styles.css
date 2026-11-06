@@ -325,3 +325,26 @@ select { appearance: none; -webkit-appearance: none; }
 .plan-list label.plan-info { display: flex; gap: 10px; align-items: center; min-width: 0; }
 .plan-list label.plan-info span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .field-label { display: block; margin: 12px 0 6px; font-size: .9rem; }
+
+/* ---------- Novidades (1.4) ---------- */
+.novidade-aviso {
+  display: flex; gap: 10px; align-items: center; width: 100%; text-align: left;
+  border: 1px solid var(--accent); border-radius: var(--radius); background: var(--card); padding: 12px 16px; font-weight: 600;
+}
+.novidades-btn { display: flex; gap: 12px; align-items: center; width: 100%; border: 0; text-align: left; font-size: 1.2rem; }
+.novidades-btn > span:nth-child(1) { flex: 1; display: grid; font-size: 1rem; }
+.novidades-btn small { margin: 0; }
+.novidades-dialog { border: 0; border-radius: var(--radius); background: var(--bg); color: var(--text); padding: 0; width: min(94vw, 560px); max-height: 86vh; }
+.novidades-dialog::backdrop { background: #000c; }
+.novidades-dialog > header { position: sticky; top: 0; display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--bg); border-bottom: 1px solid var(--line); }
+.novidades-dialog > header h2 { margin: 0; }
+#novidades-lista { padding: 12px 16px 20px; display: grid; gap: 14px; }
+.nov-versao { background: var(--card); border-radius: var(--radius); padding: 14px 16px; }
+.nov-versao h3 { margin: 0; font-size: 1rem; }
+.nov-versao .nov-t { margin: 6px 0 10px; color: var(--muted); }
+.nov-versao ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.nov-versao li { display: grid; grid-template-columns: 1.6em 1fr; gap: 6px; }
+.nov-versao li b { display: block; }
+.nov-versao .nov-qol { margin-top: 10px; font-size: .85rem; color: var(--muted); }
+.nov-antigas { justify-self: center; }
+.novidade-aviso[hidden] { display: none; }

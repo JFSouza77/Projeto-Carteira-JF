@@ -90,5 +90,5 @@ sempre testado.
 - [x] Conta com banco "Outro" aparece "Outro · Apelido": mostrar só o apelido. Faltam bancos (ex.: Banestes).
 
 ## Novidades
-- [ ] Aba/tela **Novidades** como a do Perfil: o que mudou em cada versão, em linguagem de quem usa, e aviso quando tem
+- [x] Aba/tela **Novidades** como a do Perfil: o que mudou em cada versão, em linguagem de quem usa, e aviso quando tem
   coisa nova.
