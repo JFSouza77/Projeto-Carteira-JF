@@ -123,7 +123,7 @@ sempre testado.
 - [ ] O JF vai explicar melhor quem ele é pra o C.A.O.S. zoar com mais assunto.
 
 # 06/11, 09h46 (sugestão do Bruno Levanti)
-- [ ] **Aba Investimentos**: cadastrar o que a pessoa tem investido (CDB, Tesouro, ações, poupança), quanto aplicou e
+- [x] (1ª parte, 06/11: cadastro, total, rendimento, conversa) **Aba Investimentos**: cadastrar o que a pessoa tem investido (CDB, Tesouro, ações, poupança), quanto aplicou e
   quanto está; total, rendimento do mês, comparação com o CDI; cotações do servidor (já existe a busca do mercado).
   Sem recomendar investimento. Widgets do Investing.com: não usar como base (o C.A.O.S. não lê dentro do iframe, não
   funciona offline, traz rastreamento); dá pra pôr um, opcional, só online.

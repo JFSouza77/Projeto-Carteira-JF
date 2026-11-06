@@ -7,6 +7,20 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.8',
+    data: '06/11/2026',
+    nome: 'Investimentos',
+    t: 'Uma lista dos seus investimentos, com o total, quanto rendeu e onde está a maior parte.',
+    itens: [
+      '📈 Seus investimentos: na aba Contas, coloque CDB, Tesouro, ações, poupança e outros, com quanto aplicou e quanto vale.',
+      '🔄 Atualizar valor: olhe no app do banco e atualize. Colocou mais dinheiro? Toque em "Coloquei mais".',
+      '💬 Pergunte pro C.A.O.S.: "como estão meus investimentos?" Ele mostra o total e quanto rendeu, sem recomendar nada.',
+    ],
+    qol: [
+      '☁️ Com conta: seus investimentos também aparecem nos outros aparelhos.',
+    ],
+  },
+  {
     v: '1.7',
     data: '06/11/2026',
     nome: 'Vários Aparelhos',

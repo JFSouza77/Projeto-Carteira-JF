@@ -628,6 +628,7 @@ export function validarBackup(bruto) {
   const compromissos = lista('compromissos', false);
   const planos = lista('planos', false);
   const metas = lista('metas', false);
+  const investimentos = lista('investimentos', false);
   const obj = o => o && typeof o === 'object' && !Array.isArray(o);
   const unicos = (itens, nome) => {
     const ids = new Set();
@@ -692,6 +693,11 @@ export function validarBackup(bruto) {
       || !(m.ate == null || MES_RE.test(m.ate))) erro(`Meta ${i + 1} do backup está com dado inválido.`);
   });
   unicos(metas.filter(obj), 'meta');
+  investimentos.forEach((v, i) => {
+    if (!obj(v) || !ID_RE.test(v.id ?? '') || !texto(v.nome, 60, 1) || !TIPOS_INVESTIMENTO[v.tipo] || !textoOuNada(v.instituicao, 40)
+      || !centavos(v.aplicadoCents, 1) || !centavos(v.atualCents, 0)) erro(`Investimento ${i + 1} do backup está com dado inválido.`);
+  });
+  unicos(investimentos.filter(obj), 'investimento');
 
   let perfil = null;
   if (bruto.perfil != null) {
@@ -708,7 +714,7 @@ export function validarBackup(bruto) {
     ok: true, erros: [],
     dados: {
       categories: copia(categories), expenses: copia(expenses), incomes: copia(incomes), accounts: copia(accounts),
-      compromissos: copia(compromissos), planos: copia(planos), metas: copia(metas), perfil,
+      compromissos: copia(compromissos), planos: copia(planos), metas: copia(metas), investimentos: copia(investimentos), perfil,
     },
   };
 }
@@ -875,4 +881,46 @@ export function lerMesAlvo(texto, today = toISODate()) {
     return k >= mes ? k : null;
   }
   return null;
+}
+
+// ---------- Investimentos (06/11, ideia do Bruno Levanti) ----------
+// A pessoa cadastra o que tem e atualiza o valor de vez em quando (o app não acessa corretora nem banco).
+
+export const TIPOS_INVESTIMENTO = Object.freeze({
+  cdb: 'CDB / LCI / LCA', tesouro: 'Tesouro Direto', poupanca: 'Poupança', acoes: 'Ações', fii: 'Fundos imobiliários',
+  fundo: 'Fundos de investimento', cripto: 'Criptomoedas', previdencia: 'Previdência', caixinha: 'Caixinha / conta que rende', outro: 'Outro',
+});
+
+export function createInvestimento({ nome, tipo = 'outro', instituicao = '', aplicadoCents, atualCents }, { now = new Date(), id } = {}) {
+  const n = String(nome || '').trim();
+  if (!n) throw new Error('Dá um nome pro investimento (ex.: CDB do Nubank).');
+  if (!TIPOS_INVESTIMENTO[tipo]) throw new Error('Escolha o tipo.');
+  if (!Number.isInteger(aplicadoCents) || aplicadoCents <= 0 || aplicadoCents > 100_000_000_00) throw new Error('Quanto você aplicou?');
+  const atual = atualCents == null ? aplicadoCents : atualCents;
+  if (!Number.isInteger(atual) || atual < 0 || atual > 100_000_000_00) throw new Error('Quanto está valendo agora?');
+  return {
+    id: id || newId(), nome: n.slice(0, 60), tipo, instituicao: String(instituicao).trim().slice(0, 40),
+    aplicadoCents, atualCents: atual, valorEm: now.getTime(), criadoEm: now.getTime(),
+  };
+}
+
+/** Novo valor de um investimento (a pessoa confere no app do banco e atualiza). Não grava nada. */
+export function atualizarInvestimento(inv, { atualCents, aporteCents = 0 }, now = new Date()) {
+  if (!Number.isInteger(atualCents) || atualCents < 0) throw new Error('Valor inválido.');
+  if (!Number.isInteger(aporteCents) || aporteCents < 0) throw new Error('Valor do aporte inválido.');
+  return { ...inv, atualCents, aplicadoCents: inv.aplicadoCents + aporteCents, valorEm: now.getTime() };
+}
+
+/** Total aplicado, quanto vale agora, quanto rendeu e a fatia de cada tipo. */
+export function resumoInvestimentos(lista = []) {
+  const aplicado = lista.reduce((s, i) => s + i.aplicadoCents, 0);
+  const atual = lista.reduce((s, i) => s + i.atualCents, 0);
+  const porTipo = {};
+  for (const i of lista) porTipo[i.tipo] = (porTipo[i.tipo] || 0) + i.atualCents;
+  return {
+    quantidade: lista.length, aplicadoCents: aplicado, atualCents: atual, ganhoCents: atual - aplicado,
+    rendimentoPct: aplicado ? Math.round(((atual - aplicado) / aplicado) * 1000) / 10 : 0,
+    porTipo: Object.entries(porTipo).map(([tipo, cents]) => ({ tipo, nome: TIPOS_INVESTIMENTO[tipo], cents, pct: atual ? Math.round((cents / atual) * 100) : 0 }))
+      .sort((a, b) => b.cents - a.cents),
+  };
 }

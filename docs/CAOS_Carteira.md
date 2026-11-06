@@ -155,3 +155,9 @@ orçamento ("quanto ainda posso gastar?"), alertas, previsão do mês, comparaç
 - Não é do C.A.O.S. (ele continua sem tocar em dados), mas muda de onde os dados vêm: com conta, o `db.js` marca cada
   gravação como "mudança pendente" e o `js/conta.js` manda e recebe pelo `/sync` do servidor. Quem mudou por último
   ganha, registro por registro (`js/sincronia.js`). A memória do C.A.O.S. e a conversa ficam só no aparelho.
+
+## Investimentos (1.11.0, 06/11, ideia do Bruno Levanti)
+
+- Intenção `meus_investimentos` ("como estão meus investimentos?", "quanto tenho investido?"): total, aplicado, quanto
+  rendeu e a maior fatia. Sempre fecha com "não recomendo investimento". `investir` ("vale a pena investir em…?")
+  continua como antes. Dados em `meta/investimentos` (sincroniza com conta, entra no backup).
