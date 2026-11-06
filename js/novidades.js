@@ -16,6 +16,7 @@ export const NOVIDADES = Object.freeze([
       '📆 Quanto guardar por mês: ele faz a conta pra você chegar lá no prazo.',
       '💰 Guardei na meta: fale "guardei 50 na meta do show" ou toque em Guardar, na aba Mês.',
       '🏆 Meta batida: quando chegar a 100%, ele comemora com você.',
+      '✨ Visual novo: ícones próprios nas abas, mais limpos, com um brilho neon na aba aberta.',
     ],
     qol: [],
   },

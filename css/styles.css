@@ -199,6 +199,7 @@ fieldset.mood legend { color: var(--muted); margin-bottom: 8px; padding: 0; }
   color: var(--muted); text-decoration: none; font-size: .72rem;
 }
 .tabbar a span { font-size: 1.25rem; line-height: 1; }
+.tabbar .ico { width: 24px; height: 24px; }
 .tabbar a[aria-current="page"] { color: var(--accent); background: var(--card-2); }
 
 select { appearance: none; -webkit-appearance: none; }
@@ -396,3 +397,19 @@ select { appearance: none; -webkit-appearance: none; }
   background: var(--card); color: var(--text); box-shadow: 0 6px 18px #0006;
 }
 .me-ajuda[hidden] { display: none; }
+
+/* ---------- Visual minimalista com toques de neon (06/11) ---------- */
+.ico { width: 1.2em; height: 1.2em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; vertical-align: -0.2em; }
+.tabbar a[aria-current="page"] { background: transparent; }
+.tabbar a[aria-current="page"] .ico { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 70%, transparent)); }
+.tabbar a[aria-current="page"]::after { content: ''; display: block; width: 18px; height: 3px; border-radius: 3px; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.card { border: 1px solid color-mix(in srgb, var(--accent) 7%, var(--line)); }
+.primary { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent), 0 0 16px -4px var(--accent); }
+.big { text-shadow: 0 0 22px color-mix(in srgb, var(--accent) 18%, transparent); }
+.me-ajuda { display: inline-flex; gap: 6px; align-items: center; box-shadow: 0 0 14px -4px var(--caos), 0 6px 18px #0006; }
+.me-ajuda .ico { color: var(--caos); }
+:root[data-theme="claro"] .big, :root[data-theme="claro"] .primary { text-shadow: none; box-shadow: none; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="escuro"]):not([data-theme="claro"]) .big,
+  :root:not([data-theme="escuro"]):not([data-theme="claro"]) .primary { text-shadow: none; box-shadow: none; }
+}

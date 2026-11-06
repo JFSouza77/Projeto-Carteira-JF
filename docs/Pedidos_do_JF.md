@@ -70,7 +70,7 @@ sempre testado.
 ## 4. Visual e acessibilidade (como no Perfil)
 - [x] **Rostinho combinando com a frase**: a emoção do rosto tem que fazer sentido com o que ele está falando, não é
   enfeite (no Perfil: "a emoção do balão sai do conteúdo da frase", C.A.O.S. 4.4).
-- [ ] Visual **mais minimalista**, com toques de **neon** parecidos com o Perfil, **ícones bonitos** no lugar de
+- [x] Visual **mais minimalista** (1ª parte: ícones das abas e do Me ajuda, toques de neon; emojis das categorias continuam), com toques de **neon** parecidos com o Perfil, **ícones bonitos** no lugar de
   emoji (menos poluído), cores e fontes com boa visibilidade, algumas animações e efeitos.
 - [x] **Acessibilidade** (olhar como o Perfil faz): letra maior, modo claro e escuro, velocidade da fala do C.A.O.S.,
   menos movimento.
