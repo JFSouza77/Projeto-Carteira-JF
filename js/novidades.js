@@ -24,6 +24,9 @@ export const NOVIDADES = Object.freeze([
       '🏦 Bancos de A a Z: em ordem alfabética, com Itaú Cartões e mais opções.',
       '😄 Mais piadas: 15 piadas novas, de todos os humores.',
       '📅 Data de nascimento: o campo cabe direitinho na tela do iPhone.',
+      '📺 Categoria Streaming: Netflix, Disney+, HBO Max, Paramount+, Mercado Play e outros ficam juntos.',
+      '🙂 Apelido: quem já se apresenta com um apelido não precisa responder de novo.',
+      '😶 Balões da conversa: o rostinho do C.A.O.S. é a assinatura de cada fala, como no Perfil.',
     ],
   },
   {

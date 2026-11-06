@@ -443,12 +443,12 @@ function renderChat() {
       const acao = m.acao && !m.acaoFeita
         ? `<div class="acao"><button class="sim" data-acao="${i}" data-ok="1">✔ Confirmar</button><button class="nao" data-acao="${i}" data-ok="0">Cancelar</button></div>`
         : '';
-      if (m.digitando) return `<li class="msg caos-msg pensando digitando" aria-label="C.A.O.S. está digitando"><span class="who"><span class="caos-face mini" data-msg="${i}" aria-hidden="true"></span>C.A.O.S.</span><span class="pontos" aria-hidden="true"><i></i><i></i><i></i></span> digitando</li>`;
-      return `<li class="msg caos-msg ${m.temp ? 'pensando' : ''}"><span class="who"><span class="caos-face mini" data-msg="${i}" aria-hidden="true"></span>C.A.O.S.${m.ia ? ' · IA' : ''}</span>${esc(m.texto)}${acao}</li>`;
+      if (m.digitando) return `<li class="msg caos-msg pensando digitando" aria-label="C.A.O.S. está digitando"><span class="who" aria-label="C.A.O.S."><span class="caos-face mini" data-msg="${i}" aria-hidden="true"></span></span><span class="pontos" aria-hidden="true"><i></i><i></i><i></i></span> digitando</li>`;
+      return `<li class="msg caos-msg ${m.temp ? 'pensando' : ''}"><span class="who" aria-label="C.A.O.S.${m.ia ? ' com IA' : ''}"><span class="caos-face mini" data-msg="${i}" aria-hidden="true"></span>${m.ia ? '<span class="tag-ia">IA</span>' : ''}</span>${esc(m.texto)}${acao}</li>`;
     }).join('');
     for (const el of log.querySelectorAll('[data-msg]')) {
       const r = state.chat[Number(el.dataset.msg)]?.rosto;
-      if (r) setRosto(el, r); else el.remove();
+      if (r) setRosto(el, r); else el.replaceWith(Object.assign(document.createElement('span'), { className: 'nome-caos', textContent: 'C.A.O.S.' }));
     }
   }
   const ult = [...state.chat].reverse().find(m => m.de === 'caos');
@@ -1312,9 +1312,20 @@ async function onboardingResposta(t) {
     const nome = extrairNome(t);
     if (!nome) return caosDiz('onb_nome', {}, ['Pular por enquanto']);
     d.nome = nome;
+    const partes = nome.split(' ').filter(Boolean);
+    if (partes.length === 1) {
+      // um nome só ("JF", "Gu") já é o jeito de chamar: não pergunta apelido de apelido (JF, 06/11)
+      d.apelido = nome;
+      o.passo = 'aniversario';
+      caosDiz('onb_aniversario', { nome }, ['Prefiro não dizer']);
+      return;
+    }
     o.passo = 'apelido';
-    const primeiro = nome.split(' ')[0];
-    caosDiz('onb_apelido', { nome: primeiro }, [...new Set([primeiro, nome])]);
+    // nome completo ("Gustavo Lima"): sugere o primeiro nome, as iniciais e um apelido curto
+    const primeiro = partes[0];
+    const iniciais = partes.map(p => p[0]).join('').toUpperCase();
+    const curto = primeiro.length > 4 ? primeiro.slice(0, 2) : null;
+    caosDiz('onb_apelido', { nome: primeiro }, [...new Set([primeiro, iniciais, curto].filter(Boolean))]);
   } else if (o.passo === 'apelido') {
     d.apelido = extrairNome(t) || d.nome.split(' ')[0];
     o.passo = 'aniversario';
@@ -1607,6 +1618,9 @@ async function init() {
       state.categories = DEFAULT_CATEGORIES.map(c => ({ ...c }));
       await db.putMany(db.STORES.categories, state.categories);
     } else {
+      // categoria nova do app (ex.: Streaming, 06/11) entra pra quem já usava, sem mexer nas que a pessoa tem
+      const faltam = DEFAULT_CATEGORIES.filter(d => !cats.some(c => c.id === d.id)).map(c => ({ ...c }));
+      if (faltam.length) { await db.putMany(db.STORES.categories, faltam); cats.push(...faltam); }
       const order = DEFAULT_CATEGORIES.map(c => c.id);
       state.categories = cats.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
     }
