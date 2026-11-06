@@ -68,9 +68,112 @@ function acharValor(t) {
   return m ? parseAmount(m[1]) : null;
 }
 
-/** Descobre a intenção. Função pura e testável. */
-export function entender(texto, { categories = [] } = {}) {
-  const t = norm(texto);
+// ---------- Cérebro que interpreta (1.6.0) ----------
+// Erro de digitação: palavra parecida com uma do vocabulário dele vira a palavra certa ("qunto gastie" → "quanto gastei").
+const VOCAB = [
+  'quanto', 'quando', 'gastei', 'gastou', 'gastos', 'gasto', 'gastar', 'paguei', 'despesa', 'despesas', 'mercado',
+  'supermercado', 'delivery', 'restaurante', 'transporte', 'moradia', 'contas', 'saude', 'lazer', 'compras', 'outros',
+  'saldo', 'orcamento', 'limite', 'entrada', 'entradas', 'salario', 'rendimento', 'rendimentos', 'recebi', 'planejado',
+  'planejei', 'planejamento', 'programado', 'compromisso', 'compromissos', 'vencimento', 'previsao', 'alerta', 'alertas',
+  'guardado', 'poupado', 'banco', 'bancos', 'semana', 'passado', 'anterior', 'comparar', 'media', 'maior', 'piada',
+  'ajuda', 'obrigado', 'cotacao', 'dolar', 'bitcoin', 'investir', 'pagar', 'farmacia', 'gasolina', 'aluguel', 'internet',
+  'padaria', 'cinema', 'presente', 'sobrou', 'situacao', 'resumo', 'categoria', 'gastando', 'ontem', 'hoje', 'mes',
+];
+// Palavras comuns que NÃO são erro (não corrigir pra parecida: "conta" ≠ "contas", "comprar" ≠ "compras").
+const CONHECIDAS = [
+  'conta', 'comprar', 'compra', 'comprei', 'gasta', 'gastas', 'pago', 'paga', 'pagou', 'mais', 'menos', 'tenho', 'temos',
+  'posso', 'pode', 'mesmo', 'sobre', 'meus', 'minha', 'minhas', 'quero', 'queria', 'falar', 'fala', 'coisa', 'coisas',
+  'tudo', 'isso', 'esse', 'essa', 'este', 'esta', 'para', 'pela', 'pelo', 'dele', 'dela', 'voce', 'ainda', 'ganhei',
+  'total', 'cabe', 'qual', 'quais', 'onde', 'como', 'vale', 'valeu', 'carro', 'casa', 'loja', 'festa', 'dinheiro',
+  'comida', 'conto', 'reais', 'real', 'preciso', 'sabe', 'saber', 'cartao', 'fatura', 'poupar', 'guardar', 'dica',
+  'dicas', 'algo', 'alguma', 'algum', 'muito', 'pouco', 'agora', 'depois', 'antes', 'sempre', 'nunca', 'tambem',
+  'obrigada', 'brigado', 'certo', 'errado', 'legal', 'bom', 'boa', 'noite', 'tarde', 'manha', 'cade', 'quem', 'porque',
+  'pois', 'entao', 'assim', 'aqui', 'juros', 'renda', 'banca', 'passa', 'passei', 'gastamos', 'ganho', 'ganha', 'mesada',
+  'lanche', 'pizza', 'mercados', 'plano', 'planos', 'planejar', 'pagamento', 'pagamentos', 'gastando', 'gostei',
+  'sobra', 'sobrar', 'falta', 'faltam', 'semanas', 'meses', 'dias', 'ano', 'anos', 'contar', 'contei', 'conte',
+];
+const VOCAB_SET = new Set([...VOCAB, ...CONHECIDAS]);
+
+/** Distância de edição com troca de letras vizinhas contando 1 ("gastie" ~ "gastei"). */
+function distancia(a, b, max) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const c = a[i - 1] === b[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+    }
+  }
+  return d[a.length][b.length];
+}
+
+export function corrigirDigitacao(t, extras = []) {
+  const vocab = [...VOCAB, ...extras];
+  return String(t).split(' ').map(w => {
+    if (w.length < 4 || VOCAB_SET.has(w) || extras.includes(w) || /\d/.test(w)) return w;
+    const max = w.length >= 8 ? 2 : 1;
+    let melhor = null;
+    for (const v of vocab) {
+      if (Math.abs(v.length - w.length) > max || v[0] !== w[0]) continue; // primeira letra quase nunca erra
+      const dd = distancia(w, v, max);
+      if (dd <= max && (!melhor || dd < melhor.d)) melhor = { v, d: dd };
+    }
+    return melhor ? melhor.v : w;
+  }).join(' ');
+}
+
+// Continuação da conversa ("e no mês passado?", "e em delivery?") reaproveita a última pergunta.
+const REUSAVEIS = new Set(['gasto_total', 'maior_gasto', 'entradas', 'media', 'orcamento', 'saldo', 'previsao', 'comparar']);
+const mencionaPeriodo = t => /\b(hoje|ontem|semana|7 dias|sete dias|ano|mes passado|ultimo mes|mes anterior|este mes|esse mes|neste mes|nesse mes)\b/.test(t);
+
+// Melhor palpite quando não dá pra ter certeza: a intenção com mais pistas na frase.
+const PISTAS = {
+  gasto_total: ['gast', 'despes', 'paguei', 'saiu'],
+  saldo: ['saldo', 'banco', 'guard', 'poup', 'conta'],
+  entradas: ['recebi', 'salario', 'entrada', 'renda', 'rendiment'],
+  planos: ['plane', 'program', 'comprar'],
+  pagar: ['pagar', 'venc', 'boleto', 'fatura'],
+  orcamento: ['limite', 'orcament', 'sobr'],
+  alertas: ['alerta', 'situac', 'resumo', 'problema'],
+  maior_gasto: ['maior', 'mais'],
+  previsao: ['previs', 'fim do mes', 'ritmo'],
+};
+
+function palpite(t) {
+  let melhor = null;
+  for (const [intent, pistas] of Object.entries(PISTAS)) {
+    const n = pistas.filter(p => t.includes(p)).length;
+    if (n && (!melhor || n > melhor.n)) melhor = { intent, n };
+  }
+  return melhor?.intent || null;
+}
+
+/**
+ * Descobre a intenção. Função pura e testável.
+ * `anterior` = a última pergunta entendida ({ intent, categoryId, periodo }), pra continuar a conversa.
+ */
+export function entender(texto, { categories = [], anterior = null } = {}) {
+  const r0 = entenderSimples(corrigirDigitacao(norm(texto), categories.map(c => norm(c.name))), { categories });
+  const t = r0.t;
+  const curta = t.split(' ').length <= 6;
+  const continua = anterior && REUSAVEIS.has(anterior.intent) && curta
+    && (/^e\b/.test(t) || /^(e )?(no|na|em|do|da|com|de|nos|nas)\b/.test(t) || (r0.intent === 'nao_entendi' && (r0.categoria || mencionaPeriodo(t))));
+  if (continua && (r0.intent === 'nao_entendi' || r0.intent === 'gasto_total' || r0.intent === anterior.intent || r0.intent === 'comparar')) {
+    const categoria = r0.categoria || (mencionaPeriodo(t) ? categories.find(c => c.id === anterior.categoryId) || null : null);
+    const periodo = mencionaPeriodo(t) ? r0.periodo : anterior.periodo || 'mes';
+    const intent = r0.intent === 'comparar' && anterior.intent !== 'comparar' ? 'comparar' : anterior.intent;
+    return { ...r0, intent, categoria, periodo, continuacao: true };
+  }
+  if (r0.intent === 'nao_entendi') {
+    const p = palpite(t);
+    if (p) return { ...r0, intent: p, palpite: true };
+  }
+  return r0;
+}
+
+function entenderSimples(t, { categories = [] } = {}) {
   const r = { t, categoria: acharCategoria(t, categories), periodo: acharPeriodo(t), valor: acharValor(t), fonte: acharFonte(t) };
   const pergunta = /\b(quanto|qual|quais|onde|como|tive|teve|tenho|vai|posso|consigo|algum|alguma)\b|\?/.test(t);
 

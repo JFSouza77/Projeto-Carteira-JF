@@ -100,3 +100,14 @@ orçamento ("quanto ainda posso gastar?"), alertas, previsão do mês, comparaç
   (festa, preocupado, deboche, orgulho, carinho, surpresa, pensando). Frase neutra: fica com o evento/emoção.
 - Travas: alerta nunca sai com festa/orgulho/carinho/alívio; piada nunca sai com preocupado/triste/raiva/tédio.
   Suave continua sem raiva, deboche nem julgando. Teste com mil montagens de cada.
+
+## Cérebro que interpreta (1.6.0, 06/11)
+
+- `corrigirDigitacao()`: palavra parecida (1 erro; 2 em palavra longa; troca de letras vizinhas conta 1) com o
+  vocabulário dele vira a certa. Palavras comuns (`CONHECIDAS`) nunca são "corrigidas".
+- Continuação: a memória guarda a última pergunta (`memoria.conversa`). "e no mês passado?", "e em delivery?" reaproveitam
+  a intenção com o período/categoria novos.
+- Palpite: sem certeza, escolhe a intenção com mais pistas e responde "Acho que você quis saber isto: … Se não for, me
+  pergunta de outro jeito." Com IA online, o app pergunta pra ela antes.
+- Fila geral: o que ele não sabe vai pra `meta/fila` (tipo `pergunta`, até 10). Quando o servidor responde, entrega
+  "Ei, {nome}, sabe aquela sua pergunta?…". Só a pergunta e os totais agregados vão pro servidor.

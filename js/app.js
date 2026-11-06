@@ -456,10 +456,15 @@ async function enviarPergunta(texto) {
       return;
     } catch (e) {
       state.chat = state.chat.filter(m => !m.temp);
-      addMsg({ de: 'caos', texto: `${fala.texto} (A IA online não respondeu: ${e.message})`, sugestoes: fala.sugestoes, rosto: fala.rosto });
+      const guardou = fala.palpite ? false : await guardarPergunta(t);
+      addMsg({ de: 'caos', texto: `${fala.texto}${guardou ? ' A IA online não respondeu agora, mas guardei sua pergunta e trago a resposta depois.' : ` (A IA online não respondeu: ${e.message})`}`, sugestoes: fala.sugestoes, rosto: fala.rosto });
       pintarRosto(fala.rosto);
       return;
     }
+  }
+  if (!fala.entendeu && !fala.palpite && await guardarPergunta(t)) {
+    // Fila geral (1.6.0): o que ele não sabe vai pro servidor quando der; a resposta volta na conversa.
+    fala.texto = 'Ainda não sei responder isso, mas guardei sua pergunta. Quando eu tiver conexão com o servidor da Carteira, eu trago a resposta aqui.';
   }
   await respiro(fala.texto);
   addMsg({ de: 'caos', texto: fala.texto, sugestoes: fala.sugestoes, acao: fala.acao, rosto: fala.rosto });
@@ -504,6 +509,22 @@ async function perguntaPraDepois(item) {
   addMsg({ de: 'caos', texto: 'Hoje eu não consigo trazer a comparação certinha, mas guardei sua pergunta. Assim que eu tiver conexão com o servidor da Carteira, eu trago a resposta aqui. 😉' });
 }
 
+/** Guarda uma pergunta que ele não soube responder (até 10, sem repetir). Devolve true se guardou. */
+async function guardarPergunta(pergunta) {
+  try {
+    const fila = await db.getMeta('fila', []);
+    const p = String(pergunta).trim().slice(0, 300);
+    if (!p || fila.some(x => x.tipo === 'pergunta' && x.pergunta.toLowerCase() === p.toLowerCase())) return true;
+    const perguntas = fila.filter(x => x.tipo === 'pergunta');
+    if (perguntas.length >= 10) return false;
+    fila.push({ tipo: 'pergunta', pergunta: p, id: crypto.randomUUID?.() || String(Date.now()), criadoEm: Date.now() });
+    await db.setMeta('fila', fila);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Responde o que ficou na fila, quando o servidor estiver ao alcance; entrega na conversa e no balão. */
 async function processarFila() {
   if (!(state.settings.aiOn && state.settings.aiUrl && navigator.onLine)) return;
@@ -512,6 +533,13 @@ async function processarFila() {
   const resta = [];
   for (const item of fila) {
     try {
+      if (item.tipo === 'pergunta') {
+        const texto = await ia.perguntar(state.settings.aiUrl, { pergunta: item.pergunta, humor: state.settings.mood, dados: dados() });
+        const nome = state.perfil?.apelido;
+        addMsg({ de: 'caos', ia: true, texto: `Ei${nome ? `, ${nome}` : ''}, sabe aquela sua pergunta? "${item.pergunta}" Agora eu consigo responder: ${texto}` });
+        $('#caos-line').textContent = 'Lembra daquela pergunta? Agora eu sei responder. Toca aqui pra ver.';
+        continue;
+      }
       if (item.tipo !== 'bancos') continue;
       const texto = await ia.perguntarBancos(state.settings.aiUrl, { bancos: item.bancos, cdi: state.mercado?.cdi?.valor });
       addMsg({ de: 'caos', ia: true, texto: `Lembra que você perguntou qual banco rende mais? Trouxe: ${texto}` });

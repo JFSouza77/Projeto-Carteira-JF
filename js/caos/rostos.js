@@ -30,10 +30,10 @@ const PROIBIDOS_SUAVE = new Set(['raiva', 'deboche', 'julgando']);
 // Rosto combinando com a frase (06/11; no Perfil: caosEmocaoDoTexto, C.A.O.S. 4.4): a emoção sai do que ele
 // está dizendo. A ordem importa: a primeira que bater manda. Sem nada marcante, fica com o evento/emoção.
 const DO_TEXTO = [
-  ['festa', /feliz anivers|parab[eé]ns|bateu a meta|conquist|comemor|m[eê]s no verde|fechou no verde/i],
+  ['festa', /feliz anivers|parab[eé]ns|bateu a meta|conquist|comemor/i],
   ['preocupado', /estour|passou do limite|negativ|venceu|atrasad|apert|cuidado|aten[cç][aã]o|faltariam|n[aã]o cabe|acima do (limite|or[cç]amento)|ritmo (alto|forte)|no vermelho/i],
   ['deboche', /sobrancelha|fascinante|suspir|pode chorar|n[aã]o atire|escolha de vida/i],
-  ['orgulho', /bom controle|mandando bem|disciplina|economizou|organizad|cabe!|t[aá] indo bem|vit[oó]ria/i],
+  ['orgulho', /m[eê]s no verde|fechou no verde|no verde|bom controle|mandando bem|disciplina|economizou|organizad|cabe!|t[aá] indo bem|vit[oó]ria/i],
   ['carinho', /obrigad|valeu|prazer|que bom te|bem-vind|com carinho|t[oô] por aqui|tudo bem!|sem problema|tudo bem,|orgulho de voc/i],
   ['surpresa', /\buau\b|caramba|nossa!|de madrugada|a essa hora/i],
   ['pensando', /deixa eu (ver|pensar)|\bhmm\b|ainda n[aã]o sei|n[aã]o peguei|consultei|vou buscar|fiz as contas/i],
@@ -45,6 +45,11 @@ export function emocaoDoTexto(texto) {
   for (const [e, re] of DO_TEXTO) if (re.test(t)) return e;
   return null;
 }
+
+const FAMILIA = {
+  festa: 'bom', orgulho: 'bom', carinho: 'bom', alivio: 'bom',
+  preocupado: 'ruim', triste: 'ruim', raiva: 'ruim', recompondo: 'ruim',
+};
 
 // Coerência: alerta nunca sai com cara de festa; piada nunca sai com cara de preocupação.
 const NUNCA_NO_ALERTA = new Set(['festa', 'orgulho', 'carinho', 'alivio']);
@@ -85,8 +90,11 @@ export function escada(antes, alvo) {
  */
 export function escolherRosto({ emocao = 'calmo', evento, humor = 'suave', intensidade = 0.3, memoria, rng = Math.random, livre = false, texto = null, alerta = false } = {}) {
   const mem = { atual: memoria?.atual || 'calmo', ult: { ...(memoria?.ult || {}) } };
-  const doTexto = emocaoDoTexto(texto);
-  let alvo = doTexto || (humor === 'acido' && DO_EVENTO_ACIDO[evento]) || DO_EVENTO[evento] || DA_EMOCAO[emocao] || 'calmo';
+  const doEvento = (humor === 'acido' && DO_EVENTO_ACIDO[evento]) || DO_EVENTO[evento] || null;
+  let doTexto = emocaoDoTexto(texto);
+  // o evento tem rosto próprio e a frase vai no mesmo sentido (ex.: mês verde + "parabéns"): fica o do evento
+  if (doTexto && doEvento && FAMILIA[doTexto] && FAMILIA[doTexto] === FAMILIA[doEvento]) doTexto = null;
+  let alvo = doTexto || doEvento || DA_EMOCAO[emocao] || 'calmo';
   if (alerta && NUNCA_NO_ALERTA.has(alvo)) alvo = 'preocupado';
   if (evento === 'piada' && NUNCA_NA_PIADA.has(alvo)) alvo = humor === 'acido' ? 'deboche' : 'festa';
   if (doTexto || alerta || evento === 'piada') livre = true; // a frase manda: o rosto vai direto
