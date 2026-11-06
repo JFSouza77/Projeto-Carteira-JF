@@ -330,8 +330,12 @@ export function forecastMonth(expenses, month, today = toISODate()) {
   const spent = spentIn(expenses, month);
   const total = daysInMonth(month);
   const day = monthKey(today) === month ? Number(today.slice(8, 10)) : total;
-  const perDay = day > 0 ? spent / day : 0;
-  return { spentCents: spent, perDayCents: Math.round(perDay), projectedCents: Math.round(perDay * total), day, daysTotal: total };
+  // Conta fixa paga (lançada a partir de um compromisso) não vira "ritmo": no começo do mês, aluguel e contas
+  // fariam a média diária parecer enorme (sugestão do Gemini, 06/11). Projeção = fixos + variáveis por dia × dias.
+  const fixos = expenses.filter(e => e.month === month && e.compromissoId).reduce((s, e) => s + e.amountCents, 0);
+  const variaveis = spent - fixos;
+  const perDay = day > 0 ? variaveis / day : 0;
+  return { spentCents: spent, fixosCents: fixos, perDayCents: Math.round(perDay), projectedCents: Math.round(fixos + perDay * total), day, daysTotal: total };
 }
 
 const SEVERITY = { alta: 3, media: 2, baixa: 1 };
@@ -360,8 +364,10 @@ export function analyze({ expenses, incomes = [], categories, accounts = [], com
 
   // Ritmo: projeta só o gasto das categorias COM limite contra o orçamento (as sem limite não entram)
   const f = forecastMonth(expenses, month, today);
-  const perDayBud = f.day > 0 ? s.budgetedSpentCents / f.day : 0;
-  const projBud = Math.round(perDayBud * f.daysTotal);
+  const comLimite = new Set(categories.filter(c => c.budgetCents > 0).map(c => c.id));
+  const fixosBud = expenses.filter(e => e.month === month && e.compromissoId && comLimite.has(e.categoryId)).reduce((t, e) => t + e.amountCents, 0);
+  const perDayBud = f.day > 0 ? (s.budgetedSpentCents - fixosBud) / f.day : 0;
+  const projBud = Math.round(fixosBud + perDayBud * f.daysTotal);
   if (s.budgetTotalCents > 0 && f.day >= 5 && projBud > s.budgetTotalCents && s.budgetedSpentCents <= s.budgetTotalCents) {
     out.push({ type: 'ritmo_alto', severity: 'media', projectedCents: projBud, budgetCents: s.budgetTotalCents,
       perDayCents: Math.round(perDayBud), overCents: projBud - s.budgetTotalCents });

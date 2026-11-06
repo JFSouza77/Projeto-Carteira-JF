@@ -161,3 +161,12 @@ orçamento ("quanto ainda posso gastar?"), alertas, previsão do mês, comparaç
 - Intenção `meus_investimentos` ("como estão meus investimentos?", "quanto tenho investido?"): total, aplicado, quanto
   rendeu e a maior fatia. Sempre fecha com "não recomendo investimento". `investir` ("vale a pena investir em…?")
   continua como antes. Dados em `meta/investimentos` (sincroniza com conta, entra no backup).
+
+## Revisão do Gemini e memória (1.12.0, 06/11)
+
+- `memoria.semResposta`: a última pergunta sem resposta. Intenção `retomar` ("e agora?", "já sabe responder?") tenta de
+  novo; se ainda não sabe, diz qual era a pergunta (`retomar_nao`); sem pendência, `retomar_vazio`.
+- Anotação sem verbo ("uber 30") vira proposta; `salario_caos`; atalhos cc/vr/va; piadas `inicioDoMes`/`fimDoMes`.
+- Com o criador (JF), o balde `humor_acido` vale em qualquer humor (pedido dele: no Perfil o C.A.O.S. é ácido com ele).
+  Tratamento formal e criança continuam tirando a zoeira.
+- Revisão completa: `docs/revisoes/2026-11-06_gemini.md`.

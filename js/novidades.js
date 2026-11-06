@@ -7,6 +7,23 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.9',
+    data: '06/11/2026',
+    nome: 'Mais Esperto',
+    t: 'Anote do jeito mais rápido, ele lembra do que ficou sem resposta e entende melhor suas perguntas.',
+    itens: [
+      '⚡ Anotação rápida: mande só "uber 30" ou "50 no posto" na conversa. Ele prepara o gasto e você confirma.',
+      '🧠 Memória: perguntou algo que ele não sabia? Mande "e agora?" ou "já sabe?" e ele lembra qual era a pergunta.',
+      '💬 Mais atalhos: cc (cartão), vr, va, xopi… ele entende.',
+      '🎯 Orçamento: "quanto sobra do orçamento do mercado?" agora responde o limite daquela categoria.',
+      '📊 Previsão do mês mais justa: conta fixa paga no começo do mês não parece mais gasto alto do dia a dia.',
+      '😄 Piadas da época: começo e fim de mês têm piadas próprias.',
+    ],
+    qol: [
+      '💡 Dica de economia: o corte sugerido vai pra onde dá pra segurar (delivery, lazer, compras), não pra moradia ou saúde.',
+    ],
+  },
+  {
     v: '1.8',
     data: '06/11/2026',
     nome: 'Investimentos',
