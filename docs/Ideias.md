@@ -50,3 +50,22 @@ Formas que viram **funções** de verdade:
   Investidor (sugestão leve), Humorista.
 - **Onde aparece** (do Gemini): grande no topo da conversa, pequeno no topo das outras abas (toque abre a conversa),
   e num aviso que desliza na hora do lançamento (ex.: Bronca ao estourar o orçamento).
+
+## Mecânicas novas (Gemini + JF, 07/11) · ordem recomendada pelo Wally
+1. **Ofensiva (Treinador):** dias seguidos anotando e semanas no verde, estilo Duolingo. Os dados já existem (datas
+   dos lançamentos); é a mais fácil e a que mais cria hábito. Cuidado: perder a ofensiva não pode virar bronca pesada.
+2. **Rachadinha / a receber (Cobrador):** "paguei a pizza, mas vou rachar com 3 amigos" → o gasto conta só a minha
+   parte no orçamento, e o resto vira "a receber" com o nome de quem deve; o C.A.O.S. lembra de cobrar e, quando o
+   Pix chega, dá baixa. Deixa o orçamento justo.
+3. **Simulador de compras / "cabe a geladeira?" (Contador + Vidente):** a pessoa diz o que quer e o preço (ex.:
+   geladeira de R$ 2.600, orçamento de R$ 2.500). O C.A.O.S.:
+   - mostra de onde dá pra tirar a diferença sem estrago (categorias com folga, nunca moradia/saúde);
+   - olha o calendário: se uma data de promoção está perto (Black Friday = sexta depois da 4ª quinta de novembro;
+     em 2026 é 27/11), sugere esperar; se está longe, sugere o remanejamento ou guardar por meta;
+   - compara as opções e recomenda uma.
+   Limite honesto: offline ele **não pesquisa preço na internet**; a pessoa informa o preço. Com o servidor/IA no ar
+   dá pra pensar em ajuda pra pesquisar depois. Base: o "cabe 200 no mês?" e as metas já existem.
+4. **Assinaturas / gastos fantasma (Auditor):** somar compromissos recorrentes e a categoria Streaming e avisar quando
+   passam de uma fatia do orçamento ("8 assinaturas = R$ 180/mês").
+5. **Inflação e comparação anual (Vovô):** comparar o mesmo mês do ano anterior com o IPCA. Precisa de 1 ano de dados
+   da pessoa e do índice (servidor), então fica por último.
