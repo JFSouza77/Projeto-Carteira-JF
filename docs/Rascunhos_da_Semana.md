@@ -29,3 +29,5 @@ Legenda: ✅ entra na rodada · 🕒 depois (bom, mas não agora) · ❌ não en
 | Data | De | Ideia | Veredito | Por quê / observação |
 | --- | --- | --- | --- | --- |
 | 07/11 | JF | **Avatar sempre animado:** olho pisca, boca mexe quando fala, espiral gira, balança sobe e desce com moedas caindo | ✅ regra | Já feito no rascunho (`caos-vivo.gif` no PR #208 do Perfil). Quando o avatar entrar no app, vale pra todas as formas, sempre respeitando "menos movimento". |
+| 07/11 | JF | **C.A.O.S. percebe a evolução:** "uma semana sem delivery", "cortou o streaming", "gastou menos que no mês passado" → Surpreso → festa → Treinador ("mantém o ritmo") | ✅ | Dá pra fazer no motor comparando semana com semana e mês com mês (categoria que caiu, assinatura que saiu dos compromissos). Desenho pronto (cena "você evoluiu"). |
+| 07/11 | JF | **Ofensiva ganha pontos por evolução** (não só por anotar todo dia) | 🕒 junto com a Saúde da Carteira | Os pontos fazem mais sentido dentro da nota da Saúde da Carteira; a ofensiva continua simples (dias seguidos) pra não confundir. |
