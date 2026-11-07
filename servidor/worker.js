@@ -29,7 +29,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { resumoIdentidade } from '../js/caos/identidade.js';
 import { analisarSerie, MOEDAS } from '../js/mercado.js';
-import { mesclar, mudancasDesde, estadoVazio, normalizarApelido, SENHA_MINIMA, LIMITE_MUDANCAS } from '../js/sincronia.js';
+import { mesclar, mudancasDesde, estadoVazio, normalizarApelido, LIMITE_MUDANCAS, recCifrado, ACESSO_RE } from '../js/sincronia.js';
 
 const MODELO_PADRAO = 'claude-opus-5-5';
 const MAX_CORPO = 6 * 1024 * 1024; // foto já chega comprimida pelo app (~300 KB)
@@ -520,8 +520,9 @@ async function limiteTentativas(req, env, apelido) {
 function lerCredenciais(corpo) {
   const apelido = normalizarApelido(corpo.apelido);
   if (!apelido) throw new ErroHttp(400, 'Apelido de 3 a 30 letras ou números (pode ponto, traço e sublinhado).');
+  // Ponta a ponta (07/11): o app manda uma "senha de acesso" tirada da senha de verdade, que nunca sai do aparelho.
   const senha = typeof corpo.senha === 'string' ? corpo.senha : '';
-  if (senha.length < SENHA_MINIMA || senha.length > 200) throw new ErroHttp(400, `A senha precisa ter pelo menos ${SENHA_MINIMA} caracteres.`);
+  if (!ACESSO_RE.test(senha)) throw new ErroHttp(400, 'Atualize o app pra entrar na conta (agora a senha fica só no seu aparelho).');
   return { apelido, senha };
 }
 
@@ -575,6 +576,10 @@ async function sincronizar(req, env) {
   const desde = Number.isInteger(corpo.desde) && corpo.desde >= 0 ? corpo.desde : 0;
   const mudancas = Array.isArray(corpo.mudancas) ? corpo.mudancas : [];
   if (mudancas.length > LIMITE_MUDANCAS) throw new ErroHttp(413, 'Mudanças demais de uma vez.');
+  // nada de dado aberto no servidor: registro tem que vir embaralhado pelo app (ou ser um "apagado")
+  if (mudancas.some(m => m && typeof m === 'object' && 'rec' in m && !recCifrado(m.rec))) {
+    throw new ErroHttp(400, 'Os dados precisam chegar embaralhados. Atualize o app.');
+  }
   const chave = `dados:${s.apelido}`;
   const atual = JSON.parse((await env.CARTEIRA_KV.get(chave)) || 'null') || estadoVazio();
   const { estado, aceitas } = mesclar(atual, mudancas);

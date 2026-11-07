@@ -7,6 +7,21 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.13',
+    data: '07/11/2026',
+    nome: 'Cofre Fechado',
+    t: 'Com conta, seus dados sobem embaralhados com a sua senha. Nem o servidor consegue ler.',
+    itens: [
+      '🔐 Dados embaralhados: com conta, cada gasto sobe trancado com a sua senha. O servidor guarda só um bloco que ninguém lê.',
+      '🔑 A senha fica com você: ela nem sai do aparelho. Pro servidor vai só uma chave de acesso tirada dela.',
+      '⚠️ Guarde bem a senha: se esquecer, a cópia da nuvem não abre. O que está no aparelho continua lá.',
+    ],
+    qol: [
+      '⏳ Entrando na conta: o botão mostra "Protegendo…" enquanto prepara a chave.',
+      '📦 Muita coisa de uma vez: a primeira sincronização vai em partes, sem travar.',
+    ],
+  },
+  {
     v: '1.12',
     data: '07/11/2026',
     nome: 'Barra Nova',

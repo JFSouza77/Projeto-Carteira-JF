@@ -71,7 +71,7 @@ Formas que viram **funções** de verdade:
    da pessoa e do índice (servidor), então fica por último.
 
 ## Do Gemini (07/11): local + servidor · avaliação do Wally
-1. **Sincronização criptografada de ponta a ponta (E2EE):** o app embaralha cada registro com uma chave tirada da
+1. ✅ **(feito na 1.13)** **Sincronização criptografada de ponta a ponta (E2EE):** o app embaralha cada registro com uma chave tirada da
    senha (PBKDF2 → AES-GCM) antes de mandar; o servidor só guarda `{store, id, em}` + um bloco ilegível, e o
    "quem mudou por último ganha" continua funcionando. **Fazer ANTES de publicar o servidor** (ninguém tem dado lá
    ainda, então não precisa migrar nada). Custo honesto: esqueceu a senha, a cópia da nuvem se perde (o aparelho
