@@ -2,6 +2,9 @@
 
 App de controle de gastos com o C.A.O.S., narrador trazido do Perfil JF (JFSouza77/Projeto_Perfil_JF) e adaptado.
 
+**Nome que aparece (JF, 07/11/2026): C.A.O.S. Finanças** (na tela inicial: "C.A.O.S."). O endereço continua
+`carteira-jf.pages.dev` e o id do backup continua `carteira-jf`: trocar o endereço apagaria os dados de quem não tem conta.
+
 **Missão (JF, 07/11/2026):** o C.A.O.S. não é assistente virtual de banco: é um **parceiro virtual financeiro**, um amigo
 que escuta, presta atenção, reage com emoção ao que acontece, incentiva, aconselha e puxa a orelha. Slogan:
 **"Um C.A.O.S. pra organizar o seu caos."** (fica em `js/caos/identidade.js`).

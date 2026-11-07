@@ -1,4 +1,4 @@
-// Conta e sincronização entre aparelhos (06/11). Camada de navegador: fala com o servidor da Carteira.
+// Conta e sincronização entre aparelhos (06/11). Camada de navegador: fala com o servidor do C.A.O.S. Finanças.
 // Quem guarda as mudanças pendentes e aplica as que chegam é o db.js; quem decide quando sincronizar é o app.js.
 // A conta (apelido + token) fica em meta/conta, só no aparelho. A senha nunca é guardada.
 // Ponta a ponta (07/11): a senha nem sai do aparelho. Dela sai uma "senha de acesso" (é o que vai pro servidor) e a
@@ -13,7 +13,7 @@ const LOTE = 300; // mudanças por pedido (a primeira sincronização de quem te
 const TEMPO_MS = 20_000;
 
 async function chamar(base, rota, corpo, token) {
-  if (!base) throw new Error('Falta o endereço do servidor da Carteira (Ajustes → Servidor e IA online).');
+  if (!base) throw new Error('Falta o endereço do servidor do C.A.O.S. Finanças (Ajustes → Servidor e IA online).');
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), TEMPO_MS);
   try {
@@ -32,7 +32,7 @@ async function chamar(base, rota, corpo, token) {
     return j;
   } catch (e) {
     if (e.name === 'AbortError') throw new Error('O servidor demorou demais. Tenta de novo.');
-    if (e instanceof TypeError) throw new Error('Sem conexão com o servidor da Carteira agora.');
+    if (e instanceof TypeError) throw new Error('Sem conexão com o servidor do C.A.O.S. Finanças agora.');
     throw e;
   } finally {
     clearTimeout(t);

@@ -79,7 +79,7 @@ export async function desativar({ servidor = '' } = {}) {
 export async function testar(texto = 'Assim vão chegar os lembretes do C.A.O.S.') {
   if (Notification.permission !== 'granted') throw new Error('Ative os lembretes primeiro.');
   const reg = await navigator.serviceWorker.ready;
-  await reg.showNotification('C.A.O.S. · Carteira JF', { body: texto, icon: './icons/icon-192.png', badge: './icons/icon-192.png', tag: 'teste' });
+  await reg.showNotification('C.A.O.S. Finanças', { body: texto, icon: './icons/icon-192.png', badge: './icons/icon-192.png', tag: 'teste' });
 }
 
 export function descreverModo(modo) {

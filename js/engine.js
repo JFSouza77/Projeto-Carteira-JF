@@ -729,7 +729,7 @@ export function validarBackup(bruto) {
   const erros = [];
   const erro = msg => { if (erros.length < 5) erros.push(msg); };
   if (!bruto || typeof bruto !== 'object' || Array.isArray(bruto) || bruto.app !== 'carteira-jf') {
-    return { ok: false, erros: ['Esse arquivo não parece um backup da Carteira JF.'], dados: null };
+    return { ok: false, erros: ['Esse arquivo não parece um backup do C.A.O.S. Finanças.'], dados: null };
   }
   const lista = (nome, obrigatoria) => {
     const v = bruto[nome];

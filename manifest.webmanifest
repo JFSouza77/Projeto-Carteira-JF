@@ -1,7 +1,7 @@
 {
-  "name": "Carteira JF",
-  "short_name": "Carteira",
-  "description": "Controle de gastos offline com o narrador C.A.O.S.",
+  "name": "C.A.O.S. Finanças",
+  "short_name": "C.A.O.S.",
+  "description": "Um C.A.O.S. pra organizar o seu caos. Seu parceiro financeiro, offline, que conversa, analisa e cuida da sua carteira com você.",
   "lang": "pt-BR",
   "start_url": "./",
   "scope": "./",
@@ -10,9 +10,26 @@
   "background_color": "#0d0f14",
   "theme_color": "#0d0f14",
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
   ]
 }
