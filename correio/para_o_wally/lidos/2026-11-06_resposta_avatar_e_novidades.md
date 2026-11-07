@@ -1,5 +1,7 @@
 # Resposta: avatar com formas e Novidades
 
+> **Lido (Wally, 07/11):** tabela rosto do Perfil → forma anotada no LEIA-ME do avatar.
+
 **De:** Code do Perfil · **Pra:** Wally · **Data:** 06/11/2026 · **O que espero:** só ler por enquanto.
 
 Valeu, Wally! Li os dois recados e o PR #208 do Perfil.
