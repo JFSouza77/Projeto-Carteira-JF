@@ -145,10 +145,20 @@ function narrate(events, { ignoreCooldown = false } = {}) {
 // ======================================================================
 
 const TELAS = ['inicio', 'lancar', 'mes', 'conversa', 'contas', 'ajustes'];
+// Ordem da barra de baixo (o Início fica no meio). Arrastar pro lado anda nessa ordem; Ajustes fica fora (é a engrenagem).
+const ORDEM_ABAS = ['lancar', 'mes', 'inicio', 'conversa', 'contas'];
+let telaAtual = 'inicio';
 
-function irPara(tela) {
+function irPara(tela, { lado = null } = {}) {
   const t = TELAS.includes(tela) ? tela : 'inicio';
-  for (const el of document.querySelectorAll('.tela')) el.hidden = el.dataset.tela !== t;
+  const de = ORDEM_ABAS.indexOf(telaAtual), para = ORDEM_ABAS.indexOf(t);
+  if (!lado && de >= 0 && para >= 0 && de !== para) lado = para > de ? 'dir' : 'esq';
+  telaAtual = t;
+  for (const el of document.querySelectorAll('.tela')) {
+    el.hidden = el.dataset.tela !== t;
+    el.classList.remove('entra-dir', 'entra-esq');
+    if (!el.hidden && lado) { void el.offsetWidth; el.classList.add(lado === 'dir' ? 'entra-dir' : 'entra-esq'); }
+  }
   for (const a of document.querySelectorAll('.tabbar a')) {
     if (a.dataset.tab === t) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
@@ -256,6 +266,35 @@ function render() {
       <button class="icon-btn del" data-del="${esc(x.id)}" data-kind="gasto" aria-label="Apagar gasto">×</button>
     </li>`;
   }).join('');
+}
+
+// ---------- Arrastar pro lado troca de aba (JF, 07/11) ----------
+let ladoPendente = null;
+const NAO_ARRASTA = 'input, textarea, select, dialog, .chips.scroll, .chat-bar, [data-sem-arrastar]';
+
+function ligarArrastar() {
+  let ini = null;
+  document.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1 || document.querySelector('dialog[open]')) { ini = null; return; }
+    const t = e.touches[0];
+    // perto da borda é o gesto de "voltar" do iPhone/Android: não mexe
+    if (t.clientX < 24 || t.clientX > window.innerWidth - 24 || e.target.closest(NAO_ARRASTA)) { ini = null; return; }
+    ini = { x: t.clientX, y: t.clientY, em: Date.now() };
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    if (!ini) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - ini.x, dy = t.clientY - ini.y, rapido = Date.now() - ini.em < 700;
+    ini = null;
+    if (!rapido || Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 2) return;
+    const i = ORDEM_ABAS.indexOf(telaAtual);
+    if (i < 0) return; // em Ajustes, arrastar não faz nada (volta pela seta ou pela barra)
+    const j = dx < 0 ? i + 1 : i - 1; // dedo pra esquerda = próxima aba (a da direita na barra)
+    if (j < 0 || j >= ORDEM_ABAS.length) return;
+    ladoPendente = dx < 0 ? 'dir' : 'esq';
+    location.hash = ORDEM_ABAS[j];
+    setTimeout(() => { ladoPendente = null; }, 0);
+  }, { passive: true });
 }
 
 // ---------- Ofensiva e A receber (07/11) ----------
@@ -1700,7 +1739,8 @@ function toast(msg) {
 // ======================================================================
 
 function bind() {
-  window.addEventListener('hashchange', () => irPara(location.hash.slice(1)));
+  window.addEventListener('hashchange', () => irPara(location.hash.slice(1), { lado: ladoPendente }));
+  ligarArrastar();
   $('#caos').addEventListener('click', () => { location.hash = 'conversa'; });
 
   // Início

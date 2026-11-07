@@ -7,6 +7,20 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.12',
+    data: '07/11/2026',
+    nome: 'Barra Nova',
+    t: 'O Início ficou no meio da barra, maior, e agora dá pra trocar de aba arrastando a tela.',
+    itens: [
+      '🏠 Início no meio: o botão do Início ficou grande e no centro da barra de baixo.',
+      '👉 Arraste pro lado: deslize o dedo pra esquerda ou pra direita e passe de uma aba pra outra.',
+      '⚙️ Ajustes na engrenagem: os ajustes ficam no alto da tela do Início, no botão de engrenagem.',
+    ],
+    qol: [
+      '‹ Voltar: na tela de Ajustes tem uma seta pra voltar pro Início.',
+    ],
+  },
+  {
     v: '1.11',
     data: '07/11/2026',
     nome: 'Ofensiva e Rachadinha',
