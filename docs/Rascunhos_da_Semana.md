@@ -8,18 +8,20 @@ Legenda: ✅ entra na rodada · 🕒 depois (bom, mas não agora) · ❌ não en
 
 ## 🔴 PRIORIDADE 1 da rodada: vistoria do JF no celular (07/11, 15h)
 
-O JF usou o app de verdade e achou muita coisa "brigando". **Quinta começa por aqui, antes de qualquer forma nova do
+O JF usou o app de verdade e achou muita coisa "brigando". **Amigos do JF já estão testando** (o Bruno já mandou
+feedback): o básico tem que estar certo e cada erro precisa ter resposta. **Quinta começa por aqui, antes de qualquer forma nova do
 C.A.O.S.** (os prints dele têm saldos reais: **não vão pro repositório**, só a descrição abaixo).
 
 | # | O que o JF viu | O que fazer |
 | --- | --- | --- |
 | 1 | **"gastei não sei quanto de internet"** não virou lançamento, e o C.A.O.S. não perguntou nada | Conversa em etapas: faltou o valor → ele **pergunta** "quanto foi?"; parece conta que se repete → "é todo mês? quer que eu deixe como conta fixa?". Ele é parceiro financeiro: perguntar de onde veio, pra onde foi e o que acontece depois é a função dele. |
-| 2 | **"Me explica melhor"** caiu em "ainda não sei responder" | Continuação da conversa: "explica melhor" depois de uma resposta = explicar a resposta anterior em passos simples. |
+| 2 | **"Me explica melhor"** caiu em "ainda não sei responder" (JF: "se você é a IA e não sabe responder, quebra minhas pernas") | Continuação da conversa: "explica melhor" depois de uma resposta = explicar a resposta anterior em passos simples. |
 | 3 | **"Cabe no mês?" sem entrada lançada** respondeu "sobram R$ 0,00 do orçamento (R$ 0,00)" | Sem base, não fazer conta vazia: dizer o que falta e **perguntar** ("quanto você recebe por mês?") e já propor lançar a entrada. |
 | 4 | **Aviso branco simples** ("Fatura C6 salvo…") fora do visual neon | Aviso (toast) no estilo do app: fundo escuro, borda neon, rostinho do C.A.O.S. Corrigir a concordância ("Fatura C6 salva" / "anotada"). |
 | 5 | **Contas fora de ordem**; o mesmo banco espalhado | Lista em **ordem alfabética por banco**, e **tudo do mesmo banco junto**: conta corrente, poupança, cofrinho e cartão como partes de um mesmo banco. |
 | 6 | No compromisso, a lista de contas mostra **"C6 Bank" duas vezes** (conta e cartão iguais) | Bug: o nome tem que dizer o que é ("C6 Bank · Conta", "C6 Bank · Cartão 💳"), em todas as listas do app. |
 | 7 | **Cofrinho** não existe; alguns cofrinhos **aumentam o limite do cartão** (PicPay, Inter) | Novo tipo de conta "Cofrinho" dentro do banco; opção "este cofrinho aumenta o limite do cartão X" (o limite do cartão soma o valor guardado). |
+| 8a | **Detalhes do JF (07/11, à noite)** | Pagou no cartão → o C.A.O.S. pergunta **crédito ou débito** (o cartão físico e o virtual são o mesmo cartão). Débito → sai da conta do banco na hora. Crédito → **à vista ou parcelado**. Parcelado → **de que jeito**: (1) **no limite**: a compra de R$ 100 em 4x ocupa R$ 100 do limite e vai liberando R$ 25 por mês; (2) **dividido**: só a parcela do mês (R$ 25) ocupa o limite, mês a mês, até acabar. O motor precisa saber os dois jeitos pra fatura e o limite disponível ficarem certos. Tudo isso por perguntas curtas na conversa e botões no Lançar, sem formulário gigante. |
 | 8 | Lançamento não pergunta **como pagou** | Forma de pagamento: dinheiro, Pix, débito, crédito; no crédito, **à vista ou parcelado em quantas vezes** → as parcelas viram lançamentos dos próximos meses (o C.A.O.S. enxerga o que vem pela frente, não só o mês atual). |
 | 9 | **Botão "Me ajuda" tampa coisas** (ex.: o "Salvar compromisso") | Tirar o botão flutuante de cima do conteúdo: ir pro topo da tela ou encolher quando tem botão embaixo. |
 | 10 | **Barra de baixo:** "o Lançar vai ter que ir pro meio" | Rever com o JF na quinta: **Lançar (➕ grande) no meio** e Início na ponta, como nos apps de banco. Recomendação do Wally: sim, o lançar é a ação mais usada. |
