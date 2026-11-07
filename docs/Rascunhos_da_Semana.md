@@ -26,4 +26,6 @@ Legenda: ✅ entra na rodada · 🕒 depois (bom, mas não agora) · ❌ não en
 
 ## Chegou durante a semana
 
-(vazio por enquanto)
+| Data | De | Ideia | Veredito | Por quê / observação |
+| --- | --- | --- | --- | --- |
+| 07/11 | JF | **Avatar sempre animado:** olho pisca, boca mexe quando fala, espiral gira, balança sobe e desce com moedas caindo | ✅ regra | Já feito no rascunho (`caos-vivo.gif` no PR #208 do Perfil). Quando o avatar entrar no app, vale pra todas as formas, sempre respeitando "menos movimento". |
