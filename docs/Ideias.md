@@ -69,3 +69,28 @@ Formas que viram **funções** de verdade:
    passam de uma fatia do orçamento ("8 assinaturas = R$ 180/mês").
 5. **Inflação e comparação anual (Vovô):** comparar o mesmo mês do ano anterior com o IPCA. Precisa de 1 ano de dados
    da pessoa e do índice (servidor), então fica por último.
+
+## Do Gemini (07/11): local + servidor · avaliação do Wally
+1. **Sincronização criptografada de ponta a ponta (E2EE):** o app embaralha cada registro com uma chave tirada da
+   senha (PBKDF2 → AES-GCM) antes de mandar; o servidor só guarda `{store, id, em}` + um bloco ilegível, e o
+   "quem mudou por último ganha" continua funcionando. **Fazer ANTES de publicar o servidor** (ninguém tem dado lá
+   ainda, então não precisa migrar nada). Custo honesto: esqueceu a senha, a cópia da nuvem se perde (o aparelho
+   continua com tudo); trocar a senha exige embaralhar de novo. Obs.: a "1ª lei" do C.A.O.S. é ele nunca mudar dado,
+   não é sobre o servidor; a privacidade vem das regras de segurança do CLAUDE.md.
+2. **Nota fiscal fatiada por item (IA):** a IA lê a nota e propõe vários lançamentos (carne → Mercado, cerveja →
+   Lazer, ração → Pet); a pessoa confere e confirma tudo de uma vez. Depende do servidor no ar; custa por foto.
+3. **Contas de hoje (piloto automático):** offline dá pra fazer já: no dia do vencimento, um card no Início "Contas de
+   hoje: Aluguel, Netflix… [Confirmar]" usando os compromissos. Push: o servidor manda push vazio (regra de
+   privacidade) e o próprio aparelho monta o texto lendo os dados locais, sem o servidor saber o que é. O app não sabe
+   se o banco debitou: é uma pergunta pra confirmar, nunca um lançamento automático.
+4. **Carteira compartilhada (casal / república):** cofre em comum com convite por código. Grande (convite,
+   permissões, conflitos, chave compartilhada se tiver E2EE). Fica pra depois; a rachadinha já cobre parte.
+5. **Simulador de sonhos com Selic/CDI:** útil, mas como **simulação**, nunca recomendação (regra do C.A.O.S.), e
+   antes do imposto. Conta certa do exemplo do Gemini: R$ 40.000 guardando R$ 1.500/mês a 11% ao ano dá **cerca de
+   25 meses** (não 22); sem render nada, 27 meses. Junta com o Simulador de compras e com as metas.
+6. **Saúde da Carteira (0 a 1000):** nota calculada no aparelho (mês no verde, ofensiva, fixos abaixo de 50% da
+   renda…), mostrando de onde vem cada ponto. Não chamar de "score" (confunde com score de crédito). Formas novas
+   do C.A.O.S. como conquista. Nunca punir: nota baixa vira o Parceiro, não bronca.
+
+Ordem recomendada: 1) E2EE antes do servidor ir pro ar · 2) Contas de hoje · 3) Simuladores (compras + sonhos) ·
+4) Nota fiscal fatiada · 5) Saúde da Carteira · 6) Carteira compartilhada.
