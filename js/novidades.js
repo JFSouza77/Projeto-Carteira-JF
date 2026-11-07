@@ -7,6 +7,17 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.14',
+    data: '07/11/2026',
+    nome: 'Mais Bancos',
+    t: 'A lista de bancos e cartões ficou bem maior, com os cartões de vale-refeição.',
+    itens: [
+      '🏦 Mais bancos e cartões: BMG, Genial, Porto Bank, RappiBank, RecargaPay, Revolut, Wise, Cresol, Unicred e outros.',
+      '🍽️ Cartões de benefício: Alelo, VR, Sodexo (Pluxee), Ticket, Swile e Caju. Dá pra acompanhar o saldo do vale.',
+    ],
+    qol: [],
+  },
+  {
     v: '1.13',
     data: '07/11/2026',
     nome: 'Cofre Fechado',
