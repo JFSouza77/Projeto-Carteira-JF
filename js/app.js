@@ -1471,7 +1471,8 @@ async function sincronizarAgora({ avisar = false } = {}) {
   try {
     const r = await conta.sincronizar(servidor());
     if (r.recebidas) await recarregarDoBanco();
-    if (avisar) toast(r.recebidas ? `Pronto! Chegaram ${r.recebidas} ${r.recebidas === 1 ? 'mudança' : 'mudanças'} dos outros aparelhos.` : 'Tudo em dia com a sua conta.');
+    if (r.ruins) toast(`${r.ruins} ${r.ruins === 1 ? 'dado da nuvem não abriu' : 'dados da nuvem não abriram'} com essa senha. Se você trocou de senha em outro aparelho, entre de novo com a senha nova.`);
+    else if (avisar) toast(r.recebidas ? `Pronto! Chegaram ${r.recebidas} ${r.recebidas === 1 ? 'mudança' : 'mudanças'} dos outros aparelhos.` : 'Tudo em dia com a sua conta.');
   } catch (e) {
     if (avisar) toast(e.message || 'Não deu pra sincronizar agora.');
   } finally {
@@ -1493,6 +1494,10 @@ async function entrarNaConta(criar) {
   if (!servidor()) { err.textContent = 'Primeiro coloque o endereço do servidor da Carteira em "IA online e servidor".'; err.hidden = false; return; }
   if (apelido.length < 3) { err.textContent = 'Escolha um apelido com pelo menos 3 letras.'; err.hidden = false; return; }
   if (senha.length < 6) { err.textContent = 'A senha precisa ter pelo menos 6 letras ou números.'; err.hidden = false; return; }
+  const botoes = [$('#conta-entrar'), $('#conta-criar')];
+  const textos = botoes.map(b => b.textContent);
+  botoes.forEach(b => { b.disabled = true; });
+  (criar ? botoes[1] : botoes[0]).textContent = '🔐 Protegendo…';
   try {
     const nome = await conta.entrar(servidor(), { apelido, senha, criar });
     $('#conta-senha').value = '';
@@ -1501,6 +1506,8 @@ async function entrarNaConta(criar) {
   } catch (e) {
     err.textContent = e.message;
     err.hidden = false;
+  } finally {
+    botoes.forEach((b, i) => { b.disabled = false; b.textContent = textos[i]; });
   }
   renderConta();
 }

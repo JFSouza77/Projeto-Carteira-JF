@@ -20,6 +20,14 @@ export function mudancasValidas(lista) {
     && (m.rec === null || (m.rec && typeof m.rec === 'object' && !Array.isArray(m.rec))));
 }
 
+/** Ponta a ponta (07/11): o registro só pode chegar embaralhado ({ v: 1, d: "base64" }) ou apagado (null). */
+export const MAX_CIFRADO = 300_000;
+export const recCifrado = rec => rec === null || (!!rec && typeof rec === 'object' && !Array.isArray(rec) && rec.v === 1
+  && typeof rec.d === 'string' && rec.d.length > 0 && rec.d.length <= MAX_CIFRADO && /^[A-Za-z0-9+/=]+$/.test(rec.d) && Object.keys(rec).length === 2);
+
+/** A "senha de acesso" que o app manda (nunca a senha de verdade): "e2ee1:" + 64 letras hexadecimais. */
+export const ACESSO_RE = /^e2ee1:[0-9a-f]{64}$/;
+
 /** Estado vazio da conta no servidor. */
 export const estadoVazio = () => ({ versao: 0, registros: {} });
 

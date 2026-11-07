@@ -499,3 +499,5 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 @keyframes entraEsq { from { opacity: .4; transform: translateX(-36px); } to { opacity: 1; transform: none; } }
 .menos-mov .tela.entra-dir, .menos-mov .tela.entra-esq { animation: none; }
 @media (prefers-reduced-motion: reduce) { .tela.entra-dir, .tela.entra-esq { animation: none; } }
+.cripto-aviso { margin: 8px 0 4px; padding: 10px 12px; border-radius: 10px; font-size: .85rem; line-height: 1.4;
+  background: color-mix(in srgb, var(--ok) 12%, transparent); border: 1px solid color-mix(in srgb, var(--ok) 45%, transparent); }

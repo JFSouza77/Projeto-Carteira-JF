@@ -1,8 +1,14 @@
 // Conta e sincronização entre aparelhos (06/11). Camada de navegador: fala com o servidor da Carteira.
 // Quem guarda as mudanças pendentes e aplica as que chegam é o db.js; quem decide quando sincronizar é o app.js.
 // A conta (apelido + token) fica em meta/conta, só no aparelho. A senha nunca é guardada.
+// Ponta a ponta (07/11): a senha nem sai do aparelho. Dela sai uma "senha de acesso" (é o que vai pro servidor) e a
+// chave que embaralha cada registro antes de subir (fica em meta/contaChave, só aqui). O servidor guarda só blocos
+// embaralhados: vê que existe um gasto (o tipo, o id e quando mudou), mas não vê valor, nome, nada.
 
 import * as db from './db.js';
+import { derivarChaves, cifrarMudancas, decifrarMudancas } from './cripto.js';
+
+const LOTE = 300; // mudanças por pedido (a primeira sincronização de quem tem muita coisa vai em partes)
 
 const TEMPO_MS = 20_000;
 
@@ -37,16 +43,18 @@ export async function contaAtual() {
   return db.getMeta('conta', null);
 }
 
-async function guardar(conta) {
+async function guardar(conta, chave) {
   await db.setMeta('conta', conta);
+  if (chave !== undefined) await db.setMeta('contaChave', chave);
   db.setRastrear(!!conta);
   return conta;
 }
 
 /** Cria a conta ou entra numa que já existe. Na primeira vez, junta o que já estava no aparelho com o servidor. */
 export async function entrar(base, { apelido, senha, criar = false }) {
-  const r = await chamar(base, criar ? '/conta/criar' : '/conta/entrar', { apelido, senha });
-  await guardar({ apelido: r.apelido, token: r.token, versao: 0, ultimaSync: null });
+  const { acesso, chave } = await derivarChaves(apelido, senha);
+  const r = await chamar(base, criar ? '/conta/criar' : '/conta/entrar', { apelido, senha: acesso });
+  await guardar({ apelido: r.apelido, token: r.token, versao: 0, ultimaSync: null, cripto: 1 }, chave);
   await db.marcarTudo();
   return r.apelido;
 }
@@ -54,7 +62,7 @@ export async function entrar(base, { apelido, senha, criar = false }) {
 export async function sair(base) {
   const c = await contaAtual();
   if (c?.token) await chamar(base, '/conta/sair', {}, c.token).catch(() => {});
-  await guardar(null);
+  await guardar(null, null);
 }
 
 /**
@@ -62,22 +70,37 @@ export async function sair(base) {
  * Devolve { recebidas } (quantas mudanças chegaram de fora: o app recarrega a tela se for > 0).
  */
 export async function sincronizar(base) {
-  const c = await contaAtual();
+  let c = await contaAtual();
   if (!c?.token) return { recebidas: 0, semConta: true };
-  db.setRastrear(true);
-  const enviadas = await db.pegarPendentes();
-  let r;
-  try {
-    r = await chamar(base, '/sync', { desde: c.versao || 0, mudancas: enviadas }, c.token);
-  } catch (e) {
-    if (e.status === 401) { await guardar(null); throw new Error('Sua sessão expirou. Entre na conta de novo em Ajustes.'); }
-    throw e;
+  const chave = await db.getMeta('contaChave', null);
+  if (!chave || !c.cripto) {
+    // conta de antes da criptografia, ou chave perdida: pede a senha de novo (sem senha não dá pra abrir nada)
+    await guardar(null, null);
+    throw new Error('Por segurança, entre na sua conta de novo em Ajustes (agora seus dados sobem embaralhados).');
   }
-  await db.limparPendentes(enviadas);
-  // o que eu mesmo mandei volta igual: não precisa reaplicar
-  const minhas = new Set(enviadas.map(m => `${m.store}/${m.id}/${m.em}`));
-  const deFora = (r.mudancas || []).filter(m => !minhas.has(`${m.store}/${m.id}/${m.em}`));
-  await db.aplicarRemotas(deFora);
-  await guardar({ ...c, versao: r.versao, ultimaSync: Date.now() });
-  return { recebidas: deFora.length, enviadas: enviadas.length };
+  db.setRastrear(true);
+  const pendentes = await db.pegarPendentes();
+  let recebidas = 0, ruins = 0, primeira = true;
+  // manda em lotes; o primeiro pedido vai mesmo sem nada pendente, pra buscar o que mudou nos outros aparelhos
+  for (let i = 0; primeira || i < pendentes.length; i += LOTE) {
+    primeira = false;
+    const lote = pendentes.slice(i, i + LOTE);
+    let r;
+    try {
+      r = await chamar(base, '/sync', { desde: c.versao || 0, mudancas: await cifrarMudancas(chave, lote) }, c.token);
+    } catch (e) {
+      if (e.status === 401) { await guardar(null, null); throw new Error('Sua sessão expirou. Entre na conta de novo em Ajustes.'); }
+      throw e;
+    }
+    await db.limparPendentes(lote);
+    // o que eu mesmo mandei volta igual: não precisa reaplicar
+    const minhas = new Set(lote.map(m => `${m.store}/${m.id}/${m.em}`));
+    const aberto = await decifrarMudancas(chave, (r.mudancas || []).filter(m => !minhas.has(`${m.store}/${m.id}/${m.em}`)));
+    await db.aplicarRemotas(aberto.ok);
+    recebidas += aberto.ok.length;
+    ruins += aberto.ruins;
+    c = { ...c, versao: r.versao, ultimaSync: Date.now() };
+    await guardar(c);
+  }
+  return { recebidas, enviadas: pendentes.length, ruins };
 }

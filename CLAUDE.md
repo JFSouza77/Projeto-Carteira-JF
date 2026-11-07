@@ -90,8 +90,10 @@ Mapa do cérebro: `docs/CAOS_Carteira.md`.
 - Repositório **público** (JF, 05/11): mais ainda, **nada de dado real, chave ou senha no repositório**. As chaves
   ficam só nos segredos do Cloudflare.
 - **Conta e sincronização (JF, 06/11):** os dados podem ficar no servidor da Carteira, **só na conta da própria pessoa**
-  (apelido + senha), pra funcionar em vários aparelhos. Sem conta, continua tudo só no aparelho. A senha nunca é guardada
-  (só hash PBKDF2 com sal); a sessão é um token cujo hash fica no KV. Fotos não sincronizam. Regras em `js/sincronia.js`
+  (apelido + senha), pra funcionar em vários aparelhos. Sem conta, continua tudo só no aparelho. **Ponta a ponta (JF, 07/11):**
+  a senha nem sai do aparelho; dela saem a "senha de acesso" (vai pro servidor, que ainda faz hash PBKDF2 com sal por
+  cima) e a chave AES-GCM que embaralha cada registro antes de subir (`js/cripto.js`). O servidor só aceita registro
+  embaralhado e só vê tipo, id e data da mudança. Esqueceu a senha, a cópia da nuvem não abre. A sessão é um token cujo hash fica no KV. Fotos não sincronizam. Regras em `js/sincronia.js`
   (as mesmas no app e no servidor); quem marca e aplica mudanças é o `db.js`; a rede é o `js/conta.js`. **Nada de dados reais no commit** (extrato, backup `carteira-backup-*.json`, print com valores
   reais). Dados de teste são inventados.
 - Chaves (`ANTHROPIC_API_KEY`, `VAPID_PRIVATE_JWK`) ficam **só nos segredos do Cloudflare**. Nunca no código, em arquivo

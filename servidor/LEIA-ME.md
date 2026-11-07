@@ -10,7 +10,8 @@ lembretes no Android (pelo navegador). Com ele, o app também tem:
   Banco Central). O app baixa quando tem internet e guarda pra usar offline. Não precisa de chave nenhuma.
 
 - **Conta e sincronização:** a pessoa cria uma conta (apelido + senha) em Ajustes → Sua conta e o que ela anota num
-  aparelho aparece nos outros sozinho. Usa o mesmo KV (`CARTEIRA_KV`): não precisa de nada a mais.
+  aparelho aparece nos outros sozinho. Usa o mesmo KV (`CARTEIRA_KV`): não precisa de nada a mais. Desde 07/11 é de
+  ponta a ponta: o servidor recusa registro que não chegue embaralhado.
 
 ## O que passa pelo servidor
 
@@ -20,7 +21,7 @@ lembretes no Android (pelo navegador). Com ele, o app também tem:
 | Foto | A foto, só quando você toca em "Ler com IA" | Nada fica guardado no servidor |
 | Lembrete | A inscrição de push do aparelho e o horário | Nenhum dado financeiro: o servidor manda um "toque" vazio e o texto é montado no próprio celular |
 | Mercado | Nada: o app só baixa o resumo público do dia | Seus dados não saem do aparelho |
-| Conta (opcional) | Gastos, entradas, contas, compromissos, planos, categorias, metas e perfil, **só na conta da pessoa** | A senha (só um hash dela) e as fotos (ficam no aparelho) |
+| Conta (opcional) | Gastos, entradas, contas etc. **embaralhados no aparelho** (AES-GCM, chave tirada da senha): o servidor vê só o tipo, o id e quando mudou | A senha (nem sai do aparelho; vai uma "senha de acesso" tirada dela, que o servidor ainda passa por hash), o conteúdo aberto dos registros e as fotos |
 
 ## Publicar (uma vez só, uns 15 minutos)
 
