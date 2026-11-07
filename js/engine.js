@@ -104,11 +104,95 @@ export function newId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-/** Soma dos gastos de uma categoria num mês. */
+// ---------- Rachadinha (07/11): conta dividida com amigos ----------
+// O gasto guarda o total (é o que saiu da conta ou do cartão) e `racha`: [{ id, nome, valorCents, recebidoEm }].
+// No orçamento, nas categorias e na previsão conta só a MINHA parte; o resto é "a receber".
+export const RACHA_MAX_PESSOAS = 20;
+
+/** Quanto do gasto é meu de verdade (total menos a parte dos amigos). */
+export function valorProprio(e) {
+  if (!e || !Array.isArray(e.racha) || !e.racha.length) return e?.amountCents ?? 0;
+  const dos = e.racha.reduce((s, p) => s + (p.valorCents || 0), 0);
+  return Math.max(0, e.amountCents - dos);
+}
+
+/**
+ * Divide um total igualmente entre mim e os nomes. Cada amigo paga a parte inteira em centavos; a sobra do
+ * arredondamento fica comigo. Ex.: R$ 182,00 entre mim e 3 amigos → cada um R$ 45,50.
+ */
+export function dividirIgual(totalCents, nomes, { now = Date.now() } = {}) {
+  const lista = (nomes || []).map(n => String(n).trim().slice(0, 40)).filter(Boolean);
+  if (!Number.isInteger(totalCents) || totalCents <= 0) throw new Error('Valor inválido.');
+  if (!lista.length) throw new Error('Diga com quem você vai dividir.');
+  if (lista.length > RACHA_MAX_PESSOAS) throw new Error(`Dá pra dividir com até ${RACHA_MAX_PESSOAS} pessoas.`);
+  const parte = Math.floor(totalCents / (lista.length + 1));
+  if (parte <= 0) throw new Error('Valor pequeno demais pra dividir.');
+  return lista.map((nome, i) => ({ id: `r${now.toString(36)}${i}`, nome, valorCents: parte, recebidoEm: null }));
+}
+
+/** "Ana", "Ana e Bia", "Ana, Bia e Caio", "Ana, Bia, Caio e mais gente". */
+export function juntarNomes(nomes) {
+  const l = [...new Set(nomes)];
+  if (l.length > 3) return `${l.slice(0, 3).join(', ')} e mais gente`;
+  return l.length <= 1 ? (l[0] || '') : `${l.slice(0, -1).join(', ')} e ${l[l.length - 1]}`;
+}
+
+/** Tudo que ainda falta receber, do mais antigo pro mais novo. */
+export function aReceber(expenses) {
+  const itens = [];
+  for (const e of expenses) {
+    if (!Array.isArray(e.racha)) continue;
+    for (const p of e.racha) {
+      if (!p.recebidoEm) itens.push({ expenseId: e.id, pessoaId: p.id, nome: p.nome, valorCents: p.valorCents, date: e.date, note: e.note || '', categoryId: e.categoryId });
+    }
+  }
+  itens.sort((a, b) => a.date.localeCompare(b.date));
+  return { itens, totalCents: itens.reduce((s, x) => s + x.valorCents, 0) };
+}
+
+/** Marca a parte de um amigo como recebida. Devolve uma cópia nova do gasto. */
+export function marcarRecebido(expense, pessoaId, now = Date.now()) {
+  if (!Array.isArray(expense.racha) || !expense.racha.some(p => p.id === pessoaId)) throw new Error('Não achei essa parte.');
+  return { ...expense, racha: expense.racha.map(p => (p.id === pessoaId ? { ...p, recebidoEm: now } : p)) };
+}
+
+// ---------- Ofensiva (07/11): dias seguidos anotando ----------
+const diaLocal = ms => toISODate(new Date(ms));
+function diaAnterior(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return toISODate(new Date(y, m - 1, d - 1));
+}
+
+/**
+ * Dias seguidos em que a pessoa usou o app pra anotar (gasto ou entrada criados naquele dia, ou "hoje não gastei").
+ * A ofensiva continua viva se o último dia foi hoje ou ontem. Devolve { dias, hojeFeito, recorde }.
+ */
+export function ofensiva({ expenses = [], incomes = [], diasSemGasto = [] }, today = toISODate()) {
+  const dias = new Set();
+  for (const x of [...expenses, ...incomes]) if (Number.isFinite(x.createdAt)) dias.add(diaLocal(x.createdAt));
+  for (const d of diasSemGasto) if (isValidISODate(d)) dias.add(d);
+  const hojeFeito = dias.has(today);
+  let cursor = hojeFeito ? today : diaAnterior(today);
+  let atual = 0;
+  while (dias.has(cursor)) { atual++; cursor = diaAnterior(cursor); }
+  // recorde: maior sequência em todo o histórico
+  let recorde = 0;
+  for (const d of dias) {
+    if (dias.has(diaAnterior(d))) continue; // só começa a contar no primeiro dia de cada sequência
+    let n = 0, c = d;
+    while (dias.has(c)) { n++; const [y, m, dd] = c.split('-').map(Number); c = toISODate(new Date(y, m - 1, dd + 1)); }
+    if (n > recorde) recorde = n;
+  }
+  return { dias: atual, hojeFeito, recorde: Math.max(recorde, atual) };
+}
+
+export const MARCOS_OFENSIVA = Object.freeze([3, 7, 14, 30, 60, 100, 200, 365]);
+
+/** Soma dos gastos de uma categoria num mês (só a minha parte, se a conta foi rachada). */
 export function spentIn(expenses, month, categoryId) {
   let total = 0;
   for (const e of expenses) {
-    if (e.month === month && (categoryId === undefined || e.categoryId === categoryId)) total += e.amountCents;
+    if (e.month === month && (categoryId === undefined || e.categoryId === categoryId)) total += valorProprio(e);
   }
   return total;
 }
@@ -162,7 +246,7 @@ export function detectExpenseEvents({ expenses, categories, newExpense }) {
   const budget = cat?.budgetCents || 0;
   if (budget > 0) {
     const after = spentIn(expenses, newExpense.month, newExpense.categoryId);
-    const before = after - newExpense.amountCents;
+    const before = after - valorProprio(newExpense);
     const base = {
       categoryId: cat.id, categoryName: cat.name, spentCents: after, budgetCents: budget,
       pct: Math.round((after / budget) * 100),
@@ -185,7 +269,7 @@ export function detectExpenseEvents({ expenses, categories, newExpense }) {
         type: 'delivery_repetido',
         count: recent.length,
         days: DELIVERY_WINDOW_DAYS,
-        totalCents: recent.reduce((s, e) => s + e.amountCents, 0),
+        totalCents: recent.reduce((s, e) => s + valorProprio(e), 0),
       });
     }
   }
@@ -282,7 +366,12 @@ export function accountLabel(a) {
 export function accountBalance(account, expenses, incomes) {
   let v = account.balanceCents;
   for (const i of incomes) if (i.accountId === account.id && i.createdAt > account.balanceAt) v += i.amountCents;
-  for (const e of expenses) if (e.accountId === account.id && e.createdAt > account.balanceAt) v -= e.amountCents;
+  for (const e of expenses) {
+    if (e.accountId !== account.id) continue;
+    if (e.createdAt > account.balanceAt) v -= e.amountCents;
+    // parte da rachadinha recebida depois do saldo informado: o dinheiro voltou pra essa conta
+    if (Array.isArray(e.racha)) for (const p of e.racha) if (p.recebidoEm && p.recebidoEm > account.balanceAt) v += p.valorCents;
+  }
   return v;
 }
 
@@ -321,7 +410,7 @@ export function periodRange(name, today = toISODate()) {
 
 export function sumInRange(list, { from, to }, filter = () => true) {
   let t = 0, n = 0;
-  for (const x of list) if (x.date >= from && x.date <= to && filter(x)) { t += x.amountCents; n++; }
+  for (const x of list) if (x.date >= from && x.date <= to && filter(x)) { t += valorProprio(x); n++; }
   return { totalCents: t, count: n };
 }
 
@@ -332,7 +421,7 @@ export function forecastMonth(expenses, month, today = toISODate()) {
   const day = monthKey(today) === month ? Number(today.slice(8, 10)) : total;
   // Conta fixa paga (lançada a partir de um compromisso) não vira "ritmo": no começo do mês, aluguel e contas
   // fariam a média diária parecer enorme (sugestão do Gemini, 06/11). Projeção = fixos + variáveis por dia × dias.
-  const fixos = expenses.filter(e => e.month === month && e.compromissoId).reduce((s, e) => s + e.amountCents, 0);
+  const fixos = expenses.filter(e => e.month === month && e.compromissoId).reduce((s, e) => s + valorProprio(e), 0);
   const variaveis = spent - fixos;
   const perDay = day > 0 ? variaveis / day : 0;
   return { spentCents: spent, fixosCents: fixos, perDayCents: Math.round(perDay), projectedCents: Math.round(fixos + perDay * total), day, daysTotal: total };
@@ -365,12 +454,20 @@ export function analyze({ expenses, incomes = [], categories, accounts = [], com
   // Ritmo: projeta só o gasto das categorias COM limite contra o orçamento (as sem limite não entram)
   const f = forecastMonth(expenses, month, today);
   const comLimite = new Set(categories.filter(c => c.budgetCents > 0).map(c => c.id));
-  const fixosBud = expenses.filter(e => e.month === month && e.compromissoId && comLimite.has(e.categoryId)).reduce((t, e) => t + e.amountCents, 0);
+  const fixosBud = expenses.filter(e => e.month === month && e.compromissoId && comLimite.has(e.categoryId)).reduce((t, e) => t + valorProprio(e), 0);
   const perDayBud = f.day > 0 ? (s.budgetedSpentCents - fixosBud) / f.day : 0;
   const projBud = Math.round(fixosBud + perDayBud * f.daysTotal);
   if (s.budgetTotalCents > 0 && f.day >= 5 && projBud > s.budgetTotalCents && s.budgetedSpentCents <= s.budgetTotalCents) {
     out.push({ type: 'ritmo_alto', severity: 'media', projectedCents: projBud, budgetCents: s.budgetTotalCents,
       perDayCents: Math.round(perDayBud), overCents: projBud - s.budgetTotalCents });
+  }
+
+  // Rachadinha: parte de amigo pendente há 3 dias ou mais vira lembrete de cobrança
+  const pendentes = aReceber(expenses).itens.filter(x => daysBetween(x.date, today) >= 3);
+  if (pendentes.length) {
+    const nomes = [...new Set(pendentes.map(x => x.nome))];
+    out.push({ type: 'a_receber', severity: 'baixa', count: pendentes.length, totalCents: pendentes.reduce((t, x) => t + x.valorCents, 0),
+      quem: juntarNomes(nomes) });
   }
 
   const inc = incomeIn(incomes, month);
@@ -395,7 +492,7 @@ export function analyze({ expenses, incomes = [], categories, accounts = [], com
     && daysBetween(e.date, today) < DELIVERY_WINDOW_DAYS);
   if (recentDelivery.length >= DELIVERY_REPEAT_COUNT) {
     out.push({ type: 'delivery_repetido', severity: 'baixa', count: recentDelivery.length, days: DELIVERY_WINDOW_DAYS,
-      totalCents: recentDelivery.reduce((t, e) => t + e.amountCents, 0) });
+      totalCents: recentDelivery.reduce((t, e) => t + valorProprio(e), 0) });
   }
 
   if (expenses.length > 0) {
@@ -609,6 +706,14 @@ const texto = (v, max, min = 0) => typeof v === 'string' && v.trim().length >= m
 const textoOuNada = (v, max) => v == null || texto(v, max);
 const centavos = (v, min) => Number.isInteger(v) && v >= min && v <= VALOR_MAX;
 const LIMITE_ITENS = 50_000;
+// Rachadinha no backup: lista curta de amigos com nome, valor e (opcional) quando pagou; a soma não passa do total.
+function rachaOk(e) {
+  if (e.racha == null) return true;
+  if (!Array.isArray(e.racha) || !e.racha.length || e.racha.length > RACHA_MAX_PESSOAS) return false;
+  const ok = e.racha.every(p => p && typeof p === 'object' && ID_RE.test(p.id ?? '') && texto(p.nome, 40, 1)
+    && centavos(p.valorCents, 1) && (p.recebidoEm == null || (Number.isFinite(p.recebidoEm) && p.recebidoEm > 0)));
+  return ok && e.racha.reduce((t, p) => t + p.valorCents, 0) <= e.amountCents;
+}
 
 /**
  * Confere um backup inteiro. Devolve { ok, erros, dados }.
@@ -674,7 +779,8 @@ export function validarBackup(bruto) {
   expenses.forEach((e, i) => {
     if (!obj(e) || !ID_RE.test(e.id ?? '') || !centavos(e.amountCents, 1) || !isValidISODate(e.date ?? '') || e.month !== monthKey(e.date)
       || !catIds.has(e.categoryId) || !textoOuNada(e.note, 120) || !contaOk(e.accountId)
-      || !(e.compromissoId == null || compIds.has(e.compromissoId)) || !(e.imageId == null || ID_RE.test(e.imageId))) {
+      || !(e.compromissoId == null || compIds.has(e.compromissoId)) || !(e.imageId == null || ID_RE.test(e.imageId))
+      || !rachaOk(e)) {
       erro(`Gasto ${i + 1} do backup está com dado inválido (valor, data ou categoria).`);
     }
   });
@@ -710,7 +816,8 @@ export function validarBackup(bruto) {
     const p = bruto.perfil;
     if (!obj(p) || !textoOuNada(p.nome, 40) || !textoOuNada(p.apelido, 40) || !['descontraido', 'formal', undefined].includes(p.tratamento)
       || !(p.foco == null || (Array.isArray(p.foco) && p.foco.length <= 10 && p.foco.every(f => texto(f, 40))))
-      || !(p.aniversario == null || isValidISODate(p.aniversario))) erro('O perfil do backup está com dado inválido.');
+      || !(p.aniversario == null || isValidISODate(p.aniversario))
+      || !(p.diasSemGasto == null || (Array.isArray(p.diasSemGasto) && p.diasSemGasto.length <= 400 && p.diasSemGasto.every(isValidISODate)))) erro('O perfil do backup está com dado inválido.');
     else perfil = { ...p };
   }
 

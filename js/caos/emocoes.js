@@ -53,6 +53,9 @@ const EFEITO = {
   plano_do_mes: { alegria: 1.5, carinho: 1 },
   confira_banco: { carinho: 1, curiosidade: 0.5 },
   carinho_conversa: { carinho: 1.5, curiosidade: 0.5 },
+  ofensiva_marco: { orgulho: 3, alegria: 2, tedio: -1 },
+  racha_cadastrada: { curiosidade: 1, carinho: 0.5 },
+  a_receber: { curiosidade: 1, preocupacao: 0.5 },
 };
 
 export function emocoesIniciais(now = Date.now()) {

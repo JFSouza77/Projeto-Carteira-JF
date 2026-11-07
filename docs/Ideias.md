@@ -52,9 +52,9 @@ Formas que viram **funções** de verdade:
   e num aviso que desliza na hora do lançamento (ex.: Bronca ao estourar o orçamento).
 
 ## Mecânicas novas (Gemini + JF, 07/11) · ordem recomendada pelo Wally
-1. **Ofensiva (Treinador):** dias seguidos anotando e semanas no verde, estilo Duolingo. Os dados já existem (datas
+1. ✅ **(feito na 1.11)** **Ofensiva (Treinador):** dias seguidos anotando e semanas no verde, estilo Duolingo. Os dados já existem (datas
    dos lançamentos); é a mais fácil e a que mais cria hábito. Cuidado: perder a ofensiva não pode virar bronca pesada.
-2. **Rachadinha / a receber (Cobrador):** "paguei a pizza, mas vou rachar com 3 amigos" → o gasto conta só a minha
+2. ✅ **(feito na 1.11)** **Rachadinha / a receber (Cobrador):** "paguei a pizza, mas vou rachar com 3 amigos" → o gasto conta só a minha
    parte no orçamento, e o resto vira "a receber" com o nome de quem deve; o C.A.O.S. lembra de cobrar e, quando o
    Pix chega, dá baixa. Deixa o orçamento justo.
 3. **Simulador de compras / "cabe a geladeira?" (Contador + Vidente):** a pessoa diz o que quer e o preço (ex.:

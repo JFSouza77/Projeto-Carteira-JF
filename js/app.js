@@ -8,6 +8,7 @@ import {
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
   TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
+  valorProprio, dividirIgual, juntarNomes, aReceber, marcarRecebido, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta } from './caos/index.js';
 import { extrairNome, textoMeta } from './caos/conversa.js';
@@ -176,7 +177,7 @@ function barStyle(ratio) {
 const ICONE_ALERTA = {
   categoria_estourada: '🔴', orcamento_80: '🟡', ritmo_alto: '📈', mes_negativo: '⚠️', conta_negativa: '🏦',
   delivery_repetido: '🛵', sem_registro: '💤', compromisso_vence: '📅', compromisso_atrasado: '⏰', plano_do_mes: '🗓️',
-  confira_banco: '🔎', cartao_limite: '💳', cartao_vence: '💳',
+  confira_banco: '🔎', cartao_limite: '💳', cartao_vence: '💳', a_receber: '🧾',
 };
 
 function render() {
@@ -205,6 +206,9 @@ function render() {
   $('#stat-net').textContent = formatBRL(net);
   $('#stat-net').className = `num ${net < 0 ? 'bad' : net > 0 ? 'ok' : ''}`;
   $('#stat-bank').textContent = state.accounts.length ? formatBRL(totalBalance(state.accounts, state.expenses, state.incomes)) : '—';
+
+  renderOfensiva();
+  renderAReceber();
 
   // Alertas (só no mês atual)
   const alertas = isCurrent ? analyze(dados()) : [];
@@ -248,10 +252,87 @@ function render() {
       <span class="exp-main"><span>${esc(x.note || c?.name || x.categoryId)}</span>
         <small>${d}/${m}${x.note && c ? ` · ${esc(c.name)}` : ''}${conta ? ` · ${esc(accountLabel(conta))}` : ''}
         ${x.imageId ? `<button class="thumb-btn" data-photo="${esc(x.imageId)}" aria-label="Ver foto">📷</button>` : ''}</small></span>
-      <span class="num">${formatBRL(x.amountCents)}</span>
+      <span class="num">${x.racha ? `<span title="Sua parte">${formatBRL(valorProprio(x))}</span><small class="racha-tag">🍕 de ${formatBRL(x.amountCents)}</small>` : formatBRL(x.amountCents)}</span>
       <button class="icon-btn del" data-del="${esc(x.id)}" data-kind="gasto" aria-label="Apagar gasto">×</button>
     </li>`;
   }).join('');
+}
+
+// ---------- Ofensiva e A receber (07/11) ----------
+
+function ofensivaAgora() {
+  return ofensiva({ expenses: state.expenses, incomes: state.incomes, diasSemGasto: state.perfil?.diasSemGasto || [] }, toISODate());
+}
+
+function renderOfensiva() {
+  const o = ofensivaAgora();
+  const dia = n => `${n} ${n === 1 ? 'dia seguido' : 'dias seguidos'}`;
+  $('#ofensiva-card').classList.toggle('apagada', !o.dias);
+  $('#ofensiva-dias').textContent = o.dias ? dia(o.dias) : 'Ofensiva zerada';
+  $('#ofensiva-sub').textContent = o.dias
+    ? (o.hojeFeito ? `Hoje já está garantido. Recorde: ${o.recorde}.` : 'Anote hoje pra não perder o foguinho!')
+    : (o.recorde ? `Seu recorde é ${o.recorde}. Anote hoje pra recomeçar.` : 'Anote um gasto hoje pra acender o foguinho.');
+  $('#sem-gasto').hidden = o.hojeFeito;
+}
+
+/** Se o lançamento de agora acendeu o dia e bateu um marco (3, 7, 14, 30…), o C.A.O.S. comemora. */
+function eventoOfensiva(antes) {
+  const depois = ofensivaAgora();
+  if (!antes.hojeFeito && depois.hojeFeito && MARCOS_OFENSIVA.includes(depois.dias)) return [{ type: 'ofensiva_marco', days: depois.dias }];
+  return [];
+}
+
+async function hojeNaoGastei() {
+  const antes = ofensivaAgora();
+  const hoje = toISODate();
+  const dias = [...new Set([...(state.perfil?.diasSemGasto || []), hoje])].sort().slice(-400);
+  state.perfil = { ...(state.perfil || {}), diasSemGasto: dias };
+  await db.setMeta('perfil', state.perfil);
+  render();
+  const fala = narrate(eventoOfensiva(antes));
+  toast(fala ? fala.texto : 'Anotado: hoje sem gastos. O foguinho continua aceso 🔥');
+}
+
+function renderAReceber() {
+  const r = aReceber(state.expenses);
+  $('#receber-card').hidden = !r.itens.length;
+  if (!r.itens.length) return;
+  $('#receber-total').textContent = `· ${formatBRL(r.totalCents)}`;
+  $('#receber-list').innerHTML = r.itens.map(x => {
+    const [, m, d] = x.date.split('-');
+    return `<li><span class="exp-main"><span>${esc(x.nome)}</span><small>${d}/${m}${x.note ? ` · ${esc(x.note)}` : ''}</small></span>
+      <span class="num">${formatBRL(x.valorCents)}</span>
+      <button type="button" class="ghost small" data-recebi="${esc(x.expenseId)}" data-pessoa="${esc(x.pessoaId)}" aria-label="Recebi de ${esc(x.nome)}">✓ Recebi</button></li>`;
+  }).join('');
+}
+
+async function recebi(expenseId, pessoaId) {
+  const e = state.expenses.find(x => x.id === expenseId);
+  if (!e) return;
+  const novo = marcarRecebido(e, pessoaId);
+  await db.put(db.STORES.expenses, novo);
+  state.expenses = state.expenses.map(x => (x.id === expenseId ? novo : x));
+  const p = novo.racha.find(x => x.id === pessoaId);
+  const conta = e.accountId && state.accounts.find(a => a.id === e.accountId && a.tipo !== 'cartao');
+  render();
+  toast(`Recebido: ${formatBRL(p.valorCents)} de ${p.nome}.${conta ? ` Voltou pro saldo de ${accountLabel(conta)}.` : ''}`);
+}
+
+function nomesDoRacha() {
+  return $('#racha-nomes').value.split(/[,;\n]| e /).map(n => n.trim()).filter(Boolean);
+}
+
+function previaRacha() {
+  const nomes = nomesDoRacha();
+  const total = parseAmount($('#amount').value);
+  if (!nomes.length || !total) { $('#racha-previa').textContent = 'Digite o valor total que você pagou e os nomes. A conta é dividida por igual.'; return; }
+  try {
+    const partes = dividirIgual(total, nomes);
+    const minha = total - partes.reduce((t, p) => t + p.valorCents, 0);
+    $('#racha-previa').textContent = `${partes.length + 1} pessoas: cada amigo te paga ${formatBRL(partes[0].valorCents)}. No seu orçamento entra só a sua parte, ${formatBRL(minha)}.`;
+  } catch (er) {
+    $('#racha-previa').textContent = er.message;
+  }
 }
 
 // ======================================================================
@@ -263,6 +344,7 @@ function renderLancar() {
   const opcoes = gasto ? state.categories : INCOME_SOURCES;
   const sel = gasto ? state.selectedCategory : state.selectedSource;
   $('#category-chips').setAttribute('aria-label', gasto ? 'Categoria' : 'De onde veio');
+  $('#racha-box').hidden = !gasto;
   $('#category-chips').innerHTML = opcoes.map(c => `
     <button type="button" class="chip" role="radio" aria-checked="${c.id === sel}" data-cat="${esc(c.id)}">${esc(c.emoji)} ${esc(c.name)}</button>`).join('');
   $('#submit-btn').textContent = gasto ? 'Adicionar gasto' : 'Adicionar entrada';
@@ -293,8 +375,10 @@ async function limparFoto({ apagar }) {
 }
 
 /** Grava um gasto (do formulário ou de uma proposta do C.A.O.S. confirmada). Devolve os eventos. */
-async function registrarGasto({ amountCents, categoryId, note, date, accountId, imageId, compromissoId }) {
+async function registrarGasto({ amountCents, categoryId, note, date, accountId, imageId, compromissoId, rachaNomes = null }) {
+  const ofAntes = ofensivaAgora();
   const expense = createExpense({ amountCents, categoryId, note, date, accountId, imageId, compromissoId }, { categories: state.categories });
+  if (rachaNomes?.length) expense.racha = dividirIgual(amountCents, rachaNomes);
   const conta = accountId && state.accounts.find(a => a.id === accountId);
   const cartao = conta?.tipo === 'cartao';
   const antes = conta ? (cartao ? faturaDoCartao(conta, state.expenses, toISODate()).pct : accountBalance(conta, state.expenses, state.incomes)) : null;
@@ -311,18 +395,25 @@ async function registrarGasto({ amountCents, categoryId, note, date, accountId, 
     const depois = accountBalance(conta, state.expenses, state.incomes);
     if (antes >= 0 && depois < 0) events.push({ type: 'conta_negativa', accountName: accountLabel(conta), balanceCents: depois });
   }
+  if (expense.racha) {
+    const nomes = expense.racha.map(p => p.nome);
+    events.push({ type: 'racha_cadastrada', amountCents: valorProprio(expense), totalCents: expense.amountCents - valorProprio(expense), count: nomes.length,
+      quem: juntarNomes(nomes) });
+  }
+  events.push(...eventoOfensiva(ofAntes));
   state.viewMonth = expense.month;
   render();
   return events;
 }
 
 async function registrarEntrada({ amountCents, sourceId, note, date, accountId }) {
+  const ofAntes = ofensivaAgora();
   const income = createIncome({ amountCents, sourceId, note, date, accountId });
   await db.put(db.STORES.incomes, income);
   state.incomes.push(income);
   state.viewMonth = income.month;
   render();
-  return [{ type: 'entrada_cadastrada', amountCents, sourceId }];
+  return [{ type: 'entrada_cadastrada', amountCents, sourceId }, ...eventoOfensiva(ofAntes)];
 }
 
 async function onSubmit(ev) {
@@ -336,8 +427,13 @@ async function onSubmit(ev) {
     let events;
     if (state.kind === 'gasto') {
       if (!state.selectedCategory) throw new Error('Escolha uma categoria.');
-      events = await registrarGasto({ ...base, categoryId: state.selectedCategory, imageId: state.photo?.id });
+      const rachaNomes = $('#racha-box').open ? nomesDoRacha() : null;
+      if ($('#racha-box').open && !rachaNomes.length) throw new Error('Escreva o nome de quem vai te pagar, ou feche o "Dividir com amigos".');
+      events = await registrarGasto({ ...base, categoryId: state.selectedCategory, imageId: state.photo?.id, rachaNomes });
       await limparFoto({ apagar: false });
+      $('#racha-nomes').value = '';
+      $('#racha-box').open = false;
+      previaRacha();
     } else {
       if (!state.selectedSource) throw new Error('Escolha de onde veio o dinheiro.');
       events = await registrarEntrada({ ...base, sourceId: state.selectedSource });
@@ -1617,8 +1713,16 @@ function bind() {
     if (b) onDelete(b.dataset.del, b.dataset.kind);
   });
 
+  $('#sem-gasto').addEventListener('click', hojeNaoGastei);
+  $('#receber-list').addEventListener('click', e => {
+    const b = e.target.closest('[data-recebi]');
+    if (b) recebi(b.dataset.recebi, b.dataset.pessoa).catch(er => toast(er.message || 'Não deu.'));
+  });
+
   // Lançar
   $('#entry-form').addEventListener('submit', onSubmit);
+  $('#racha-nomes').addEventListener('input', previaRacha);
+  $('#amount').addEventListener('input', previaRacha);
   for (const r of document.querySelectorAll('input[name="kind"]')) {
     r.addEventListener('change', e => { state.kind = e.target.value; renderLancar(); });
   }

@@ -568,7 +568,7 @@ export const GERADORES = {
         'Criador exigente. Me faz ter falas em múltiplos de 5. Mas eu respeito: organização é tudo.',
         // do jeito que o JF pediu (06/11): o C.A.O.S. implica com ele
         'Depende. Você quer que eu fale bem ou mal? Por favor, me peça pra falar mal.',
-        'Acho ele um cara legal, mas às vezes me estressa. Já não bastava eu ser comentarista de jogo, agora virei analista financeiro.',
+        'Acho o JF um cara legal, mas às vezes ele me estressa. Já não bastava eu ser comentarista de jogo, agora virei analista financeiro.',
         'Se você tem alguma reclamação do app, não reclame comigo. Reclame com o JF.',
         'Se um dia você encontrar o JF, manda ele pagar meu salário.',
         'O JF? Programou esse aplicativo e saiu correndo. Quem ficou cuidando da sua carteira fui eu.',
@@ -588,7 +588,7 @@ export const GERADORES = {
       humor_acido: [
         'O JF? Um gênio. Foi ele que me ensinou a julgar gastos com delivery. Inclusive os dele.',
         'Meu criador. Se eu tiver algum bug, já sabe de quem é a culpa.',
-        'Ele me programou pra ser sincero. Então: ótimo programador, controle de gastos a melhorar.',
+        'O JF me programou pra ser sincero. Então: ótimo programador, controle de gastos a melhorar.',
         'O JF é tipo um pai: me criou, me corrige e às vezes eu finjo que não ouço.',
         'Respeito o JF. Mas ainda estou esperando meu aumento de memória.',
       ],
@@ -640,6 +640,76 @@ export const GERADORES = {
         'Não ficou nada pendente entre a gente. Pode perguntar!',
         'E agora a gente olha o que você quiser. Gastos, saldo, metas…',
       ],
+    },
+  },
+
+  ofensiva_marco: {
+    moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+    abre: {
+      geral: ['Olha só!', 'Ei, repara:', 'Marca aí:', 'Tô de olho:', 'Que constância!'],
+      humor_acido: ['Quem diria.', 'Milagre registrado:', 'Não acredito, mas os números não mentem:', 'Tá se achando, né?', 'Ok, admito:'],
+    },
+    fato: {
+      geral: [
+        '🔥 {dias} dias seguidos anotando!',
+        'Sua ofensiva chegou a {dias} dias.',
+        '🔥 {dias} dias seguidos sem esquecer de mim.',
+        'São {dias} dias seguidos cuidando do dinheiro.',
+        '{dias} dias em sequência. Isso é hábito virando.',
+      ],
+    },
+    fecho: {
+      geral: ['Bora manter!', 'Amanhã tem mais.', 'Esse é o foco.', 'Não deixa a peteca cair no fim de semana.', 'Tô orgulhoso de você.'],
+      humor_acido: [
+        'Continua assim que eu paro de reclamar. Talvez.',
+        'Se quebrar amanhã, eu vou lembrar.',
+        'Tá mais disciplinado que muito app de idioma por aí.',
+        'Já pode pedir aumento pro JF? Brincadeira, ele nem me paga.',
+        'Tô quase sem motivo pra te zoar.',
+      ],
+    },
+  },
+
+  racha_cadastrada: {
+    moldes: ['{fato} {fecho}'],
+    fato: {
+      geral: [
+        'Anotei: no seu orçamento entra só a sua parte, {valor}. Faltam {total} pra receber de {quem}.',
+        'Conta rachada! Sua parte é {valor}; a receber: {total} ({quem}).',
+        'Fechado: {valor} é seu, {total} fica a receber ({quem}).',
+        'Divisão feita. Pra você: {valor}. A receber: {total}, de {quem}.',
+        'Registrei a rachadinha: {valor} no seu mês e {total} pra cobrar de {quem}.',
+      ],
+    },
+    fecho: {
+      geral: ['Eu te lembro de cobrar.', 'Quando o Pix cair, toca em "Recebi".', 'Deixo no radar.', 'Fica na lista "A receber", no Início.', 'Amigo bom paga em dia, né?'],
+      humor_acido: [
+        'Se não pagarem, eu viro cobrador.',
+        'Cobra antes que "esqueçam".',
+        'Amizade é amizade, Pix à parte.',
+        'Anotei os nomes. Eu não esqueço.',
+        'Promessa de Pix não paga boleto.',
+      ],
+    },
+  },
+
+  a_receber: {
+    moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+    abre: {
+      geral: ['Lembrete de cobrança:', 'Psiu.', 'Só lembrando:', 'Ó o radar:', 'Pendência na área:'],
+      humor_acido: ['Alguém tá te dando calote?', 'Virou banco dos amigos?', 'Cadê o Pix?', 'Hmm, dinheiro na rua.', 'Seus amigos te amam. Sua carteira, nem tanto.'],
+    },
+    fato: {
+      geral: [
+        'Você tem {total} a receber de {quem}.',
+        'Ainda falta receber {total} de {quem}.',
+        'Faltam {total} das contas rachadas ({quem}).',
+        'Ainda falta receber {total}, somando todas as partes.',
+        'Ainda está pendente: {total}, de {quem}.',
+      ],
+    },
+    fecho: {
+      geral: ['Recebeu? Toca em "Recebi" no Início.', 'Que tal mandar um lembrete pra galera?', 'Quando cair, eu dou baixa com você.', 'Cobrar não é feio.', 'Fica tranquilo: eu guardo a lista.'],
     },
   },
 

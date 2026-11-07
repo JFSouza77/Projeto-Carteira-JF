@@ -7,6 +7,23 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.11',
+    data: '07/11/2026',
+    nome: 'Ofensiva e Rachadinha',
+    t: 'Um foguinho pra cada dia que você anota e um jeito fácil de dividir a conta com os amigos.',
+    itens: [
+      '🔥 Ofensiva: no Início, veja quantos dias seguidos você anota. O C.A.O.S. comemora em 3, 7, 14 e 30 dias.',
+      '🙌 Hoje não gastei nada: não gastou? Toque no botão do foguinho e o dia conta do mesmo jeito.',
+      '🍕 Dividir com amigos: pagou a pizza de todo mundo? No Lançar, toque em "Dividir com amigos" e escreva os nomes.',
+      '🎯 Orçamento justo: na conta dividida, só a sua parte entra no orçamento e nas categorias.',
+      '🧾 A receber: no Início aparece quem te deve. Caiu o Pix? Toque em "Recebi" e o dinheiro volta pro saldo.',
+      '💬 Pergunte pro C.A.O.S.: "quem me deve?" ou "qual minha ofensiva?".',
+    ],
+    qol: [
+      '⏰ Lembrete de cobrança: depois de 3 dias, o C.A.O.S. lembra de quem ainda não pagou.',
+    ],
+  },
+  {
     v: '1.10',
     data: '06/11/2026',
     nome: 'Novidades de Cara Nova',
