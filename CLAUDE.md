@@ -2,6 +2,10 @@
 
 App de controle de gastos com o C.A.O.S., narrador trazido do Perfil JF (JFSouza77/Projeto_Perfil_JF) e adaptado.
 
+**Missão (JF, 07/11/2026):** o C.A.O.S. não é assistente virtual de banco: é um **parceiro virtual financeiro**, um amigo
+que escuta, presta atenção, reage com emoção ao que acontece, incentiva, aconselha e puxa a orelha. Slogan:
+**"Um C.A.O.S. pra organizar o seu caos."** (fica em `js/caos/identidade.js`).
+
 ## Como falar com o JF (as mesmas regras do Perfil)
 
 - **Sempre em português**, linguagem simples, sem jargão. Resposta curta e direta.
@@ -71,7 +75,7 @@ Mapa do cérebro: `docs/CAOS_Carteira.md`.
 
 ## C.A.O.S.
 
-- **Sobe de versão sempre que for mexido** (`CAOS_VERSAO` em `js/caos/index.js`; hoje 1.13.0).
+- **Sobe de versão sempre que for mexido** (`CAOS_VERSAO` em `js/caos/index.js`; hoje 1.13.1).
 - **Quantidades sempre terminam em 0 ou 5**: cada lista de falas tem 5, 10, 15… (teste confere).
 - **Quem ele é** (nome, sigla, criador, origem, pode/não pode, anatomia): só em `js/caos/identidade.js`. O app e o
   servidor da IA leem dali, pra nunca ficarem diferentes.

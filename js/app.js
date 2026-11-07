@@ -572,7 +572,7 @@ function addMsg(msg) {
 function renderChat() {
   const log = $('#chat-log');
   if (!state.chat.length) {
-    log.innerHTML = `<li class="msg caos-msg"><span class="who">C.A.O.S.</span>Oi! Sou o C.A.O.S., a ${esc(IDENTIDADE.sigla)}. Pergunta sobre gastos, entradas, saldo, orçamento ou alertas, manda "gastei 30 no mercado" ou uma foto de comprovante. Se quiser saber mais de mim, pergunta "quem é você?".</li>`;
+    log.innerHTML = `<li class="msg caos-msg"><span class="who">C.A.O.S.</span>Oi! Sou o C.A.O.S., a ${esc(IDENTIDADE.sigla)}: ${esc(IDENTIDADE.slogan.charAt(0).toLowerCase() + IDENTIDADE.slogan.slice(1))} Pergunta sobre gastos, entradas, saldo, orçamento ou alertas, manda "gastei 30 no mercado" ou uma foto de comprovante. Se quiser saber mais de mim, pergunta "quem é você?".</li>`;
   } else {
     log.innerHTML = state.chat.map((m, i) => {
       if (m.de === 'eu') {
@@ -1128,7 +1128,7 @@ async function renderSettings() {
   $('#voz-vel-out').textContent = `${Number(state.settings.vozVel ?? 1).toFixed(1).replace('.', ',')}×`;
   $('#menos-mov').checked = MENOS_MOVIMENTO.matches;
   $('#voice-toggle').closest('label').hidden = !vozDisponivel();
-  $('#caos-version').textContent = `${IDENTIDADE.nome} ${CAOS_VERSAO} · ${IDENTIDADE.sigla}. Criado por ${IDENTIDADE.criador}, veio do ${IDENTIDADE.origem}.`;
+  $('#caos-version').textContent = `${IDENTIDADE.nome} ${CAOS_VERSAO} · ${IDENTIDADE.sigla}. ${IDENTIDADE.slogan} Criado por ${IDENTIDADE.criador}, veio do ${IDENTIDADE.origem}.`;
   $('#ai-toggle').checked = state.settings.aiOn;
   $('#ai-url').value = state.settings.aiUrl;
   $('#chat-mic').hidden = !ditadoDisponivel();

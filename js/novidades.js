@@ -7,6 +7,17 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.15',
+    data: '07/11/2026',
+    nome: 'Parceiro Financeiro',
+    t: 'Um C.A.O.S. pra organizar o seu caos.',
+    itens: [
+      '🤝 Seu parceiro: o C.A.O.S. não é um banco nem um assistente. É um amigo que escuta, comemora e puxa a orelha.',
+      '💬 Pergunte "quem é você?": ele conta quem é e qual é o lema dele.',
+    ],
+    qol: [],
+  },
+  {
     v: '1.14',
     data: '07/11/2026',
     nome: 'Mais Bancos',

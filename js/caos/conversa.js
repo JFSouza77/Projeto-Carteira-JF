@@ -696,7 +696,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
     case 'sobre_jf':
       return { gatilho: 'sobre_jf', vars: { criador: IDENTIDADE.criador }, sugestoes: SUG_IDENTIDADE };
     case 'significado': case 'criador': case 'origem': case 'identidade': case 'piada':
-      return { gatilho: intencao.intent, vars: { sigla: IDENTIDADE.sigla, criador: IDENTIDADE.criador, origem: IDENTIDADE.origem }, sugestoes: SUG_IDENTIDADE };
+      return { gatilho: intencao.intent, vars: { sigla: IDENTIDADE.sigla, criador: IDENTIDADE.criador, origem: IDENTIDADE.origem, slogan: IDENTIDADE.slogan }, sugestoes: SUG_IDENTIDADE };
     case 'como_funciona':
       return { fato: `Sou uma IA de bolso, montada em camadas. ${textoAnatomia()} Funciono offline; com a IA online ligada, ganho um reforço pra perguntas livres e fotos.`, sugestoes: SUG_IDENTIDADE };
     case 'limites':
