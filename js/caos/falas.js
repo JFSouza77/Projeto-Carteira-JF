@@ -621,7 +621,7 @@ export const GERADORES = {
     moldes: ['{inteira}'],
     inteira: {
       geral: [
-        'Ainda não. Aquela pergunta ({pergunta}) continua guardada comigo. Quando o servidor da Carteira estiver ligado, eu trago a resposta.',
+        'Ainda não. Aquela pergunta ({pergunta}) continua guardada comigo. Quando o servidor do C.A.O.S. Finanças estiver ligado, eu trago a resposta.',
         'Lembro sim: {pergunta}. Ainda não sei, mas tá na fila. Assim que eu falar com o servidor, eu respondo.',
         'Não esqueci, viu? {pergunta} tá anotada. Ainda preciso do servidor pra responder essa.',
         'Ainda tô devendo essa: {pergunta}. Ela tá guardada e eu aviso quando tiver a resposta.',
@@ -1335,7 +1335,7 @@ Object.assign(GERADORES, {
         'Certo. Agora me conta: no que você quer minha ajuda? Escolhe quantos quiser e toca em Pronto.',
         'Entendido. Qual é o seu foco agora? Marca o que fizer sentido e toca em Pronto.',
         'Beleza. Pra eu saber por onde começar: no que posso ajudar? Escolhe e toca em Pronto.',
-        'Show. E o que você mais quer da Carteira? Pode marcar vários e tocar em Pronto.',
+        'Show. E o que você mais quer do C.A.O.S. Finanças? Pode marcar vários e tocar em Pronto.',
       ],
     },
   },

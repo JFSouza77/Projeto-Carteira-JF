@@ -626,7 +626,7 @@ async function enviarPergunta(texto) {
   }
   if (!fala.entendeu && !fala.palpite && await guardarPergunta(t)) {
     // Fila geral (1.6.0): o que ele não sabe vai pro servidor quando der; a resposta volta na conversa.
-    fala.texto = 'Ainda não sei responder isso, mas guardei sua pergunta. Quando eu tiver conexão com o servidor da Carteira, eu trago a resposta aqui.';
+    fala.texto = 'Ainda não sei responder isso, mas guardei sua pergunta. Quando eu tiver conexão com o servidor do C.A.O.S. Finanças, eu trago a resposta aqui.';
   }
   await respiro(fala.texto);
   addMsg({ de: 'caos', texto: fala.texto, sugestoes: fala.sugestoes, acao: fala.acao, rosto: fala.rosto });
@@ -763,7 +763,7 @@ async function perguntaPraDepois(item) {
   const fila = (await db.getMeta('fila', [])).filter(x => x.tipo !== item.tipo);
   fila.push({ ...item, id: crypto.randomUUID?.() || String(Date.now()), criadoEm: Date.now() });
   await db.setMeta('fila', fila);
-  addMsg({ de: 'caos', texto: 'Hoje eu não consigo trazer a comparação certinha, mas guardei sua pergunta. Assim que eu tiver conexão com o servidor da Carteira, eu trago a resposta aqui. 😉' });
+  addMsg({ de: 'caos', texto: 'Hoje eu não consigo trazer a comparação certinha, mas guardei sua pergunta. Assim que eu tiver conexão com o servidor do C.A.O.S. Finanças, eu trago a resposta aqui. 😉' });
 }
 
 /** Guarda uma pergunta que ele não soube responder (até 10, sem repetir). Devolve true se guardou. */
@@ -875,7 +875,7 @@ async function explicarPrint(img, duvida) {
   const fila = await db.getMeta('fila', []);
   fila.push({ tipo: 'explicar', imagemId: img.id, duvida: String(duvida || '').slice(0, 300), id: crypto.randomUUID?.() || String(Date.now()), criadoEm: Date.now() });
   await db.setMeta('fila', fila);
-  addMsg({ de: 'caos', texto: 'Agora eu não consigo falar com o servidor da Carteira, mas guardei o print aqui no aparelho. Assim que tiver conexão, eu explico e te aviso.' });
+  addMsg({ de: 'caos', texto: 'Agora eu não consigo falar com o servidor do C.A.O.S. Finanças, mas guardei o print aqui no aparelho. Assim que tiver conexão, eu explico e te aviso.' });
 }
 
 async function fotoNoChat(arquivo) {
@@ -1200,7 +1200,7 @@ async function importBackup(file) {
   try {
     if (file.size > 20 * 1024 * 1024) throw new Error('Arquivo grande demais para ser um backup.');
     let bruto;
-    try { bruto = JSON.parse(await file.text()); } catch { throw new Error('Esse arquivo não parece um backup da Carteira JF.'); }
+    try { bruto = JSON.parse(await file.text()); } catch { throw new Error('Esse arquivo não parece um backup do C.A.O.S. Finanças.'); }
     // Valida TUDO antes de perguntar e antes de gravar: se algo estiver errado, nada muda.
     const v = validarBackup(bruto);
     if (!v.ok) throw new Error(`Não importei: ${v.erros[0]}`);
@@ -1491,7 +1491,7 @@ async function entrarNaConta(criar) {
   err.hidden = true;
   const apelido = $('#conta-apelido').value.trim();
   const senha = $('#conta-senha').value;
-  if (!servidor()) { err.textContent = 'Primeiro coloque o endereço do servidor da Carteira em "IA online e servidor".'; err.hidden = false; return; }
+  if (!servidor()) { err.textContent = 'Primeiro coloque o endereço do servidor do C.A.O.S. Finanças em "IA online e servidor".'; err.hidden = false; return; }
   if (apelido.length < 3) { err.textContent = 'Escolha um apelido com pelo menos 3 letras.'; err.hidden = false; return; }
   if (senha.length < 6) { err.textContent = 'A senha precisa ter pelo menos 6 letras ou números.'; err.hidden = false; return; }
   const botoes = [$('#conta-entrar'), $('#conta-criar')];

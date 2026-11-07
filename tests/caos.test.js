@@ -402,7 +402,7 @@ test('todo alerta que o radar gera vira fala (nenhum fica mudo)', () => {
 
 test('mercado: responde com base de cálculo, data do dado e aviso; sem dado explica de onde vem', () => {
   const d = dados();
-  assert.match(conversar('como está o dólar?', d, { now: NOW, today: hoje }).fala.texto, /servidor da Carteira/);
+  assert.match(conversar('como está o dólar?', d, { now: NOW, today: hoje }).fala.texto, /servidor do C\.A\.O\.S\. Finanças/);
   d.mercado = {
     atualizadoEm: new Date(NOW - 3_600_000).toISOString(),
     moedas: { USD: { nome: 'Dólar', atual: 5.48, varDia: 0.42, var5: 2.1, media20: 5.3, dias: 21, tendencia: 'alta' } },

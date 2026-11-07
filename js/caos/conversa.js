@@ -460,7 +460,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       };
     }
     case 'explicar_print':
-      return { fato: 'Manda o print aqui pelo 📎 que eu te explico o que o banco quis dizer. A imagem só vai pro servidor da Carteira pra isso, e eu não repito números de conta nem de cartão.', modoFoto: 'explicar', sugestoes: [] };
+      return { fato: 'Manda o print aqui pelo 📎 que eu te explico o que o banco quis dizer. A imagem só vai pro servidor do C.A.O.S. Finanças pra isso, e eu não repito números de conta nem de cartão.', modoFoto: 'explicar', sugestoes: [] };
     case 'meta_nova':
       return { gatilho: 'meta_pra_que', fluxoMeta: { nome: intencao.metaNome || null } };
     case 'metas': {
@@ -670,7 +670,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
     case 'mercado': case 'investir': {
       const m = dados.mercado;
       if (!m) {
-        return { fato: 'Ainda não tenho dados do mercado. Eles chegam pelo servidor da Carteira, todo dia útil às 10h: configure o endereço em Ajustes → IA online. Depois que chegarem, eu guardo e respondo até sem internet.' };
+        return { fato: 'Ainda não tenho dados do mercado. Eles chegam pelo servidor do C.A.O.S. Finanças, todo dia útil às 10h: configure o endereço em Ajustes → IA online. Depois que chegarem, eu guardo e respondo até sem internet.' };
       }
       const agora = new Date(now);
       const quando = quandoFoi(m.atualizadoEm, agora);

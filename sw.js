@@ -1,6 +1,6 @@
 // Service worker: app shell em cache para funcionar offline + lembretes.
 // Mudou algum arquivo abaixo? Suba CACHE_VERSION.
-const CACHE_VERSION = 'v30';
+const CACHE_VERSION = 'v31';
 const CACHE = `carteira-jf-${CACHE_VERSION}`;
 const APP_SHELL = [
   './',
@@ -117,7 +117,7 @@ async function lembrar({ conferirHora }) {
   try {
     db = await abrirBanco();
   } catch {
-    return self.registration.showNotification('C.A.O.S. · Carteira JF', { body: 'Passa aqui pra anotar os gastos de hoje.', icon: './icons/icon-192.png', tag: 'lembrete' });
+    return self.registration.showNotification('C.A.O.S. Finanças', { body: 'Passa aqui pra anotar os gastos de hoje.', icon: './icons/icon-192.png', tag: 'lembrete' });
   }
   const cfg = (await lerMeta(db, 'lembrete')) || {};
   if (conferirHora) {
@@ -129,7 +129,7 @@ async function lembrar({ conferirHora }) {
     if ((await lerMeta(db, 'ultimoLembrete')) === hojeISO()) return;
   }
   await gravarMeta(db, 'ultimoLembrete', hojeISO());
-  return self.registration.showNotification('C.A.O.S. · Carteira JF', {
+  return self.registration.showNotification('C.A.O.S. Finanças', {
     body: await textoDoLembrete(db), icon: './icons/icon-192.png', badge: './icons/icon-192.png', tag: 'lembrete',
   });
 }

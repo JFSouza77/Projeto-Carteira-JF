@@ -7,6 +7,18 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.16',
+    data: '07/11/2026',
+    nome: 'C.A.O.S. Finanças',
+    t: 'O app ganhou nome e cara novos: agora ele se chama C.A.O.S. Finanças.',
+    itens: [
+      '🏷️ Nome novo: o app agora se chama C.A.O.S. Finanças. Na tela do celular aparece "C.A.O.S.".',
+      '😏 Ícone novo: no lugar da carteira, o rostinho do C.A.O.S. com o chifrinho torto.',
+      '📱 No iPhone: o nome e o ícone da tela inicial só trocam se você adicionar o app de novo. Faça um backup antes.',
+    ],
+    qol: [],
+  },
+  {
     v: '1.15',
     data: '07/11/2026',
     nome: 'Parceiro Financeiro',
