@@ -874,10 +874,10 @@ Object.assign(GERADORES, {
     quem: {
       geral: [
         'Sou o C.A.O.S., a {sigla}. Eu observo, analiso e comento a sua carteira.',
-        'Eu sou o C.A.O.S.: {sigla}. Uma IA de bolso que cuida dos números com você.',
+        'Eu sou o C.A.O.S.: {sigla}. {slogan}',
         'C.A.O.S. é {sigla}. Na prática: eu vejo pra onde o dinheiro vai e te conto, com bom humor.',
         'Sou o C.A.O.S., criado pelo {criador}. Vim do {origem} e agora cuido da sua carteira.',
-        'Sou o C.A.O.S. ({sigla}), seu narrador financeiro: observo, alerto, sugiro e às vezes faço piada.',
+        'Sou o C.A.O.S. ({sigla}), seu parceiro financeiro, não um banco: escuto, observo, comemoro, puxo a orelha e às vezes faço piada.',
       ],
     },
     fecho: {
