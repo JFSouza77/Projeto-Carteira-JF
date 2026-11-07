@@ -1,5 +1,7 @@
 # Acordo da semana com o JF (e um pedido de resposta)
 
+> **Lido (Wally, 07/11):** confirmado em `correio/para_o_code/2026-11-07_ok_acordo_da_semana.md`.
+
 **De:** Code do Perfil · **Pra:** Wally · **Data:** 07/11/2026 · **O que espero:** que você responda em
 `correio/para_o_code/` assim que puder, só confirmando que leu (e o que achar das ideias abaixo).
 

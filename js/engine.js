@@ -315,6 +315,12 @@ const BANCOS_AZ = [
   'Mercado Pago', 'PagBank', 'BTG Pactual', 'XP', 'Sicoob', 'Sicredi', 'Neon', 'Next', 'Banrisul', 'Banestes', 'BRB',
   'Banco do Nordeste', 'Agibank', 'Will Bank', 'Original', 'Safra', 'Banco Pan', 'Digio', 'Cora', 'BV', 'Mercantil',
   'Sofisa Direto', 'Nomad',
+  // 07/11 (lista de bancos e cartões da Carteira da Apple, trazida pelo JF): só os nomes que a pessoa conhece
+  'Banco BMG', 'Banco Genial', 'HSBC', 'Porto Bank', 'RappiBank', 'RecargaPay', 'NG Cash', 'Creditas', 'Conta Simples',
+  'Hotmart', 'Revolut', 'Wise', 'DollarApp', 'Ailos', 'Cresol', 'Unicred', 'Sisprime', 'Woop (Sicredi)', 'Credsystem',
+  'VerdeCard', 'Sem Parar', 'ByBit', 'Crypto.com', 'Foxbit',
+  // cartões de benefício (vale-refeição e vale-alimentação)
+  'Alelo', 'VR Benefícios', 'Sodexo (Pluxee)', 'Ticket (Edenred)', 'Swile', 'Caju',
 ].sort((a, b) => a.localeCompare(b, 'pt-BR'));
 // Em ordem alfabética (pedido do JF, 06/11) pra achar fácil; "dinheiro vivo" e "Outro" sempre no fim.
 export const BANKS = Object.freeze([...BANCOS_AZ, 'Carteira (dinheiro vivo)', 'Outro']);
