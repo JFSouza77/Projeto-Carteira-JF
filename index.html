@@ -35,6 +35,7 @@
       <button class="icon-btn" id="prev-month" aria-label="Mês anterior">‹</button>
       <h1 id="month-label">…</h1>
       <button class="icon-btn" id="next-month" aria-label="Próximo mês">›</button>
+      <a href="#ajustes" class="ajustes-btn" id="abrir-ajustes" aria-label="Ajustes"><svg class="ico" aria-hidden="true"><use href="#i-ajustes"/></svg><small>Ajustes</small></a>
     </header>
     <main>
       <button type="button" class="novidade-aviso" id="novidade-aviso" hidden>🆕 <span>Tem novidade no app! Toque pra ver.</span></button>
@@ -276,7 +277,7 @@
 
   <!-- ============ AJUSTES ============ -->
   <section class="tela" id="tela-ajustes" data-tela="ajustes" hidden>
-    <header class="topbar"><h1>Ajustes</h1></header>
+    <header class="topbar"><a href="#inicio" class="icon-btn voltar" aria-label="Voltar pro Início">‹</a><h1>⚙️ Ajustes</h1><span class="topbar-espaco" aria-hidden="true"></span></header>
     <main>
       <button type="button" class="card novidades-btn" id="novidades-abrir">🆕 <span><strong>Novidades</strong><small class="muted" id="novidades-versao"></small></span><span aria-hidden="true">›</span></button>
       <details class="card" id="conta-card">
@@ -384,12 +385,11 @@
   </section>
 
   <nav class="tabbar" aria-label="Navegação">
-    <a href="#inicio" data-tab="inicio" aria-current="page"><svg class="ico" aria-hidden="true"><use href="#i-inicio"/></svg>Início</a>
     <a href="#lancar" data-tab="lancar"><svg class="ico" aria-hidden="true"><use href="#i-lancar"/></svg>Lançar</a>
     <a href="#mes" data-tab="mes"><svg class="ico" aria-hidden="true"><use href="#i-mes"/></svg>Mês</a>
+    <a href="#inicio" data-tab="inicio" class="tab-inicio" aria-current="page"><span class="tab-inicio-bola"><svg class="ico" aria-hidden="true"><use href="#i-inicio"/></svg></span>Início</a>
     <a href="#conversa" data-tab="conversa"><svg class="ico" aria-hidden="true"><use href="#i-conversa"/></svg>C.A.O.S.</a>
     <a href="#contas" data-tab="contas"><svg class="ico" aria-hidden="true"><use href="#i-contas"/></svg>Contas</a>
-    <a href="#ajustes" data-tab="ajustes"><svg class="ico" aria-hidden="true"><use href="#i-ajustes"/></svg>Ajustes</a>
   </nav>
   <button type="button" class="me-ajuda" id="me-ajuda" aria-label="Me ajuda: o C.A.O.S. te guia"><svg class="ico" aria-hidden="true"><use href="#i-ajuda"/></svg> Me ajuda</button>
 

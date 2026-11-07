@@ -320,7 +320,7 @@ const TUTORIAL = {
   ofensiva: 'A ofensiva 🔥 conta os dias seguidos em que você anota no app. Lançou um gasto ou uma entrada no dia, conta. Não gastou nada? Toca em "Hoje não gastei nada" no Início, que também conta. Ficou um dia inteiro sem abrir, ela zera, mas o recorde fica guardado.',
   gasto: 'Pra anotar um gasto: aba ➕ Lançar, deixa em 💸 Gasto, digita o valor, escolhe a categoria e toca em Adicionar. Ou me fala aqui: "gastei 30 no mercado", que eu preparo e você confirma.',
   entrada: 'Pra anotar uma entrada: aba ➕ Lançar, toca em 💰 Entrada, digita o valor, escolhe de onde veio (salário, freela, rendimentos…) e toca em Adicionar. Ou me fala: "recebi 1500 de salário".',
-  orcamento: 'Pra pôr orçamento: aba ⚙️ Ajustes → Orçamentos, e coloca o limite do mês em cada categoria. Deixa vazio onde não quiser limite. Aí eu aviso em 80% e quando estourar.',
+  orcamento: 'Pra pôr orçamento: ⚙️ Ajustes (engrenagem no alto do Início) → Orçamentos, e coloca o limite do mês em cada categoria. Deixa vazio onde não quiser limite. Aí eu aviso em 80% e quando estourar.',
   conta: 'Pra adicionar uma conta: aba 🏦 Contas, escolhe o banco, coloca o saldo que aparece no app do banco e toca em Adicionar conta. Depois, ao lançar, escolhe a conta e eu acompanho o saldo. De vez em quando, toca em Atualizar saldo pra acertar com o banco.',
   mes: 'Pra planejar o mês: aba 📅 Mês. Em Compromissos você põe contas fixas, faturas, assinaturas e planos que se repetem (com o dia do vencimento). Em Planos do mês, o que quer comprar e quanto custa. Eu mostro a sobra prevista e respondo "cabe no mês?".',
   cartao: 'Pra registrar um cartão de crédito: aba 🏦 Contas → Adicionar cartão de crédito. Coloca o banco, o limite, o dia que a fatura fecha, o dia que vence e quanto já está usado. Depois, ao lançar um gasto, escolhe o cartão em "Conta" e eu acompanho a fatura e o limite.',
@@ -331,7 +331,7 @@ const TUTORIAL = {
   ia: 'A IA online é opcional: ⚙️ Ajustes → IA online, cola o endereço do servidor, liga e toca em Testar conexão. Ela lê foto de comprovante e responde o que eu não entendo sozinho.',
   humor: 'Pra mudar meu jeito: ⚙️ Ajustes → C.A.O.S. Humor Suave (gentil, o padrão), Normal ou Ácido (zoeira liberada). Ali também liga a minha voz.',
   apagar: 'Pra apagar um lançamento: na aba 🏠 Início, em Lançamentos do mês, toca no × do lado dele. Eu mesmo não apago nada: essa é uma das minhas leis.',
-  geral: 'O app tem 5 abas: 🏠 Início (resumo e alertas), ➕ Lançar (gastos e entradas), 💬 C.A.O.S. (eu!), 🏦 Contas (bancos e saldos) e ⚙️ Ajustes (orçamentos, humor, lembretes, backup). Pergunta "como lanço um gasto?" ou "como ponho orçamento?" que eu explico cada uma.',
+  geral: 'Na barra de baixo: ➕ Lançar (gastos e entradas), 📅 Mês (planejamento), 🏠 Início no meio (resumo e alertas), 💬 C.A.O.S. (eu!) e 🏦 Contas (bancos e saldos). Dá pra trocar de aba arrastando a tela pro lado. Os ⚙️ Ajustes (orçamentos, humor, lembretes, backup) ficam na engrenagem, no alto do Início. Pergunta "como lanço um gasto?" ou "como ponho orçamento?" que eu explico cada uma.',
 };
 
 const fmtPct = v => `${String(Math.round(v * 100) / 100).replace('.', ',')}%`;

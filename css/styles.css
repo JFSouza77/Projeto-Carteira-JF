@@ -189,7 +189,7 @@ fieldset.mood legend { color: var(--muted); margin-bottom: 8px; padding: 0; }
 .topbar h1 small { font-weight: 400; }
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 8;
-  display: grid; grid-template-columns: repeat(6, 1fr);
+  display: grid; grid-template-columns: repeat(5, 1fr); align-items: end;
   background: var(--card);
   border-top: 1px solid var(--line);
   padding: 6px max(8px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
@@ -474,3 +474,28 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .racha .field input { width: 100%; }
 .racha-tag { display: block; font-size: .72rem; color: var(--muted); text-align: right; }
 @media (prefers-reduced-motion: reduce) { .ofensiva-fogo { filter: none; } }
+
+/* ---------- Barra de baixo com o Início no meio, grande (JF, 07/11) ---------- */
+.tabbar a.tab-inicio { gap: 3px; padding-top: 0; font-weight: 700; color: var(--text); }
+.tab-inicio-bola {
+  display: grid; place-items: center; width: 58px; height: 58px; margin-top: -26px; border-radius: 50%;
+  background: var(--accent); color: var(--accent-ink);
+  border: 4px solid var(--card); box-shadow: 0 6px 18px #0007, 0 0 16px -2px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.tabbar .tab-inicio .ico { width: 30px; height: 30px; filter: none; }
+.tabbar a.tab-inicio[aria-current="page"] { color: var(--accent); }
+.tabbar a.tab-inicio[aria-current="page"]::after { display: none; }
+.tabbar a.tab-inicio:not([aria-current="page"]) .tab-inicio-bola { background: var(--card-2); color: var(--accent); }
+.ajustes-btn { display: grid; justify-items: center; gap: 1px; min-width: 48px; min-height: 44px; padding: 4px 6px; border-radius: 12px;
+  color: var(--muted); text-decoration: none; font-size: .66rem; }
+.ajustes-btn .ico { width: 24px; height: 24px; }
+.ajustes-btn:hover, .ajustes-btn:focus-visible { color: var(--accent); }
+.topbar .voltar { text-decoration: none; display: grid; place-items: center; }
+.topbar-espaco { width: 44px; }
+/* troca de aba arrastando: entra deslizando do lado certo */
+.tela.entra-dir { animation: entraDir .22s ease-out; }
+.tela.entra-esq { animation: entraEsq .22s ease-out; }
+@keyframes entraDir { from { opacity: .4; transform: translateX(36px); } to { opacity: 1; transform: none; } }
+@keyframes entraEsq { from { opacity: .4; transform: translateX(-36px); } to { opacity: 1; transform: none; } }
+.menos-mov .tela.entra-dir, .menos-mov .tela.entra-esq { animation: none; }
+@media (prefers-reduced-motion: reduce) { .tela.entra-dir, .tela.entra-esq { animation: none; } }
