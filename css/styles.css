@@ -452,3 +452,25 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .inv-resumo { background: var(--card-2); border-radius: 12px; padding: 12px 14px; margin: 10px 0; }
 .inv-resumo .big { font-size: 1.6rem; margin: 2px 0; }
 .ganho { color: var(--ok); } .perda { color: var(--danger); }
+
+/* ---------- Ofensiva e A receber (07/11) ---------- */
+.ofensiva { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.ofensiva-fogo { font-size: 1.9rem; line-height: 1; filter: drop-shadow(0 0 8px #ff8a3d); }
+.ofensiva.apagada .ofensiva-fogo { filter: grayscale(1); opacity: .5; }
+.ofensiva-txt { flex: 1; display: grid; gap: 2px; min-width: 0; }
+.ofensiva-txt strong { font-size: 1.05rem; }
+.ofensiva-txt small { font-size: .82rem; }
+.ofensiva .ghost { min-height: 44px; font-size: .85rem; white-space: normal; max-width: 9.5em; }
+.ofensiva .ghost[hidden] { display: none; }
+.receber-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.receber-list li { display: flex; align-items: center; gap: 10px; }
+.receber-list .exp-main { flex: 1; display: grid; min-width: 0; }
+.receber-list small { color: var(--muted); }
+.ghost.small { min-height: 44px; padding: 6px 12px; font-size: .85rem; }
+.racha { border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; }
+.racha[hidden] { display: none; }
+.racha > summary { cursor: pointer; font-weight: 700; min-height: 32px; display: flex; align-items: center; }
+.racha[open] > summary { margin-bottom: 8px; }
+.racha .field input { width: 100%; }
+.racha-tag { display: block; font-size: .72rem; color: var(--muted); text-align: right; }
+@media (prefers-reduced-motion: reduce) { .ofensiva-fogo { filter: none; } }

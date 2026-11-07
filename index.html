@@ -50,6 +50,12 @@
         </div>
       </section>
 
+      <section class="card ofensiva" id="ofensiva-card" aria-live="polite">
+        <span class="ofensiva-fogo" id="ofensiva-fogo" aria-hidden="true">🔥</span>
+        <div class="ofensiva-txt"><strong id="ofensiva-dias">0 dias seguidos</strong><small id="ofensiva-sub" class="muted">Anote hoje pra acender o foguinho.</small></div>
+        <button type="button" class="ghost" id="sem-gasto">Hoje não gastei nada</button>
+      </section>
+
       <button class="caos" id="caos" aria-live="polite" type="button" aria-label="Conversar com o C.A.O.S.">
         <span class="caos-face" id="caos-face" aria-hidden="true">(•‿•)</span>
         <div class="caos-body">
@@ -61,6 +67,11 @@
       <section class="card" id="alerts-card" hidden>
         <h2>Alertas</h2>
         <ul class="alert-list" id="alert-list"></ul>
+      </section>
+
+      <section class="card" id="receber-card" hidden>
+        <h2>🧾 A receber <small class="muted" id="receber-total"></small></h2>
+        <ul class="receber-list" id="receber-list"></ul>
       </section>
 
       <section class="card">
@@ -100,6 +111,12 @@
             <span>Conta</span>
             <select id="account-select" aria-label="Conta"></select>
           </label>
+          <details class="racha" id="racha-box">
+            <summary>🍕 Dividir com amigos</summary>
+            <label class="field"><span>Quem vai te pagar a parte dele? (separe os nomes por vírgula)</span>
+              <input id="racha-nomes" type="text" maxlength="300" placeholder="Ex.: Ana, Bia, Caio" autocomplete="off"></label>
+            <p class="muted" id="racha-previa">Digite o valor total que você pagou e os nomes. A conta é dividida por igual.</p>
+          </details>
           <div class="photo-row">
             <label class="file-btn">📷 Foto do comprovante<input type="file" id="photo-input" accept="image/*" hidden></label>
             <button type="button" class="ghost" id="photo-ai" hidden>✨ Ler com IA</button>

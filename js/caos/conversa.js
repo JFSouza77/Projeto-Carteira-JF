@@ -3,7 +3,7 @@
 // ({ acao }) e quem grava é o app, depois do Confirmar (1ª lei).
 
 import {
-  formatBRL, parseAmount, periodRange, sumInRange, topCategories, summarizeMonth, forecastMonth,
+  formatBRL, parseAmount, periodRange, ofensiva, aReceber, sumInRange, topCategories, summarizeMonth, forecastMonth,
   incomeIn, monthKey, shiftMonth, monthLabel, accountBalance, accountLabel, totalBalance, analyze,
   spentIn, toISODate, INCOME_SOURCES, situacaoCompromissos, analisarPlanejamento, cabeNoMes, sugerirCategoria, palavrasDe, faturaDoCartao, progressoMeta, resumoInvestimentos,
 } from '../engine.js';
@@ -85,6 +85,7 @@ const VOCAB = [
 ];
 // Palavras comuns que NÃO são erro (não corrigir pra parecida: "conta" ≠ "contas", "comprar" ≠ "compras").
 const CONHECIDAS = [
+  'ofensiva', 'foguinho', 'seguidos', 'seguida', 'sequencia', 'receber', 'devem', 'deve', 'rachei', 'rachar', 'rachada', 'rachadinha', 'dividi', 'dividir',
   'conta', 'comprar', 'compra', 'comprei', 'gasta', 'gastas', 'pago', 'paga', 'pagou', 'mais', 'menos', 'tenho', 'temos',
   'posso', 'pode', 'mesmo', 'sobre', 'meus', 'minha', 'minhas', 'quero', 'queria', 'falar', 'fala', 'coisa', 'coisas',
   'tudo', 'isso', 'esse', 'essa', 'este', 'esta', 'para', 'pela', 'pelo', 'dele', 'dela', 'voce', 'ainda', 'ganhei',
@@ -224,6 +225,10 @@ function entenderSimples(t, { categories = [] } = {}) {
   if (/((o que|quanto) (eu )?(ainda )?tenho (pra|para|de) pagar|falta pagar|contas? (do|deste|desse) mes|vencimento|quando vence|o que vence|tenho conta|compromissos?|minhas contas fixas|assinaturas)/.test(t)) return { ...r, intent: 'pagar' };
   const querFazer = /\b(quero|preciso|queria|gostaria de) (anotar|lancar|registrar|adicionar|cadastrar|colocar|planejar|fazer|ligar|instalar|mandar)\b/.test(t);
   if (!/^como\b/.test(t) && !querFazer && /(o que (eu )?planejei|meus planos|planejamento|planos? (do|deste|desse|pro|para o) mes|o que (eu )?vou comprar|planejad|programad|o que (mais )?(eu )?tenho (pra|para) (esse|este|o) mes|o que mais (eu )?(tenho|vou))/.test(t)) return { ...r, intent: 'planos' };
+  // Ofensiva (07/11): "quantos dias seguidos?", "minha ofensiva", "meu foguinho"
+  if (/(ofensiva|foguinho|dias seguidos|dias em sequencia|sequencia de dias|streak)/.test(t) && !r.valor) return { ...r, intent: 'ofensiva' };
+  // Rachadinha (07/11): "quem me deve?", "quanto tenho a receber?", "quanto me devem?"
+  if (/(quem (me|ta me|esta me) dev|quanto (me )?devem|me deve[mn]?\b|(tenho|falta|faltam) (a|pra|para) receber|a receber\b|rachadinha|conta rachada|quem (nao )?(me )?pagou)/.test(t) && !r.valor) return { ...r, intent: 'a_receber' };
   if (/(quanto (eu )?(tenho )?investido|meus investimentos|minha carteira de investimento|quanto (meus investimentos|meu investimento) (rende|rendeu|renderam)|como (estao|esta) (meus|o meu|os meus) investimentos?)/.test(t)) return { ...r, intent: 'meus_investimentos' };
   // Saldo (06/11): "quanto eu tenho guardado no total?", "quanto tem nas contas?", "quanto poupei?"
   if (!/(pra|para) (pagar|gastar)/.test(t) && /(\bsaldo\b|quanto (eu )?(tenho|tem|ainda tenho|sobrou)\b(?! (pra|para|de) )|tenho guardado|guardad[oa]s?\b|poupad[oa]s?\b|quanto (eu )?(guardei|poupei|juntei)|dinheiro (no|na|nos|nas) (banco|conta)|tenho no banco|nas contas|no total)/.test(t)
@@ -249,10 +254,12 @@ function entenderSimples(t, { categories = [] } = {}) {
   if (/(quem e voce|quem (e|eh) tu|quem es tu|o que (e|eh) voce|se apresent|apresente.se|qual (e )?(o )?seu nome|como (voce )?se chama|voce e (uma )?(ia|inteligencia|robo|humano|gente|pessoa)|^caos\??$)/.test(t)) return { ...r, intent: 'identidade' };
   if (/(piada|me faz rir|algo engracado|anedota|charada|me alegra)/.test(t)) return { ...r, intent: 'piada' };
   // Ensinar a usar o app ("como faço pra lançar um gasto?")
-  const verboComo = /\b(como|onde)\b.*\b(faco|faz|fazer|coloco|colocar|cadastro|cadastrar|adiciono|adicionar|lanco|lancar|registro|registrar|anoto|anotar|crio|criar|mudo|mudar|troco|trocar|ativo|ativar|ligo|ligar|uso|usar|mando|mandar|envio|enviar|instalo|instalar|exporto|exportar|importo|importar|defino|definir|ponho|por|vejo|ver|apago|apagar|configuro|configurar)\b/;
+  const verboComo = /\b(como|onde)\b.*\b(faco|faz|fazer|coloco|colocar|cadastro|cadastrar|adiciono|adicionar|lanco|lancar|registro|registrar|anoto|anotar|crio|criar|mudo|mudar|troco|trocar|ativo|ativar|ligo|ligar|uso|usar|mando|mandar|envio|enviar|instalo|instalar|exporto|exportar|importo|importar|defino|definir|ponho|por|vejo|ver|apago|apagar|configuro|configurar|divido|dividir|racho|rachar)\b/;
   if (/(economiz|poupar|guardar dinheiro|gastar menos)/.test(t)) return { ...r, intent: 'dica' };
   if (verboComo.test(t) || querFazer || /(me ensina|tutorial|passo a passo|como usa(r)? o app|como funciona o app|como planejo)/.test(t)) {
     const TEMAS = [
+      ['racha', /(divid|rach|amigos? (vao|vai) (me )?pagar|me pagar de volta)/],
+      ['ofensiva', /(ofensiva|foguinho|dias seguidos|nao gastei nada)/],
       ['entrada', /(entrada|salario|rendimento|receita|recebi|ganho)/],
       ['orcamento', /(orcamento|limite|meta de gasto)/],
       ['cartao', /(cartao|fatura|credito)/],
@@ -309,6 +316,8 @@ const SUG_IDENTIDADE = ['O que você pode fazer?', 'Como funciona seu cérebro?'
 
 // Passo a passo de cada parte do app (o C.A.O.S. também instrui)
 const TUTORIAL = {
+  racha: 'Pra dividir uma conta: aba ➕ Lançar, digita o valor TOTAL que você pagou, escolhe a categoria e toca em "🍕 Dividir com amigos". Escreve o nome de quem vai te pagar (separado por vírgula). No orçamento entra só a sua parte, e o resto fica em "A receber" no Início. Quando o Pix cair, toca em "Recebi".',
+  ofensiva: 'A ofensiva 🔥 conta os dias seguidos em que você anota no app. Lançou um gasto ou uma entrada no dia, conta. Não gastou nada? Toca em "Hoje não gastei nada" no Início, que também conta. Ficou um dia inteiro sem abrir, ela zera, mas o recorde fica guardado.',
   gasto: 'Pra anotar um gasto: aba ➕ Lançar, deixa em 💸 Gasto, digita o valor, escolhe a categoria e toca em Adicionar. Ou me fala aqui: "gastei 30 no mercado", que eu preparo e você confirma.',
   entrada: 'Pra anotar uma entrada: aba ➕ Lançar, toca em 💰 Entrada, digita o valor, escolhe de onde veio (salário, freela, rendimentos…) e toca em Adicionar. Ou me fala: "recebi 1500 de salário".',
   orcamento: 'Pra pôr orçamento: aba ⚙️ Ajustes → Orçamentos, e coloca o limite do mês em cada categoria. Deixa vazio onde não quiser limite. Aí eu aviso em 80% e quando estourar.',
@@ -627,6 +636,25 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         filaIA: bancos.length ? { tipo: 'bancos', bancos, pergunta: intencao.t } : null,
         sugestoes: ['Qual a Selic?', 'Como está o mercado?'],
       };
+    }
+    case 'ofensiva': {
+      const o = ofensiva({ expenses, incomes, diasSemGasto: perfil?.diasSemGasto || [] }, today);
+      if (!o.dias) {
+        return { fato: `Sua ofensiva está zerada${o.recorde ? ` (seu recorde é ${o.recorde} ${o.recorde === 1 ? 'dia' : 'dias'})` : ''}. Anota um gasto hoje, ou toca em "Hoje não gastei nada" no Início, e o foguinho 🔥 acende de novo.`, sugestoes: ['Quanto gastei hoje?', 'Quanto gastei este mês?'] };
+      }
+      const dia = n => `${n} ${n === 1 ? 'dia' : 'dias'}`;
+      return {
+        fato: `${o.dias === 1 ? '🔥 Ofensiva acesa: 1 dia anotando.' : `🔥 Ofensiva de ${o.dias} dias seguidos anotando.`}${o.hojeFeito ? ' Hoje já está garantido.' : ' Falta anotar hoje pra não perder!'} Seu recorde é ${dia(o.recorde)}.`,
+        sugestoes: ['Quanto gastei este mês?', 'Quem me deve?'],
+      };
+    }
+    case 'a_receber': {
+      const r = aReceber(expenses);
+      if (!r.itens.length) return { fato: 'Ninguém te deve nada agora. Quando rachar uma conta, marque "🍕 Dividir com amigos" na hora de lançar o gasto que eu guardo quem deve quanto.', sugestoes: ['Como divido uma conta?'] };
+      const porPessoa = new Map();
+      for (const x of r.itens) porPessoa.set(x.nome, (porPessoa.get(x.nome) || 0) + x.valorCents);
+      const lista = [...porPessoa].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([n, v]) => `${n} (${formatBRL(v)})`).join(', ');
+      return { fato: `Você tem ${formatBRL(r.totalCents)} a receber: ${lista}${porPessoa.size > 5 ? ' e mais gente' : ''}. Quando o Pix cair, toca em "Recebi" na lista "A receber", no Início.`, sugestoes: ['Quanto gastei este mês?'] };
     }
     case 'meus_investimentos': {
       const lista = dados.investimentos || [];
