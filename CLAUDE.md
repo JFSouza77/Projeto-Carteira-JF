@@ -42,7 +42,7 @@ que escuta, presta atenção, reage com emoção ao que acontece, incentiva, aco
   `codebase-design`, `a11y-audit`.
 - Agenda: pedido urgente do JF vem primeiro. Att grande: quinta a partir das 18h e sexta das 9h às 18h (Brasília).
 - **Semana de rascunho (JF, 07/11/2026), pra guardar tokens pro Perfil:** até **domingo 08/11 à noite**, só coisa
-  pontual com o JF (publicar o servidor, ajuste pequeno). De **segunda 09/11 0h até quinta 12/11 16h**: **nada de código**.
+  pontual com o JF (publicar o servidor, ajuste pequeno). De **segunda 09/11 0h até quinta 12/11 16h**: **nada de código**, com **uma exceção: configurar e publicar o servidor junto com o JF**, quando ele chamar (JF, 08/11).
   Tudo que chegar (JF, GPT, Gemini, Code) vai pra `docs/Rascunhos_da_Semana.md` com o veredito do Wally (entra, não entra,
   depois) e o porquê; o Wally decide sozinho, sem esperar o Code. **Quinta 12/11 a partir das 16h e sexta 13/11 o dia todo:**
   rodada grande, fazendo o que entrou na lista. O Code fica de folga nesses dois dias.
