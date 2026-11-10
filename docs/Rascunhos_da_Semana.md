@@ -55,11 +55,37 @@ depender da IA online**, e falar do jeito certo pra cada idade (criança, adoles
 - *Investir e guardar:* juros simples · **juros compostos** · taxa de juros · inflação/IPCA · Selic · CDI · renda fixa × renda variável · CDB · Tesouro Direto · LCI/LCA · ação · **dividendo** · reserva de emergência · liquidez · rentabilidade × risco
 - *Contas da vida:* **lucro** × **prejuízo** · renda × despesa · orçamento · **renda bruta × renda líquida** · seguro de vida · seguro do banco/prestamista · golpe do Pix / falso funcionário
 
+**Explicar em camadas, pra qualquer idade (JF, 10/11):** não é "pergunta X, resposta Y". Adulto também não sabe tudo
+(o JF, 25 anos: "tem coisa que eu não sei"). Toda explicação começa **simples pra todo mundo** (uma frase + um exemplo
+do dia a dia), e ele oferece mais: "quer que eu explique com números?" → "quer o detalhe técnico?". A idade muda o
+exemplo e o tom (mesada pra criança, salário pra adulto), **nunca** se ele explica com calma. Ele também lê o que a pessoa
+quer saber de verdade: "vale a pena pegar consignado?" pede explicação **e** as perguntas certas (pra quê? quanto? em
+quantas vezes? qual o CET?), não só a definição. Sem tom de professor chato: "boa pergunta, muita gente não sabe".
+
 **Cuidados (inegociáveis):**
 - Regras do governo **mudam** (FGTS, INSS, IR): o texto diz de quando é a informação e manda conferir no app oficial (app FGTS, Meu INSS, Receita). Sem promessa de "você tem direito a…".
 - Ele **explica e compara, mas não recomenda produto financeiro específico** (regra do C.A.O.S.: não é consultor de investimento). "Qual rende mais" vira "como comparar" (% do CDI, liquidez, garantia do FGC).
 - Com criança: nunca falar de dívida da família de um jeito que assuste; sempre "pergunta pros seus pais / sua avó".
 - A IA online, quando estiver no ar, só **completa** o que o glossário não tiver.
+
+## 🟡 Olhar de cuidado: o que os gastos contam da vida (JF, 10/11)
+
+**A ideia:** o C.A.O.S. percebe padrões que vão além do dinheiro e faz uma **sugestão gentil**, como um amigo faria.
+Veredito: ✅ **entra, com muito cuidado** (depois do glossário).
+
+| O que ele percebe | O que ele diz (exemplo) |
+| --- | --- |
+| Farmácia/remédio subindo mês a mês | "Seus gastos com farmácia subiram bastante nos últimos meses. Tá tudo bem? Às vezes vale uma consulta pra ver se dá pra ajustar o tratamento. E pergunta na farmácia se tem genérico ou se o remédio sai pela Farmácia Popular." |
+| Combustível subindo sem rodar mais | "A gasolina tá pesando mais que antes. Já calibrou os pneus e fez a revisão? Carro desregulado bebe mais." |
+| Conta de luz subindo | "A luz subiu R$ X em 3 meses. Algum aparelho novo? Chuveiro e ar-condicionado costumam ser os vilões." |
+| Apostas/jogos online frequentes | Tom acolhedor, nunca bronca: "Notei bastante gasto com apostas. Se quiser, posso te ajudar a pôr um limite pra isso." |
+| Mercado subindo | Mostra se é inflação ou mudança de hábito, sem culpa. |
+
+**Regras:**
+- **Ele não é médico nem dá diagnóstico:** só sugere procurar um profissional ou um jeito de gastar menos. Nunca diz "você está doente".
+- **Gasto de saúde é dado sensível:** fica só no aparelho (e, com conta, embaralhado), **nunca vai pra IA online** e nunca aparece em aviso de tela inicial; só na conversa ou num cartão discreto.
+- **Uma vez por período** (não insiste), com "não quero mais esse tipo de aviso" sempre à mão. Com criança, nada disso.
+- Sempre com o número que motivou ("subiu de R$ 80 pra R$ 240 em 3 meses"), pra pessoa ver que não é chute.
 
 ## Já na fila (de antes da pausa)
 
