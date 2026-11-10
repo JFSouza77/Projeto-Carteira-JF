@@ -29,6 +29,38 @@ C.A.O.S.** (os prints dele têm saldos reais: **não vão pro repositório**, s�
 | 10 | **Barra de baixo:** "o Lançar vai ter que ir pro meio" | Rever com o JF na quinta: **Lançar (➕ grande) no meio** e Início na ponta, como nos apps de banco. Recomendação do Wally: sim, o lançar é a ação mais usada. |
 | 11 | Visual geral: **falta organização e intuitividade** (botões, áreas, adições, lançamentos) | Vistoria tela por tela (Início, Lançar, Mês, C.A.O.S., Contas, Ajustes) com a régua "uma pessoa de 3 a 86 anos entende sem explicação". Também: o rostinho de texto do topo da conversa (ex.: `┬┴┤(・_├┬┴`) fica estranho; o avatar desenhado resolve. |
 
+## 🟠 PRIORIDADE 2: o C.A.O.S. professor de finanças (JF, 10/11)
+
+**O pedido:** o C.A.O.S. tem que **saber e explicar** os termos de dinheiro que a gente escuta e não entende, **sem
+depender da IA online**, e falar do jeito certo pra cada idade (criança, adolescente, adulto, idoso). Veredito: ✅ **entra**.
+
+**Como vai ser (plano do Wally):**
+1. **Glossário offline** num arquivo próprio do C.A.O.S. (`js/caos/glossario.js`, só dados), com cada termo assim:
+   nomes e jeitos de perguntar ("cheque especial", "limite da conta"…) · **explicação pra adulto** (direta) ·
+   **explicação pra criança** (com exemplo do dia a dia, tipo mesada e lanche) · um exemplo com números · "cuidado com…" ·
+   "quando vale a pena". O teste confere que todo termo tem as duas versões.
+2. **Entender o contexto da pergunta:** "meu pai falou de cheque especial", "minha mãe vai pegar o saque-aniversário",
+   "aprendi juros compostos na escola" → ele explica **e** contextualiza ("quando um adulto fala disso, normalmente é
+   porque…; pergunta pra ele como está, ele vai gostar que você quer entender"), sem assustar a criança.
+3. **"Vale a pena parcelar?"**: conversa curta → tem desconto à vista (no Pix, no débito)? de quanto? parcela em quantas
+   vezes? com juros? → ele faz a conta e recomenda. Coxinha de R$ 5 no crédito parcelado → "não vale, paga no Pix ou no
+   dinheiro". Notebook de R$ 3.300 → compara à vista com desconto × parcelado sem juros × com juros.
+4. **Calculadoras simples offline:** juros simples × compostos (com tabelinha mês a mês), quanto rende guardar X por
+   mês, quanto custa o rotativo do cartão e o cheque especial em 3 meses.
+
+**Termos da primeira leva (≈60):**
+- *Conta e banco:* conta corrente · poupança · cofrinho/caixinha · conta digital × banco físico · saldo · extrato · tarifa · Pix · TED · débito automático · boleto
+- *Crédito e dívida:* cartão de crédito · fatura · limite · rotativo · parcelado sem e com juros · pagamento mínimo · cheque especial · empréstimo pessoal · **crédito consignado** · **margem consignável** · financiamento · CET (custo efetivo total) · score de crédito · nome sujo/negativado · renegociação
+- *Trabalho e governo:* **salário bruto × líquido** · desconto do INSS · imposto de renda (IR) · **FGTS** · **saque-aniversário** × saque-rescisão · 13º salário · férias + 1/3 · seguro-desemprego · **INSS** (aposentadoria, auxílio) · PIS/abono · benefício (VR/VA)
+- *Investir e guardar:* juros simples · **juros compostos** · taxa de juros · inflação/IPCA · Selic · CDI · renda fixa × renda variável · CDB · Tesouro Direto · LCI/LCA · ação · **dividendo** · reserva de emergência · liquidez · rentabilidade × risco
+- *Contas da vida:* **lucro** × **prejuízo** · renda × despesa · orçamento · **renda bruta × renda líquida** · seguro de vida · seguro do banco/prestamista · golpe do Pix / falso funcionário
+
+**Cuidados (inegociáveis):**
+- Regras do governo **mudam** (FGTS, INSS, IR): o texto diz de quando é a informação e manda conferir no app oficial (app FGTS, Meu INSS, Receita). Sem promessa de "você tem direito a…".
+- Ele **explica e compara, mas não recomenda produto financeiro específico** (regra do C.A.O.S.: não é consultor de investimento). "Qual rende mais" vira "como comparar" (% do CDI, liquidez, garantia do FGC).
+- Com criança: nunca falar de dívida da família de um jeito que assuste; sempre "pergunta pros seus pais / sua avó".
+- A IA online, quando estiver no ar, só **completa** o que o glossário não tiver.
+
 ## Já na fila (de antes da pausa)
 
 | Ideia | Veredito | Por quê / observação |
