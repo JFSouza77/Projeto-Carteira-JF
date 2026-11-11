@@ -87,6 +87,25 @@ Veredito: ✅ **entra, com muito cuidado** (depois do glossário).
 - **Uma vez por período** (não insiste), com "não quero mais esse tipo de aviso" sempre à mão. Com criança, nada disso.
 - Sempre com o número que motivou ("subiu de R$ 80 pra R$ 240 em 3 meses"), pra pessoa ver que não é chute.
 
+## 📰 Jornal do C.A.O.S. (JF, 11/11)
+
+**A ideia:** um canal de notícias de finanças dentro do app, atualizado **2 vezes por dia (06h e 18h)**, cobrindo o dia
+anterior e o atual. Veredito: ✅ **entra, depois do servidor no ar** (é o servidor que busca as notícias).
+
+**Como vai ser (plano do Wally):**
+- O servidor busca as manchetes nos horários (06h e 18h de Brasília, igual ao cron do mercado que já existe) e guarda
+  **uma edição só pra todo mundo** (barato: não é por pessoa). O app baixa e guarda: **funciona offline** com a última edição.
+- Cada notícia: manchete, **resumo curto escrito com as palavras do C.A.O.S.**, fonte e link pra matéria original.
+  **Nunca copiar a matéria inteira** (direito autoral).
+- **Fontes:** primeiro as públicas e oficiais, que podem ser republicadas com crédito: **Agência Brasil** (licença
+  aberta), Banco Central, IBGE, Tesouro, gov.br. Manchetes de grandes portais só com link e crédito.
+- **"E o que isso muda pra você?"**: o diferencial. O C.A.O.S. traduz a notícia pro bolso da pessoa, **usando os dados
+  dela só dentro do aparelho**: "a Selic subiu: o rotativo do seu cartão fica mais caro; você tem R$ X na fatura".
+- Versão pra criança (palavras simples) e o glossário ligado: termo difícil na notícia vira link pra explicação.
+- **Regras:** só fatos, sem opinião política e sem torcida; nada de "compre/venda" (não é recomendação); diz a hora da
+  edição; se a busca falhar, mostra a anterior com "edição de ontem".
+- Nome: **Jornal do C.A.O.S.** 🗞️ (e o avatar ganha uma forma de jornalista/âncora de TV).
+
 ## Já na fila (de antes da pausa)
 
 | Ideia | Veredito | Por quê / observação |
