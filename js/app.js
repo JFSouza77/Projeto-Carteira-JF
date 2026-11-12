@@ -29,7 +29,7 @@ const state = {
   expenses: [],
   incomes: [],
   accounts: [],
-  settings: { mood: DEFAULT_MOOD, voice: false, aiOn: false, aiUrl: '', letra: 'normal', tema: 'auto', vozVel: 1, menosMov: null },
+  settings: { mood: DEFAULT_MOOD, voice: false, aiOn: false, aiUrl: '', letra: 'normal', tema: 'escuro', temaV: 2, vozVel: 1, menosMov: null },
   caosMemory: memoriaInicial(),
   viewMonth: monthKey(toISODate()),
   kind: 'gasto',
@@ -2090,6 +2090,8 @@ async function init() {
     }
     Object.assign(state, { expenses, incomes, accounts: accounts.sort((a, b) => a.createdAt - b.createdAt) });
     if (settings) state.settings = { ...state.settings, ...settings };
+    // escuro por padrão (JF + Code, 12/11): quem nunca escolheu tema ("do aparelho" de fábrica) passa pro escuro, uma vez só
+    if (settings && !settings.temaV) state.settings = { ...state.settings, tema: settings.tema === 'claro' ? 'claro' : 'escuro', temaV: 2 };
     aplicarAcessibilidade();
     if (memory) state.caosMemory = memory;
     // fotos da conversa antiga não voltam (o link da imagem é da sessão); o texto volta

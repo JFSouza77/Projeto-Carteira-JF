@@ -7,8 +7,6 @@ Atualizada pelo Wally a cada rodada.
 ## Esperando o JF
 
 - **Publicar o servidor juntos** (IA online, conta, push, mercado, Jornal). Passo a passo: `servidor/LEIA-ME.md`.
-- **Parcelado no resumo do mês:** contar só a parcela de cada mês ou o valor todo no mês da compra (hoje)?
-- **Abrir no escuro por padrão?** (sugestão do Code: hoje segue o tema do celular).
 - Contar mais sobre ele pro C.A.O.S. zoar com mais assunto (sem dado pessoal sensível).
 
 ## Próxima rodada (sexta 13/11)
@@ -26,6 +24,10 @@ Atualizada pelo Wally a cada rodada.
 - Comparar rendimento dos bancos pela IA; perguntas da fila.
 
 ## Corrigido na hora (12/11)
+
+- Escuro por padrão (JF topou a ideia do Code); o claro e o "do aparelho" ficam em Acessibilidade.
+- Parcelado no resumo do mês: o JF deixou com o Wally. Decisão: continua o valor todo no mês da compra (é quando a
+  pessoa se comprometeu); as parcelas futuras aparecem no cartão. Rever se alguém reclamar.
 
 - Aviso vazio aparecia como uma pílula em cima do botão Lançar (1.17).
 - "Cabe no mês" sem renda dizia "sobram R$ 0,00" (1.17).
