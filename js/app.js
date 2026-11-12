@@ -147,7 +147,8 @@ function narrate(events, { ignoreCooldown = false } = {}) {
 
 const TELAS = ['inicio', 'lancar', 'mes', 'conversa', 'contas', 'ajustes'];
 // Ordem da barra de baixo (12/11: o Lançar, ação mais usada, fica no meio, grande). Arrastar pro lado anda nessa ordem; Ajustes fica fora (é a engrenagem).
-const ORDEM_ABAS = ['inicio', 'mes', 'lancar', 'conversa', 'contas'];
+// barra de baixo (JF, 12/11): C.A.O.S., Contas, Lançar (meio), Mês, Início por último
+const ORDEM_ABAS = ['conversa', 'contas', 'lancar', 'mes', 'inicio'];
 let telaAtual = 'inicio';
 
 function irPara(tela, { lado = null } = {}) {
@@ -185,10 +186,19 @@ function barStyle(ratio) {
   return `width:${pct}%;background:${color}`;
 }
 
+// Ícones de traço no lugar dos emojis (JF, 12/11: "mais limpo"). Os símbolos ficam no <svg> do index.html.
+const ic = id => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
+const CAT_COM_ICONE = new Set(['mercado', 'delivery', 'restaurante', 'transporte', 'moradia', 'contas', 'saude', 'lazer', 'streaming', 'compras', 'outros']);
+const FONTE_COM_ICONE = new Set(['salario', 'freela', 'rendimento', 'presente', 'outros']);
+/** Ícone da categoria: as que vêm com o app têm desenho próprio; a criada pela pessoa mantém o emoji dela. */
+const icCat = c => (c && CAT_COM_ICONE.has(c.id) ? ic(`c-${c.id}`) : esc(c?.emoji ?? '') || ic('c-outros'));
+const icFonte = f => (f && FONTE_COM_ICONE.has(f.id) ? ic(`e-${f.id}`) : ic('e-outros'));
+const ICONE_FORMA = { dinheiro: 'f-dinheiro', pix: 'f-pix', debito: 'a-cartao', credito: 'a-cartao' };
+
 const ICONE_ALERTA = {
-  categoria_estourada: '🔴', orcamento_80: '🟡', ritmo_alto: '📈', mes_negativo: '⚠️', conta_negativa: '🏦',
-  delivery_repetido: '🛵', sem_registro: '💤', compromisso_vence: '📅', compromisso_atrasado: '⏰', plano_do_mes: '🗓️',
-  confira_banco: '🔎', cartao_limite: '💳', cartao_vence: '💳', a_receber: '🧾',
+  categoria_estourada: 'i-alerta', orcamento_80: 'i-alerta', ritmo_alto: 'e-rendimento', mes_negativo: 'i-alerta', conta_negativa: 'i-contas',
+  delivery_repetido: 'c-delivery', sem_registro: 'i-relogio', compromisso_vence: 'i-mes', compromisso_atrasado: 'i-relogio', plano_do_mes: 'i-mes',
+  confira_banco: 'i-lupa', cartao_limite: 'a-cartao', cartao_vence: 'a-cartao', a_receber: 'i-recibo',
 };
 
 function render() {
@@ -225,13 +235,13 @@ function render() {
   const alertas = isCurrent ? analyze(dados()) : [];
   $('#alerts-card').hidden = !alertas.length;
   $('#alert-list').innerHTML = alertas.map(a => `
-    <li class="${a.severity}"><span aria-hidden="true">${ICONE_ALERTA[a.type] || '⚠️'}</span><span>${esc(cap(nomeAlerta(a)))}</span></li>`).join('');
+    <li class="${a.severity}">${ic(ICONE_ALERTA[a.type] || 'i-alerta')}<span>${esc(cap(nomeAlerta(a)))}</span></li>`).join('');
 
   const rows = s.rows.filter(r => r.spentCents > 0 || r.budgetCents > 0).sort((a, b) => b.spentCents - a.spentCents);
   $('#cat-list').innerHTML = rows.length ? rows.map(r => `
     <li>
       <div class="cat-head">
-        <span>${esc(r.emoji)} ${esc(r.name)}</span>
+        <span>${icCat(r)} ${esc(r.name)}</span>
         <span class="num">${formatBRL(r.spentCents)}${r.budgetCents ? `<small> / ${formatBRL(r.budgetCents)}</small>` : ''}</span>
       </div>
       ${r.budgetCents ? `<div class="bar"><div class="bar-fill" style="${barStyle(r.ratio)}"></div></div>` : ''}
@@ -249,7 +259,7 @@ function render() {
       const s2 = srcById(x.sourceId);
       return `
       <li class="entrada">
-        <span class="exp-emoji" aria-hidden="true">${esc(s2?.emoji ?? '💰')}</span>
+        <span class="exp-emoji" aria-hidden="true">${icFonte(s2)}</span>
         <span class="exp-main"><span>${esc(x.note || s2?.name || 'Entrada')}</span>
           <small>${d}/${m} · entrada${conta ? ` · ${esc(accountLabel(conta))}` : ''}</small></span>
         <span class="num">+${formatBRL(x.amountCents)}</span>
@@ -259,11 +269,11 @@ function render() {
     const c = catById(x.categoryId);
     return `
     <li>
-      <span class="exp-emoji" aria-hidden="true">${esc(c?.emoji ?? '📦')}</span>
+      <span class="exp-emoji" aria-hidden="true">${icCat(c)}</span>
       <span class="exp-main"><span>${esc(x.note || c?.name || x.categoryId)}</span>
         <small>${d}/${m}${x.note && c ? ` · ${esc(c.name)}` : ''}${conta ? ` · ${esc(accountLabel(conta))}` : ''}${x.forma && !conta ? ` · ${esc(FORMAS_PAGAMENTO[x.forma].slice(2).trim())}` : ''}${x.parcelas > 1 ? ` · ${x.parcelas}x de ${formatBRL(Math.floor(x.amountCents / x.parcelas))}` : ''}
-        ${x.imageId ? `<button class="thumb-btn" data-photo="${esc(x.imageId)}" aria-label="Ver foto">📷</button>` : ''}</small></span>
-      <span class="num">${x.racha ? `<span title="Sua parte">${formatBRL(valorProprio(x))}</span><small class="racha-tag">🍕 de ${formatBRL(x.amountCents)}</small>` : formatBRL(x.amountCents)}</span>
+        ${x.imageId ? `<button class="thumb-btn" data-photo="${esc(x.imageId)}" aria-label="Ver foto">${ic('i-foto')}</button>` : ''}</small></span>
+      <span class="num">${x.racha ? `<span title="Sua parte">${formatBRL(valorProprio(x))}</span><small class="racha-tag">${ic('i-dividir')} de ${formatBRL(x.amountCents)}</small>` : formatBRL(x.amountCents)}</span>
       <button class="icon-btn del" data-del="${esc(x.id)}" data-kind="gasto" aria-label="Apagar gasto">×</button>
     </li>`;
   }).join('');
@@ -330,7 +340,7 @@ async function hojeNaoGastei() {
   await db.setMeta('perfil', state.perfil);
   render();
   const fala = narrate(eventoOfensiva(antes));
-  toast(fala ? fala.texto : 'Anotado: hoje sem gastos. O foguinho continua aceso 🔥');
+  toast(fala ? fala.texto : 'Anotado: hoje sem gastos. O foguinho continua aceso.');
 }
 
 function renderAReceber() {
@@ -386,13 +396,13 @@ function renderLancar() {
   $('#category-chips').setAttribute('aria-label', gasto ? 'Categoria' : 'De onde veio');
   $('#racha-box').hidden = !gasto;
   $('#category-chips').innerHTML = opcoes.map(c => `
-    <button type="button" class="chip" role="radio" aria-checked="${c.id === sel}" data-cat="${esc(c.id)}">${esc(c.emoji)} ${esc(c.name)}</button>`).join('');
+    <button type="button" class="chip" role="radio" aria-checked="${c.id === sel}" data-cat="${esc(c.id)}">${gasto ? icCat(c) : icFonte(c)} ${esc(c.name)}</button>`).join('');
   $('#submit-btn').textContent = gasto ? 'Adicionar gasto' : 'Adicionar entrada';
   // Pagou como? (P8): a forma escolhe que contas aparecem e o que mais perguntar
   const forma = gasto ? state.forma : null;
   $('#forma-field').hidden = !gasto;
   $('#forma-chips').innerHTML = Object.entries(FORMAS_PAGAMENTO).map(([id, nome]) =>
-    `<button type="button" class="chip" role="radio" aria-checked="${id === forma}" data-forma="${id}">${esc(nome)}</button>`).join('');
+    `<button type="button" class="chip" role="radio" aria-checked="${id === forma}" data-forma="${id}">${ic(ICONE_FORMA[id])} ${esc(nome.replace(/^\S+\s/, ''))}</button>`).join('');
   const filtro = !gasto ? a => a.tipo !== 'cartao' // entrada não cai no cartão de crédito
     : forma === 'credito' ? a => a.tipo === 'cartao'
     : forma ? a => a.tipo !== 'cartao' : () => true;
@@ -545,7 +555,7 @@ async function lerFotoComIA() {
   const btn = $('#photo-ai');
   try {
     btn.disabled = true;
-    btn.textContent = '⏳ Lendo…';
+    btn.textContent = 'Lendo…';
     const img = await imagens.pegar(state.photo.id);
     const r = await ia.lerImagem(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob), categorias: state.categories });
     if (r.valor_centavos > 0) $('#amount').value = centsToInput(r.valor_centavos);
@@ -562,7 +572,7 @@ async function lerFotoComIA() {
     toast(e.message || 'Não consegui ler a foto.');
   } finally {
     btn.disabled = false;
-    btn.textContent = '✨ Ler com IA';
+    btn.innerHTML = `${ic('i-ia')} Ler com IA`;
   }
 }
 
@@ -615,7 +625,7 @@ function renderChat() {
         return `<li class="msg eu">${m.url ? `<img src="${esc(m.url)}" alt="Foto enviada">` : ''}${esc(m.texto || '')}</li>`;
       }
       const acao = m.acao && !m.acaoFeita
-        ? `<div class="acao"><button class="sim" data-acao="${i}" data-ok="1">✔ Confirmar</button><button class="nao" data-acao="${i}" data-ok="0">Cancelar</button></div>`
+        ? `<div class="acao"><button class="sim" data-acao="${i}" data-ok="1">${ic('i-ok')} Confirmar</button><button class="nao" data-acao="${i}" data-ok="0">Cancelar</button></div>`
         : '';
       if (m.digitando) return `<li class="msg caos-msg pensando digitando" aria-label="C.A.O.S. está digitando"><span class="who" aria-label="C.A.O.S."><span class="caos-face mini" data-msg="${i}" aria-hidden="true"></span></span><span class="pontos" aria-hidden="true"><i></i><i></i><i></i></span> digitando</li>`;
       return `<li class="msg caos-msg ${m.temp ? 'pensando' : ''}"><span class="who" aria-label="C.A.O.S.${m.ia ? ' com IA' : ''}"><span class="caos-face mini" data-msg="${i}" aria-hidden="true"></span>${m.ia ? '<span class="tag-ia">IA</span>' : ''}</span>${esc(m.texto)}${acao}</li>`;
@@ -741,7 +751,7 @@ function renderMetas() {
   el.innerHTML = state.metas.map(m => {
     const p = progressoMeta(m, hoje);
     return `<li>
-      <div class="account-head"><strong>${p.batida ? '🏆' : '🎯'} ${esc(m.nome)}</strong><span class="num">${p.pct}%</span></div>
+      <div class="account-head"><strong>${ic(p.batida ? 'i-trofeu' : 'i-meta')} ${esc(m.nome)}</strong><span class="num">${p.pct}%</span></div>
       <div class="limite-bar" role="img" aria-label="${p.pct}% da meta"><i style="width:${p.pct}%"></i></div>
       <small class="muted">${esc(p.batida ? `Meta batida! ${formatBRL(m.alvoCents)} guardados.` : textoMeta(p))}</small>
       <div class="account-actions">
@@ -984,7 +994,7 @@ function renderInvestimentos() {
   $('#inv-list').innerHTML = lista.map(i => {
     const g = i.atualCents - i.aplicadoCents;
     return `<li>
-      <div class="account-head"><strong>📈 ${esc(i.nome)}</strong><span class="num">${formatBRL(i.atualCents)}</span></div>
+      <div class="account-head"><strong>${ic('e-rendimento')} ${esc(i.nome)}</strong><span class="num">${formatBRL(i.atualCents)}</span></div>
       <small class="muted">${esc(TIPOS_INVESTIMENTO[i.tipo] || 'Outro')}${i.instituicao ? ` · ${esc(i.instituicao)}` : ''} · aplicou ${formatBRL(i.aplicadoCents)} · <span class="${g >= 0 ? 'ganho' : 'perda'}">${g >= 0 ? '+' : '−'}${formatBRL(Math.abs(g))}</span> · valor de ${dia(i.valorEm)}</small>
       <div class="account-actions">
         <button class="ghost" data-inv-atualizar="${esc(i.id)}">Atualizar valor</button>
@@ -1071,7 +1081,7 @@ function itemCartao(a) {
   const dia = iso => `${iso.slice(8)}/${iso.slice(5, 7)}`;
   return `
     <li>
-      <div class="account-head"><strong>💳 ${esc(accountLabel(a))}</strong><span class="num ${f.pct >= 100 ? 'bad' : ''}">${formatBRL(f.disponivelCents)} livre</span></div>${f.reforcoCents ? `<small class="muted">Limite ${formatBRL(a.limiteCents)} + ${formatBRL(f.reforcoCents)} do cofrinho.</small>` : ''}
+      <div class="account-head"><strong>${ic('a-cartao')} ${esc(accountLabel(a))}</strong><span class="num ${f.pct >= 100 ? 'bad' : ''}">${formatBRL(f.disponivelCents)} livre</span></div>${f.reforcoCents ? `<small class="muted">Limite ${formatBRL(a.limiteCents)} + ${formatBRL(f.reforcoCents)} do cofrinho.</small>` : ''}
       <div class="limite-bar ${cls}" role="img" aria-label="${f.pct}% do limite usado"><i style="width:${Math.min(100, Math.max(0, f.pct))}%"></i></div>
       <small class="muted">Usado ${formatBRL(f.usadoCents)} de ${formatBRL(f.limiteCents)} (${f.pct}%). Fatura aberta ${formatBRL(f.abertaCents)}, fecha ${dia(f.fechamento)}.${f.fechadaCents ? ` Fatura fechada ${formatBRL(f.fechadaCents)} vence ${dia(f.vencimento)}.` : ''}${f.futurasCents ? ` Parcelas das próximas faturas: ${formatBRL(f.futurasCents)}${f.presoFuturoCents ? ` (${formatBRL(f.presoFuturoCents)} preso no limite)` : ''}.` : ''}</small>
       <div class="account-actions">
@@ -1103,20 +1113,20 @@ async function onAddCartao(ev) {
   }
 }
 
-const ICONE_CONTA = { corrente: '🏦', poupanca: '🐷', cofrinho: '🪙', cartao: '💳' };
-const iconeConta = a => ICONE_CONTA[a.tipo === 'cartao' ? 'cartao' : a.subtipo || 'corrente'];
+const ICONE_CONTA = { corrente: 'i-contas', poupanca: 'a-poupanca', cofrinho: 'e-outros', cartao: 'a-cartao' };
+const iconeConta = a => ic(ICONE_CONTA[a.tipo === 'cartao' ? 'cartao' : a.subtipo || 'corrente']);
 
 /** <option>s de conta agrupadas por banco, em ordem alfabética, cada uma dizendo o que é (12/11). */
 function opcoesDeConta(filtro = () => true) {
   return '<option value="">Sem conta</option>' + agruparPorBanco(state.accounts.filter(filtro)).map(g =>
-    `<optgroup label="${esc(g.bank)}">${g.contas.map(a => `<option value="${esc(a.id)}">${iconeConta(a)} ${esc(accountLabel(a))}</option>`).join('')}</optgroup>`).join('');
+    `<optgroup label="${esc(g.bank)}">${g.contas.map(a => `<option value="${esc(a.id)}">${esc(accountLabel(a))}</option>`).join('')}</optgroup>`).join('');
 }
 
 function renderFormConta() {
   const cofrinho = $('#bank-subtipo').value === 'cofrinho';
   const cartoes = state.accounts.filter(a => a.tipo === 'cartao');
   $('#bank-reforco-field').hidden = !cofrinho || !cartoes.length;
-  $('#bank-reforco-cartao').innerHTML = cartoes.map(a => `<option value="${esc(a.id)}">💳 ${esc(accountLabel(a))}</option>`).join('');
+  $('#bank-reforco-cartao').innerHTML = cartoes.map(a => `<option value="${esc(a.id)}">${esc(accountLabel(a))}</option>`).join('');
   const doBanco = cartoes.find(a => a.bank === $('#bank-select').value);
   if (doBanco) $('#bank-reforco-cartao').value = doBanco.id;
 }
@@ -1181,7 +1191,7 @@ async function onRemoveAccount(id) {
 function renderBudgets() {
   $('#budget-list').innerHTML = state.categories.map(c => `
     <li>
-      <label for="b-${esc(c.id)}">${esc(c.emoji)} ${esc(c.name)}</label>
+      <label for="b-${esc(c.id)}">${icCat(c)} ${esc(c.name)}</label>
       <span class="amount small"><span>R$</span>
         <input id="b-${esc(c.id)}" data-budget="${esc(c.id)}" type="text" inputmode="decimal" placeholder="sem limite" value="${centsToInput(c.budgetCents)}">
       </span>
@@ -1304,16 +1314,16 @@ function prepararFormCompromisso() {
     const k = shiftMonth(hoje, i);
     return `<option value="${k}">${i === 0 ? 'este mês' : i === 1 ? 'mês que vem' : nomeMes(k)}</option>`;
   }).join('');
-  $('#comp-cat').innerHTML = state.categories.map(c => `<option value="${esc(c.id)}" ${c.id === 'contas' ? 'selected' : ''}>${esc(c.emoji)} ${esc(c.name)}</option>`).join('');
+  $('#comp-cat').innerHTML = state.categories.map(c => `<option value="${esc(c.id)}" ${c.id === 'contas' ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
   $('#comp-conta-field').hidden = !state.accounts.length;
   $('#comp-conta').innerHTML = opcoesDeConta();
 }
 
 function textoStatus(c) {
   if (!c.noMes) return `próxima vez: ${nomeMes(c.proximaVez).toLowerCase()}`;
-  if (c.status === 'pago') return `✔ pago este mês (${formatBRL(c.pagoCents)})`;
+  if (c.status === 'pago') return `pago este mês (${formatBRL(c.pagoCents)})`;
   const parcial = c.parcial ? ` · pagou ${formatBRL(c.pagoCents)}, falta ${formatBRL(c.faltaCents)}` : '';
-  if (c.status === 'atrasado') return `⏰ venceu dia ${c.diaNoMes}${parcial}`;
+  if (c.status === 'atrasado') return `venceu dia ${c.diaNoMes}${parcial}`;
   if (c.parcial) return `${c.diaNoMes ? `vence dia ${c.diaNoMes}` : 'é deste mês'}${parcial}`;
   if (c.status === 'pendente') return 'é deste mês';
   return c.diasParaVencer === 0 ? 'vence hoje' : c.diasParaVencer === 1 ? 'vence amanhã' : `vence dia ${c.diaNoMes} (em ${c.diasParaVencer} dias)`;
@@ -1341,7 +1351,7 @@ function renderMes() {
   $('#plan-linhas').innerHTML = linhas.map(([k, v]) => `<li><span>${esc(k)}</span><span>${esc(v)}</span></li>`).join('');
   // a análise do C.A.O.S. (só leitura: não muda a memória dele)
   const { fala } = conversar('cabe no mês?', dados(), { mood: state.settings.mood, memory: state.caosMemory, perfil: state.perfil });
-  $('#plan-caos').textContent = `🤖 ${fala.texto}`;
+  $('#plan-caos').textContent = fala.texto;
 
   const sit = situacaoCompromissos(state.compromissos, state.expenses, hoje);
   $('#comp-list').innerHTML = sit.length ? sit.map(c => {
@@ -1349,7 +1359,7 @@ function renderMes() {
     const rep = c.cadaMeses === 1 ? 'todo mês' : c.cadaMeses === 12 ? 'todo ano' : `a cada ${c.cadaMeses} meses`;
     return `
     <li class="${c.status}">
-      <span class="comp-info"><span>${cat?.emoji ?? '📌'} ${esc(c.nome)}</span>
+      <span class="comp-info"><span>${icCat(cat)} ${esc(c.nome)}</span>
         <small>${esc(TIPOS_COMPROMISSO[c.tipo])} · ${rep}${c.dia ? ` · dia ${c.dia}` : ''} · ${esc(textoStatus(c))}</small></span>
       <span class="num">${formatBRL(c.valorCents)}</span>
       <span class="comp-acoes">
@@ -1568,7 +1578,7 @@ async function entrarNaConta(criar) {
   const botoes = [$('#conta-entrar'), $('#conta-criar')];
   const textos = botoes.map(b => b.textContent);
   botoes.forEach(b => { b.disabled = true; });
-  (criar ? botoes[1] : botoes[0]).textContent = '🔐 Protegendo…';
+  (criar ? botoes[1] : botoes[0]).textContent = 'Protegendo…';
   try {
     const nome = await conta.entrar(servidor(), { apelido, senha, criar });
     $('#conta-senha').value = '';
@@ -1597,10 +1607,10 @@ function versaoNovidade(n, i) {
   return `<details class="nov-item"${i === 0 ? ' open' : ''}><summary>`
     + `<span class="nov-v">Versão ${esc(n.v)}</span>`
     + (n.nome ? `<span class="nov-nome">${esc(n.nome)}</span>` : '')
-    + (n.data ? `<span class="nov-data">📅 ${esc(n.data)}</span>` : '')
+    + (n.data ? `<span class="nov-data">${esc(n.data)}</span>` : '')
     + `<span class="nov-t">${esc(n.t)}</span></summary>`
     + (n.itens.length ? `<ul>${n.itens.map(itemNovidade).join('')}</ul>` : '')
-    + (n.qol.length ? `<div class="nov-qol">🛠️ Ajustes e correções 🛠️</div><ul>${n.qol.map(itemNovidade).join('')}</ul>` : '')
+    + (n.qol.length ? `<div class="nov-qol">Ajustes e correções</div><ul>${n.qol.map(itemNovidade).join('')}</ul>` : '')
     + `</details>`;
 }
 
@@ -1611,7 +1621,7 @@ function renderNovidades() {
     `<div class="nov-ic" aria-hidden="true">🆕</div><p class="nov-sub">O que mudou nas últimas versões. Toque num item pra ver a explicação.</p>`
     + NOVIDADES.slice(0, NOV_A_MOSTRA).map(versaoNovidade).join('')
     + (antigas > 0
-      ? `<button type="button" class="ghost nov-antigas" id="novidades-antigas" aria-expanded="false">📚 Ver versões antigas (${antigas})</button>`
+      ? `<button type="button" class="ghost nov-antigas" id="novidades-antigas" aria-expanded="false">Ver versões antigas (${antigas})</button>`
         + `<div id="novidades-antigas-lista" class="nov-antigas-lista" hidden>${NOVIDADES.slice(NOV_A_MOSTRA).map((n, i) => versaoNovidade(n, i + NOV_A_MOSTRA)).join('')}</div>`
       : '');
 }
@@ -1620,7 +1630,7 @@ function alternarAntigas(b) {
   const l = $('#novidades-antigas-lista'), abrir = l.hidden;
   l.hidden = !abrir;
   b.setAttribute('aria-expanded', String(abrir));
-  b.textContent = abrir ? '📚 Esconder versões antigas' : `📚 Ver versões antigas (${NOVIDADES.length - NOV_A_MOSTRA})`;
+  b.textContent = abrir ? 'Esconder versões antigas' : `Ver versões antigas (${NOVIDADES.length - NOV_A_MOSTRA})`;
 }
 
 async function abrirNovidades() {
@@ -1788,7 +1798,7 @@ function sugerirPelaDescricao() {
   state.selectedCategory = cat.id;
   state.catSugerida = true;
   renderLancar();
-  aviso.textContent = `🤖 Lembrei: isso costuma ser ${cat.emoji} ${cat.name}. Se não for, é só tocar em outra.`;
+  aviso.textContent = `Lembrei: isso costuma ser ${cat.name}. Se não for, é só tocar em outra.`;
   aviso.hidden = false;
 }
 

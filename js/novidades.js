@@ -7,6 +7,20 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.19',
+    data: '12/11/2026',
+    nome: 'Visual Mais Limpo',
+    t: 'Ícones de traço no lugar dos emojis, verde neon no modo escuro e barra de baixo em nova ordem.',
+    itens: [
+      '🧭 Barra nova: C.A.O.S., Contas, Lançar no meio, Mês e Início por último.',
+      '✨ Neon no escuro: botões e escolhas com brilho neon e fundo vazado, no lugar do verde chapado.',
+      '✏️ Ícones novos: categorias, contas, pagamentos e botões ganharam desenhos de traço.',
+    ],
+    qol: [
+      '🏷️ Categoria sua: as que você criar continuam com o emoji que você escolheu.',
+    ],
+  },
+  {
     v: '1.18',
     data: '12/11/2026',
     nome: 'Pagou Como?',
