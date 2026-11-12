@@ -1,4 +1,4 @@
-# Um C.A.O.S. só (núcleo único, 12/11/2026)
+# Um C.A.O.S. só (núcleo único, 12/11/2026 · aprovado pelo JF)
 
 Pedido do JF: "que não haja uma versão diferente dele, mesmo que ele esteja em projetos diferentes".
 
@@ -40,3 +40,11 @@ Analogia: é a mesma pessoa com dois empregos. Muda a roupa e o assunto; o jeito
   4. Trazer o temperamento do dia e o estabilizador.
 - **Perfil (Code, 2.0):** ler a identidade e as datas do núcleo em vez de constantes soltas, e o teste de cópia
   idêntica.
+
+## Versões do núcleo
+
+| Versão | Data | O que mudou |
+|---|---|---|
+| 1.1.0 | 12/11/2026 | O JF aprovou. Entraram o aniversário da Carteira (5/11) e o calendário de dias (`dias`): 10 datas especiais e os dias da semana, iguais nos dois projetos. |
+| 1.0.0 | 12/11/2026 | Primeira versão: identidade, vida, datas, criador, leis, 10 emoções, formas do avatar. |
+
