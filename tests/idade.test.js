@@ -107,12 +107,26 @@ test('alerta nunca sai com rosto de festa; piada nunca sai com rosto preocupado 
   }
 });
 
-test('reconhece o JF como criador (sem acento, minúsculas) e só ele', async () => {
-  const { ehCriador } = await import('../js/caos/index.js');
-  assert.equal(ehCriador({ apelido: 'JF' }), true);
-  assert.equal(ehCriador({ nome: 'João Fernando', apelido: 'Jão' }), true);
-  assert.equal(ehCriador({ apelido: 'tgp77' }), true);
-  assert.equal(ehCriador({ apelido: 'Fulano' }), false);
+test('criador só com o selo da conta, nunca pelo nome digitado (achado do Code, 12/11)', async () => {
+  const { ehCriador, pareceCriador } = await import('../js/caos/index.js');
+  assert.equal(ehCriador({ apelido: 'JF' }), false);
+  assert.equal(ehCriador({ nome: 'João Fernando', apelido: 'Jão' }), false);
+  assert.equal(pareceCriador({ apelido: 'tgp77' }), true);
+  assert.equal(pareceCriador({ apelido: 'Fulano' }), false);
+  assert.equal(ehCriador({ apelido: 'Qualquer', seloCriador: true }), true);
   const now = new Date(2026, 10, 6, 10).getTime();
-  assert.ok(contexto({ humor: 'suave', emocao: 'calmo', now, perfil: { apelido: 'JF' } }).has('criador'));
+  assert.ok(!contexto({ humor: 'suave', emocao: 'calmo', now, perfil: { apelido: 'JF' } }).has('criador'));
+  assert.ok(contexto({ humor: 'suave', emocao: 'calmo', now, perfil: { apelido: 'JF', seloCriador: true } }).has('criador'));
+});
+
+test('sexta-feira 13: ele comenta o dia (uma vez)', async () => {
+  const { diaEspecial, reagir } = await import('../js/caos/index.js');
+  assert.equal(diaEspecial('2026-11-13'), 'sexta13');
+  assert.equal(diaEspecial('2026-11-12'), null);
+  assert.equal(diaEspecial('2026-12-13'), null); // domingo
+  const now = new Date(2026, 10, 13, 9).getTime();
+  const r = reagir([{ type: 'dia_especial', dia: 'sexta13' }, { type: 'boas_vindas' }], { now });
+  assert.match(r.fala.texto, /sexta-feira 13/i);
+  const de_novo = reagir([{ type: 'dia_especial', dia: 'sexta13' }], { now: now + 3_600_000, memory: r.memoria });
+  assert.ok(!de_novo.fala || !/sexta-feira 13/i.test(de_novo.fala.texto));
 });

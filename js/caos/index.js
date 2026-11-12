@@ -11,7 +11,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '1.15.0';
+export const CAOS_VERSAO = '1.16.0';
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -22,7 +22,7 @@ export { IDENTIDADE, resumoIdentidade } from './identidade.js';
 const PRIORIDADE = {
   categoria_estourada: 50, compromisso_atrasado: 49, conta_negativa: 48, cartao_limite: 47, mes_negativo: 46, cartao_vence: 45, compromisso_vence: 44,
   orcamento_80: 40, mes_verde: 35, plano_do_mes: 25, confira_banco: 9,
-  ritmo_alto: 30, ofensiva_marco: 28, racha_cadastrada: 27, a_receber: 22, delivery_repetido: 20, entrada_cadastrada: 15, gasto_cadastrado: 10, sem_registro: 8, boas_vindas: 5,
+  ritmo_alto: 30, ofensiva_marco: 28, racha_cadastrada: 27, a_receber: 22, delivery_repetido: 20, entrada_cadastrada: 15, gasto_cadastrado: 10, sem_registro: 8, dia_especial: 7, boas_vindas: 5,
 };
 // Cooldown por tipo (ms). Alertas de orçamento e conta não têm: são úteis.
 const COOLDOWN = {
@@ -33,6 +33,7 @@ const COOLDOWN = {
   sem_registro: 24 * 3_600_000,
   mes_negativo: 12 * 3_600_000,
   boas_vindas: 6 * 3_600_000,
+  dia_especial: 20 * 3_600_000, // uma vez no dia
   plano_do_mes: 24 * 3_600_000,
   cartao_limite: 12 * 3_600_000,
   cartao_vence: 12 * 3_600_000,
@@ -53,9 +54,24 @@ function normalizarMem(m, now) {
 }
 
 const NOMES_DO_CRIADOR = new Set(['joao fernando', 'jf', 'tgp', 'jf77', 'tgp77']);
+/**
+ * Criador só com a conta confirmada pelo servidor (achado do Code, 12/11; foi o bug "Nick Protegido" do Perfil 1.9.5):
+ * qualquer um podia digitar "JF" no primeiro acesso e virar criador. O selo vem do login (lista no servidor).
+ */
 export function ehCriador(perfil) {
+  return !!perfil && perfil.seloCriador === true;
+}
+
+/** Só o nome parece o do criador (sem conta): ele trata como qualquer pessoa, no máximo brinca. */
+export function pareceCriador(perfil) {
   const n = x => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   return !!perfil && [perfil.apelido, perfil.nome].some(x => NOMES_DO_CRIADOR.has(n(x)));
+}
+
+/** Dia especial (ideia do JF, 12/11, igual ao Perfil): por enquanto, sexta-feira 13. */
+export function diaEspecial(iso) {
+  const d = new Date(`${iso}T12:00:00`);
+  return d.getDay() === 5 && d.getDate() === 13 ? 'sexta13' : null;
 }
 
 function periodo(h) {

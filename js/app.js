@@ -10,7 +10,7 @@ import {
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
   valorProprio, dividirIgual, juntarNomes, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
-import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta } from './caos/index.js';
+import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta } from './caos/conversa.js';
 import { NOVIDADES, VERSAO_APP, temNovidade, partesDoItem } from './novidades.js';
 import { falar, vozDisponivel, ditadoDisponivel, ouvir, setVelocidade } from './voz.js';
@@ -1581,8 +1581,10 @@ async function entrarNaConta(criar) {
   botoes.forEach(b => { b.disabled = true; });
   (criar ? botoes[1] : botoes[0]).textContent = 'Protegendo…';
   try {
-    const nome = await conta.entrar(servidor(), { apelido, senha, criar });
+    const { apelido: nome, criador } = await conta.entrar(servidor(), { apelido, senha, criar });
     $('#conta-senha').value = '';
+    // selo de criador: só o servidor dá (lista de contas dele), nunca o nome digitado
+    await marcarSelo(criador);
     toast(criar ? `Conta ${nome} criada! Agora seus aparelhos ficam juntos.` : `Bem-vindo de volta, ${nome}! Buscando seus dados…`);
     await sincronizarAgora({ avisar: !criar });
   } catch (e) {
@@ -1592,6 +1594,13 @@ async function entrarNaConta(criar) {
     botoes.forEach((b, i) => { b.disabled = false; b.textContent = textos[i]; });
   }
   renderConta();
+}
+
+async function marcarSelo(criador) {
+  if (!!state.perfil?.seloCriador === !!criador) return;
+  const { seloCriador, ...resto } = state.perfil || {};
+  state.perfil = criador ? { ...resto, seloCriador: true } : resto;
+  await db.setMeta('perfil', state.perfil);
 }
 
 // ---------- Novidades (1.4) ----------
@@ -2002,6 +2011,7 @@ function bind() {
   $('#conta-sair').addEventListener('click', async () => {
     if (!confirm('Sair da conta neste aparelho? Seus dados continuam aqui e na conta; só param de sincronizar.')) return;
     await conta.sair(servidor());
+    await marcarSelo(false);
     toast('Você saiu da conta neste aparelho.');
     renderConta();
   });
@@ -2120,7 +2130,8 @@ async function init() {
   const closing = detectMonthClose({ expenses: state.expenses, categories: state.categories, currentMonth: monthKey(today) });
   // ao abrir, o C.A.O.S. olha o radar: o alerta mais grave entra na fila junto com as boas-vindas
   const radar = analyze(dados(), today).slice(0, 1).map(a => ({ ...a, radar: true }));
-  narrate([...closing, ...radar, { type: 'boas_vindas' }]);
+  const especial = diaEspecial(today) ? [{ type: 'dia_especial', dia: diaEspecial(today) }] : [];
+  narrate([...closing, ...radar, ...especial, { type: 'boas_vindas' }]);
   if ($('#caos-line').textContent === 'Iniciando…') $('#caos-line').textContent = 'De olho nos seus gastos. Toque aqui pra conversar.';
   pintarOlho();
 

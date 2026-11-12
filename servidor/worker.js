@@ -17,7 +17,7 @@
  *   POST /ia/bancos       → { bancos:[nomes], cdi } → { texto } (comparação de rendimento; só nomes, nada de saldo)
  *   GET  /mercado         → resumo do mercado (moedas, Ibovespa, Selic, CDI, IPCA) guardado no KV
  *   POST /conta/criar     → { apelido, senha } → { apelido, token }      (06/11: login e sincronização)
- *   POST /conta/entrar    → { apelido, senha } → { apelido, token }
+ *   POST /conta/entrar    → { apelido, senha } → { apelido, token, criador? }  (criador: apelido na lista CRIADOR_CONTAS)
  *   POST /conta/sair      → (Authorization: Bearer token) → { ok }
  *   POST /sync            → (Authorization) { desde, mudancas:[{store,id,em,rec}] } → { versao, mudancas }
  *   cron (15 em 15 min)   → manda os lembretes do horário e, em dia útil depois das 10h, atualiza o mercado
@@ -551,7 +551,9 @@ async function contaEntrar(req, env) {
   const conta = JSON.parse((await env.CARTEIRA_KV.get(`conta:${apelido}`)) || 'null');
   // mesma mensagem pra apelido que não existe e senha errada (não entrega quem tem conta)
   if (!conta || !igual(await hashSenha(senha, conta.sal), conta.hash)) throw new ErroHttp(401, 'Apelido ou senha não conferem.');
-  return novaSessao(env, apelido);
+  // selo de criador (12/11): só pra conta na lista CRIADOR_CONTAS (variável do Cloudflare), nunca pelo nome digitado
+  const criador = String(env.CRIADOR_CONTAS || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean).includes(apelido);
+  return { ...(await novaSessao(env, apelido)), ...(criador ? { criador: true } : {}) };
 }
 
 async function sessaoDe(req, env) {

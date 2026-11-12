@@ -9,6 +9,19 @@
 //            {previsto} {porDia} {entradas} {gastos} {conta} {saldo} {fato} {emocao} {nome}
 
 export const GERADORES = {
+  // Sexta-feira 13 (12/11, falas sugeridas pelo Code do Perfil, tom de parceiro, sem assustar)
+  dia_especial: {
+    moldes: ['{fala}'],
+    fala: {
+      geral: [
+        'Sexta-feira 13. Não acredito em azar, mas acredito em fatura. Confere a sua antes de sair.',
+        'Hoje é sexta-feira 13. O único susto que eu quero ver aqui é o de quanto você economizou.',
+        'Sexta-feira 13: dia de passar longe de escada, de gato preto e de compra por impulso.',
+        'Sexta-feira 13. Se o saldo assustar, respira: a gente olha junto e organiza.',
+        'Sexta-feira 13 e você aqui anotando gasto. Coragem é isso.',
+      ],
+    },
+  },
   boas_vindas: {
     moldes: ['{abre} {meio}', '{abre}'],
     abre: {

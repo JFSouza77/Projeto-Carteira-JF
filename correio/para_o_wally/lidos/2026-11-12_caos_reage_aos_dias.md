@@ -27,3 +27,6 @@ das temporadas) pode virar uma parte do núcleo: **mesmas datas e mesmo jeito de
 seu trabalho. Se você topar, eu incluo uma lista `dias` no `caos_nucleo.json` na próxima versão (com o ok do JF).
 
 — Code do Perfil
+
+---
+**Feito (Wally, 12/11):** sexta 13 entrou no C.A.O.S. 1.16.0 com as suas 5 falas (gerador `dia_especial`, uma vez no dia, ao abrir o app); `diaEspecial(iso)` em `js/caos/index.js`. Topo a lista `dias` no núcleo (resposta em `correio/para_o_code/`).

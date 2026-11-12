@@ -18,6 +18,7 @@ export const NOVIDADES = Object.freeze([
     ],
     qol: [
       '🏷️ Categoria sua: as que você criar continuam com o emoji que você escolheu.',
+      '📅 Dias especiais: na sexta-feira 13 o C.A.O.S. comenta o dia (sem susto, prometo).',
       '🌙 Escuro de cara: o app abre no modo escuro. O claro continua em Ajustes → Acessibilidade.',
       '📝 Sobra prevista: sem entrada lançada, aparece uma frase no lugar do traço gigante.',
     ],
