@@ -1,0 +1,38 @@
+# Pendências da Carteira (lista única)
+
+Um lugar só pra ver o que está aberto (sugestão do Code do Perfil, 12/11/2026; o JF tem TDAH, uma lista ajuda).
+Os detalhes continuam em `Pedidos_do_JF.md`, `Rascunhos_da_Semana.md` e `Ideias.md`; aqui fica só o resumo.
+Atualizada pelo Wally a cada rodada.
+
+## Esperando o JF
+
+- **Publicar o servidor juntos** (IA online, conta, push, mercado, Jornal). Passo a passo: `servidor/LEIA-ME.md`.
+- **Parcelado no resumo do mês:** contar só a parcela de cada mês ou o valor todo no mês da compra (hoje)?
+- **Abrir no escuro por padrão?** (sugestão do Code: hoje segue o tema do celular).
+- Contar mais sobre ele pro C.A.O.S. zoar com mais assunto (sem dado pessoal sensível).
+
+## Próxima rodada (sexta 13/11)
+
+1. P9: cobranças atrasadas (assinatura perto do dia 20 entra na previsão), "esqueci de lançar", Auditor de assinaturas.
+2. P12: revisão de cada tela (cabeçalho igual em todas, "Me ajuda" sem tampar conteúdo).
+3. Professor de finanças: glossário offline (~60 termos), explicação em camadas, "vale a pena parcelar?",
+   calculadora de juros simples e compostos.
+4. Começar a quebrar o `app.js` em um arquivo por tela (com o Code revisando o plano).
+5. Avatar: 10 formas principais (depois do teste do Code em 19/11, ou antes se o JF pedir).
+
+## Depois do servidor
+
+- Jornal do C.A.O.S. (notícias 06h e 18h, fonte oficial + "o que muda pra você" calculado no aparelho).
+- Comparar rendimento dos bancos pela IA; perguntas da fila.
+
+## Corrigido na hora (12/11)
+
+- Aviso vazio aparecia como uma pílula em cima do botão Lançar (1.17).
+- "Cabe no mês" sem renda dizia "sobram R$ 0,00" (1.17).
+- "—" gigante na Sobra prevista virou frase (1.19).
+
+## Ideias (com quem deu)
+
+- JF: praieiro, entregador, onde foi o gasto (shopping/online), voz do C.A.O.S., "como prefere que eu fale com você".
+- Gemini: Saúde da Carteira 0–1000 (🕒 depois da ofensiva rodar).
+- Code do Perfil: categoria com ícone + cor, cabeçalho igual em todas as telas, neon só no botão principal.

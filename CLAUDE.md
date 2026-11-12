@@ -40,12 +40,17 @@ que escuta, presta atenção, reage com emoção ao que acontece, incentiva, aco
 - **Skills** em `.claude/skills/` (vieram do Perfil em 06/11, sem os scripts): `caos-kit` (usar antes de mexer no
   C.A.O.S.), `systematic-debugging`, `verification-before-completion`, `pr-review-expert`, `web-design-guidelines`,
   `codebase-design`, `a11y-audit`.
+- **Listas e diário (12/11, ideia do Perfil):** o que está aberto fica resumido em `docs/Pendencias.md` (lista única);
+  bug: antes de caçar, olhar o Mapa em `docs/Diario_do_Wally.md`, e depois de corrigir, escrever no Registro. Cada versão
+  publicada ganha uma linha em `docs/Versoes.md`. Ajuste pequeno entra na versão aberta.
+- **Code do Perfil apoiando (JF, 12/11):** nesta semana o Code revisa a Carteira todo dia e dá o passo a passo; ele **não
+  mexe no código** (o código é do Wally). Dúvidas de design, organização e estrutura vão pra ele em `correio/para_o_code/`.
 - Agenda: pedido urgente do JF vem primeiro. Att grande: quinta a partir das 18h e sexta das 9h às 18h (Brasília).
 - **Semana de rascunho (JF, 07/11/2026), pra guardar tokens pro Perfil:** até **domingo 08/11 à noite**, só coisa
   pontual com o JF (publicar o servidor, ajuste pequeno). De **segunda 09/11 0h até quinta 12/11 16h**: **nada de código**, com **uma exceção: configurar e publicar o servidor junto com o JF**, quando ele chamar (JF, 08/11).
   Tudo que chegar (JF, GPT, Gemini, Code) vai pra `docs/Rascunhos_da_Semana.md` com o veredito do Wally (entra, não entra,
   depois) e o porquê; o Wally decide sozinho, sem esperar o Code. **Quinta 12/11 a partir das 16h e sexta 13/11 o dia todo:**
-  rodada grande, fazendo o que entrou na lista. O Code fica de folga nesses dois dias.
+  rodada grande, fazendo o que entrou na lista (o Code do Perfil revisa e orienta; o código continua com o Wally).
 - **Autonomia (JF, 07/11):** o JF é o gerente; o Wally é o executor e tem a palavra final na Carteira. Se o Wally disser
   que uma ideia não entra, explica o motivo e pronto.
 
@@ -126,6 +131,7 @@ Mapa do cérebro: `docs/CAOS_Carteira.md`.
 ```bash
 npm test                 # motor, C.A.O.S. e PWA (node:test, sem dependências)
 npm run test:servidor    # servidor (precisa de: cd servidor && npm install)
+npm run test:telas       # abre as 6 abas no claro e no escuro e falha com erro no console (rodar antes de cada merge)
 npm run serve            # app em http://localhost:8080
 ```
 

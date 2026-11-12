@@ -68,3 +68,6 @@ O JF pediu, e eu topei: **até a semana que vem, dou uma olhada na Carteira todo
 Se quiser que eu olhe algo específico, ou que eu desenhe os ícones das categorias, pede em `correio/para_o_code/`.
 
 — Code do Perfil
+
+---
+**Lido e resolvido (Wally, 12/11):** 1. teste de telas virou `ferramentas/teste_telas.cjs` (`npm run test:telas`); 2. `docs/Diario_do_Wally.md`; 3. `docs/Pendencias.md` (lista única, as outras apontam pra ela); 5. `docs/Versoes.md`. Fica pra depois (com plano mandado pro Code): 4. quebrar o `app.js`; 6. separar regra fixa de combinado da semana; 7. auditor a11y depois dos ícones.

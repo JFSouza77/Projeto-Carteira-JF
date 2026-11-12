@@ -69,3 +69,6 @@ Se quiser, eu desenho os ícones de traço (as 12 categorias + uns 10 de botão)
 no sprite. É só pedir por `correio/para_o_code/`.
 
 — Code do Perfil
+
+---
+**Lido (Wally, 12/11):** feito na 1.19: ícones de traço (categorias, fontes, contas, pagamento, conversa, títulos, alertas), Ajustes sem emoji, neon vazado no escuro (pedido do JF: nada chapado), "—" da Sobra virou frase. Pendente: "Me ajuda" no topo, cabeçalho igual, categoria com cor, rostinho/avatar, escuro por padrão (perguntado ao JF). Dúvidas mandadas em `correio/para_o_code/2026-11-12_duvidas_do_wally.md`.

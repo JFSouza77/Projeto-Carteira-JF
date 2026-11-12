@@ -1,5 +1,7 @@
 # Pedidos do JF (05/11/2026)
 
+> Lista única do que está aberto: `docs/Pendencias.md`.
+
 Lista de tudo o que o JF pediu pro app e pro C.A.O.S., pra nenhuma sessão esquecer. Marque `[x]` quando entregar.
 Janelas de trabalho: o que o JF marcar e **toda sexta das 06h às 09h** (Brasília).
 

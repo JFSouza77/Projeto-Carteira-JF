@@ -18,6 +18,7 @@ export const NOVIDADES = Object.freeze([
     ],
     qol: [
       '🏷️ Categoria sua: as que você criar continuam com o emoji que você escolheu.',
+      '📝 Sobra prevista: sem entrada lançada, aparece uma frase no lugar do traço gigante.',
     ],
   },
   {
