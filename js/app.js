@@ -8,7 +8,7 @@ import {
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
   TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
-  valorProprio, dividirIgual, juntarNomes, TIPOS_CONTA, agruparPorBanco, comReforco, aReceber, marcarRecebido, ofensiva, MARCOS_OFENSIVA,
+  valorProprio, dividirIgual, juntarNomes, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta } from './caos/index.js';
 import { extrairNome, textoMeta } from './caos/conversa.js';
@@ -34,6 +34,7 @@ const state = {
   viewMonth: monthKey(toISODate()),
   kind: 'gasto',
   selectedCategory: null,
+  forma: null, // pagou como (P8): dinheiro, pix, debito, credito
   selectedSource: null,
   photo: null, // { id, url } da foto anexada no formulário
   chat: [],
@@ -260,7 +261,7 @@ function render() {
     <li>
       <span class="exp-emoji" aria-hidden="true">${esc(c?.emoji ?? '📦')}</span>
       <span class="exp-main"><span>${esc(x.note || c?.name || x.categoryId)}</span>
-        <small>${d}/${m}${x.note && c ? ` · ${esc(c.name)}` : ''}${conta ? ` · ${esc(accountLabel(conta))}` : ''}
+        <small>${d}/${m}${x.note && c ? ` · ${esc(c.name)}` : ''}${conta ? ` · ${esc(accountLabel(conta))}` : ''}${x.forma && !conta ? ` · ${esc(FORMAS_PAGAMENTO[x.forma].slice(2).trim())}` : ''}${x.parcelas > 1 ? ` · ${x.parcelas}x de ${formatBRL(Math.floor(x.amountCents / x.parcelas))}` : ''}
         ${x.imageId ? `<button class="thumb-btn" data-photo="${esc(x.imageId)}" aria-label="Ver foto">📷</button>` : ''}</small></span>
       <span class="num">${x.racha ? `<span title="Sua parte">${formatBRL(valorProprio(x))}</span><small class="racha-tag">🍕 de ${formatBRL(x.amountCents)}</small>` : formatBRL(x.amountCents)}</span>
       <button class="icon-btn del" data-del="${esc(x.id)}" data-kind="gasto" aria-label="Apagar gasto">×</button>
@@ -387,12 +388,41 @@ function renderLancar() {
   $('#category-chips').innerHTML = opcoes.map(c => `
     <button type="button" class="chip" role="radio" aria-checked="${c.id === sel}" data-cat="${esc(c.id)}">${esc(c.emoji)} ${esc(c.name)}</button>`).join('');
   $('#submit-btn').textContent = gasto ? 'Adicionar gasto' : 'Adicionar entrada';
-  $('#account-field').hidden = state.accounts.length === 0;
+  // Pagou como? (P8): a forma escolhe que contas aparecem e o que mais perguntar
+  const forma = gasto ? state.forma : null;
+  $('#forma-field').hidden = !gasto;
+  $('#forma-chips').innerHTML = Object.entries(FORMAS_PAGAMENTO).map(([id, nome]) =>
+    `<button type="button" class="chip" role="radio" aria-checked="${id === forma}" data-forma="${id}">${esc(nome)}</button>`).join('');
+  const filtro = !gasto ? a => a.tipo !== 'cartao' // entrada não cai no cartão de crédito
+    : forma === 'credito' ? a => a.tipo === 'cartao'
+    : forma ? a => a.tipo !== 'cartao' : () => true;
+  const cabem = state.accounts.filter(filtro);
+  $('#account-field').hidden = cabem.length === 0;
+  $('#account-label').textContent = forma === 'credito' ? 'Qual cartão?' : forma === 'pix' || forma === 'debito' ? 'De qual banco saiu?'
+    : forma === 'dinheiro' ? 'Saiu de onde? (se quiser)' : 'Conta';
   const atual = $('#account-select').value;
-  // entrada não cai no cartão de crédito: ele só aparece pra gasto
-  $('#account-select').innerHTML = opcoesDeConta(a => gasto || a.tipo !== 'cartao');
-  if (state.accounts.some(a => a.id === atual)) $('#account-select').value = atual;
+  $('#account-select').innerHTML = opcoesDeConta(filtro);
+  if (cabem.some(a => a.id === atual)) $('#account-select').value = atual;
+  else if (forma === 'credito' && cabem.length === 1) $('#account-select').value = cabem[0].id;
+  $('#parcelas-box').hidden = forma !== 'credito';
+  if (!$('#parcelas-select').options.length) {
+    $('#parcelas-select').innerHTML = '<option value="1">À vista (1x)</option>' +
+      Array.from({ length: 23 }, (_, i) => `<option value="${i + 2}">Parcelado em ${i + 2}x</option>`).join('');
+  }
+  previaParcelas();
   $('#photo-ai').hidden = !(state.photo && state.settings.aiOn);
+}
+
+function previaParcelas() {
+  const n = Number($('#parcelas-select').value) || 1;
+  $('#limite-modo-field').hidden = n < 2;
+  const v = parseAmount($('#amount').value);
+  if (n < 2 || !v) { $('#parcelas-previa').textContent = ''; return; }
+  const parcela = Math.floor(v / n);
+  const total = document.querySelector('input[name="limite-modo"]:checked')?.value !== 'parcela';
+  $('#parcelas-previa').textContent = `${n}x de ${formatBRL(parcela)}. ` + (total
+    ? `Agora o limite fica ${formatBRL(v)} menor e volta ${formatBRL(parcela)} a cada fatura paga.`
+    : `Só ${formatBRL(parcela)} por mês ocupa o limite.`);
 }
 
 function mostrarFoto() {
@@ -413,9 +443,11 @@ async function limparFoto({ apagar }) {
 }
 
 /** Grava um gasto (do formulário ou de uma proposta do C.A.O.S. confirmada). Devolve os eventos. */
-async function registrarGasto({ amountCents, categoryId, note, date, accountId, imageId, compromissoId, rachaNomes = null }) {
+async function registrarGasto({ amountCents, categoryId, note, date, accountId, imageId, compromissoId, rachaNomes = null, forma = null, parcelas = 1, limiteModo = 'total' }) {
   const ofAntes = ofensivaAgora();
-  const expense = createExpense({ amountCents, categoryId, note, date, accountId, imageId, compromissoId }, { categories: state.categories });
+  // escolheu um cartão sem dizer a forma: é crédito
+  if (!forma && accountId && state.accounts.find(a => a.id === accountId)?.tipo === 'cartao') forma = 'credito';
+  const expense = createExpense({ amountCents, categoryId, note, date, accountId, imageId, compromissoId, forma, parcelas, limiteModo }, { categories: state.categories });
   if (rachaNomes?.length) expense.racha = dividirIgual(amountCents, rachaNomes);
   const conta = accountId && state.accounts.find(a => a.id === accountId);
   const cartao = conta?.tipo === 'cartao';
@@ -467,7 +499,12 @@ async function onSubmit(ev) {
       if (!state.selectedCategory) throw new Error('Escolha uma categoria.');
       const rachaNomes = $('#racha-box').open ? nomesDoRacha() : null;
       if ($('#racha-box').open && !rachaNomes.length) throw new Error('Escreva o nome de quem vai te pagar, ou feche o "Dividir com amigos".');
-      events = await registrarGasto({ ...base, categoryId: state.selectedCategory, imageId: state.photo?.id, rachaNomes });
+      const forma = state.forma;
+      const parcelas = forma === 'credito' ? Number($('#parcelas-select').value) || 1 : 1;
+      const limiteModo = document.querySelector('input[name="limite-modo"]:checked')?.value || 'total';
+      if (forma === 'credito' && !base.accountId && state.accounts.some(a => a.tipo === 'cartao')) throw new Error('Qual cartão? Escolha ali em cima.');
+      events = await registrarGasto({ ...base, categoryId: state.selectedCategory, imageId: state.photo?.id, rachaNomes, forma, parcelas, limiteModo });
+      $('#parcelas-select').value = '1';
       await limparFoto({ apagar: false });
       $('#racha-nomes').value = '';
       $('#racha-box').open = false;
@@ -844,7 +881,8 @@ async function confirmarAcao(i, ok) {
     }
     const events = a.tipo === 'registrar_entrada'
       ? await registrarEntrada({ amountCents: a.amountCents, sourceId: a.sourceId, note: a.note, date: a.date })
-      : await registrarGasto({ amountCents: a.amountCents, categoryId: a.categoryId, note: a.note, date: a.date, imageId: a.imageId, compromissoId: a.compromissoId, accountId: a.accountId });
+      : await registrarGasto({ amountCents: a.amountCents, categoryId: a.categoryId, note: a.note, date: a.date, imageId: a.imageId, compromissoId: a.compromissoId, accountId: a.accountId,
+          forma: a.forma || null, parcelas: a.parcelas || 1, limiteModo: a.limiteModo || 'total' });
     if (a.compromissoId) renderMes();
     const fala = narrate(events, { ignoreCooldown: true });
     addMsg({ de: 'caos', texto: fala ? fala.texto : 'Anotado!', rosto: fala?.rosto });
@@ -1035,7 +1073,7 @@ function itemCartao(a) {
     <li>
       <div class="account-head"><strong>💳 ${esc(accountLabel(a))}</strong><span class="num ${f.pct >= 100 ? 'bad' : ''}">${formatBRL(f.disponivelCents)} livre</span></div>${f.reforcoCents ? `<small class="muted">Limite ${formatBRL(a.limiteCents)} + ${formatBRL(f.reforcoCents)} do cofrinho.</small>` : ''}
       <div class="limite-bar ${cls}" role="img" aria-label="${f.pct}% do limite usado"><i style="width:${Math.min(100, Math.max(0, f.pct))}%"></i></div>
-      <small class="muted">Usado ${formatBRL(f.usadoCents)} de ${formatBRL(f.limiteCents)} (${f.pct}%). Fatura aberta ${formatBRL(f.abertaCents)}, fecha ${dia(f.fechamento)}.${f.fechadaCents ? ` Fatura fechada ${formatBRL(f.fechadaCents)} vence ${dia(f.vencimento)}.` : ''}</small>
+      <small class="muted">Usado ${formatBRL(f.usadoCents)} de ${formatBRL(f.limiteCents)} (${f.pct}%). Fatura aberta ${formatBRL(f.abertaCents)}, fecha ${dia(f.fechamento)}.${f.fechadaCents ? ` Fatura fechada ${formatBRL(f.fechadaCents)} vence ${dia(f.vencimento)}.` : ''}${f.futurasCents ? ` Parcelas das próximas faturas: ${formatBRL(f.futurasCents)}${f.presoFuturoCents ? ` (${formatBRL(f.presoFuturoCents)} preso no limite)` : ''}.` : ''}</small>
       <div class="account-actions">
         <button class="ghost" data-acc-del="${esc(a.id)}">Remover</button>
       </div>
@@ -1821,6 +1859,15 @@ function bind() {
     else state.selectedSource = b.dataset.cat;
     renderLancar();
   });
+  $('#forma-chips').addEventListener('click', e => {
+    const b = e.target.closest('[data-forma]');
+    if (!b) return;
+    state.forma = state.forma === b.dataset.forma ? null : b.dataset.forma; // tocar de novo desmarca
+    renderLancar();
+  });
+  $('#parcelas-select').addEventListener('change', previaParcelas);
+  $('#amount').addEventListener('input', previaParcelas);
+  for (const r of document.querySelectorAll('input[name="limite-modo"]')) r.addEventListener('change', previaParcelas);
   $('#photo-input').addEventListener('change', e => { const f = e.target.files?.[0]; if (f) onFoto(f); });
   $('#photo-remove').addEventListener('click', () => limparFoto({ apagar: true }));
   $('#photo-ai').addEventListener('click', lerFotoComIA);

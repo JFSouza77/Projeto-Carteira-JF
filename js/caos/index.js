@@ -8,10 +8,10 @@ import { sentir, emocaoAtual, emocoesIniciais, intensidade, ROSTO } from './emoc
 import { escolherRosto, memoriaRostoInicial } from './rostos.js';
 import { gerarFala } from './gerador.js';
 import { GERADORES, SUGESTOES } from './falas.js';
-import { entender, responder } from './conversa.js';
+import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '1.14.0';
+export const CAOS_VERSAO = '1.15.0';
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -193,6 +193,10 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
     && ['nao_entendi', 'registrar_gasto', 'gasto_sem_valor', 'cabe'].includes(intencao.intent)) {
     intencao = { ...intencao, intent: 'registrar_gasto', t: espera.t, categoria: intencao.categoria || espera.categoria, palpite: false };
   }
+  if (espera?.tipo === 'pagamento') {
+    const resposta = continuarPagamento(espera.acao, texto, d);
+    if (resposta) intencao = { ...intencao, intent: 'pagamento_resposta', resposta, palpite: false };
+  }
   mem = { ...mem, aguardando: null };
   // Memória (06/11): "e agora?", "já sabe responder?" voltam na última pergunta que ficou sem resposta
   let retomada = null;
@@ -202,7 +206,13 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   }
   mem = { ...mem, emocoes: sentir(mem.emocoes, EVENTO_DA_INTENCAO[intencao.intent] || 'pergunta', now) };
   const emocao = emocaoAtual(mem.emocoes, humor, now);
-  const resp = responder(intencao, { ...d, anterior: mem.conversa || null }, { today: today || toISODate(new Date(now)), emocao: rostoDe(emocao).nome, perfil, now });
+  let resp = responder(intencao, { ...d, anterior: mem.conversa || null }, { today: today || toISODate(new Date(now)), emocao: rostoDe(emocao).nome, perfil, now });
+  // gasto novo: pergunta como pagou antes de propor (pula o que a pessoa já disse)
+  if (resp.pagamento && resp.acao) {
+    const q = proximaPerguntaPagamento(resp.acao, d.accounts || []);
+    if (q) resp = { ...resp, ...seguirPagamento(resp.acao, d), acao: null, fato: `Anotando ${formatBRL(resp.acao.amountCents)}. ${q.texto}`, gatilho: null };
+    else resp = { ...resp, acao: seguirPagamento(resp.acao, d).acao };
+  }
   if (resp.aguardar) mem = { ...mem, aguardando: { ...resp.aguardar, em: now } };
 
   let fato = resp.fato;
@@ -259,7 +269,7 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   if (intencao.intent === 'nao_entendi') mem = { ...mem, semResposta: String(texto).trim().slice(0, 160) };
   else if (retomada) mem = { ...mem, semResposta: null };
   // lembra a última pergunta pra entender a próxima ("e no mês passado?")
-  if (!['nao_entendi', 'retomar', 'explicar_melhor', 'gasto_sem_valor'].includes(intencao.intent)) {
+  if (!['nao_entendi', 'retomar', 'explicar_melhor', 'gasto_sem_valor', 'pagamento_resposta'].includes(intencao.intent)) {
     mem = { ...mem, conversa: { intent: intencao.intent, categoryId: intencao.categoria?.id || null, periodo: intencao.periodo || 'mes' } };
   }
   return {

@@ -7,6 +7,22 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.18',
+    data: '12/11/2026',
+    nome: 'Pagou Como?',
+    t: 'Agora o app sabe como você pagou: dinheiro, Pix, débito ou crédito, à vista ou parcelado.',
+    itens: [
+      '💳 Pagou como: no Lançar, escolha dinheiro, Pix, débito ou crédito.',
+      '🧾 Parcelado: no crédito, diga em quantas vezes. Cada parcela cai na fatura do mês dela.',
+      '🔒 Limite do parcelado: escolha se o banco prende o valor todo ou só a parcela do mês.',
+      '💬 C.A.O.S. pergunta: fala "gastei 100 na loja" que ele pergunta como pagou, sem repetir o que você já disse.',
+    ],
+    qol: [
+      '📋 Lista de gastos: mostra as parcelas, tipo "4x de R$ 25,00".',
+      '💳 Cartão: mostra as parcelas que ainda vêm nas próximas faturas.',
+    ],
+  },
+  {
     v: '1.17',
     data: '12/11/2026',
     nome: 'Conversa Mais Esperta',

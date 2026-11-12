@@ -79,8 +79,18 @@ function isValidISODate(s) {
 }
 
 /** Valida e monta um gasto novo. Lança Error com mensagem para o usuário se algo estiver errado. */
-export function createExpense({ amountCents, categoryId, note = '', date, accountId = null, imageId = null, compromissoId = null }, { categories, now = new Date(), id } = {}) {
+// Como pagou (P8, vistoria do JF 12/11): dinheiro, Pix, débito ou crédito (à vista ou parcelado)
+export const FORMAS_PAGAMENTO = Object.freeze({ dinheiro: '💵 Dinheiro', pix: '⚡ Pix', debito: '💳 Débito', credito: '💳 Crédito' });
+// parcelado no crédito: "total" = o banco prende o valor todo no limite e solta a cada parcela paga;
+// "parcela" = só a parcela do mês ocupa o limite
+export const MODOS_LIMITE = Object.freeze({ total: 'Prende o valor todo no limite', parcela: 'Só a parcela do mês ocupa o limite' });
+
+export function createExpense({ amountCents, categoryId, note = '', date, accountId = null, imageId = null, compromissoId = null, forma = null, parcelas = 1, limiteModo = 'total' }, { categories, now = new Date(), id } = {}) {
   if (!Number.isInteger(amountCents) || amountCents <= 0) throw new Error('Valor inválido.');
+  if (forma != null && !FORMAS_PAGAMENTO[forma]) throw new Error('Como você pagou?');
+  if (!(Number.isInteger(parcelas) && parcelas >= 1 && parcelas <= 24)) throw new Error('Parcelas: de 1 a 24.');
+  if (parcelas > 1 && forma !== 'credito') throw new Error('Só dá pra parcelar no crédito.');
+  if (!MODOS_LIMITE[limiteModo]) throw new Error('Como o parcelado ocupa o limite?');
   if (amountCents > 100_000_000_00) throw new Error('Valor alto demais. Confere aí.');
   if (categories && !categories.some(c => c.id === categoryId)) throw new Error('Escolha uma categoria.');
   const day = date || toISODate(now);
@@ -95,8 +105,21 @@ export function createExpense({ amountCents, categoryId, note = '', date, accoun
     accountId: accountId || null,
     imageId: imageId || null,
     compromissoId: compromissoId || null,
+    forma: forma || null,
+    parcelas,
+    limiteModo: parcelas > 1 ? limiteModo : 'total',
     createdAt: now.getTime(),
   };
+}
+
+/** Parcelas de um gasto: [{ k, date, valorCents }]. A 1ª leva o centavo que sobra da divisão. */
+export function parcelasDe(e) {
+  const n = e.parcelas > 1 ? e.parcelas : 1;
+  const base = Math.floor(e.amountCents / n);
+  return Array.from({ length: n }, (_, k) => {
+    const mes = shiftMonth(e.date.slice(0, 7), k);
+    return { k, date: k ? diaDoMes(mes, Number(e.date.slice(8, 10))) : e.date, valorCents: k ? base : e.amountCents - base * (n - 1) };
+  });
 }
 
 export function newId() {
@@ -828,7 +851,9 @@ export function validarBackup(bruto) {
     if (!obj(e) || !ID_RE.test(e.id ?? '') || !centavos(e.amountCents, 1) || !isValidISODate(e.date ?? '') || e.month !== monthKey(e.date)
       || !catIds.has(e.categoryId) || !textoOuNada(e.note, 120) || !contaOk(e.accountId)
       || !(e.compromissoId == null || compIds.has(e.compromissoId)) || !(e.imageId == null || ID_RE.test(e.imageId))
-      || !rachaOk(e)) {
+      || !rachaOk(e) || !(e.forma == null || FORMAS_PAGAMENTO[e.forma])
+      || !(e.parcelas == null || (Number.isInteger(e.parcelas) && e.parcelas >= 1 && e.parcelas <= 24))
+      || !(e.limiteModo == null || MODOS_LIMITE[e.limiteModo])) {
       erro(`Gasto ${i + 1} do backup está com dado inválido (valor, data ou categoria).`);
     }
   });
@@ -966,20 +991,25 @@ export function faturaDoCartao(cartao, expenses, today = toISODate()) {
   // vencimento da fatura fechada: o primeiro dia de vencimento depois do fechamento
   const vencNoMes = diaDoMes(ultimoFech.slice(0, 7), cartao.vencimentoDia);
   const vencimento = vencNoMes > ultimoFech ? vencNoMes : diaDoMes(shiftMonth(ultimoFech.slice(0, 7), 1), cartao.vencimentoDia);
-  const doCartao = expenses.filter(e => e.accountId === cartao.id);
-  const soma = (de, ate) => doCartao.filter(e => e.date > de && e.date <= ate).reduce((s, e) => s + e.amountCents, 0);
+  // parcelado (P8): cada parcela cai na fatura do mês dela
+  const doCartao = expenses.filter(e => e.accountId === cartao.id)
+    .flatMap(e => parcelasDe(e).map(p => ({ date: p.date, amountCents: p.valorCents, modo: e.limiteModo || 'total' })));
+  const soma = (de, ate, lista = doCartao) => lista.filter(e => e.date > de && e.date <= ate).reduce((s, e) => s + e.amountCents, 0);
   const criadoEm = toISODate(new Date(cartao.balanceAt || cartao.createdAt || Date.now()));
   const inicial = cartao.usadoInicialCents || 0;
   // o "já usado" informado entra na fatura do ciclo em que o cartão foi cadastrado
-  const abertaCents = soma(ultimoFech, '9999-12-31') + (criadoEm > ultimoFech ? inicial : 0);
+  const abertaCents = soma(ultimoFech, proxFech) + (criadoEm > ultimoFech ? inicial : 0);
+  // parcelas das próximas faturas: no modo "total" elas continuam presas no limite
+  const futurasCents = soma(proxFech, '9999-12-31');
+  const presoFuturoCents = soma(proxFech, '9999-12-31', doCartao.filter(e => e.modo === 'total'));
   const fechadaCents = soma(penultFech, ultimoFech) + (criadoEm > penultFech && criadoEm <= ultimoFech ? inicial : 0);
   const pagaJa = today > vencimento; // depois do vencimento, a fechada já foi (ou devia ter sido) paga
-  const usadoCents = abertaCents + (pagaJa ? 0 : fechadaCents);
+  const usadoCents = abertaCents + (pagaJa ? 0 : fechadaCents) + presoFuturoCents;
   const limiteCents = (cartao.limiteCents || 0) + (cartao.reforcoCents || 0);
   return {
     id: cartao.id, nome: accountLabel(cartao), limiteCents, reforcoCents: cartao.reforcoCents || 0, usadoCents, disponivelCents: limiteCents - usadoCents,
     pct: limiteCents ? Math.round((usadoCents / limiteCents) * 100) : 0,
-    abertaCents, fechadaCents: pagaJa ? 0 : fechadaCents, fechamento: proxFech, ultimoFechamento: ultimoFech, vencimento,
+    abertaCents, fechadaCents: pagaJa ? 0 : fechadaCents, futurasCents, presoFuturoCents, fechamento: proxFech, ultimoFechamento: ultimoFech, vencimento,
     diasParaFechar: daysBetween(today, proxFech), diasParaVencer: daysBetween(today, vencimento),
   };
 }

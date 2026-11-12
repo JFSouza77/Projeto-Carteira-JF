@@ -164,8 +164,10 @@ test('conversa responde com os números certos e PROPÕE registro (não grava)',
   assert.match(ent.fala.texto, /1\.500,00/);
   const saldo = conversar('qual meu saldo no nubank?', d, { now: NOW, today: hoje });
   assert.match(saldo.fala.texto, /500,00/);
-  const prop = conversar('gastei 30 no mercado', d, { now: NOW, today: hoje });
-  assert.deepEqual({ ...prop.fala.acao }, { tipo: 'registrar_gasto', amountCents: 3000, categoryId: 'mercado', date: hoje, note: 'Mercado' });
+  // com conta cadastrada ele pergunta como pagou; aqui a pessoa já disse (dinheiro)
+  const prop = conversar('gastei 30 no mercado em dinheiro', d, { now: NOW, today: hoje });
+  assert.deepEqual({ ...prop.fala.acao }, { tipo: 'registrar_gasto', amountCents: 3000, categoryId: 'mercado', date: hoje, note: 'Mercado',
+    forma: 'dinheiro', parcelas: 1, limiteModo: 'total' });
   assert.equal(d.expenses.length, 4);
   const alert = conversar('algum alerta?', d, { now: NOW, today: hoje });
   assert.match(alert.fala.texto, /Lazer/);
@@ -352,7 +354,7 @@ test('aprende categoria na conversa: "gastei 30 no uber" vai pra Transporte pelo
   const d = dados();
   d.expenses = [...d.expenses, createExpense({ amountCents: 2000, categoryId: 'transporte', note: 'Uber', date: '2026-11-10' }, { categories: cats })];
   assert.equal(descricaoDe('gastei 30 no uber'), 'uber');
-  const o = conversar('gastei 30 no uber', d, { now: NOW, today: hoje });
+  const o = conversar('gastei 30 no uber em dinheiro', d, { now: NOW, today: hoje });
   assert.equal(o.fala.acao.categoryId, 'transporte');
   assert.equal(o.fala.acao.note, 'Uber');
 });
