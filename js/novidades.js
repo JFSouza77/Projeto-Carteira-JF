@@ -7,6 +7,25 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.17',
+    data: '12/11/2026',
+    nome: 'Conversa Mais Esperta',
+    t: 'O C.A.O.S. pergunta o que falta e explica com calma.',
+    itens: [
+      '❓ Esqueceu o valor: fala "gastei não sei quanto de internet" que ele pergunta quanto foi e anota.',
+      '🧩 Me explica melhor: peça e ele refaz a última conta em passos, com cada número.',
+      '🧮 Cabe no mês sem renda: em vez de dizer "sobram R$ 0,00", ele pergunta quanto você recebe.',
+      '🐷 Cofrinho: nova conta que pode aumentar o limite do cartão, igual nos bancos.',
+      '🏦 Contas por banco: tudo em ordem alfabética, cada banco com suas contas e cartões juntos.',
+      '➕ Lançar no meio: o botão de lançar agora fica no centro da barra de baixo.',
+    ],
+    qol: [
+      '🏷️ Nomes sem repetir: conta e cartão do mesmo banco não aparecem mais com o mesmo nome.',
+      '💬 Avisos novos: com o rostinho do C.A.O.S. e frases mais naturais.',
+      '📅 Dica de conta fixa: internet, luz e afins ganham a dica de virar conta fixa.',
+    ],
+  },
+  {
     v: '1.16',
     data: '07/11/2026',
     nome: 'C.A.O.S. Finanças',

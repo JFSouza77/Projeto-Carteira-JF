@@ -339,12 +339,18 @@ export function createIncome({ amountCents, sourceId, note = '', date, accountId
 }
 
 /** Valida e monta uma conta. O saldo informado vale a partir de `balanceAt`. */
-export function createAccount({ bank, nickname = '', balanceCents }, { now = new Date(), id } = {}) {
+// Tipos de conta (12/11, vistoria do JF): o que mora dentro de um banco. Cartão de crédito é `tipo: 'cartao'`.
+export const TIPOS_CONTA = Object.freeze({ corrente: 'Conta corrente', poupanca: 'Poupança', cofrinho: 'Cofrinho' });
+
+export function createAccount({ bank, nickname = '', balanceCents, subtipo = 'corrente', reforcaCartaoId = null }, { now = new Date(), id } = {}) {
   const b = String(bank || '').trim();
   if (!b) throw new Error('Escolha o banco.');
   if (!Number.isInteger(balanceCents)) throw new Error('Saldo inválido.');
+  if (!TIPOS_CONTA[subtipo]) throw new Error('Escolha o tipo da conta.');
   return {
-    id: id || newId(), bank: b.slice(0, 40), nickname: String(nickname).trim().slice(0, 30),
+    id: id || newId(), bank: b.slice(0, 40), nickname: String(nickname).trim().slice(0, 30), subtipo,
+    // cofrinho que aumenta o limite do cartão (PicPay, Inter…): o valor guardado soma no limite desse cartão
+    reforcaCartaoId: subtipo === 'cofrinho' && reforcaCartaoId ? reforcaCartaoId : null,
     balanceCents, balanceAt: now.getTime(), createdAt: now.getTime(),
   };
 }
@@ -359,10 +365,45 @@ export function parseSignedAmount(input) {
   return v == null ? null : neg ? -v : v;
 }
 
+const semAcento = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+/**
+ * Nome da conta pra mostrar em qualquer lista. Sempre diz o que é (12/11: "C6 Bank" aparecia duas vezes, conta e
+ * cartão): "C6 Bank · Cartão", "Banestes · Poupança", "PicPay · Cofrinho · Viagem". Conta corrente sem apelido fica só
+ * o banco. Banco "Outro" com apelido mostra só o apelido (06/11).
+ */
 export function accountLabel(a) {
-  // Banco "Outro" com apelido: mostra só o apelido (06/11). "Outro · Cofrinho" não diz nada.
-  if (a.bank === 'Outro') return a.nickname || 'Outro banco';
-  return a.nickname ? `${a.bank} · ${a.nickname}` : a.bank;
+  const tipo = a.tipo === 'cartao' ? 'Cartão' : a.subtipo && a.subtipo !== 'corrente' ? TIPOS_CONTA[a.subtipo] : null;
+  const apelido = a.nickname && semAcento(a.nickname) !== semAcento(tipo) ? a.nickname : '';
+  if (a.bank === 'Outro') return [apelido || 'Outro banco', tipo].filter(Boolean).join(' · ');
+  return [a.bank, tipo, apelido].filter(Boolean).join(' · ');
+}
+
+const ORDEM_TIPO = { corrente: 0, poupanca: 1, cofrinho: 2, cartao: 3 };
+/**
+ * Contas agrupadas por banco, em ordem alfabética (12/11): [{ bank, contas }]. Dentro do banco: conta corrente,
+ * poupança, cofrinho e cartão. "Carteira (dinheiro vivo)" e "Outro" ficam no fim.
+ */
+export function agruparPorBanco(accounts) {
+  const fim = b => (/dinheiro vivo/i.test(b) ? 1 : b === 'Outro' ? 2 : 0);
+  const grupos = new Map();
+  for (const a of accounts) {
+    if (!grupos.has(a.bank)) grupos.set(a.bank, []);
+    grupos.get(a.bank).push(a);
+  }
+  return [...grupos].map(([bank, contas]) => ({
+    bank,
+    contas: contas.sort((x, y) => (ORDEM_TIPO[x.tipo === 'cartao' ? 'cartao' : x.subtipo || 'corrente'] - ORDEM_TIPO[y.tipo === 'cartao' ? 'cartao' : y.subtipo || 'corrente'])
+      || accountLabel(x).localeCompare(accountLabel(y), 'pt-BR')),
+  })).sort((a, b) => fim(a.bank) - fim(b.bank) || a.bank.localeCompare(b.bank, 'pt-BR'));
+}
+
+/** Cartão com o reforço dos cofrinhos ligados a ele (o valor guardado aumenta o limite). */
+export function comReforco(cartao, accounts = [], expenses = [], incomes = []) {
+  if (!cartao || cartao.tipo !== 'cartao') return cartao;
+  const reforcoCents = accounts.filter(a => a.reforcaCartaoId === cartao.id && a.tipo !== 'cartao')
+    .reduce((t, a) => t + Math.max(0, accountBalance(a, expenses, incomes)), 0);
+  return reforcoCents ? { ...cartao, reforcoCents } : cartao;
 }
 
 /**
@@ -481,7 +522,7 @@ export function analyze({ expenses, incomes = [], categories, accounts = [], com
     out.push({ type: 'mes_negativo', severity: 'alta', incomeCents: inc, totalCents: s.totalCents, overCents: s.totalCents - inc });
   }
 
-  for (const f of accounts.filter(a => a.tipo === 'cartao').map(a => faturaDoCartao(a, expenses, today))) {
+  for (const f of accounts.filter(a => a.tipo === 'cartao').map(a => faturaDoCartao(comReforco(a, accounts, expenses, incomes), expenses, today))) {
     if (f.pct >= 100) out.push({ type: 'cartao_limite', severity: 'alta', accountId: f.id, accountName: f.nome, pct: f.pct, amountCents: f.usadoCents, leftCents: f.disponivelCents, budgetCents: f.limiteCents });
     else if (f.pct >= 80) out.push({ type: 'cartao_limite', severity: 'media', accountId: f.id, accountName: f.nome, pct: f.pct, amountCents: f.usadoCents, leftCents: f.disponivelCents, budgetCents: f.limiteCents });
     if (f.fechadaCents > 0 && f.diasParaVencer >= 0 && f.diasParaVencer <= 3) {
@@ -767,6 +808,7 @@ export function validarBackup(bruto) {
     if (!obj(a) || !ID_RE.test(a.id ?? '') || !texto(a.bank, 40, 1) || !textoOuNada(a.nickname, 30)
       || !Number.isInteger(a.balanceCents) || Math.abs(a.balanceCents) > VALOR_MAX
       || !(a.tipo == null || a.tipo === 'cartao')
+      || !(a.subtipo == null || TIPOS_CONTA[a.subtipo]) || !(a.reforcaCartaoId == null || ID_RE.test(a.reforcaCartaoId))
       || (a.tipo === 'cartao' && (!centavos(a.limiteCents, 1) || !centavos(a.usadoInicialCents ?? 0, 0)
         || ![a.fechamentoDia, a.vencimentoDia].every(d => Number.isInteger(d) && d >= 1 && d <= 31)))) erro(`Conta ${i + 1} do backup está com dado inválido.`);
   });
@@ -933,9 +975,9 @@ export function faturaDoCartao(cartao, expenses, today = toISODate()) {
   const fechadaCents = soma(penultFech, ultimoFech) + (criadoEm > penultFech && criadoEm <= ultimoFech ? inicial : 0);
   const pagaJa = today > vencimento; // depois do vencimento, a fechada já foi (ou devia ter sido) paga
   const usadoCents = abertaCents + (pagaJa ? 0 : fechadaCents);
-  const limiteCents = cartao.limiteCents || 0;
+  const limiteCents = (cartao.limiteCents || 0) + (cartao.reforcoCents || 0);
   return {
-    id: cartao.id, nome: accountLabel(cartao), limiteCents, usadoCents, disponivelCents: limiteCents - usadoCents,
+    id: cartao.id, nome: accountLabel(cartao), limiteCents, reforcoCents: cartao.reforcoCents || 0, usadoCents, disponivelCents: limiteCents - usadoCents,
     pct: limiteCents ? Math.round((usadoCents / limiteCents) * 100) : 0,
     abertaCents, fechadaCents: pagaJa ? 0 : fechadaCents, fechamento: proxFech, ultimoFechamento: ultimoFech, vencimento,
     diasParaFechar: daysBetween(today, proxFech), diasParaVencer: daysBetween(today, vencimento),
