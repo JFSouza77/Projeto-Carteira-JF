@@ -11,7 +11,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '1.13.2';
+export const CAOS_VERSAO = '1.14.0';
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -187,6 +187,13 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   let mem = normalizarMem(memory, now);
   const d = congelar(dados);
   let intencao = entender(texto, { ...d, anterior: mem.conversa || null });
+  // Esperando um valor (12/11): perguntou "quanto foi?" e a pessoa respondeu só o número
+  const espera = mem.aguardando && now - (mem.aguardando.em || 0) < 15 * 60_000 ? mem.aguardando : null;
+  if (espera?.tipo === 'valor_gasto' && intencao.valor && String(texto).trim().split(/\s+/).length <= 5
+    && ['nao_entendi', 'registrar_gasto', 'gasto_sem_valor', 'cabe'].includes(intencao.intent)) {
+    intencao = { ...intencao, intent: 'registrar_gasto', t: espera.t, categoria: intencao.categoria || espera.categoria, palpite: false };
+  }
+  mem = { ...mem, aguardando: null };
   // Memória (06/11): "e agora?", "já sabe responder?" voltam na última pergunta que ficou sem resposta
   let retomada = null;
   if (intencao.intent === 'retomar' && mem.semResposta) {
@@ -195,7 +202,8 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   }
   mem = { ...mem, emocoes: sentir(mem.emocoes, EVENTO_DA_INTENCAO[intencao.intent] || 'pergunta', now) };
   const emocao = emocaoAtual(mem.emocoes, humor, now);
-  const resp = responder(intencao, d, { today: today || toISODate(new Date(now)), emocao: rostoDe(emocao).nome, perfil, now });
+  const resp = responder(intencao, { ...d, anterior: mem.conversa || null }, { today: today || toISODate(new Date(now)), emocao: rostoDe(emocao).nome, perfil, now });
+  if (resp.aguardar) mem = { ...mem, aguardando: { ...resp.aguardar, em: now } };
 
   let fato = resp.fato;
   if (retomada && fato) fato = `Sobre aquela sua pergunta ("${retomada}"): ${fato}`;
@@ -216,7 +224,9 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   }
 
   let saida;
-  if (fato) {
+  if (fato && resp.cru) {
+    saida = fato; // pergunta direta (ex.: "quanto foi?"), sem embrulho
+  } else if (fato) {
     const r = montar('resposta', { fato }, { humor, emocao, mem, now, rng, perfil });
     saida = r.texto || fato;
     mem = { ...mem, gerador: r.gerador };
@@ -228,6 +238,7 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
     mem = { ...mem, gerador: r.gerador };
   }
 
+  if (resp.dica && saida) saida = `${saida} ${resp.dica}`;
   // Papo avulso demais seguido (06/11): na 5ª pergunta fora do dinheiro, ele chama de volta (sem bronca no Suave)
   const AVULSAS = new Set(['piada', 'identidade', 'significado', 'criador', 'origem', 'como_funciona', 'limites', 'elogio', 'xingamento', 'como_esta', 'nao_entendi', 'sobre_jf', 'saudacao', 'agradecimento']);
   const avulsas = AVULSAS.has(intencao.intent) ? (mem.avulsas || 0) + 1 : 0;
@@ -248,7 +259,7 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   if (intencao.intent === 'nao_entendi') mem = { ...mem, semResposta: String(texto).trim().slice(0, 160) };
   else if (retomada) mem = { ...mem, semResposta: null };
   // lembra a última pergunta pra entender a próxima ("e no mês passado?")
-  if (intencao.intent !== 'nao_entendi' && intencao.intent !== 'retomar') {
+  if (!['nao_entendi', 'retomar', 'explicar_melhor', 'gasto_sem_valor'].includes(intencao.intent)) {
     mem = { ...mem, conversa: { intent: intencao.intent, categoryId: intencao.categoria?.id || null, periodo: intencao.periodo || 'mes' } };
   }
   return {

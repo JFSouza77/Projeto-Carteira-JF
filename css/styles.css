@@ -178,11 +178,15 @@ fieldset.mood legend { color: var(--muted); margin-bottom: 8px; padding: 0; }
 }
 
 .toast {
-  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 84px); transform: translateX(-50%);
-  background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 16px; font-weight: 600;
-  width: max-content; max-width: min(calc(100% - 32px), 520px); text-align: center; z-index: 10;
-  box-shadow: 0 6px 24px #0008;
+  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 96px); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px;
+  background: var(--card); color: var(--text); border: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  padding: 10px 14px; border-radius: 16px; font-weight: 600; line-height: 1.35;
+  width: max-content; max-width: min(calc(100% - 32px), 520px); text-align: left; z-index: 10;
+  box-shadow: 0 0 18px -4px color-mix(in srgb, var(--accent) 70%, transparent), 0 8px 24px #000a;
 }
+.toast-face { flex: none; font-family: ui-monospace, monospace; font-size: .8rem; color: var(--caos); border: 1px solid var(--caos); border-radius: 99px; padding: 2px 8px; }
+.toast[hidden] { display: none; }
 
 /* ---------- Telas e abas ---------- */
 .tela[hidden] { display: none; }
@@ -501,3 +505,18 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 @media (prefers-reduced-motion: reduce) { .tela.entra-dir, .tela.entra-esq { animation: none; } }
 .cripto-aviso { margin: 8px 0 4px; padding: 10px 12px; border-radius: 10px; font-size: .85rem; line-height: 1.4;
   background: color-mix(in srgb, var(--ok) 12%, transparent); border: 1px solid color-mix(in srgb, var(--ok) 45%, transparent); }
+
+/* ---------- Contas agrupadas por banco (12/11) ---------- */
+.banco-grupo { list-style: none; padding: 12px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
+.banco-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 0 2px 8px; }
+.banco-head strong { font-size: 1.1rem; }
+.banco-partes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.banco-partes > li { background: var(--card-2); border-radius: 12px; padding: 10px 12px; display: grid; gap: 6px; }
+.check { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0; }
+.check[hidden] { display: none; }
+
+/* "Me ajuda" não tampa nada (12/11): a tela ganha espaço no fim pra rolar o conteúdo pra cima dele,
+   e enquanto rola ele vira só um "?" redondo */
+.tela main { padding-bottom: calc(env(safe-area-inset-bottom) + 150px); }
+.me-ajuda.mini { padding: 10px; }
+.me-ajuda.mini .me-ajuda-txt { display: none; }

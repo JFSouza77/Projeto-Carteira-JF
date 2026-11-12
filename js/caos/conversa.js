@@ -3,7 +3,7 @@
 // ({ acao }) e quem grava é o app, depois do Confirmar (1ª lei).
 
 import {
-  formatBRL, parseAmount, periodRange, ofensiva, aReceber, sumInRange, topCategories, summarizeMonth, forecastMonth,
+  formatBRL, parseAmount, periodRange, ofensiva, aReceber, comReforco, sumInRange, topCategories, summarizeMonth, forecastMonth,
   incomeIn, monthKey, shiftMonth, monthLabel, accountBalance, accountLabel, totalBalance, analyze,
   spentIn, toISODate, INCOME_SOURCES, situacaoCompromissos, analisarPlanejamento, cabeNoMes, sugerirCategoria, palavrasDe, faturaDoCartao, progressoMeta, resumoInvestimentos,
 } from '../engine.js';
@@ -201,11 +201,20 @@ function entenderSimples(t, { categories = [] } = {}) {
   if (!t) return { ...r, intent: 'nao_entendi' };
   // Registro ("gastei 30 no mercado", "paguei 120 de luz", "recebi 1500 de salario")
   if (r.valor && !/\bquanto\b/.test(t)) {
-    if (/\b(recebi|ganhei|entrou|caiu|recebemos|me pagaram)\b/.test(t)) return { ...r, intent: 'registrar_entrada' };
+    if (/\b(recebi|recebo|ganhei|ganho|entrou|caiu|recebemos|me pagaram)\b/.test(t)) return { ...r, intent: 'registrar_entrada' };
     if (/\b(gastei|paguei|comprei|torrei|saiu|pedi|abasteci|gasto de|gastamos|passei|deixei|foram|foi)\b/.test(t)) return { ...r, intent: 'registrar_gasto' };
     // Anotação curta, sem verbo, do jeito de quem anota num papel: "uber 30", "50 no posto" (achado do Gemini, 06/11)
     const curtinha = t.split(' ').length <= 5 && !pergunta && !/\b(meta|guardei|juntei|poupei|investi)\b/.test(t);
     if (curtinha && (r.categoria || descricaoDe(t) || /^[a-z]+ \d/.test(t) || /^\d+([.,]\d+)? [a-z]/.test(t))) return { ...r, intent: 'registrar_gasto' };
+  }
+  // Gasto sem valor (12/11, vistoria do JF): "gastei não sei quanto de internet" → ele pergunta quanto foi
+  const tSemNaoSei = t.replace(/\bnao sei (quanto|o valor|direito)\b/g, '');
+  if (!r.valor && /\b(gastei|paguei|comprei|torrei|pedi|abasteci|gastamos)\b/.test(t) && !/\b(quanto|qual|quais|onde|como|quando)\b|\?/.test(tSemNaoSei)) {
+    return { ...r, intent: 'gasto_sem_valor' };
+  }
+  // "Me explica melhor" (12/11): explicar de novo a última resposta, em passos
+  if (/^(me )?(expli(ca|que)|explicar)( isso| ai| aí)?( melhor| de novo| direito| devagar| com calma)?\??$|^(nao|n) entendi( nada| isso| direito)?\??$|^como assim\??$|(pode|poderia|consegue) (me )?explicar( melhor| de novo)?|explica(r)? melhor|o que (voce|vc) quis dizer/.test(t)) {
+    return { ...r, intent: 'explicar_melhor' };
   }
   // Metas (1.8.0): montar junto, ver o progresso e guardar dinheiro nelas
   if (r.valor && /\b(guardei|juntei|separei|coloquei|poupei|depositei)\b/.test(t) && /\b(meta|pr[oa]|para o|para a|no|na)\b/.test(t)) return { ...r, intent: 'meta_guardar' };
@@ -351,14 +360,45 @@ function textoAtivo(m, a) {
 }
 
 function textoSobra(a) {
+  // sem entrada nem orçamento não tem conta pra fazer (em JS, null >= 0 é true: antes virava "sobram R$ 0,00")
+  if (a.sobraCents == null || !a.baseTipo) return semBase();
   const base = a.baseTipo === 'entradas' ? `das entradas (${formatBRL(a.baseCents)})` : `do orçamento (${formatBRL(a.baseCents)})`;
   const partes = `já saiu ${formatBRL(a.gastosCents)}, faltam ${formatBRL(a.compPendentesCents)} de compromissos e ${formatBRL(a.planosPendentesCents)} de planos`;
   if (a.sobraCents >= 0) return `Cabe no mês: ${partes}, e ainda sobram ${formatBRL(a.sobraCents)} ${base}.`;
   return `Não cabe tudo: ${partes}, e faltariam ${formatBRL(-a.sobraCents)} ${base}.${a.adiar.length ? ` Dá pra adiar ${a.adiar.map(p => `${p.nome} (${formatBRL(p.valorCents)})`).join(', ')}.` : ''}`;
 }
 
+/** "Me explica melhor": a última resposta de novo, em passos simples, com a conta aberta. */
+export function explicarMelhor(anterior, dados, today = toISODate()) {
+  const { expenses = [], incomes = [], categories = [] } = dados;
+  const mes = monthKey(today);
+  const intent = anterior?.intent;
+  if (['planos', 'cabe', 'pagar', 'saldo_mes'].includes(intent)) {
+    const a = analisarPlanejamento(dados, today);
+    if (!a.baseTipo) return `${semBase()} Funciona assim: eu pego o que entra no mês, tiro o que já saiu, o que ainda falta pagar de contas fixas e os planos que você anotou. O que sobrar é o quanto você ainda pode gastar sem aperto.`;
+    const base = a.baseTipo === 'entradas' ? `1) Entrou no mês: ${formatBRL(a.baseCents)}.` : `1) Seu orçamento do mês (você não anotou entradas, então uso os limites): ${formatBRL(a.baseCents)}.`;
+    const resultado = a.sobraCents >= 0 ? `Sobram ${formatBRL(a.sobraCents)}: é o quanto você ainda pode gastar sem aperto.` : `Faltam ${formatBRL(-a.sobraCents)}: não cabe tudo, então algum plano precisa esperar.`;
+    return `Vou por partes. ${base} 2) Já saiu: ${formatBRL(a.gastosCents)}. 3) Ainda falta pagar de contas fixas: ${formatBRL(a.compPendentesCents)}. 4) Planos que você anotou: ${formatBRL(a.planosPendentesCents)}. A conta é: ${formatBRL(a.baseCents)} − ${formatBRL(a.gastosCents)} − ${formatBRL(a.compPendentesCents)} − ${formatBRL(a.planosPendentesCents)}. ${resultado} Qual parte ficou confusa?`;
+  }
+  if (intent === 'previsao') {
+    const f = forecastMonth(expenses, mes, today);
+    return `Vou por partes. Até hoje (dia ${f.day} de ${f.daysTotal}) você gastou ${formatBRL(f.spentCents)}. Tirando as contas fixas (${formatBRL(f.fixosCents)}), dá uma média de ${formatBRL(f.perDayCents)} por dia. Se continuar nesse ritmo até o dia ${f.daysTotal}, o mês fecha perto de ${formatBRL(f.projectedCents)}. É uma estimativa: se você gastar menos nos próximos dias, ela cai.`;
+  }
+  if (['gasto_total', 'gasto_categoria', 'maior_gasto', 'onde_gastei'].includes(intent)) {
+    const s = summarizeMonth(expenses, categories, mes);
+    const top = s.rows.filter(r => r.spentCents > 0).sort((a, b) => b.spentCents - a.spentCents).slice(0, 3);
+    if (!top.length) return 'Ainda não tem gasto anotado neste mês, então não tem o que somar. Quando você lançar, eu mostro quanto foi em cada categoria.';
+    return `Vou por partes. Eu somo tudo que você anotou no mês, separado por tipo de gasto (categoria). Os maiores: ${top.map(r => `${r.name} ${formatBRL(r.spentCents)}`).join(', ')}. Somando tudo dá ${formatBRL(s.totalCents)}. Quer ver uma categoria por dentro? Pergunta tipo "quanto gastei em ${top[0].name.toLowerCase()}?".`;
+  }
+  if (intent === 'cartao') {
+    return 'Vou por partes. O cartão junta suas compras numa fatura. Ela "fecha" num dia do mês (o que você comprou até ali vai pra essa fatura) e "vence" alguns dias depois (é quando você paga). O limite é o máximo que o banco deixa você usar; o que você já usou e ainda não pagou fica preso nele. Por isso eu mostro quanto ainda está livre.';
+  }
+  if (!intent) return 'Explico, sim! Mas me diz o quê: me manda a pergunta de novo, ou o assunto (tipo "o cartão", "o cabe no mês", "a previsão"), que eu explico com calma, passo a passo.';
+  return 'Explico, sim. Qual parte ficou confusa? Me manda a palavra ou o número que não fez sentido que eu explico só ele, com um exemplo.';
+}
+
 function semBase() {
-  return 'Pra eu calcular se cabe, preciso de uma base: lança suas entradas do mês (salário, extras) ou define orçamentos em Ajustes.';
+  return 'Pra eu fazer essa conta, preciso saber quanto entra no seu mês. Quanto você recebe? Me fala tipo "recebi 2500 de salário" que eu anoto como entrada, e aí eu te digo quanto sobra de verdade.';
 }
 
 /** "gastei 30 no uber" → "uber"; "paguei 120 de luz" → "luz". */
@@ -397,14 +437,29 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       const aprendida = !intencao.categoria && desc ? sugerirCategoria(desc, expenses) : null;
       const cat = intencao.categoria || (aprendida && categories.find(c => c.id === aprendida.categoryId))
         || categories.find(c => c.id === 'outros') || categories[0];
+      const recorrente = /\b(internet|luz|energia|agua|aluguel|condominio|netflix|spotify|streaming|academia|plano|celular|telefone|assinatura|mensalidade|escola|faculdade|seguro|gas)\b/.test(intencao.t)
+        || ['contas', 'moradia', 'streaming'].includes(cat?.id);
       return {
         gatilho: 'proposta_registro',
+        dica: recorrente ? 'Isso parece conta de todo mês. Se for, cadastra em 📅 Mês → Contas fixas que eu passo a lembrar do vencimento e já entra no planejamento.' : null,
         vars: { valor: formatBRL(intencao.valor), categoria: cat?.name ?? 'Outros' },
         acao: { tipo: 'registrar_gasto', amountCents: intencao.valor, categoryId: cat?.id ?? 'outros', date: today,
           note: desc ? desc[0].toUpperCase() + desc.slice(1) : '' },
         aprendeu: !!aprendida,
       };
     }
+    case 'gasto_sem_valor': {
+      const desc = descricaoDe(intencao.t);
+      const doQue = desc ? ` de ${desc}` : intencao.categoria ? ` em ${intencao.categoria.name}` : '';
+      return {
+        fato: `Bora anotar! Quanto foi o gasto${doQue}? Me manda só o valor, tipo 79,90. Se não lembrar, dá uma olhada no app do banco ou na fatura e me fala depois.`,
+        aguardar: { tipo: 'valor_gasto', t: intencao.t, categoria: intencao.categoria || null },
+        cru: true,
+        sugestoes: [],
+      };
+    }
+    case 'explicar_melhor':
+      return { fato: explicarMelhor(dados.anterior, dados, today) };
     case 'registrar_entrada': {
       const fonte = INCOME_SOURCES.find(s => s.id === (intencao.fonte || 'outros'));
       return {
@@ -479,7 +534,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       const cartoes = accounts.filter(a => a.tipo === 'cartao');
       if (!cartoes.length) return { fato: 'Você ainda não cadastrou cartão de crédito. Na aba 🏦 Contas tem "Adicionar cartão de crédito": limite, dia que fecha e dia que vence. Aí eu acompanho a fatura com você.', sugestoes: ['Como registro meu cartão?'] };
       const partes = cartoes.map(c => {
-        const f = faturaDoCartao(c, expenses, today);
+        const f = faturaDoCartao(comReforco(c, accounts, expenses, incomes), expenses, today);
         const fech = f.diasParaFechar === 0 ? 'fecha hoje' : `fecha em ${f.diasParaFechar} ${f.diasParaFechar === 1 ? 'dia' : 'dias'}`;
         const venc = f.fechadaCents > 0 ? ` Fatura fechada de ${formatBRL(f.fechadaCents)} vence ${f.diasParaVencer === 0 ? 'hoje' : f.diasParaVencer === 1 ? 'amanhã' : `dia ${Number(f.vencimento.slice(8))}`}.` : '';
         return `${f.nome}: ${formatBRL(f.usadoCents)} de ${formatBRL(f.limiteCents)} do limite (${f.pct}%), sobram ${formatBRL(f.disponivelCents)}. A fatura aberta está em ${formatBRL(f.abertaCents)} e ${fech}.${venc}`;

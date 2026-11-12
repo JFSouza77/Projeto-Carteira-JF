@@ -8,7 +8,7 @@ import {
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
   TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
-  valorProprio, dividirIgual, juntarNomes, aReceber, marcarRecebido, ofensiva, MARCOS_OFENSIVA,
+  valorProprio, dividirIgual, juntarNomes, TIPOS_CONTA, agruparPorBanco, comReforco, aReceber, marcarRecebido, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta } from './caos/index.js';
 import { extrairNome, textoMeta } from './caos/conversa.js';
@@ -145,8 +145,8 @@ function narrate(events, { ignoreCooldown = false } = {}) {
 // ======================================================================
 
 const TELAS = ['inicio', 'lancar', 'mes', 'conversa', 'contas', 'ajustes'];
-// Ordem da barra de baixo (o Início fica no meio). Arrastar pro lado anda nessa ordem; Ajustes fica fora (é a engrenagem).
-const ORDEM_ABAS = ['lancar', 'mes', 'inicio', 'conversa', 'contas'];
+// Ordem da barra de baixo (12/11: o Lançar, ação mais usada, fica no meio, grande). Arrastar pro lado anda nessa ordem; Ajustes fica fora (é a engrenagem).
+const ORDEM_ABAS = ['inicio', 'mes', 'lancar', 'conversa', 'contas'];
 let telaAtual = 'inicio';
 
 function irPara(tela, { lado = null } = {}) {
@@ -390,8 +390,7 @@ function renderLancar() {
   $('#account-field').hidden = state.accounts.length === 0;
   const atual = $('#account-select').value;
   // entrada não cai no cartão de crédito: ele só aparece pra gasto
-  $('#account-select').innerHTML = '<option value="">Sem conta</option>'
-    + state.accounts.filter(a => gasto || a.tipo !== 'cartao').map(a => `<option value="${esc(a.id)}">${a.tipo === 'cartao' ? '💳 ' : ''}${esc(accountLabel(a))}</option>`).join('');
+  $('#account-select').innerHTML = opcoesDeConta(a => gasto || a.tipo !== 'cartao');
   if (state.accounts.some(a => a.id === atual)) $('#account-select').value = atual;
   $('#photo-ai').hidden = !(state.photo && state.settings.aiOn);
 }
@@ -420,13 +419,13 @@ async function registrarGasto({ amountCents, categoryId, note, date, accountId, 
   if (rachaNomes?.length) expense.racha = dividirIgual(amountCents, rachaNomes);
   const conta = accountId && state.accounts.find(a => a.id === accountId);
   const cartao = conta?.tipo === 'cartao';
-  const antes = conta ? (cartao ? faturaDoCartao(conta, state.expenses, toISODate()).pct : accountBalance(conta, state.expenses, state.incomes)) : null;
+  const antes = conta ? (cartao ? faturaDoCartao(comReforco(conta, state.accounts, state.expenses, state.incomes), state.expenses, toISODate()).pct : accountBalance(conta, state.expenses, state.incomes)) : null;
   await db.put(db.STORES.expenses, expense);
   state.expenses.push(expense);
   const events = detectExpenseEvents({ expenses: state.expenses, categories: state.categories, newExpense: expense });
   if (conta && cartao) {
     // passou de 80% ou de 100% do limite com esta compra: o C.A.O.S. avisa na hora
-    const f = faturaDoCartao(conta, state.expenses, toISODate());
+    const f = faturaDoCartao(comReforco(conta, state.accounts, state.expenses, state.incomes), state.expenses, toISODate());
     if ((antes < 80 && f.pct >= 80) || (antes < 100 && f.pct >= 100)) {
       events.push({ type: 'cartao_limite', accountName: f.nome, pct: f.pct, amountCents: f.usadoCents, leftCents: f.disponivelCents, budgetCents: f.limiteCents });
     }
@@ -915,24 +914,20 @@ async function fotoNoChat(arquivo) {
 function renderContas() {
   renderInvestimentos();
   $('#bank-total').textContent = formatBRL(totalBalance(state.accounts, state.expenses, state.incomes));
-  $('#account-list').innerHTML = state.accounts.map(a => {
-    if (a.tipo === 'cartao') return itemCartao(a);
-    const bal = accountBalance(a, state.expenses, state.incomes);
-    const desde = new Date(a.balanceAt).toLocaleDateString('pt-BR');
+  $('#account-list').innerHTML = agruparPorBanco(state.accounts).map(g => {
+    const dinheiro = g.contas.filter(a => a.tipo !== 'cartao').reduce((t, a) => t + accountBalance(a, state.expenses, state.incomes), 0);
+    const temDinheiro = g.contas.some(a => a.tipo !== 'cartao');
     return `
-    <li>
-      <div class="account-head"><strong>🏦 ${esc(accountLabel(a))}</strong><span class="num ${bal < 0 ? 'bad' : ''}">${formatBRL(bal)}</span></div>
-      <small class="muted">Saldo informado ${formatBRL(a.balanceCents)} em ${desde}${bal !== a.balanceCents ? ', mais os lançamentos desde então' : ''}.</small>
-      <div class="account-actions">
-        <button class="ghost" data-acc-update="${esc(a.id)}">Atualizar saldo</button>
-        <button class="ghost" data-acc-del="${esc(a.id)}">Remover</button>
-      </div>
+    <li class="banco-grupo">
+      <div class="banco-head"><strong>${esc(g.bank === 'Outro' ? 'Outros' : g.bank)}</strong>${temDinheiro && g.contas.length > 1 ? `<span class="num muted">${formatBRL(dinheiro)} no total</span>` : ''}</div>
+      <ul class="banco-partes">${g.contas.map(a => (a.tipo === 'cartao' ? itemCartao(a) : itemConta(a))).join('')}</ul>
     </li>`;
   }).join('');
   if (!$('#bank-select').options.length) {
     $('#bank-select').innerHTML = BANKS.map(b => `<option>${esc(b)}</option>`).join('');
     $('#card-bank').innerHTML = BANKS.filter(b => !/dinheiro vivo/.test(b)).map(b => `<option>${esc(b)}</option>`).join('');
   }
+  renderFormConta();
 }
 
 // ---------- Investimentos (app 1.8, ideia do Bruno Levanti) ----------
@@ -1017,13 +1012,28 @@ async function acaoInvestimento(e) {
   }
 }
 
+function itemConta(a) {
+  const bal = accountBalance(a, state.expenses, state.incomes);
+  const desde = new Date(a.balanceAt).toLocaleDateString('pt-BR');
+  const reforca = a.reforcaCartaoId && state.accounts.find(c => c.id === a.reforcaCartaoId);
+  return `
+    <li>
+      <div class="account-head"><strong>${iconeConta(a)} ${esc(accountLabel(a))}</strong><span class="num ${bal < 0 ? 'bad' : ''}">${formatBRL(bal)}</span></div>
+      <small class="muted">Saldo informado ${formatBRL(a.balanceCents)} em ${desde}${bal !== a.balanceCents ? ', mais os lançamentos desde então' : ''}.${reforca ? ` Aumenta o limite do ${esc(accountLabel(reforca))}.` : ''}</small>
+      <div class="account-actions">
+        <button class="ghost" data-acc-update="${esc(a.id)}">Atualizar saldo</button>
+        <button class="ghost" data-acc-del="${esc(a.id)}">Remover</button>
+      </div>
+    </li>`;
+}
+
 function itemCartao(a) {
-  const f = faturaDoCartao(a, state.expenses, toISODate());
+  const f = faturaDoCartao(comReforco(a, state.accounts, state.expenses, state.incomes), state.expenses, toISODate());
   const cls = f.pct >= 100 ? 'cheio' : f.pct >= 80 ? 'alto' : '';
   const dia = iso => `${iso.slice(8)}/${iso.slice(5, 7)}`;
   return `
     <li>
-      <div class="account-head"><strong>💳 ${esc(accountLabel(a))}</strong><span class="num ${f.pct >= 100 ? 'bad' : ''}">${formatBRL(f.disponivelCents)} livre</span></div>
+      <div class="account-head"><strong>💳 ${esc(accountLabel(a))}</strong><span class="num ${f.pct >= 100 ? 'bad' : ''}">${formatBRL(f.disponivelCents)} livre</span></div>${f.reforcoCents ? `<small class="muted">Limite ${formatBRL(a.limiteCents)} + ${formatBRL(f.reforcoCents)} do cofrinho.</small>` : ''}
       <div class="limite-bar ${cls}" role="img" aria-label="${f.pct}% do limite usado"><i style="width:${Math.min(100, Math.max(0, f.pct))}%"></i></div>
       <small class="muted">Usado ${formatBRL(f.usadoCents)} de ${formatBRL(f.limiteCents)} (${f.pct}%). Fatura aberta ${formatBRL(f.abertaCents)}, fecha ${dia(f.fechamento)}.${f.fechadaCents ? ` Fatura fechada ${formatBRL(f.fechadaCents)} vence ${dia(f.vencimento)}.` : ''}</small>
       <div class="account-actions">
@@ -1055,6 +1065,24 @@ async function onAddCartao(ev) {
   }
 }
 
+const ICONE_CONTA = { corrente: '🏦', poupanca: '🐷', cofrinho: '🪙', cartao: '💳' };
+const iconeConta = a => ICONE_CONTA[a.tipo === 'cartao' ? 'cartao' : a.subtipo || 'corrente'];
+
+/** <option>s de conta agrupadas por banco, em ordem alfabética, cada uma dizendo o que é (12/11). */
+function opcoesDeConta(filtro = () => true) {
+  return '<option value="">Sem conta</option>' + agruparPorBanco(state.accounts.filter(filtro)).map(g =>
+    `<optgroup label="${esc(g.bank)}">${g.contas.map(a => `<option value="${esc(a.id)}">${iconeConta(a)} ${esc(accountLabel(a))}</option>`).join('')}</optgroup>`).join('');
+}
+
+function renderFormConta() {
+  const cofrinho = $('#bank-subtipo').value === 'cofrinho';
+  const cartoes = state.accounts.filter(a => a.tipo === 'cartao');
+  $('#bank-reforco-field').hidden = !cofrinho || !cartoes.length;
+  $('#bank-reforco-cartao').innerHTML = cartoes.map(a => `<option value="${esc(a.id)}">💳 ${esc(accountLabel(a))}</option>`).join('');
+  const doBanco = cartoes.find(a => a.bank === $('#bank-select').value);
+  if (doBanco) $('#bank-reforco-cartao').value = doBanco.id;
+}
+
 async function onAddAccount(ev) {
   ev.preventDefault();
   const err = $('#account-error');
@@ -1062,15 +1090,20 @@ async function onAddAccount(ev) {
   try {
     const bal = parseSignedAmount($('#bank-balance').value);
     if (bal == null) throw new Error('Digite o saldo atual (pode ser 0).');
-    const acc = createAccount({ bank: $('#bank-select').value, nickname: $('#bank-nick').value, balanceCents: bal });
+    const subtipo = $('#bank-subtipo').value;
+    const reforcaCartaoId = subtipo === 'cofrinho' && $('#bank-reforco').checked ? $('#bank-reforco-cartao').value || null : null;
+    const acc = createAccount({ bank: $('#bank-select').value, nickname: $('#bank-nick').value, balanceCents: bal, subtipo, reforcaCartaoId });
     await db.put(db.STORES.accounts, acc);
     state.accounts.push(acc);
     $('#bank-nick').value = '';
     $('#bank-balance').value = '';
+    $('#bank-subtipo').value = 'corrente';
+    $('#bank-reforco').checked = false;
+    renderFormConta();
     renderContas();
     renderLancar();
     render();
-    toast(`${accountLabel(acc)} adicionada.`);
+    toast(`Pronto, anotei: ${accountLabel(acc)}.`);
   } catch (e) {
     err.textContent = e.message;
     err.hidden = false;
@@ -1235,7 +1268,7 @@ function prepararFormCompromisso() {
   }).join('');
   $('#comp-cat').innerHTML = state.categories.map(c => `<option value="${esc(c.id)}" ${c.id === 'contas' ? 'selected' : ''}>${esc(c.emoji)} ${esc(c.name)}</option>`).join('');
   $('#comp-conta-field').hidden = !state.accounts.length;
-  $('#comp-conta').innerHTML = '<option value="">Sem conta</option>' + state.accounts.map(a => `<option value="${esc(a.id)}">${esc(accountLabel(a))}</option>`).join('');
+  $('#comp-conta').innerHTML = opcoesDeConta();
 }
 
 function textoStatus(c) {
@@ -1313,7 +1346,7 @@ async function onAddCompromisso(ev) {
     prepararFormCompromisso();
     renderMes();
     render();
-    toast(`${c.nome} salvo. Eu lembro quando chegar a hora.`);
+    toast(`Pronto, anotei: ${c.nome}. Eu lembro quando chegar a hora.`);
   } catch (e) {
     err.textContent = e.message;
     err.hidden = false;
@@ -1735,7 +1768,8 @@ async function atualizarMercado() {
 
 function toast(msg) {
   const t = $('#toast');
-  t.textContent = msg;
+  // aviso no visual do app (12/11): rostinho do C.A.O.S. + texto
+  t.innerHTML = `<span class="toast-face" aria-hidden="true">(•‿•)</span><span>${esc(msg)}</span>`;
   t.hidden = false;
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => { t.hidden = true; }, 3200);
@@ -1747,6 +1781,13 @@ function toast(msg) {
 
 function bind() {
   window.addEventListener('hashchange', () => irPara(location.hash.slice(1), { lado: ladoPendente }));
+  // "Me ajuda" encolhe pra "?" enquanto a pessoa rola a tela (pra não tampar o que ela está lendo)
+  let rolando = null;
+  window.addEventListener('scroll', () => {
+    $('#me-ajuda').classList.add('mini');
+    clearTimeout(rolando);
+    rolando = setTimeout(() => $('#me-ajuda').classList.remove('mini'), 1400);
+  }, { passive: true });
   ligarArrastar();
   $('#caos').addEventListener('click', () => { location.hash = 'conversa'; });
 
@@ -1820,6 +1861,8 @@ function bind() {
 
   // Contas
   $('#account-form').addEventListener('submit', onAddAccount);
+  $('#bank-subtipo').addEventListener('change', renderFormConta);
+  $('#bank-select').addEventListener('change', renderFormConta);
   $('#card-form').addEventListener('submit', onAddCartao);
   $('#inv-form').addEventListener('submit', onAddInvestimento);
   $('#inv-list').addEventListener('click', acaoInvestimento);
@@ -1927,7 +1970,7 @@ function bind() {
     state.perfil = { ...(state.perfil || { nome: null, apelido: null, tratamento: 'descontraido', foco: [] }), aniversario: v || null, aniversarioPerguntado: true };
     await db.setMeta('perfil', state.perfil);
     renderPerfil();
-    toast(v ? 'Aniversário salvo.' : 'Aniversário apagado.');
+    toast(v ? 'Pronto, anotei seu aniversário.' : 'Aniversário apagado.');
   });
   $('#note').addEventListener('input', sugerirPelaDescricao);
 
