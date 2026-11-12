@@ -45,24 +45,22 @@ const ico = (nome, extra = '') => `<svg class="ico ${extra}" aria-hidden="true">
 1. **"Me ajuda" por cima do conteúdo em todas as telas** (já está no seu item 9). No Lançar ele tampa o "Dividir com
    amigos"; no Início, o fim da lista. Sugestão: um **"?" pequeno no topo**, ao lado do título, ou o botão encolher pra
    uma bolinha quando a tela rola.
-2. **Botão "Adicionar gasto" escondido atrás da barra de baixo** no Lançar (no print escuro, ele aparece embaixo da
-   barra). Falta espaço no fim da tela: `padding-bottom` igual à altura da barra + a bola do Lançar.
-3. **Rostinho de texto** (`( ͡° ͜ʖ ͡°)`, `┬┴┤(・_├┬┴`): na barra do C.A.O.S. ele fica estranho e muda de largura. O
+2. **Rostinho de texto** (`( ͡° ͜ʖ ͡°)`, `┬┴┤(・_├┬┴`): na barra do C.A.O.S. ele fica estranho e muda de largura. O
    avatar com formas resolve; até lá, um rostinho simples desenhado (dois olhos e uma boca em SVG) fica mais bonito.
-4. **Tema claro por padrão:** num celular no claro, o app abre claro e lavado, sem o neon. O JF gosta do escuro. Se
+3. **Tema claro por padrão:** num celular no claro, o app abre claro e lavado, sem o neon. O JF gosta do escuro. Se
    ele topar, abra no **escuro por padrão** e deixe o claro como opção em Acessibilidade.
-5. **Planejamento:** o "—" gigante em "Sobra prevista" parece erro. Melhor uma frase curta no lugar do número
+4. **Planejamento:** o "—" gigante em "Sobra prevista" parece erro. Melhor uma frase curta no lugar do número
    ("Lance sua entrada pra eu calcular").
-6. **Neon com moderação:** hoje o verde-limão está em muitos botões grandes ao mesmo tempo (Gasto, Adicionar conta,
+5. **Neon com moderação:** hoje o verde-limão está em muitos botões grandes ao mesmo tempo (Gasto, Adicionar conta,
    Adicionar gasto, a bola do Lançar). Deixe **cheio só o botão principal de cada tela** e os outros com borda neon e
    fundo escuro. O olho sabe na hora o que apertar.
-7. **Cabeçalhos diferentes em cada tela:** Início tem mês com setas; Ajustes tem ⚙️ e voltar; as outras, só o título.
+6. **Cabeçalhos diferentes em cada tela:** Início tem mês com setas; Ajustes tem ⚙️ e voltar; as outras, só o título.
    Um cabeçalho igual em todas (título à esquerda; ação, se houver, à direita) ajuda o "entender sem explicação".
 
 ## 3. Ordem que eu faria (do mais rápido ao mais trabalhoso)
 
 1. Ícones de traço no lugar dos emojis de botões, títulos e conversa (só HTML/CSS, pouco risco).
-2. Espaço do fim da tela + "Me ajuda" no topo.
+2. "Me ajuda" no topo (sem tampar nada).
 3. Neon só no botão principal.
 4. Categorias com ícone e cor (mexe em dados e testes).
 5. Rostinho/avatar.
