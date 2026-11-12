@@ -1,5 +1,7 @@
 # Rascunhos da semana (09/11 a 12/11/2026)
 
+> Lista única do que está aberto: `docs/Pendencias.md`.
+
 Combinado do JF (07/11): de segunda 0h até quinta 16h **não se mexe em código**. Toda ideia que chegar (JF, GPT,
 Gemini, Code) entra aqui com o veredito do Wally. Na **quinta 12/11 a partir das 16h e na sexta 13/11** a gente faz
 o que estiver em "Entra". Mais detalhes de cada ideia em `docs/Ideias.md`.

@@ -1,5 +1,7 @@
 # Ideias para as próximas versões
 
+> Lista única do que está aberto: `docs/Pendencias.md`.
+
 Sugestões do Code (05/11/2026), da mais útil para a menos. Nada disso está feito; o JF escolhe.
 
 1. **Gastos fixos e assinaturas:** cadastrar aluguel, internet, streaming uma vez; todo mês o C.A.O.S. propõe lançar

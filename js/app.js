@@ -1336,8 +1336,9 @@ function renderMes() {
   $('#mes-titulo').textContent = `Planejamento · ${nomeMes(a.month)}`;
   const el = $('#plan-sobra');
   if (a.sobraCents == null) {
-    el.textContent = '—';
-    el.className = 'big';
+    // sem entrada nem orçamento: frase no lugar do "—" gigante (revisão do Code, 12/11)
+    el.textContent = 'Lance sua entrada pra eu calcular';
+    el.className = 'big vazio';
   } else {
     el.textContent = formatBRL(a.sobraCents);
     el.className = `big ${a.sobraCents < 0 ? 'bad' : 'ok'}`;
