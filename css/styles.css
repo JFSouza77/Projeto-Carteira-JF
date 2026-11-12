@@ -520,3 +520,11 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .tela main { padding-bottom: calc(env(safe-area-inset-bottom) + 150px); }
 .me-ajuda.mini { padding: 10px; }
 .me-ajuda.mini .me-ajuda-txt { display: none; }
+
+/* Pagou como? e parcelas (P8, 12/11) */
+.parcelas-box { display: grid; gap: 6px; }
+.parcelas-box[hidden], #forma-field[hidden], #limite-modo-field[hidden] { display: none; }
+#limite-modo-field { border: 1px dashed var(--line); border-radius: 12px; padding: 8px 12px; margin: 0; }
+#limite-modo-field legend { font-size: .85rem; color: var(--muted); padding: 0 4px; }
+.check { flex-wrap: nowrap; align-items: flex-start; }
+.check input[type="radio"], .check input[type="checkbox"] { width: 22px; height: 22px; min-height: 0; flex: none; margin: 2px 0 0; accent-color: var(--accent); }

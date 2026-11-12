@@ -108,10 +108,24 @@
             <input id="note" name="note" type="text" maxlength="120" placeholder="Descrição" aria-label="Descrição">
             <input id="date" name="date" type="date" aria-label="Data">
           </div>
+          <div class="field" id="forma-field">
+            <span>Pagou como?</span>
+            <div class="chips" id="forma-chips" role="radiogroup" aria-label="Pagou como?"></div>
+          </div>
           <label class="field" id="account-field" hidden>
-            <span>Conta</span>
+            <span id="account-label">Conta</span>
             <select id="account-select" aria-label="Conta"></select>
           </label>
+          <div class="parcelas-box" id="parcelas-box" hidden>
+            <label class="field"><span>À vista ou parcelado?</span>
+              <select id="parcelas-select" aria-label="Parcelas"></select></label>
+            <fieldset class="field" id="limite-modo-field" hidden>
+              <legend>Como o banco usa o seu limite?</legend>
+              <label class="check"><input type="radio" name="limite-modo" value="total" checked> Prende o valor todo e solta a cada parcela paga</label>
+              <label class="check"><input type="radio" name="limite-modo" value="parcela"> Só a parcela do mês ocupa o limite</label>
+              <p class="muted" id="parcelas-previa"></p>
+            </fieldset>
+          </div>
           <details class="racha" id="racha-box">
             <summary>🍕 Dividir com amigos</summary>
             <label class="field"><span>Quem vai te pagar a parte dele? (separe os nomes por vírgula)</span>

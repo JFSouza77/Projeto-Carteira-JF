@@ -368,6 +368,137 @@ function textoSobra(a) {
   return `Não cabe tudo: ${partes}, e faltariam ${formatBRL(-a.sobraCents)} ${base}.${a.adiar.length ? ` Dá pra adiar ${a.adiar.map(p => `${p.nome} (${formatBRL(p.valorCents)})`).join(', ')}.` : ''}`;
 }
 
+// ---------- Como pagou (P8, vistoria do JF 12/11) ----------
+// Ordem: pagou como? → cartão: crédito ou débito? → crédito: à vista ou parcelado (quantas vezes)? →
+// parcelado: prende o limite todo ou só a parcela? → qual cartão / de qual banco. Pula o que a pessoa já disse.
+
+const CONTA_DE = { credito: a => a.tipo === 'cartao', pix: a => a.tipo !== 'cartao', debito: a => a.tipo !== 'cartao' };
+
+/** Tira da descrição as palavras do pagamento (pix, crédito, 3x, nome do banco). */
+function limparPagamento(desc, accounts = []) {
+  if (!desc) return desc;
+  const bancos = new Set(accounts.flatMap(a => [a.bank, a.nickname]).filter(Boolean).map(norm));
+  const LIGA = /^(no|na|de|do|da|em|a|com|pelo|pela|e)$/;
+  const palavras = desc.split(/\s+/);
+  // nome do banco com mais de uma palavra ("Banco Teste"): marca a sequência toda
+  const doBanco = new Set();
+  for (const b of bancos) {
+    const bt = b.split(/\s+/);
+    for (let i = 0; i + bt.length <= palavras.length; i++) {
+      if (bt.every((x, k) => norm(palavras[i + k]) === x)) bt.forEach((_, k) => doBanco.add(i + k));
+    }
+  }
+  const limpo = [];
+  for (const [i, w] of palavras.entries()) {
+    const n = norm(w);
+    if (doBanco.has(i) || /^(pix|debito|credito|cartao|dinheiro|especie|\d{1,2}x|vezes|parcelas|parcelado|vista|\d{1,2})$/.test(n) || bancos.has(n)) {
+      while (limpo.length && LIGA.test(norm(limpo[limpo.length - 1]))) limpo.pop(); // "no" de "no pix"
+      continue;
+    }
+    limpo.push(w);
+  }
+  while (limpo.length && LIGA.test(norm(limpo[0]))) limpo.shift();
+  while (limpo.length && LIGA.test(norm(limpo[limpo.length - 1]))) limpo.pop();
+  return limpo.join(' ').trim() || null;
+}
+
+/** Lê do texto o que a pessoa já contou do pagamento. */
+export function lerPagamento(texto, accounts = []) {
+  const t = norm(texto);
+  const r = {};
+  if (/\bpix\b/.test(t)) r.forma = 'pix';
+  else if (/\bdebito\b/.test(t)) r.forma = 'debito';
+  else if (/\bcredito\b/.test(t)) r.forma = 'credito';
+  else if (/\b(dinheiro|especie|em maos|dinheiro vivo|nota)\b/.test(t)) r.forma = 'dinheiro';
+  else if (/\bcartao\b/.test(t)) r.forma = 'cartao'; // falta saber: crédito ou débito
+  const vezes = t.match(/\b(\d{1,2}) ?x\b|\bem (\d{1,2}) ?(vezes|parcelas)\b/);
+  if (vezes) {
+    const n = Number(vezes[1] || vezes[2]);
+    if (n >= 1 && n <= 24) { r.parcelas = n; if (n > 1 && r.forma !== 'credito') r.forma = 'credito'; }
+  } else if (/\b(a vista|avista|de uma vez|uma vez so)\b/.test(t)) r.parcelas = 1;
+  if (/\b(limite todo|valor todo|no limite|prende tudo|tudo no limite|prende o limite)\b/.test(t)) r.limiteModo = 'total';
+  else if (/\b(dividido|so a parcela|a parcela|parcela do mes|por mes)\b/.test(t)) r.limiteModo = 'parcela';
+  const filtro = CONTA_DE[r.forma] || (() => true);
+  const achou = accounts.filter(filtro).filter(a => {
+    const nomes = [a.bank, a.nickname].filter(Boolean).map(norm);
+    return nomes.some(n => n.length >= 2 && new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(t));
+  });
+  if (achou.length === 1) { r.accountId = achou[0].id; if (!r.forma && achou[0].tipo === 'cartao') r.forma = 'credito'; }
+  return r;
+}
+
+/** A próxima pergunta sobre o pagamento, ou null quando já dá pra propor. */
+export function proximaPerguntaPagamento(acao, accounts = []) {
+  if (!accounts.length) return null; // sem conta cadastrada, não enche de pergunta
+  if (!acao.forma) return { texto: 'Pagou como? Dinheiro, Pix, débito ou crédito?', sugestoes: ['Pix', 'Débito', 'Crédito', 'Dinheiro'] };
+  if (acao.forma === 'cartao') return { texto: 'No cartão de crédito ou de débito?', sugestoes: ['Crédito', 'Débito'] };
+  if (acao.forma === 'credito' && acao.parcelas == null) {
+    return { texto: 'À vista ou parcelado? Se for parcelado, me fala em quantas vezes, tipo "4x".', sugestoes: ['À vista', '2x', '3x', '10x'] };
+  }
+  if (acao.forma === 'credito' && acao.parcelas > 1 && !acao.limiteModo) {
+    const parcela = formatBRL(Math.floor(acao.amountCents / acao.parcelas));
+    return { texto: `Esse parcelado prende o valor todo (${formatBRL(acao.amountCents)}) no seu limite, soltando ${parcela} por mês, ou só a parcela de ${parcela} ocupa o limite? Se não souber, fala "não sei".`,
+      sugestoes: ['Prende o limite todo', 'Só a parcela', 'Não sei'] };
+  }
+  if (!acao.accountId && CONTA_DE[acao.forma]) {
+    const cabem = accounts.filter(CONTA_DE[acao.forma]);
+    if (cabem.length > 1) {
+      return { texto: acao.forma === 'credito' ? 'Qual cartão?' : 'De qual banco saiu?', sugestoes: cabem.slice(0, 5).map(a => accountLabel(a)) };
+    }
+  }
+  return null;
+}
+
+/** Completa a ação com o que dá pra deduzir (uma conta só, "não sei" = valor todo). */
+function completarPagamento(acao, accounts = []) {
+  const a = { ...acao };
+  if (a.forma === 'credito' && a.parcelas > 1 && !a.limiteModo) return a;
+  if (!a.accountId && CONTA_DE[a.forma]) {
+    const cabem = accounts.filter(CONTA_DE[a.forma]);
+    if (cabem.length === 1) a.accountId = cabem[0].id;
+  }
+  return a;
+}
+
+/** Proposta final (com o pagamento) ou a próxima pergunta, no formato de resposta do responder. */
+export function seguirPagamento(acao, dados) {
+  const accounts = dados.accounts || [];
+  const a = completarPagamento(acao, accounts);
+  const q = proximaPerguntaPagamento(a, accounts);
+  if (q) return { fato: q.texto, cru: true, sugestoes: q.sugestoes, aguardar: { tipo: 'pagamento', acao: a } };
+  const conta = accounts.find(c => c.id === a.accountId);
+  const como = a.forma === 'credito' ? (a.parcelas > 1 ? `no crédito em ${a.parcelas}x de ${formatBRL(Math.floor(a.amountCents / a.parcelas))}` : 'no crédito à vista')
+    : a.forma === 'debito' ? 'no débito' : a.forma === 'pix' ? 'no Pix' : a.forma === 'dinheiro' ? 'em dinheiro' : '';
+  const final = { ...a, forma: a.forma === 'cartao' ? null : a.forma || null, parcelas: a.parcelas || 1, limiteModo: a.limiteModo || 'total' };
+  const cat = (dados.categories || []).find(c => c.id === a.categoryId);
+  return {
+    fato: `Fechado: ${formatBRL(a.amountCents)} em ${cat?.name ?? 'Outros'}${como ? `, ${como}` : ''}${conta ? ` (${accountLabel(conta)})` : ''}. Confere e confirma aí embaixo.`,
+    cru: true, acao: final, sugestoes: [],
+  };
+}
+
+/** Resposta da pessoa a uma pergunta do pagamento. null = não era resposta (segue a conversa normal). */
+export function continuarPagamento(acao, texto, dados) {
+  const t = norm(texto);
+  if (/^(cancela|cancelar|deixa|deixa pra la|esquece|nao quero)\b/.test(t)) return { fato: 'Tranquilo, não anotei nada.', cru: true, sugestoes: [] };
+  if (String(texto).trim().split(/\s+/).length > 8) return null;
+  const accounts = dados.accounts || [];
+  const lido = lerPagamento(texto, accounts.filter(CONTA_DE[acao.forma === 'cartao' ? 'credito' : acao.forma] || (() => true)));
+  const novo = { ...acao };
+  if (lido.forma && (!acao.forma || acao.forma === 'cartao')) novo.forma = lido.forma === 'cartao' ? acao.forma || 'cartao' : lido.forma;
+  if (lido.parcelas != null && novo.parcelas == null) novo.parcelas = lido.parcelas;
+  if (lido.limiteModo && !novo.limiteModo) novo.limiteModo = lido.limiteModo;
+  if (/\bnao sei\b/.test(t) && novo.parcelas > 1 && !novo.limiteModo) novo.limiteModo = 'total';
+  if (lido.accountId && !novo.accountId) novo.accountId = lido.accountId;
+  // resposta com o nome da conta como está na sugestão ("Nubank · Poupança")
+  if (!novo.accountId) {
+    const igual = accounts.find(a => norm(accountLabel(a)) === t);
+    if (igual) { novo.accountId = igual.id; if (!novo.forma || novo.forma === 'cartao') novo.forma = igual.tipo === 'cartao' ? 'credito' : 'debito'; }
+  }
+  if (JSON.stringify(novo) === JSON.stringify(acao)) return null;
+  return seguirPagamento(novo, dados);
+}
+
 /** "Me explica melhor": a última resposta de novo, em passos simples, com a conta aberta. */
 export function explicarMelhor(anterior, dados, today = toISODate()) {
   const { expenses = [], incomes = [], categories = [] } = dados;
@@ -432,7 +563,8 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
   switch (intencao.intent) {
     case 'registrar_gasto': {
       // descrição: o que vem depois de "no/na/de/em/com" ("gastei 30 no uber" → "Uber")
-      const desc = descricaoDe(intencao.t);
+      // descrição sem o jeito de pagar ("no pix no mercado" → "mercado")
+      const desc = limparPagamento(descricaoDe(intencao.t), dados.accounts);
       // categoria: pela palavra (sinônimos) ou pelo que ele aprendeu com o histórico da pessoa
       const aprendida = !intencao.categoria && desc ? sugerirCategoria(desc, expenses) : null;
       const cat = intencao.categoria || (aprendida && categories.find(c => c.id === aprendida.categoryId))
@@ -444,10 +576,13 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         dica: recorrente ? 'Isso parece conta de todo mês. Se for, cadastra em 📅 Mês → Contas fixas que eu passo a lembrar do vencimento e já entra no planejamento.' : null,
         vars: { valor: formatBRL(intencao.valor), categoria: cat?.name ?? 'Outros' },
         acao: { tipo: 'registrar_gasto', amountCents: intencao.valor, categoryId: cat?.id ?? 'outros', date: today,
-          note: desc ? desc[0].toUpperCase() + desc.slice(1) : '' },
+          note: desc ? desc[0].toUpperCase() + desc.slice(1) : '', ...lerPagamento(intencao.t, dados.accounts) },
         aprendeu: !!aprendida,
+        pagamento: true,
       };
     }
+    case 'pagamento_resposta':
+      return intencao.resposta;
     case 'gasto_sem_valor': {
       const desc = descricaoDe(intencao.t);
       const doQue = desc ? ` de ${desc}` : intencao.categoria ? ` em ${intencao.categoria.name}` : '';
