@@ -51,11 +51,14 @@ Mesma conta do Cloudflare do Perfil serve. Tudo dentro da pasta `servidor/`.
    ```bash
    npx wrangler secret put VAPID_PRIVATE_JWK
    ```
-6. Publicar:
+6. **Selo de criador (opcional, 12/11):** depois de criar a sua conta no app, coloque o apelido dela em
+   `CRIADOR_CONTAS` no `wrangler.toml` (ou nas variáveis do Worker no painel). Só essa conta, com a senha certa, faz o
+   C.A.O.S. te tratar como criador; digitar "JF" no nome não vale. Crie a conta **antes** de pôr o apelido aqui.
+7. Publicar:
    ```bash
    npx wrangler deploy
    ```
-7. No app: **Ajustes → IA online**, cole o endereço que o deploy mostrou (`https://carteira-jf.SEU-USUARIO.workers.dev`),
+8. No app: **Ajustes → IA online**, cole o endereço que o deploy mostrou (`https://carteira-jf.SEU-USUARIO.workers.dev`),
    ligue e toque em **Testar conexão**.
 
 ## Custo e limites

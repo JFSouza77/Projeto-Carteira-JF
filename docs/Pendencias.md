@@ -6,6 +6,10 @@ Atualizada pelo Wally a cada rodada.
 
 ## Esperando o JF
 
+- **"Um C.A.O.S. só"** (núcleo igual no Perfil e na Carteira, 10 emoções, a vida dele): o Code propôs; plano do Wally
+  em `correio/para_o_code/`. Precisa do ok do JF.
+- **Selo de criador:** quando o servidor for pro ar, pôr o apelido da conta do JF em `CRIADOR_CONTAS`.
+
 - **Publicar o servidor juntos** (IA online, conta, push, mercado, Jornal). Passo a passo: `servidor/LEIA-ME.md`.
 - Contar mais sobre ele pro C.A.O.S. zoar com mais assunto (sem dado pessoal sensível).
 

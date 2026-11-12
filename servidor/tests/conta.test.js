@@ -102,3 +102,14 @@ test('servidor recusa dado aberto (sem embaralhar) e não guarda nada dele', asy
   assert.equal(extra.status, 400);
   assert.ok(![...env.CARTEIRA_KV.m.values()].some(v => String(v).includes('farmácia') || String(v).includes('vazou')));
 });
+
+test('selo de criador: só a conta da lista CRIADOR_CONTAS, com a senha certa (12/11)', async () => {
+  const env = { ...envBase(), CRIADOR_CONTAS: 'conta.criador' };
+  await chamar(env, '/conta/criar', { apelido: 'conta.criador', senha: A('senha-de-mentira') });
+  await chamar(env, '/conta/criar', { apelido: 'jf77', senha: A('senha-de-mentira') });
+  const ok = await chamar(env, '/conta/entrar', { apelido: 'Conta.Criador', senha: A('senha-de-mentira') });
+  assert.equal(ok.j.criador, true);
+  const outro = await chamar(env, '/conta/entrar', { apelido: 'jf77', senha: A('senha-de-mentira') });
+  assert.equal(outro.status, 200);
+  assert.equal(outro.j.criador, undefined); // apelido parecido com o do JF, sem estar na lista: não vale nada
+});

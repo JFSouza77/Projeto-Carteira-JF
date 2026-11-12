@@ -23,3 +23,4 @@ Depois de cada correção, escreva no Registro: o que o JF viu, a causa, o que m
 | 12/11 | Pílula vazia em cima do botão Lançar | `.toast { display:flex }` vencia o `hidden` | `.toast[hidden] { display: none }` | `npm run test:telas` (print) |
 | 12/11 | "C6 Bank" duas vezes (conta e cartão) | rótulo não dizia o tipo | `accountLabel` com "Cartão", "Poupança", "Cofrinho" | `tests/engine.test.js` (apelido da conta) |
 | 12/11 | "—" gigante na Sobra prevista parecia erro | placeholder sem texto | frase "Lance sua entrada pra eu calcular" | `npm run test:telas` (print) |
+| 12/11 | (achado do Code) Qualquer um que digitasse "JF" virava criador | `ehCriador` olhava só o nome digitado | criador só com `seloCriador`, que vem do login (lista `CRIADOR_CONTAS` no servidor) | `tests/idade.test.js`, `servidor/tests/conta.test.js` |

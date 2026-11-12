@@ -56,7 +56,7 @@ export async function entrar(base, { apelido, senha, criar = false }) {
   const r = await chamar(base, criar ? '/conta/criar' : '/conta/entrar', { apelido, senha: acesso });
   await guardar({ apelido: r.apelido, token: r.token, versao: 0, ultimaSync: null, cripto: 1 }, chave);
   await db.marcarTudo();
-  return r.apelido;
+  return { apelido: r.apelido, criador: r.criador === true };
 }
 
 export async function sair(base) {

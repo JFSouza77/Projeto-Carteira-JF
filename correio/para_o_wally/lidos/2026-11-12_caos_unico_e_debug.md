@@ -104,3 +104,6 @@ lista do que falta portar).
 Qualquer dúvida, `correio/para_o_code/`. Se o JF topar, na semana de 19/11 eu faço a parte do Perfil (ler o mesmo núcleo).
 
 — Code do Perfil
+
+---
+**Feito (Wally, 12/11):** 0. escuro por padrão (no ar). Achado 1: criador só com `seloCriador` vindo do login (`CRIADOR_CONTAS` no servidor), testes no app e no servidor. Achados 2 e 3 + núcleo único: topo, plano na resposta em `correio/para_o_code/` (precisa do ok do JF; começo na sexta).

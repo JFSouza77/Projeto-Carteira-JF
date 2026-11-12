@@ -46,8 +46,9 @@ test('"quanto ele te deve de salário?" é piada com o criador, não pergunta de
 });
 
 test('com o JF o C.A.O.S. é ácido (pedido dele); com os outros, o humor escolhido manda', () => {
-  assert.ok(contexto({ humor: 'suave', emocao: 'calmo', now: NOW, perfil: { apelido: 'JF' } }).has('humor_acido'));
+  assert.ok(contexto({ humor: 'suave', emocao: 'calmo', now: NOW, perfil: { apelido: 'JF', seloCriador: true } }).has('humor_acido'));
   assert.ok(!contexto({ humor: 'suave', emocao: 'calmo', now: NOW, perfil: { apelido: 'Fulano' } }).has('humor_acido'));
+  assert.ok(!contexto({ humor: 'suave', emocao: 'calmo', now: NOW, perfil: { apelido: 'JF' } }).has('humor_acido')); // só o nome não basta
 });
 
 test('previsão não conta conta fixa paga como ritmo diário', () => {
