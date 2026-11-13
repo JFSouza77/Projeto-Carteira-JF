@@ -824,13 +824,19 @@ function renderRosca(rows) {
   const com = rows.filter(r => r.spentCents > 0);
   const total = com.reduce((t, r) => t + r.spentCents, 0);
   if (!total) { el.innerHTML = '<p class="muted">Sem gastos ainda.</p>'; return; }
-  const R = 52, C = 2 * Math.PI * R;
+  // neon vazado (JF, 13/11): faixa translúcida + borda acesa por dentro e por fora + brilho, igual aos botões
+  const ANEIS = [{ r: 52, cls: 'fatia' }, { r: 62, cls: 'borda' }, { r: 42, cls: 'borda' }];
+  const GAP = com.length > 1 ? 3 : 0; // espacinho entre as fatias (em graus)
   let ac = 0;
   const fatias = com.map(r => {
-    const frac = r.spentCents / total, len = Math.max(0, frac * C - (com.length > 1 ? 2 : 0));
-    const f = `<circle cx="70" cy="70" r="${R}" class="fatia${state.filtroCat === r.id ? ' ativa' : ''}" style="stroke:${corCategoria(r.id)}" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-ac * C).toFixed(2)}" data-filtra-cat="${esc(r.id)}"><title>${esc(r.name)}: ${formatBRL(r.spentCents)}</title></circle>`;
+    const frac = r.spentCents / total;
+    const ativa = state.filtroCat === r.id ? ' ativa' : '';
+    const g = ANEIS.map(({ r: raio, cls }) => {
+      const C = 2 * Math.PI * raio, gap = (GAP / 360) * C, len = Math.max(0.5, frac * C - gap);
+      return `<circle cx="70" cy="70" r="${raio}" class="${cls}" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-(ac * C + gap / 2)).toFixed(2)}"/>`;
+    }).join('');
     ac += frac;
-    return f;
+    return `<g class="neon-fatia${ativa}" style="--cor:${corCategoria(r.id)}" data-filtra-cat="${esc(r.id)}"><title>${esc(r.name)}: ${formatBRL(r.spentCents)}</title>${g}</g>`;
   }).join('');
   const foco = com.find(r => r.id === state.filtroCat) || com[0];
   el.innerHTML = `
@@ -839,7 +845,7 @@ function renderRosca(rows) {
       <text x="70" y="64" class="r-nome">${esc(foco.name)}</text>
       <text x="70" y="82" class="r-valor">${Math.round((foco.spentCents / total) * 100)}%</text>
     </svg>
-    <ul class="rosca-leg">${com.map(r => `<li data-filtra-cat="${esc(r.id)}" role="button" tabindex="0" class="${state.filtroCat === r.id ? 'ativa' : ''}"><span class="ponto" style="background:${corCategoria(r.id)}"></span>${esc(r.name)} <span class="num">${Math.round((r.spentCents / total) * 100)}%</span></li>`).join('')}</ul>`;
+    <ul class="rosca-leg">${com.map(r => `<li data-filtra-cat="${esc(r.id)}" role="button" tabindex="0" class="${state.filtroCat === r.id ? 'ativa' : ''}"><span class="ponto neon" style="--cor:${corCategoria(r.id)}"></span>${esc(r.name)} <span class="num">${Math.round((r.spentCents / total) * 100)}%</span></li>`).join('')}</ul>`;
 }
 
 function nomeMesCurto(month) {

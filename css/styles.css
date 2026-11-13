@@ -826,13 +826,22 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .cat-rosca[hidden] { display: none; }
 .cat-list[hidden] { display: none; }
 .rosca { width: 150px; height: 150px; }
-.rosca .fatia { fill: none; stroke-width: 18; cursor: pointer; transition: stroke-width .2s; }
-.rosca .fatia.ativa, .rosca .fatia:hover { stroke-width: 24; }
+/* rosca neon vazada (13/11): faixa translúcida, bordas acesas e brilho */
+.rosca { overflow: visible; }
+.rosca .neon-fatia { cursor: pointer; filter: drop-shadow(0 0 4px color-mix(in srgb, var(--cor) 70%, transparent)); transition: filter .2s, opacity .2s; }
+.rosca .neon-fatia circle { fill: none; stroke: var(--cor); }
+.rosca .neon-fatia .fatia { stroke-width: 18; stroke-opacity: .18; }
+.rosca .neon-fatia .borda { stroke-width: 2; stroke-linecap: round; }
+.rosca .neon-fatia.ativa, .rosca .neon-fatia:hover { filter: drop-shadow(0 0 8px var(--cor)) drop-shadow(0 0 2px var(--cor)); }
+.rosca .neon-fatia.ativa .fatia, .rosca .neon-fatia:hover .fatia { stroke-opacity: .34; }
+.rosca:has(.neon-fatia.ativa) .neon-fatia:not(.ativa) { opacity: .45; }
+.rosca .r-valor { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 45%, transparent)); }
+.rosca-leg .ponto.neon { background: color-mix(in srgb, var(--cor) 20%, transparent); box-shadow: inset 0 0 0 1.5px var(--cor), 0 0 6px var(--cor); }
 .rosca .r-nome { font-size: 10px; fill: var(--muted); text-anchor: middle; }
 .rosca .r-valor { font-size: 18px; font-weight: 800; fill: var(--text); text-anchor: middle; }
 .rosca-leg { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: .88rem; }
 .rosca-leg li { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 8px; cursor: pointer; min-height: 32px; }
-.rosca-leg li.ativa { background: var(--card-2); }
+.rosca-leg li.ativa { background: var(--card-2); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent); }
 .rosca-leg .num { margin-left: auto; color: var(--muted); }
 .rosca-leg .ponto { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 @media (max-width: 380px) { .cat-rosca { grid-template-columns: 1fr; justify-items: center; } }
