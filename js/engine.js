@@ -426,10 +426,10 @@ export function agruparPorBanco(accounts) {
 }
 
 /** Cartão com o reforço dos cofrinhos ligados a ele (o valor guardado aumenta o limite). */
-export function comReforco(cartao, accounts = [], expenses = [], incomes = []) {
+export function comReforco(cartao, accounts = [], expenses = [], incomes = [], transferencias = []) {
   if (!cartao || cartao.tipo !== 'cartao') return cartao;
   const reforcoCents = accounts.filter(a => a.reforcaCartaoId === cartao.id && a.tipo !== 'cartao')
-    .reduce((t, a) => t + Math.max(0, accountBalance(a, expenses, incomes)), 0);
+    .reduce((t, a) => t + Math.max(0, accountBalance(a, expenses, incomes, transferencias)), 0);
   return reforcoCents ? { ...cartao, reforcoCents } : cartao;
 }
 
@@ -437,8 +437,14 @@ export function comReforco(cartao, accounts = [], expenses = [], incomes = []) {
  * Saldo estimado da conta: o saldo que a pessoa informou + entradas − gastos lançados nessa conta DEPOIS disso.
  * O motor nunca muda o saldo guardado; quem atualiza é a pessoa ("Atualizar saldo").
  */
-export function accountBalance(account, expenses, incomes) {
+export function accountBalance(account, expenses, incomes, transferencias = []) {
   let v = account.balanceCents;
+  // transferência entre contas (13/11, repaginada): sai de uma e entra na outra; não é gasto nem entrada
+  for (const t of transferencias) {
+    if (t.createdAt <= account.balanceAt) continue;
+    if (t.deId === account.id) v -= t.amountCents;
+    if (t.paraId === account.id) v += t.amountCents;
+  }
   for (const i of incomes) if (i.accountId === account.id && i.createdAt > account.balanceAt) v += i.amountCents;
   for (const e of expenses) {
     if (e.accountId === account.id && e.createdAt > account.balanceAt) v -= e.amountCents;
@@ -452,9 +458,24 @@ export function accountBalance(account, expenses, incomes) {
   return v;
 }
 
-export function totalBalance(accounts, expenses, incomes) {
+export function totalBalance(accounts, expenses, incomes, transferencias = []) {
   // cartão de crédito não é dinheiro guardado: fica fora do saldo total
-  return accounts.filter(a => a.tipo !== 'cartao').reduce((s, a) => s + accountBalance(a, expenses, incomes), 0);
+  return accounts.filter(a => a.tipo !== 'cartao').reduce((s, a) => s + accountBalance(a, expenses, incomes, transferencias), 0);
+}
+
+/** Transferência entre contas suas (corrente → poupança, cofrinho…). Não conta como gasto nem como entrada. */
+export function createTransferencia({ deId, paraId, amountCents, date, note = '' }, { accounts = [], now = new Date(), id } = {}) {
+  if (!deId || !paraId) throw new Error('Escolha de qual conta sai e pra qual vai.');
+  if (deId === paraId) throw new Error('A conta de origem e a de destino precisam ser diferentes.');
+  if (!Number.isInteger(amountCents) || amountCents <= 0) throw new Error('Valor inválido.');
+  if (amountCents > 100_000_000_00) throw new Error('Valor alto demais. Confere aí.');
+  for (const c of [deId, paraId]) {
+    const a = accounts.find(x => x.id === c);
+    if (!a || a.tipo === 'cartao') throw new Error('Transferência é só entre contas (cartão de crédito não entra).');
+  }
+  const day = date || toISODate(now);
+  if (!isValidISODate(day)) throw new Error('Data inválida.');
+  return { id: id || newId(), deId, paraId, amountCents, date: day, month: monthKey(day), note: String(note).trim().slice(0, 120), createdAt: now.getTime() };
 }
 
 // ---------- Gráficos (13/11, ideia do AI Studio): dados prontos, o desenho é do app ----------
@@ -533,7 +554,7 @@ const SEVERITY = { alta: 3, media: 2, baixa: 1 };
  * Alertas do momento (o "radar" do C.A.O.S.). Só leitura: devolve uma lista ordenada por gravidade.
  * Cada alerta tem type, severity e os números que o narrador precisa para falar.
  */
-export function analyze({ expenses, incomes = [], categories, accounts = [], compromissos = [] }, today = toISODate()) {
+export function analyze({ expenses, incomes = [], categories, accounts = [], compromissos = [], transferencias = [] }, today = toISODate()) {
   const month = monthKey(today);
   const s = summarizeMonth(expenses, categories, month);
   const out = [];
@@ -575,7 +596,7 @@ export function analyze({ expenses, incomes = [], categories, accounts = [], com
     out.push({ type: 'mes_negativo', severity: 'alta', incomeCents: inc, totalCents: s.totalCents, overCents: s.totalCents - inc });
   }
 
-  for (const f of accounts.filter(a => a.tipo === 'cartao').map(a => faturaDoCartao(comReforco(a, accounts, expenses, incomes), expenses, today))) {
+  for (const f of accounts.filter(a => a.tipo === 'cartao').map(a => faturaDoCartao(comReforco(a, accounts, expenses, incomes, transferencias), expenses, today))) {
     if (f.pct >= 100) out.push({ type: 'cartao_limite', severity: 'alta', accountId: f.id, accountName: f.nome, pct: f.pct, amountCents: f.usadoCents, leftCents: f.disponivelCents, budgetCents: f.limiteCents });
     else if (f.pct >= 80) out.push({ type: 'cartao_limite', severity: 'media', accountId: f.id, accountName: f.nome, pct: f.pct, amountCents: f.usadoCents, leftCents: f.disponivelCents, budgetCents: f.limiteCents });
     if (f.atrasada) {
@@ -587,7 +608,7 @@ export function analyze({ expenses, incomes = [], categories, accounts = [], com
   }
 
   for (const a of accounts.filter(x => x.tipo !== 'cartao')) {
-    const bal = accountBalance(a, expenses, incomes);
+    const bal = accountBalance(a, expenses, incomes, transferencias);
     if (bal < 0) out.push({ type: 'conta_negativa', severity: 'alta', accountId: a.id, accountName: accountLabel(a), balanceCents: bal });
   }
 
@@ -853,6 +874,7 @@ export function validarBackup(bruto) {
   const planos = lista('planos', false);
   const metas = lista('metas', false);
   const investimentos = lista('investimentos', false);
+  const transferencias = lista('transferencias', false);
   const obj = o => o && typeof o === 'object' && !Array.isArray(o);
   const unicos = (itens, nome) => {
     const ids = new Set();
@@ -927,6 +949,11 @@ export function validarBackup(bruto) {
       || !centavos(v.aplicadoCents, 1) || !centavos(v.atualCents, 0)) erro(`Investimento ${i + 1} do backup está com dado inválido.`);
   });
   unicos(investimentos.filter(obj), 'investimento');
+  transferencias.forEach((t, i) => {
+    if (!obj(t) || !ID_RE.test(t.id ?? '') || !contaOk(t.deId) || !contaOk(t.paraId) || !t.deId || !t.paraId || t.deId === t.paraId
+      || !centavos(t.amountCents, 1) || !isValidISODate(t.date ?? '') || t.month !== monthKey(t.date) || !textoOuNada(t.note, 120)) erro(`Transferência ${i + 1} do backup está com dado inválido.`);
+  });
+  unicos(transferencias.filter(obj), 'transferência');
 
   let perfil = null;
   if (bruto.perfil != null) {
@@ -944,7 +971,7 @@ export function validarBackup(bruto) {
     ok: true, erros: [],
     dados: {
       categories: copia(categories), expenses: copia(expenses), incomes: copia(incomes), accounts: copia(accounts),
-      compromissos: copia(compromissos), planos: copia(planos), metas: copia(metas), investimentos: copia(investimentos), perfil,
+      compromissos: copia(compromissos), planos: copia(planos), metas: copia(metas), investimentos: copia(investimentos), transferencias: copia(transferencias), perfil,
     },
   };
 }

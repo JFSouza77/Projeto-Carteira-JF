@@ -62,7 +62,7 @@ export async function getAll(store) {
 // ---------- Sincronização (06/11): quando a pessoa tem conta, cada gravação vira uma "mudança pendente" ----------
 // Gasto, entrada, conta, compromisso, plano, categoria, e as chaves meta "perfil" e "metas". Fotos não sincronizam.
 const STORES_SYNC = new Set([STORES.expenses, STORES.incomes, STORES.accounts, STORES.compromissos, STORES.planos, STORES.categories]);
-const META_SYNC = new Set(['perfil', 'metas', 'investimentos']);
+const META_SYNC = new Set(['perfil', 'metas', 'investimentos', 'transferencias']);
 let rastrear = false;
 let pendentes = null; // { "store/id": {store, id, em, rec} }
 let ultimoEm = 0;

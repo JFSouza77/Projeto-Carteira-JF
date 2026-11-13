@@ -809,7 +809,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       const cartoes = accounts.filter(a => a.tipo === 'cartao');
       if (!cartoes.length) return { fato: 'Você ainda não cadastrou cartão de crédito. Na aba 🏦 Contas tem "Adicionar cartão de crédito": limite, dia que fecha e dia que vence. Aí eu acompanho a fatura com você.', sugestoes: ['Como registro meu cartão?'] };
       const partes = cartoes.map(c => {
-        const f = faturaDoCartao(comReforco(c, accounts, expenses, incomes), expenses, today);
+        const f = faturaDoCartao(comReforco(c, accounts, expenses, incomes, dados.transferencias || []), expenses, today);
         const fech = f.diasParaFechar === 0 ? 'fecha hoje' : `fecha em ${f.diasParaFechar} ${f.diasParaFechar === 1 ? 'dia' : 'dias'}`;
         const venc = f.fechadaCents > 0 ? ` Fatura fechada de ${formatBRL(f.fechadaCents)} vence ${f.diasParaVencer === 0 ? 'hoje' : f.diasParaVencer === 1 ? 'amanhã' : `dia ${Number(f.vencimento.slice(8))}`}.` : '';
         return `${f.nome}: ${formatBRL(f.usadoCents)} de ${formatBRL(f.limiteCents)} do limite (${f.pct}%), sobram ${formatBRL(f.disponivelCents)}. A fatura aberta está em ${formatBRL(f.abertaCents)} e ${fech}.${venc}`;
@@ -824,11 +824,11 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       const contas = accounts.filter(a => a.tipo !== 'cartao');
       const uma = contas.find(a => t.includes(norm(a.bank)) || (a.nickname && t.includes(norm(a.nickname))));
       if (uma) {
-        return { fato: `${accountLabel(uma)}: saldo estimado de ${formatBRL(accountBalance(uma, expenses, incomes))}.`, sugestoes: ['Algum alerta?'] };
+        return { fato: `${accountLabel(uma)}: saldo estimado de ${formatBRL(accountBalance(uma, expenses, incomes, dados.transferencias || []))}.`, sugestoes: ['Algum alerta?'] };
       }
-      const lista = contas.map(a => `${accountLabel(a)} ${formatBRL(accountBalance(a, expenses, incomes))}`).join(', ');
+      const lista = contas.map(a => `${accountLabel(a)} ${formatBRL(accountBalance(a, expenses, incomes, dados.transferencias || []))}`).join(', ');
       return {
-        fato: `Saldo estimado total: ${formatBRL(totalBalance(accounts, expenses, incomes))} (${lista}). É o saldo que você informou mais o que foi lançado depois.`,
+        fato: `Saldo estimado total: ${formatBRL(totalBalance(accounts, expenses, incomes, dados.transferencias || []))} (${lista}). É o saldo que você informou mais o que foi lançado depois.`,
         sugestoes: ['Quanto gastei este mês?', 'Tive rendimentos?'],
       };
     }
@@ -919,7 +919,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       // pagar a fatura é marcar "Paguei a fatura" em Contas.
       const comFaturaCadastrada = new Set(compromissos.filter(c => c.tipo === 'fatura' && c.accountId).map(c => c.accountId));
       const faturas = accounts.filter(a => a.tipo === 'cartao' && !comFaturaCadastrada.has(a.id))
-        .map(a => faturaDoCartao(comReforco(a, accounts, expenses, incomes), expenses, today))
+        .map(a => faturaDoCartao(comReforco(a, accounts, expenses, incomes, dados.transferencias || []), expenses, today))
         .filter(f => f.fechadaCents > 0);
       const dia = iso => `${Number(iso.slice(8))}/${Number(iso.slice(5, 7))}`;
       const txtFaturas = faturas.map(f => `fatura do ${f.nome} ${formatBRL(f.fechadaCents)} (${f.atrasada ? `venceu dia ${dia(f.vencimento)}` : `vence dia ${dia(f.vencimento)}`})`);
@@ -966,7 +966,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
     }
     case 'bancos': {
       const bancos = [...new Set(accounts.map(a => a.bank).filter(b => b && !/carteira|outro/i.test(b)))];
-      const saldo = accounts.length ? totalBalance(accounts, expenses, incomes) : 0;
+      const saldo = accounts.length ? totalBalance(accounts, expenses, incomes, dados.transferencias || []) : 0;
       const cdi = dados.mercado?.cdi?.valor;
       let conta = '';
       if (cdi) {
