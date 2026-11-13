@@ -158,3 +158,12 @@ anterior e o atual. Veredito: ✅ **entra, depois do servidor no ar** (é o serv
 | caos-line alternando dicas | ✅ feito (1.23) | Junto da dica de meta, com intervalo pra não virar spam. |
 | Análise de Metas detalhada | ✅ já existe | "Como estão minhas metas?" mostra quanto falta e quanto por mês. |
 | Notificação proativa de vencimento | ✅ feito (1.23) | O aviso do celular cita as contas fixas que vencem hoje ou amanhã, montado no aparelho (o servidor continua sem ver nada). Chega quando o servidor estiver no ar. |
+
+### Mais ideias do AI Studio (JF, 13/11). Combinado: nome inventado por outra IA ("Ecossistema JF") não vale; a palavra final é do JF, do Wally e do Code.
+
+| Ideia | Veredito | Por quê |
+| --- | --- | --- |
+| Bolhas da conversa com mais contraste e "digitando" mais bonito | ✅ feito (1.23) | Pequeno, sem complexidade. |
+| Resumo do Início com metas em destaque e sugestões do C.A.O.S. abaixo do orçamento | 🕒 com a repaginada | A dica de meta já aparece no card do C.A.O.S. (1.23); o layout novo vem junto da cara nova. |
+| Gráficos: linha (tendência), barras (comparação), mapa de calor | ✅ em parte, depois | Entra: linha dos últimos 6 meses e um calendário de calor dos gastos do mês, em SVG, sem biblioteca. Não entra: "correlações" e "tempo real" (exagero pra um app de gastos pessoais). |
+| Temas (claro, escuro, alto contraste) e mudar o layout | ✅ alto contraste feito (1.23) · ❌ layout livre | Claro e escuro já existiam. Arrastar e reorganizar a tela é muita complexidade pra pouco ganho; no máximo, esconder cards do Início (🕒). |
