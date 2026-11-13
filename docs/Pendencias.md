@@ -14,11 +14,10 @@ Atualizada pelo Wally a cada rodada.
 ## Próxima rodada (sexta 13/11)
 
 0. Núcleo único, parte 3: temperamento do dia, estabilizador e paciência (emoções 7 → 10 já foram, 1.20).
-1. P12: revisão de cada tela (cabeçalho igual em todas, "Me ajuda" sem tampar conteúdo).
-2. Professor de finanças: glossário offline (~60 termos), explicação em camadas, "vale a pena parcelar?",
-   calculadora de juros simples e compostos.
-4. Começar a quebrar o `app.js` em um arquivo por tela (com o Code revisando o plano).
-5. Avatar: 10 formas principais (depois do teste do Code em 19/11, ou antes se o JF pedir).
+1. P12: revisão de cada tela, **depois** da repaginada que o JF vai trazer do Google AI Studio (12/11).
+2. Professor de finanças, parte 2: mais termos (até 100), "olhar de cuidado" (farmácia, combustível, luz, apostas).
+3. Começar a quebrar o `app.js` em um arquivo por tela (com o Code revisando o plano).
+4. Avatar: 10 formas principais (depois do teste do Code em 19/11, ou antes se o JF pedir).
 
 ## Depois do servidor
 

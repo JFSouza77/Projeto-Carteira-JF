@@ -12,7 +12,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '1.19.0';
+export const CAOS_VERSAO = '1.20.0';
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -307,7 +307,7 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   else if (retomada) mem = { ...mem, semResposta: null };
   // lembra a última pergunta pra entender a próxima ("e no mês passado?")
   if (!['nao_entendi', 'retomar', 'explicar_melhor', 'gasto_sem_valor', 'pagamento_resposta'].includes(intencao.intent)) {
-    mem = { ...mem, conversa: { intent: intencao.intent, categoryId: intencao.categoria?.id || null, periodo: intencao.periodo || 'mes' } };
+    mem = { ...mem, conversa: { intent: intencao.intent, categoryId: intencao.categoria?.id || null, periodo: intencao.periodo || 'mes', termo: intencao.termo?.termo || null } };
   }
   return {
     fala: {

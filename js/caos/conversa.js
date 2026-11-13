@@ -5,13 +5,17 @@
 import {
   formatBRL, parseAmount, periodRange, ofensiva, aReceber, comReforco, sumInRange, topCategories, summarizeMonth, forecastMonth,
   incomeIn, monthKey, shiftMonth, monthLabel, accountBalance, accountLabel, totalBalance, analyze,
-  spentIn, toISODate, INCOME_SOURCES, situacaoCompromissos, analisarPlanejamento, cabeNoMes, sugerirCategoria, palavrasDe, faturaDoCartao, progressoMeta, resumoInvestimentos,
+  spentIn, toISODate, INCOME_SOURCES, idadeDe, faixaEtaria, situacaoCompromissos, analisarPlanejamento, cabeNoMes, sugerirCategoria, palavrasDe, faturaDoCartao, progressoMeta, resumoInvestimentos,
 } from '../engine.js';
 import { IDENTIDADE, textoAnatomia, textoPodeNaoPode, textoVida } from './identidade.js';
+import { acharTermo, ATUALIZADO_EM, GLOSSARIO } from './glossario.js';
+
+const GLOSSARIO_POR_TERMO = new Map(GLOSSARIO.map(g => [g.termo, g]));
 import { textoTendencia, quandoFoi, mercadoVelho } from '../mercado.js';
 
 const norm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   .replace(/\bc\.\s?a\.\s?o\.\s?s\b\.?/g, 'caos') // "C.A.O.S." = "caos"
+  .replace(/%/g, ' porcento ') // "1%" vira "1 porcento" (a calculadora de juros precisa)
   .replace(/[^\w\s,.$-]/g, ' ').replace(/\s+/g, ' ').trim();
 
 // Palavras que levam a cada categoria (além do próprio nome dela)
@@ -65,6 +69,45 @@ function acharPeriodo(t) {
   if (/semana|7 dias|sete dias/.test(t)) return 'semana';
   if (/\bano\b/.test(t)) return 'ano';
   return 'mes';
+}
+
+// ---------- Professor de finanças: calculadoras (13/11) ----------
+
+/** "juros compostos de 1000 a 1% por 12 meses" → { tipo, valor, taxa (fração ao mês), meses }. */
+export function lerCalculoJuros(texto) {
+  const t = String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const PCT = '(?:%|porcento|por cento)';
+  const temPct = new RegExp(`\\d\\s*${PCT}`).test(t);
+  const tipo = /juros? compost/.test(t) ? 'compostos' : /juros? simples/.test(t) ? 'simples' : /(quanto (rende|renderia|vai render|fica)|se eu (guardar|investir|aplicar))/.test(t) && temPct ? 'compostos' : null;
+  if (!tipo) return null;
+  const taxa = t.match(new RegExp(`(\\d+(?:[.,]\\d+)?)\\s*${PCT}\\s*(ao|a|por)?\\s*(mes|ano|a\\.?m\\.?|a\\.?a\\.?)?`));
+  const prazo = t.match(/(\d+)\s*(meses|mes|anos|ano)\b/);
+  const semTaxa = t.replace(new RegExp(`(\\d+(?:[.,]\\d+)?)\\s*${PCT}`, 'g'), ' ').replace(/(\d+)\s*(meses|mes|anos|ano)\b/g, ' ');
+  const valor = acharValor(semTaxa);
+  if (!taxa || !prazo || !valor) return { tipo, faltando: true };
+  let i = Number(taxa[1].replace(',', '.')) / 100;
+  const anual = /ano|a\.?a/.test(taxa[3] || '');
+  let meses = Number(prazo[1]) * (/ano/.test(prazo[2]) ? 12 : 1);
+  // taxa ao ano: no composto vira a mensal equivalente; no simples, divide por 12
+  const iSimples = anual ? i / 12 : i;
+  const iComposto = anual ? Math.pow(1 + i, 1 / 12) - 1 : i;
+  if (meses > 600 || i > 1) return { tipo, faltando: true };
+  return { tipo, valor, taxa: tipo === 'simples' ? iSimples : iComposto, taxaSimples: iSimples, meses, taxaTexto: `${taxa[1]}% ${anual ? 'ao ano' : 'ao mês'}` };
+}
+
+/** Juros: valor final e quanto foi de juros (centavos). */
+export function calcularJuros({ tipo, valor, taxa, meses }) {
+  const final = tipo === 'simples' ? valor * (1 + taxa * meses) : valor * Math.pow(1 + taxa, meses);
+  return { finalCents: Math.round(final), jurosCents: Math.round(final - valor) };
+}
+
+/** "parcelar 3000 em 10x de 330" ou "3000 a vista ou 10x de 330" → { vista, n, parcela }. */
+export function lerParcelamento(t) {
+  const n = t.match(/(\d{1,2})\s*x|em (\d{1,2}) (vezes|parcelas)/);
+  const parcela = t.match(/(?:x|vezes|parcelas) de (?:r\$\s?)?(\d+(?:[.,]\d{1,2})?)/);
+  const resto = t.replace(/(\d{1,2})\s*x(?: de (?:r\$\s?)?\d+(?:[.,]\d{1,2})?)?/g, ' ').replace(/em \d{1,2} (vezes|parcelas)( de \d+(?:[.,]\d{1,2})?)?/g, ' ');
+  const vista = acharValor(resto);
+  return { vista: vista || null, n: n ? Number(n[1] || n[2]) : null, parcela: parcela ? parseAmount(parcela[1]) : null };
 }
 
 /** Data de um lançamento atrasado: "ontem", "anteontem", "dia 10" (do mês atual, ou do anterior se ainda não chegou). */
@@ -268,6 +311,16 @@ function entenderSimples(t, { categories = [] } = {}) {
   if (!/(pra|para) (pagar|gastar)/.test(t) && /(\bsaldo\b|quanto (eu )?(tenho|tem|ainda tenho|sobrou)\b(?! (pra|para|de) )|tenho guardado|guardad[oa]s?\b|poupad[oa]s?\b|quanto (eu )?(guardei|poupei|juntei)|dinheiro (no|na|nos|nas) (banco|conta)|tenho no banco|nas contas|no total)/.test(t)
     && !/(gast|entrada|recebi|rendimento|planej)/.test(t)) return { ...r, intent: 'saldo' };
   // Mercado (1.3.0): moedas, bolsa, juros e "vale investir?"
+  // Professor de finanças (13/11): calculadoras e glossário offline (60 termos), antes de "entradas" (que pega "juros")
+  const calc = lerCalculoJuros(t);
+  // "o que é juros compostos?" é pergunta de glossário; conta só com números ou pedido de cálculo
+  if (calc && (!calc.faltando || /(calcul|faz a conta|faca a conta|simul|quanto (rende|renderia|fica|vira))/.test(t))) return { ...r, intent: 'calc_juros', calc };
+  if (/(vale a pena parcelar|parcelar ou (pagar )?(a vista)|a vista ou parcelad|compensa parcelar|devo parcelar|melhor parcelar)/.test(t)) return { ...r, intent: 'vale_parcelar', parc: lerParcelamento(t) };
+  const termo = acharTermo(t);
+  const contexto = t.match(/\b(meu|minha) (pai|mae|chefe|amigo|amiga|irmao|irma|avo|tio|tia|namorad[oa]|esposa|marido|professor[a]?|colega)\b.*\b(falou|disse|comentou|mencionou|falaram)\b/);
+  if (termo && (contexto || /(o que (e|sao|significa|quer dizer)|\bque (e|sao)\b|me explica|explica|me ensina|como funciona|ouvi falar|vi falar|nunca entendi|nao entendo|nao sei o que)/.test(t))) {
+    return { ...r, intent: 'glossario', termo, quem: contexto ? contexto[2] : null };
+  }
   const ativo = /\b(dolar|dolares|usd)\b/.test(t) ? 'USD' : /\beuros?\b/.test(t) ? 'EUR' : /\blibras?\b/.test(t) ? 'GBP'
     : /\b(bitcoin|btc)\b/.test(t) ? 'BTC' : /peso argentino/.test(t) ? 'ARS' : /\b(bolsa|ibovespa|ibov|b3|acoes)\b/.test(t) ? 'IBOV'
     : /\bselic\b/.test(t) ? 'SELIC' : /\bcdi\b/.test(t) ? 'CDI' : /\b(ipca|inflacao)\b/.test(t) ? 'IPCA' : null;
@@ -551,6 +604,10 @@ export function explicarMelhor(anterior, dados, today = toISODate()) {
     if (!top.length) return 'Ainda não tem gasto anotado neste mês, então não tem o que somar. Quando você lançar, eu mostro quanto foi em cada categoria.';
     return `Vou por partes. Eu somo tudo que você anotou no mês, separado por tipo de gasto (categoria). Os maiores: ${top.map(r => `${r.name} ${formatBRL(r.spentCents)}`).join(', ')}. Somando tudo dá ${formatBRL(s.totalCents)}. Quer ver uma categoria por dentro? Pergunta tipo "quanto gastei em ${top[0].name.toLowerCase()}?".`;
   }
+  if (intent === 'glossario' && anterior.termo) {
+    const g = GLOSSARIO_POR_TERMO.get(anterior.termo);
+    if (g) return `Bora mais fundo em ${g.termo.toLowerCase()}. ${g.mais}`;
+  }
   if (intent === 'cartao') {
     return 'Vou por partes. O cartão junta suas compras numa fatura. Ela "fecha" num dia do mês (o que você comprou até ali vai pra essa fatura) e "vence" alguns dias depois (é quando você paga). O limite é o máximo que o banco deixa você usar; o que você já usou e ainda não pagou fica preso nele. Por isso eu mostro quanto ainda está livre.';
   }
@@ -613,6 +670,40 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
     }
     case 'pagamento_resposta':
       return intencao.resposta;
+    case 'glossario': {
+      const g = intencao.termo;
+      const idade = idadeDe(perfil?.aniversario, today);
+      const crianca = idade != null && faixaEtaria(idade) === 'crianca';
+      const abre = intencao.quem ? `Ah, ${intencao.quem === 'mae' ? 'sua mãe' : `seu ${intencao.quem.replace('mae', 'mãe')}`} falou de ${g.termo.toLowerCase()}? Explico. ` : '';
+      const gov = g.governo ? ` Isso depende de regra do governo, que muda: o que eu sei é de ${ATUALIZADO_EM}. Confere no canal oficial.` : '';
+      const def = (crianca ? g.crianca : g.adulto).replace(/^É /, 'é ');
+      return { fato: `${abre}${g.termo}: ${def}${gov} Quer que eu explique melhor? É só pedir.`, cru: true, sugestoes: ['Me explica melhor', 'O que é juros compostos?', 'Vale a pena parcelar?'] };
+    }
+    case 'calc_juros': {
+      const c = intencao.calc;
+      if (c.faltando) {
+        return { fato: `Faço a conta de juros ${c.tipo}! Me manda o valor, a taxa e o tempo, tipo "juros ${c.tipo} de 1000 a 1% ao mês por 12 meses".`, cru: true, sugestoes: [] };
+      }
+      const r = calcularJuros(c);
+      const tempo = c.meses % 12 === 0 && c.meses >= 12 ? `${c.meses / 12} ${c.meses === 12 ? 'ano' : 'anos'}` : `${c.meses} ${c.meses === 1 ? 'mês' : 'meses'}`;
+      const comparar = c.tipo === 'compostos' ? ` Com juros simples daria ${formatBRL(calcularJuros({ ...c, tipo: 'simples', taxa: c.taxaSimples }).finalCents)}: a diferença é o juro sobre juro.` : '';
+      return { fato: `Com juros ${c.tipo}, ${formatBRL(c.valor)} a ${c.taxaTexto} por ${tempo} vira ${formatBRL(r.finalCents)} (${formatBRL(r.jurosCents)} de juros).${comparar} Se for dívida, a mesma conta joga contra você. É só uma conta: rendimento real depende de imposto e taxa.`, cru: true, sugestoes: ['O que é juros compostos?', 'Vale a pena parcelar?'] };
+    }
+    case 'vale_parcelar': {
+      const p = intencao.parc || {};
+      if (p.n && p.parcela) {
+        const total = p.n * p.parcela;
+        const vista = p.vista && p.vista !== total ? p.vista : null;
+        if (vista) {
+          const dif = total - vista;
+          return { fato: dif > 0
+            ? `Parcelado dá ${p.n}x de ${formatBRL(p.parcela)} = ${formatBRL(total)}. À vista é ${formatBRL(vista)}. Parcelando você paga ${formatBRL(dif)} a mais: isso é juro, mesmo que digam "sem juros". Se dá pra pagar à vista sem apertar o mês, à vista ganha.`
+            : `Parcelado dá ${formatBRL(total)} e à vista ${formatBRL(vista)}: o parcelado não sai mais caro. Aí vale parcelar se as ${p.n} parcelas de ${formatBRL(p.parcela)} cabem no mês junto com as que você já tem.`, cru: true };
+        }
+        return { fato: `${p.n}x de ${formatBRL(p.parcela)} dá ${formatBRL(total)} no total. Pergunta o preço à vista: se for menor, a diferença é o juro escondido. E confere se a parcela cabe no mês com as outras que você já tem.`, cru: true };
+      }
+      return { fato: 'Depende de três coisas: 1) o total parcelado é igual ao à vista? Se for maior, tem juro. 2) a parcela cabe no mês junto com as outras? 3) vale pelo que dura? Coxinha de R$ 5 em 3x? Não! Ela acaba hoje e a parcela fica três meses. Um notebook de R$ 3.000 em 10x sem juros, que você vai usar anos? Pode valer, se couber no mês. Me manda os números, tipo "3000 à vista ou 10x de 330", que eu faço a conta.', cru: true, sugestoes: [] };
+    }
     case 'esqueci_de_lancar':
       return {
         fato: 'Esqueceu?! Quase caí da cadeira aqui. Brincadeira: acontece com todo mundo, e eu não conto pra ninguém. Me fala três coisas: quanto foi, em quê e quando. Tipo "gastei 50 no mercado ontem" ou "paguei 120 de luz dia 10".',
