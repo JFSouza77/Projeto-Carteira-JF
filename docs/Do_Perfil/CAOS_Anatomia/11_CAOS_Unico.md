@@ -41,10 +41,22 @@ Analogia: é a mesma pessoa com dois empregos. Muda a roupa e o assunto; o jeito
 - **Perfil (Code, 2.0):** ler a identidade e as datas do núcleo em vez de constantes soltas, e o teste de cópia
   idêntica.
 
+## Regra de ouro (JF, 13/11/2026)
+
+**Mexeu no C.A.O.S. e é uma característica única dele** (um jeito novo de falar, de tratar alguém, uma emoção, um marco
+da vida, uma data que ele comemora)? Então:
+1. vai pro `caos_nucleo.json`, com o ok do JF;
+2. quem mexeu avisa o outro projeto pela caixa de correio no mesmo dia;
+3. os dois atualizam a cópia.
+
+Motivo: o JF quer, um dia, transformar o C.A.O.S. numa **IA de verdade, um agente virtual**. O núcleo é a bagagem que ele
+vai levar: tem que estar completo e em dia pra quando esse dia chegar.
+
 ## Versões do núcleo
 
 | Versão | Data | O que mudou |
 |---|---|---|
+| 1.2.0 | 13/11/2026 | Entraram o futuro dele (`futuro`: virar um agente virtual) e a regra de ouro. |
 | 1.1.0 | 12/11/2026 | O JF aprovou. Entraram o aniversário da Carteira (5/11) e o calendário de dias (`dias`): 10 datas especiais e os dias da semana, iguais nos dois projetos. |
 | 1.0.0 | 12/11/2026 | Primeira versão: identidade, vida, datas, criador, leis, 10 emoções, formas do avatar. |
 
