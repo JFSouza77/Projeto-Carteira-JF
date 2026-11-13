@@ -12,6 +12,7 @@ export const NOVIDADES = Object.freeze([
     nome: 'Estúdio do C.A.O.S.',
     t: 'Na aba C.A.O.S., o botão Estúdio abre um cantinho pra aprender sobre dinheiro no seu ritmo.',
     itens: [
+      '🔥 Calendário da ofensiva: no Início, veja as últimas 4 semanas e os dias sem gasto.',
       '📚 Glossário com busca: 60 palavras do dinheiro explicadas sem complicar, do Pix ao CDI.',
       '🧮 Calculadora de juros: mexa no valor, na taxa e no tempo e compare simples com compostos.',
       '🕰️ Linha do tempo: a história do C.A.O.S., do Perfil JF até aqui.',

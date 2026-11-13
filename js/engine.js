@@ -204,10 +204,15 @@ function diaAnterior(iso) {
  * Dias seguidos em que a pessoa usou o app pra anotar (gasto ou entrada criados naquele dia, ou "hoje não gastei").
  * A ofensiva continua viva se o último dia foi hoje ou ontem. Devolve { dias, hojeFeito, recorde }.
  */
-export function ofensiva({ expenses = [], incomes = [], diasSemGasto = [] }, today = toISODate()) {
+function diasAnotados({ expenses = [], incomes = [], diasSemGasto = [] }) {
   const dias = new Set();
   for (const x of [...expenses, ...incomes]) if (Number.isFinite(x.createdAt)) dias.add(diaLocal(x.createdAt));
   for (const d of diasSemGasto) if (isValidISODate(d)) dias.add(d);
+  return dias;
+}
+
+export function ofensiva(dados, today = toISODate()) {
+  const dias = diasAnotados(dados);
   const hojeFeito = dias.has(today);
   let cursor = hojeFeito ? today : diaAnterior(today);
   let atual = 0;
@@ -221,6 +226,19 @@ export function ofensiva({ expenses = [], incomes = [], diasSemGasto = [] }, tod
     if (n > recorde) recorde = n;
   }
   return { dias: atual, hojeFeito, recorde: Math.max(recorde, atual) };
+}
+
+/**
+ * Calendário da ofensiva (fase 2 da repaginada, 13/11): os últimos `n` dias (28 = 4 semanas), do mais antigo pro hoje.
+ * Cada dia: { data, anotado, semGasto (marcou "hoje não gastei"), hoje }.
+ */
+export function calendarioOfensiva(dados, today = toISODate(), n = 28) {
+  const dias = diasAnotados(dados);
+  const sem = new Set((dados.diasSemGasto || []).filter(isValidISODate));
+  const out = [];
+  let d = today;
+  for (let i = 0; i < n; i++) { out.unshift({ data: d, anotado: dias.has(d), semGasto: sem.has(d), hoje: i === 0 }); d = diaAnterior(d); }
+  return out;
 }
 
 export const MARCOS_OFENSIVA = Object.freeze([3, 7, 14, 30, 60, 100, 200, 365]);
