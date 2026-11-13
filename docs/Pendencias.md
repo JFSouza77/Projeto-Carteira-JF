@@ -15,8 +15,11 @@ Atualizada pelo Wally a cada rodada.
 
 **Repaginada do AI Studio** (plano em `docs/Repaginada_AI_Studio.md`): fase 1 no computador feita (1.25); fase 2 feita na
 madrugada de 13/11 (1.26 e 1.27: transferência, ritmo, barras, filtros, CSV, Cobrar, simulador, Estúdio, calendário da
-ofensiva, editar lançamento). Falta: C.A.O.S. reagindo enquanto preenche, fase 1 no celular (cabeçalho com rostinho e 4
-cartões), melhorias do simulador (planos a adiar, limite do cartão), filtro por forma no extrato e a fase 3.
+ofensiva, editar lançamento). V2 do AI Studio (13/11 de manhã): 1.28 e 2.0 Alfa no ar (orçamento de hoje, gráficos
+vivos, rosca neon, metas com anel, bancos com cores reais, exportar o mês, teste do macaco). Falta: Dica do Dia
+(C.A.O.S., versão nova), rodada de falas/emoções/rostinhos (com o Code; núcleo só com ok do JF), toque no dia da
+ofensiva, C.A.O.S. reagindo enquanto preenche, fase 1 no celular (cabeçalho com rostinho e 4 cartões), melhorias do
+simulador e a fase 3. Hoje: GPT faz debug às 9h, 11h e 13h; servidor com o JF no almoço.
 
 0. Núcleo único, parte 3: temperamento do dia, estabilizador e paciência (emoções 7 → 10 já foram, 1.20).
 1. P12: revisão de cada tela, **depois** da repaginada que o JF vai trazer do Google AI Studio (12/11).
