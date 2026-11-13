@@ -74,11 +74,11 @@ O JF trouxe a versão 2 do protótipo (zip e prints fora do repositório, só no
 | # | Item | Veredito |
 | --- | --- | --- |
 | 1 | Orçamento de hoje (limite por dia + barra) e atalhos Gasto/Entrada/Transferir no Início | ✅ no ar (1.28, PR #94) |
-| 2 | Metas com anel de progresso que enche ao guardar | ✅ em SVG simples, ❌ D3 (biblioteca pesada, offline) |
-| 3 | Gráficos vivos: ritmo Acumulado/Por dia com toque no dia; 6 meses Comparar/Saldo líquido; categorias Barras/Donut; toque no dia da ofensiva | ✅ |
-| 4 | Lançar: chips +10/+20/+50/+100/+200 e Limpar; cores por forma de pagamento | ✅ |
-| 5 | Contas: cor por banco, cartão com faixa do banco e situação do limite (Saudável/Atenção/Crítico), "Lançar compra neste cartão" | ✅ |
-| 6 | Exportar o mês (CSV e PDF pela impressão do navegador) no Mês | ✅ |
+| 2 | Metas com anel de progresso que enche ao guardar | ✅ no ar (1.28, PR #95), em SVG simples, sem D3 |
+| 3 | Gráficos vivos: ritmo Acumulado/Por dia com toque no dia; 6 meses Comparar/Saldo líquido; categorias Barras/Donut; toque no dia da ofensiva | ✅ no ar (1.28), menos o toque no dia da ofensiva |
+| 4 | Lançar: chips +10/+20/+50/+100/+200 e Limpar; cores por forma de pagamento | ✅ no ar (1.28) |
+| 5 | Contas: cor por banco, cartão com faixa do banco e situação do limite (Saudável/Atenção/Crítico), "Lançar compra neste cartão" | ✅ no ar (1.28) |
+| 6 | Exportar o mês (CSV e PDF pela impressão do navegador) no Mês | ✅ no ar (1.28) |
 | 7 | Dica do Dia no Início (muda com o humor, Outra dica, Aprofundar) | ✅ mexe no C.A.O.S. (versão nova, listas em múltiplo de 5, 2ª lei: ácido nunca no formal nem pra criança) |
 | 8 | "Melhorar falas, glossário, emoções, rostinhos, brilhos" | 🕒 rodada própria do C.A.O.S., com o Code (núcleo só com o ok do JF) |
 
