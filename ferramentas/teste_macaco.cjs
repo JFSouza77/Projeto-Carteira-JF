@@ -56,6 +56,7 @@ function aleatorio(semente) { let s = semente >>> 0; return () => ((s = (s * 166
       await db.setMeta("metas", [{ id: "m1", nome: "Viagem", alvoCents: 300000, guardadoCents: 90000, criadaEm: 1 }]);
     });
     await p.reload(); await p.waitForTimeout(1500);
+    await p.evaluate(() => document.getElementById("abertura")?.remove()); // a abertura dura 5 s (13/11)
     for (let i = 0; i < TOQUES; i++) {
       if (sorte() < 0.08) { const aba = ABAS[Math.floor(sorte() * ABAS.length)]; ultimo = `aba ${aba}`; await p.evaluate((a) => (location.hash = "#" + a), aba); await p.waitForTimeout(120); continue; }
       // escolhe e toca dentro da página, numa ida só (rápido); os números da sorte vêm daqui, pra repetir igual

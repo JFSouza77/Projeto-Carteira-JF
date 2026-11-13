@@ -14,7 +14,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '2.0.7'; // 2.0.7 (13/11): estabilizador das emoções (o rosto não pisca). 2.0.6: espantado. 2.0.5: núcleo 1.4.0
+export const CAOS_VERSAO = '2.0.8'; // 2.0.8 (13/11): avatares; a fala diz o assunto (intent). 2.0.7: estabilizador. 2.0.6: espantado
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -365,6 +365,7 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
       filaIA: resp.filaIA || null, // pergunta que precisa do servidor: o app responde agora ou guarda na fila
       entendeu: intencao.intent !== 'nao_entendi' && !intencao.palpite && !(intencao.intent === 'retomar' && !retomada),
       palpite: !!intencao.palpite,
+      intent: intencao.intent, // 2.0.8: o assunto da conversa (o app escolhe a forma do avatar com ele)
     },
     memoria: mem,
   };

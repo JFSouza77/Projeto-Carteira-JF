@@ -14,6 +14,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="C.A.O.S.">
   <link rel="stylesheet" href="./css/styles.css">
+  <link rel="stylesheet" href="./css/avatar.css">
   <script type="module" src="./js/app.js"></script>
 </head>
 <body>
@@ -21,10 +22,12 @@
        hora, antes do JavaScript; se algo travar, o CSS some com ela sozinho depois de alguns segundos. -->
   <div class="abertura" id="abertura" role="status" aria-live="polite">
     <div class="abertura-caixa">
-      <span class="abertura-rosto" aria-hidden="true">(•‿•)</span>
+      <span class="abertura-avatar" id="abertura-avatar"><span class="abertura-rosto" aria-hidden="true">(•‿•)</span></span>
       <p class="abertura-titulo">C.A.O.S.</p>
       <p class="abertura-frase">Um C.A.O.S. pra organizar o seu caos.</p>
+      <p class="abertura-dica" id="abertura-dica" aria-live="polite"></p>
       <p class="abertura-versao" id="abertura-versao">Carregando…</p>
+      <p class="abertura-pula">toque pra pular</p>
       <div class="abertura-login" id="abertura-login" hidden>
         <button type="button" class="primary" id="abertura-entrar">Entrar na conta</button>
         <button type="button" class="ghost" id="abertura-pular">Continuar sem conta</button>
@@ -141,6 +144,7 @@
       </section>
 
       <button class="caos" id="caos" aria-live="polite" type="button" aria-label="Conversar com o C.A.O.S.">
+        <span class="caos-avatar" id="caos-avatar"></span>
         <span class="caos-face" id="caos-face" aria-hidden="true">(•‿•)</span>
         <div class="caos-body">
           <p class="caos-name">C.A.O.S. <span id="caos-mood"></span></p>
@@ -279,6 +283,7 @@
   <!-- ============ C.A.O.S. (conversa) ============ -->
   <section class="tela" id="tela-conversa" data-tela="conversa" hidden>
     <header class="topbar chat-top">
+      <span class="chat-avatar" id="chat-avatar"></span>
       <span class="caos-face small" id="chat-face" aria-hidden="true">(•‿•)</span>
       <h1>C.A.O.S. <small id="chat-mood" class="muted"></small></h1>
       <button class="ghost small estudio-btn" id="estudio-btn" type="button" aria-pressed="false" aria-controls="estudio"><svg class="ico" aria-hidden="true"><use href="#i-livro"/></svg> Estúdio</button>
@@ -596,6 +601,7 @@
   <!-- Painel "C.A.O.S. ao vivo" (13/11, repaginada do AI Studio): só no computador (tela larga) -->
   <aside class="painel-caos" id="painel-caos" aria-label="C.A.O.S. ao vivo">
     <div class="pc-cabeca">
+      <span class="painel-avatar" id="painel-avatar"></span>
       <span class="caos-face pc-face" id="painel-face" aria-hidden="true">(•‿•)</span>
       <p class="pc-nome">C.A.O.S. · <span id="painel-mood">calmo</span></p>
       <div class="pc-barra" role="img" id="painel-int-barra" aria-label="Intensidade da emoção"><i id="painel-int"></i></div>
@@ -617,7 +623,7 @@
     <a href="#inicio" data-tab="inicio" aria-current="page"><svg class="ico" aria-hidden="true"><use href="#i-inicio"/></svg>Início</a>
       <div class="nav-resumo"><small class="muted">Saldo em contas</small><strong id="nav-saldo">—</strong><span id="nav-fogo"></span></div>
   </nav>
-  <button type="button" class="me-ajuda" id="me-ajuda" aria-label="Me ajuda: o C.A.O.S. te guia (dá pra arrastar)" aria-haspopup="menu" aria-expanded="false"><svg class="ico" aria-hidden="true"><use href="#i-ajuda"/></svg><span class="me-ajuda-txt"> Me ajuda</span></button>
+  <button type="button" class="me-ajuda" id="me-ajuda" aria-label="Me ajuda (dá pra arrastar)" aria-haspopup="menu" aria-expanded="false"><svg class="ico" aria-hidden="true"><use href="#i-ajuda"/></svg><span class="me-ajuda-txt">Me ajuda</span></button>
   <div class="ajuda-menu" id="ajuda-menu" role="menu" aria-label="Ajuda rápida" hidden></div>
 
   <dialog id="photo-dialog" class="photo-dialog">
@@ -660,7 +666,7 @@
 
   <dialog id="espanto-dialog" class="novidades-dialog pix-dialog espanto-dialog" aria-labelledby="espanto-titulo">
     <form method="dialog">
-      <header><span class="caos-face espanto-face" id="espanto-face" aria-hidden="true"></span><h2 id="espanto-titulo"></h2></header>
+      <header><span class="espanto-avatar" id="espanto-avatar"></span><span class="caos-face espanto-face" id="espanto-face" aria-hidden="true"></span><h2 id="espanto-titulo"></h2></header>
       <div class="pix-corpo">
         <p id="espanto-texto"></p>
         <menu class="pix-botoes"><button value="" class="ghost">Errei, vou corrigir</button><button value="ok" class="primary">É isso mesmo</button></menu>

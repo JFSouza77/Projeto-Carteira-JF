@@ -52,7 +52,7 @@ Atualizada pelo Wally a cada rodada.
 
 ## Próxima rodada grande (pedidos do JF, 13/11)
 
-- **Avatares animados do C.A.O.S.** no lugar dos rostinhos (os rostinhos ficam só quando precisar, pra não poluir).
+- ~~**Avatares animados do C.A.O.S.**~~ (feito em 13/11 à noite, 2.0.2: 44 formas) no lugar dos rostinhos (os rostinhos ficam só quando precisar, pra não poluir).
   Os avatares já estão prontos (vieram do Perfil).
   - Criar mais avatares onde fizer sentido, por exemplo **"espantado"** (o rosto saiu em 13/11, 2.0.1; falta o avatar animado): o susto com um valor absurdo, tipo "R$ 17 mil
     na Cacau Show?". Ele reage ao "valor fora do normal".

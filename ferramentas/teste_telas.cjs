@@ -25,6 +25,7 @@ const ABAS = ["inicio", "lancar", "mes", "conversa", "contas", "ajustes"];
     p.on("console", (m) => m.type() === "error" && erros.push(`[${tema}] console: ${m.text()}`));
     await p.goto(`http://127.0.0.1:${porta}/`);
     await p.waitForTimeout(2000);
+    await p.evaluate(() => document.getElementById('abertura')?.remove()); // a abertura dura 5 s (13/11)
     for (const aba of ABAS) {
       await p.evaluate((a) => (location.hash = "#" + a), aba);
       await p.waitForTimeout(700);
