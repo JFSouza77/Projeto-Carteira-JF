@@ -24,6 +24,7 @@ export const NOVIDADES = Object.freeze([
       '🗨️ Balão com a cor da emoção: cada mensagem do C.A.O.S. tem a cor do humor dele.',
       '👋 Tudo bem?: agora ele responde do jeito certo, e entende "como vai fechar o mês?".',
       '🔒 E os meus dados?: pergunta que ele explica pra onde vai cada coisa.',
+      '😤 Entende desabafo: palavrão e abreviação (até "krlh"), sem responder com palavrão.',
     ],
   },
   {

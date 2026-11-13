@@ -1016,6 +1016,37 @@ export const GERADORES = {
     },
   },
 
+  // 2.0.9 (JF, 13/11): ele entende palavrão, mas responde sem palavrão. Desabafo = palavrão sem xingar ninguém.
+  desabafo: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Eita! Que foi? Me conta que a gente olha junto.',
+        'Opa, sentimento forte! Aconteceu alguma coisa com o dinheiro?',
+        'Calma, respira. Quer que eu veja como tá o mês?',
+        'Xi, pelo jeito o dia foi puxado. Posso ajudar em quê?',
+        'Entendi a reação! Foi gasto inesperado? Me fala quanto que eu anoto.',
+        'Ai, ai. Desabafa aí, que depois a gente resolve com calma.',
+        'Nossa! Se foi susto com fatura, me pergunta "quanto tá minha fatura?".',
+        'Eita, que energia! Bora transformar isso num plano?',
+        'Pode falar, eu aguento. O que rolou?',
+        'Calma, eu tô aqui. Os números a gente arruma junto.',
+      ],
+    },
+  },
+  desabafo_curto: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Eita, calma!',
+        'Respira…',
+        'Opa, entendi o sentimento.',
+        'Ai, ai.',
+        'Xi!',
+      ],
+    },
+  },
+
   proposta_registro: {
     moldes: ['{fato} {fecho}'],
     fato: {

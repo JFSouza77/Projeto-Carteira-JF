@@ -53,7 +53,7 @@ Atualizada pelo Wally a cada rodada.
 ## Próxima rodada grande (pedidos do JF, 13/11)
 
 - ~~**Avatares animados do C.A.O.S.**~~ (feito em 13/11 à noite, 2.0.2: 44 formas) no lugar dos rostinhos (os rostinhos ficam só quando precisar, pra não poluir).
-  Os avatares já estão prontos (vieram do Perfil).
+  Os avatares são do Wally (rascunho de 06/11, com 35 formas, mandado ao Perfil quando o Code tinha pedido só 3); entraram no app em 13/11.
   - Criar mais avatares onde fizer sentido, por exemplo **"espantado"** (o rosto saiu em 13/11, 2.0.1; falta o avatar animado): o susto com um valor absurdo, tipo "R$ 17 mil
     na Cacau Show?". Ele reage ao "valor fora do normal".
   - O que for traço dele vai pro núcleo, com o ok do JF e aviso ao Code.
