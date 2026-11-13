@@ -474,6 +474,17 @@
     <form method="dialog"><button class="primary">Fechar</button></form>
   </dialog>
 
+  <dialog id="pix-dialog" class="novidades-dialog pix-dialog" aria-labelledby="pix-titulo">
+    <form method="dialog" id="pix-form">
+      <header><h2 id="pix-titulo">Em qual conta caiu?</h2></header>
+      <div class="pix-corpo">
+        <p id="pix-texto"></p>
+        <label class="field"><span>Conta</span><select id="pix-conta"></select></label>
+        <menu class="pix-botoes"><button value="" class="ghost">Cancelar</button><button value="ok" class="primary">Recebi</button></menu>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="novidades-dialog" class="novidades-dialog" aria-labelledby="novidades-titulo">
     <header><h2 id="novidades-titulo">🆕 Novidades</h2><form method="dialog"><button class="icon-btn" aria-label="Fechar">×</button></form></header>
     <div id="novidades-lista"></div>
