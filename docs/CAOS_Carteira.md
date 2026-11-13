@@ -175,3 +175,18 @@ orçamento ("quanto ainda posso gastar?"), alertas, previsão do mês, comparaç
 
 - `js/caos/glossario.js`: 60 termos (adulto, criança, camada a mais; `governo: true` cita a data e manda conferir no oficial). Nunca recomenda produto.
 - Conversa: intent `glossario` ("o que é…", "meu pai falou de…"), `calc_juros` (simples/compostos, taxa ao mês ou ao ano), `vale_parcelar` (mostra o juro escondido). "Me explica melhor" depois de um termo traz a camada a mais.
+
+## Analista de ofertas e porcentagem (2.0.2, 13/11)
+
+Pedido do JF: "a geladeira tá 3.500 no Mercado Livre, 3.400 na Amazon e 2.100 na Shopee". Fica em `js/caos/ofertas.js`
+(funções puras); a conversa chama antes do registro, porque preço em loja não é gasto.
+- **Comparar:** lê 2 ou mais lojas com preço, em qualquer ordem, e ordena da mais barata pra mais cara. A oferta 30% ou
+  mais abaixo das outras ganha o aviso de "preço bom demais": outro modelo, usado, sem nota, vendedor ruim ou golpe.
+  Nesse caso ele também aponta a melhor entre as confiáveis.
+- **Pagamento:** pergunta como a pessoa vai pagar e espera 15 minutos pela resposta. "amazon 10x de 380", "5% no pix",
+  "frete 80" ou "frete grátis" refazem a conta e mostram o juro escondido no parcelado.
+- **Porcentagem:** "15% de 3500", "3500 com 10% de desconto", "com 10% de juros", "de 3500 por 2800",
+  "quanto % é 700 de 3500" e cashback.
+- **O que ele não faz:** buscar preço na internet nem recomendar loja por conta própria. Ele só faz a conta com os números
+  que a pessoa trouxe.
+- Testes: `tests/ofertas.test.js`.

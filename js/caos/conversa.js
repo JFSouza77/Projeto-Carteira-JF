@@ -9,6 +9,7 @@ import {
 } from '../engine.js';
 import { IDENTIDADE, textoAnatomia, textoPodeNaoPode, textoVida } from './identidade.js';
 import { acharTermo, ATUALIZADO_EM, GLOSSARIO } from './glossario.js';
+import { lerPorcentagem, textoPorcentagem, lerOfertas, analisarOfertas, textoOfertas } from './ofertas.js';
 
 const GLOSSARIO_POR_TERMO = new Map(GLOSSARIO.map(g => [g.termo, g]));
 import { textoTendencia, quandoFoi, mercadoVelho } from '../mercado.js';
@@ -264,6 +265,14 @@ function entenderSimples(t, { categories = [] } = {}) {
   const pergunta = /\b(quanto|qual|quais|onde|como|tive|teve|tenho|vai|posso|consigo|algum|alguma)\b|\?/.test(t);
 
   if (!t) return { ...r, intent: 'nao_entendi' };
+  // Ofertas e porcentagem (JF, 13/11): "3500 no mercado livre, 3400 na amazon e 2100 na shopee", "15% de 3500",
+  // "3500 com 10% de desconto", "de 3500 por 2800". Antes do registro: preço em loja não é gasto.
+  if (!/\b(gastei|paguei|comprei|torrei|recebi|ganhei)\b/.test(t)) {
+    const ofertas = lerOfertas(t);
+    if (ofertas) return { ...r, intent: 'comparar_ofertas', ofertas: ofertas.ofertas, produto: ofertas.produto };
+    const pct = lerPorcentagem(t);
+    if (pct) return { ...r, intent: 'porcentagem', pct };
+  }
   // Registro ("gastei 30 no mercado", "paguei 120 de luz", "recebi 1500 de salario")
   if (r.valor && !/\bquanto\b/.test(t)) {
     if (/\b(recebi|recebo|ganhei|ganho|entrou|caiu|recebemos|me pagaram)\b/.test(t)) return { ...r, intent: 'registrar_entrada' };
@@ -698,6 +707,13 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       const tempo = c.meses % 12 === 0 && c.meses >= 12 ? `${c.meses / 12} ${c.meses === 12 ? 'ano' : 'anos'}` : `${c.meses} ${c.meses === 1 ? 'mês' : 'meses'}`;
       const comparar = c.tipo === 'compostos' ? ` Com juros simples daria ${formatBRL(calcularJuros({ ...c, tipo: 'simples', taxa: c.taxaSimples }).finalCents)}: a diferença é o juro sobre juro.` : '';
       return { fato: `Com juros ${c.tipo}, ${formatBRL(c.valor)} a ${c.taxaTexto} por ${tempo} vira ${formatBRL(r.finalCents)} (${formatBRL(r.jurosCents)} de juros).${comparar} Se for dívida, a mesma conta joga contra você. É só uma conta: rendimento real depende de imposto e taxa.`, cru: true, sugestoes: ['O que é juros compostos?', 'Vale a pena parcelar?'] };
+    }
+    case 'porcentagem':
+      return { fato: textoPorcentagem(intencao.pct), cru: true, sugestoes: [] };
+    case 'comparar_ofertas': {
+      const a = analisarOfertas(intencao.ofertas);
+      return { fato: textoOfertas(a, intencao.produto), cru: true, sugestoes: ['Deixa pra depois'],
+        aguardar: { tipo: 'ofertas', ofertas: intencao.ofertas, produto: intencao.produto } };
     }
     case 'vale_parcelar': {
       const p = intencao.parc || {};
