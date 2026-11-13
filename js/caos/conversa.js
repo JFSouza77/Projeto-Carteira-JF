@@ -234,14 +234,56 @@ const GIRIAS = {
   cmg: 'comigo', ctg: 'contigo', pfv: 'por favor', pf: 'por favor', sla: 'sei la', tlgd: 'ta ligado', mn: 'mano', vdd: 'verdade',
   grana: 'dinheiro', bufunfa: 'dinheiro', din: 'dinheiro', gastano: 'gastando', torrei: 'gastei', rango: 'comida',
   // atalhos de finanças do brasileiro (sugestão do Gemini, 06/11)
+  // mais gírias (JF, 13/11 à noite)
+  fds: 'fim de semana', tmj: 'tamo junto', pprt: 'papo reto', mlk: 'moleque', slk: 'sei la', vey: 'veio', kkk: 'haha', kkkk: 'haha', rs: 'haha', rsrs: 'haha',
   cc: 'cartao', vr: 'restaurante', va: 'mercado', xopi: 'shopee', chopi: 'shopee', xopee: 'shopee', mercadolivre: 'mercado livre', ml: 'mercado livre',
 };
 export function expandirGirias(t) {
   return String(t).split(' ').map(w => GIRIAS[w] ?? w).join(' ');
 }
 
+// ---------- Palavrão (JF, 13/11 à noite: "ele tem que entender o palavrão, até abreviado, tipo KRLH") ----------
+// Ele ENTENDE, mas nunca responde com palavrão. Dois casos:
+//  · xingar o C.A.O.S. ("vsf caos", "você é um lixo") → resposta de xingamento (calma, sem revidar);
+//  · desabafo ("krlh, gastei 500 no mercado") → tira o palavrão e entende o pedido normal; se só sobrou o palavrão,
+//    ele pergunta o que houve. Assim "que merda, quanto gastei?" deixa de virar xingamento.
+const PALAVROES = {
+  caralho: 'caralho', krlh: 'caralho', krl: 'caralho', crl: 'caralho', crlh: 'caralho', karalho: 'caralho', caraio: 'caralho', carai: 'caralho', caramba: 'caramba', krai: 'caralho',
+  porra: 'porra', poha: 'porra', pora: 'porra', prr: 'porra', porr: 'porra', merda: 'merda', mrd: 'merda', bosta: 'bosta', cacete: 'cacete', kct: 'cacete',
+  pqp: 'puta que pariu', putz: 'putz', puts: 'putz', droga: 'droga', inferno: 'inferno', desgraca: 'desgraca', dsgrc: 'desgraca', mds: 'meu deus', aff: 'aff', afe: 'aff',
+  foda: 'foda', fodase: 'foda-se', fdse: 'foda-se', fudeu: 'fudeu', fodeu: 'fudeu', fudido: 'fudido', lascou: 'lascou', saco: 'saco',
+};
+// ofensa: palavra que já é xingamento de alguém
+const OFENSAS = {
+  vsf: 'vai se foder', vtnc: 'vai tomar no cu', tnc: 'tomar no cu', fdp: 'filho da puta', vsfd: 'vai se foder', pnc: 'pau no cu',
+  burro: 'burro', idiota: 'idiota', inutil: 'inutil', lixo: 'lixo', otario: 'otario', otaria: 'otaria', babaca: 'babaca', imbecil: 'imbecil',
+  trouxa: 'trouxa', arrombado: 'arrombado', corno: 'corno', bocó: 'boco', boco: 'boco', retardado: 'retardado', estupido: 'estupido', jumento: 'jumento', anta: 'anta',
+  porcaria: 'porcaria', chato: 'chato', ridiculo: 'ridiculo', palhaco: 'palhaco', escroto: 'escroto', cuzao: 'cuzao',
+};
+const FRASES_OFENSA = /(vai (se|te) (foder|fuder|ferrar|lascar)|vai tomar no cu|filho da puta|odeio (voce|vc|o caos)|cala (a )?boca|tomar no cu)/;
+const PARA_ELE = /\b(voce|vc|tu|caos|seu|sua|te|contigo)\b/;
+/** Lê palavrão e ofensa. Devolve { limpo, palavrao, ofensa }. Pura. */
+export function lerPalavroes(t) {
+  const palavras = t.replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
+  const temOfensa = FRASES_OFENSA.test(t) || palavras.some(w => OFENSAS[w]);
+  const temPalavrao = palavras.some(w => PALAVROES[w]) || /puta que pariu|que merda|que porra/.test(t);
+  // palavrão dito PRA ele ("caos de merda", "você é uma bosta") também é ofensa
+  const ofensa = temOfensa || (temPalavrao && PARA_ELE.test(t) && /\b(e|eh|de|seu|sua|uma?|esse|essa)\b/.test(t) && palavras.length <= 7);
+  const limpo = palavras.filter(w => !PALAVROES[w] && !OFENSAS[w]).join(' ')
+    .replace(/\b(puta que pariu|que (merda|porra))\b/g, ' ').replace(/^(que|mano|meu|ai|nossa|ah|eita)( |$)/, '').replace(/\s+/g, ' ').trim();
+  return { limpo, palavrao: temPalavrao || temOfensa, ofensa };
+}
+
 export function entender(texto, { categories = [], anterior = null } = {}) {
-  const r0 = entenderSimples(corrigirDigitacao(expandirGirias(norm(texto)), categories.map(c => norm(c.name))), { categories });
+  const base = corrigirDigitacao(expandirGirias(norm(texto)), categories.map(c => norm(c.name)));
+  const pv = lerPalavroes(base);
+  if (pv.ofensa) return { t: base, intent: 'xingamento', palavrao: true, categoria: null, periodo: acharPeriodo(base) };
+  if (pv.palavrao) {
+    const r = entender(pv.limpo, { categories, anterior });
+    if (!pv.limpo || (r.intent === 'nao_entendi' && !r.palpite)) return { ...r, t: base, intent: 'desabafo', palavrao: true };
+    return { ...r, palavrao: true };
+  }
+  const r0 = entenderSimples(base, { categories });
   const t = r0.t;
   const curta = t.split(' ').length <= 6;
   const continua = anterior && REUSAVEIS.has(anterior.intent) && curta
@@ -390,7 +432,7 @@ function entenderSimples(t, { categories = [] } = {}) {
   }
   if (/\b(ajuda|comandos|o que voce (faz|sabe)|pra que (voce )?serve|para que (voce )?serve|sua funcao|como voce (me )?ajuda|o que posso perguntar)\b/.test(t)) return { ...r, intent: 'ajuda' };
   if (/\b(obrigad|valeu|vlw|brigad|agradeco)/.test(t)) return { ...r, intent: 'agradecimento' };
-  if (/\b(burro|idiota|inutil|lixo|chato|odeio voce|merda|porcaria)\b/.test(t)) return { ...r, intent: 'xingamento' };
+  if (/\b(burro|idiota|inutil|lixo|chato|odeio voce|porcaria)\b/.test(t)) return { ...r, intent: 'xingamento' };
   if (/\b(te amo|voce e (o )?(muito )?(melhor|demais|incrivel|genial|otimo|legal|top|brabo|foda)|gosto de voce|lindo|parabens caos)\b/.test(t)) return { ...r, intent: 'elogio' };
   if (/(como voce (esta|ta)|tudo bem com voce|como (vai|ta) voce|seu humor|voce esta bem|^(e ai|eai|oi|ola|opa)?[ ,!]*(tudo|td) (bem|bom|certo|joia|tranquilo)\??$|^beleza\??$)/.test(t)) return { ...r, intent: 'como_esta' };
   if (/(meus dados|minha privacidade|privacidade|quem ve (meus|os meus)|e seguro|meus dados (estao|ficam)|pra onde vao)/.test(t)) return { ...r, intent: 'privacidade' };
