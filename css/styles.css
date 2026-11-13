@@ -917,3 +917,26 @@ select:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); 
 .banco-partes > li { border-left: 3px solid var(--banco-cor, var(--line)); }
 #tela-contas .summary #bank-total { color: var(--text); text-shadow: 0 0 18px color-mix(in srgb, var(--cyan) 45%, transparent); }
 #tela-contas .summary { border-color: color-mix(in srgb, var(--cyan) 35%, var(--line)); }
+
+/* Raio-X do banco e cofrinhos (JF, 13/11) */
+button.banco-head { width: 100%; background: none; border: 0; padding: 4px 2px; cursor: pointer; text-align: left; font: inherit; color: inherit; border-radius: 10px; }
+button.banco-head:hover { background: color-mix(in srgb, var(--banco-cor) 8%, transparent); }
+.banco-dir { display: inline-flex; align-items: baseline; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.rx-seta { font-size: .78rem; font-weight: 700; color: var(--banco-cor); white-space: nowrap; }
+.raio-x { margin: 0 0 10px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--banco-cor) 7%, var(--card-2));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--banco-cor) 35%, transparent); }
+.rx-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.rx-lista > li > strong { display: flex; align-items: center; gap: 6px; }
+.rx-conta { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; margin: 6px 0 4px; font-size: .9rem; }
+.rx-conta dt { color: var(--muted); } .rx-conta dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.rx-conta .soma { color: var(--text); font-weight: 700; border-top: 1px solid var(--line); padding-top: 4px; }
+.rx-cdi { margin: 10px 0 0; font-size: .85rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag { font-size: .72rem; font-weight: 700; padding: 3px 8px; border-radius: 99px; }
+.tag.rende { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.tag.reforca { color: var(--violet); background: color-mix(in srgb, var(--violet) 16%, transparent); }
+.tag.outro { color: var(--warn); background: color-mix(in srgb, var(--warn) 16%, transparent); }
+.banco-partes > li.de-outro { border-left-style: dashed; }
+[data-acc-edit] { color: var(--cyan); border-color: color-mix(in srgb, var(--cyan) 45%, var(--line)) !important; }
+#conta-dialog .erro { color: var(--danger); margin: 0; }
+#cd-reforca-campo[hidden], #cd-quem-campo[hidden] { display: none; }

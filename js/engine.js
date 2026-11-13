@@ -397,17 +397,69 @@ export function createIncome({ amountCents, sourceId, note = '', date, accountId
 // Tipos de conta (12/11, vistoria do JF): o que mora dentro de um banco. Cartão de crédito é `tipo: 'cartao'`.
 export const TIPOS_CONTA = Object.freeze({ corrente: 'Conta corrente', poupanca: 'Poupança', cofrinho: 'Cofrinho' });
 
-export function createAccount({ bank, nickname = '', balanceCents, subtipo = 'corrente', reforcaCartaoId = null }, { now = new Date(), id } = {}) {
+// Rendimento em % do CDI (JF, 13/11: "meu cofrinho do PicPay é 102% do CDI") e dinheiro guardado pra outra pessoa.
+const pctCdiOk = v => v == null || (typeof v === 'number' && Number.isFinite(v) && v > 0 && v <= 300);
+const limparPctCdi = v => (v == null || v === '' ? null : Math.round(Number(v) * 10) / 10);
+
+export function createAccount({ bank, nickname = '', balanceCents, subtipo = 'corrente', reforcaCartaoId = null, rendeCdiPct = null, paraQuem = '' }, { now = new Date(), id } = {}) {
   const b = String(bank || '').trim();
   if (!b) throw new Error('Escolha o banco.');
   if (!Number.isInteger(balanceCents)) throw new Error('Saldo inválido.');
   if (!TIPOS_CONTA[subtipo]) throw new Error('Escolha o tipo da conta.');
+  const pct = limparPctCdi(rendeCdiPct);
+  if (!pctCdiOk(pct)) throw new Error('O rendimento vai de 1% a 300% do CDI (ex.: 102).');
   return {
     id: id || newId(), bank: b.slice(0, 40), nickname: String(nickname).trim().slice(0, 30), subtipo,
     // cofrinho que aumenta o limite do cartão (PicPay, Inter…): o valor guardado soma no limite desse cartão
     reforcaCartaoId: subtipo === 'cofrinho' && reforcaCartaoId ? reforcaCartaoId : null,
+    rendeCdiPct: pct, paraQuem: String(paraQuem || '').trim().slice(0, 40),
     balanceCents, balanceAt: now.getTime(), createdAt: now.getTime(),
   };
+}
+
+/**
+ * Editar conta (13/11): apelido, tipo, cartão que o cofrinho reforça, rendimento (% do CDI) e pra quem é o dinheiro.
+ * Não mexe no saldo (isso é o "Atualizar saldo"). Devolve uma cópia nova.
+ */
+export function editarConta(conta, { nickname, subtipo, reforcaCartaoId, rendeCdiPct, paraQuem }, { accounts = [] } = {}) {
+  if (!conta || conta.tipo === 'cartao') throw new Error('Isso é um cartão: ele não tem esses campos.');
+  const novo = { ...conta };
+  if (nickname !== undefined) novo.nickname = String(nickname).trim().slice(0, 30);
+  if (subtipo !== undefined) {
+    if (!TIPOS_CONTA[subtipo]) throw new Error('Escolha o tipo da conta.');
+    novo.subtipo = subtipo;
+  }
+  if (reforcaCartaoId !== undefined) {
+    if (reforcaCartaoId && !accounts.some(a => a.id === reforcaCartaoId && a.tipo === 'cartao')) throw new Error('Não achei esse cartão.');
+    novo.reforcaCartaoId = reforcaCartaoId || null;
+  }
+  if (novo.subtipo !== 'cofrinho') novo.reforcaCartaoId = null; // só cofrinho aumenta limite
+  if (rendeCdiPct !== undefined) {
+    const pct = limparPctCdi(rendeCdiPct);
+    if (!pctCdiOk(pct)) throw new Error('O rendimento vai de 1% a 300% do CDI (ex.: 102).');
+    novo.rendeCdiPct = pct;
+  }
+  if (paraQuem !== undefined) novo.paraQuem = String(paraQuem || '').trim().slice(0, 40);
+  return novo;
+}
+
+/** Quanto rende por mês e por ano, estimado: CDI ao ano (ex.: 10,65) × % do CDI (ex.: 102). Juros compostos ao mês. */
+export function rendimentoEstimado(saldoCents, rendeCdiPct, cdiAnualPct) {
+  if (!(saldoCents > 0) || !(rendeCdiPct > 0) || !(cdiAnualPct > 0)) return null;
+  const anual = (cdiAnualPct / 100) * (rendeCdiPct / 100);
+  const mensal = Math.pow(1 + anual, 1 / 12) - 1;
+  return { mesCents: Math.round(saldoCents * mensal), anoCents: Math.round(saldoCents * anual), taxaAnualPct: Math.round(anual * 10000) / 100 };
+}
+
+/**
+ * Raio-X do limite do cartão (JF, 13/11: "de onde está vindo esse limite alto?"): o limite do próprio cartão
+ * e cada cofrinho que soma nele.
+ */
+export function raioXCartao(cartao, accounts = [], expenses = [], incomes = [], transferencias = []) {
+  const cofrinhos = accounts.filter(a => a.reforcaCartaoId === cartao.id && a.tipo !== 'cartao')
+    .map(a => ({ id: a.id, conta: a, saldoCents: Math.max(0, accountBalance(a, expenses, incomes, transferencias)) }));
+  const doCofrinhoCents = cofrinhos.reduce((t, c) => t + c.saldoCents, 0);
+  return { limiteCartaoCents: cartao.limiteCents, cofrinhos, doCofrinhoCents, limiteTotalCents: cartao.limiteCents + doCofrinhoCents };
 }
 
 /** Saldo em reais aceitando negativo: "-50", "1.200,00". */
@@ -487,8 +539,8 @@ export function accountBalance(account, expenses, incomes, transferencias = []) 
 }
 
 export function totalBalance(accounts, expenses, incomes, transferencias = []) {
-  // cartão de crédito não é dinheiro guardado: fica fora do saldo total
-  return accounts.filter(a => a.tipo !== 'cartao').reduce((s, a) => s + accountBalance(a, expenses, incomes, transferencias), 0);
+  // cartão de crédito não é dinheiro guardado, e dinheiro guardado pra outra pessoa não é seu: ficam fora do total
+  return accounts.filter(a => a.tipo !== 'cartao' && !a.paraQuem).reduce((s, a) => s + accountBalance(a, expenses, incomes, transferencias), 0);
 }
 
 /** Transferência entre contas suas (corrente → poupança, cofrinho…). Não conta como gasto nem como entrada. */
@@ -925,6 +977,7 @@ export function validarBackup(bruto) {
       || !Number.isInteger(a.balanceCents) || Math.abs(a.balanceCents) > VALOR_MAX
       || !(a.tipo == null || a.tipo === 'cartao')
       || !(a.subtipo == null || TIPOS_CONTA[a.subtipo]) || !(a.reforcaCartaoId == null || ID_RE.test(a.reforcaCartaoId))
+      || !pctCdiOk(a.rendeCdiPct) || !textoOuNada(a.paraQuem, 40)
       || !(a.faturaPagaAte == null || isValidISODate(a.faturaPagaAte))
       || (a.tipo === 'cartao' && (!centavos(a.limiteCents, 1) || !centavos(a.usadoInicialCents ?? 0, 0)
         || ![a.fechamentoDia, a.vencimentoDia].every(d => Number.isInteger(d) && d >= 1 && d <= 31)))) erro(`Conta ${i + 1} do backup está com dado inválido.`);

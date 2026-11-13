@@ -619,6 +619,22 @@
     </form>
   </dialog>
 
+  <dialog id="conta-dialog" class="novidades-dialog pix-dialog" aria-labelledby="cd-titulo">
+    <form method="dialog" id="conta-form" novalidate>
+      <header><h2 id="cd-titulo">Editar conta</h2></header>
+      <div class="pix-corpo">
+        <label class="field"><span>Apelido</span><input id="cd-apelido" type="text" maxlength="30" placeholder="ex.: Reserva, Viagem"></label>
+        <label class="field"><span>O que é?</span><select id="cd-tipo"><option value="corrente">Conta corrente</option><option value="poupanca">Poupança</option><option value="cofrinho">Cofrinho / caixinha</option></select></label>
+        <label class="field" id="cd-reforca-campo"><span>Esse cofrinho aumenta o limite de qual cartão?</span><select id="cd-reforca"></select></label>
+        <label class="field"><span>Quanto rende (% do CDI, opcional)</span><input id="cd-cdi" type="text" inputmode="decimal" placeholder="ex.: 102"></label>
+        <label class="check"><input type="checkbox" id="cd-outro"> Esse dinheiro é de outra pessoa (estou guardando pra alguém)</label>
+        <label class="field" id="cd-quem-campo" hidden><span>De quem?</span><input id="cd-quem" type="text" maxlength="40" placeholder="ex.: Léo"></label>
+        <p class="erro" id="cd-erro" role="alert" hidden></p>
+        <menu class="pix-botoes"><button value="" class="ghost" formnovalidate>Cancelar</button><button value="ok" class="primary">Salvar</button></menu>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="pix-dialog" class="novidades-dialog pix-dialog" aria-labelledby="pix-titulo">
     <form method="dialog" id="pix-form">
       <header><h2 id="pix-titulo">Em qual conta caiu?</h2></header>
