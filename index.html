@@ -50,6 +50,7 @@
       <symbol id="i-foto" viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13.5" r="3.5"/></symbol>
       <symbol id="i-clipe" viewBox="0 0 24 24"><path d="M20 11.5 12.3 19.2a5 5 0 0 1-7.1-7.1l8-8a3.3 3.3 0 0 1 4.7 4.7l-8 8a1.7 1.7 0 0 1-2.4-2.4l7.3-7.3"/></symbol>
       <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></symbol>
+      <symbol id="i-editar" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/></symbol>
       <symbol id="i-limpar" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7M6 7l1 13h10l1-13M10 11v6M14 11v6"/></symbol>
       <symbol id="i-enviar" viewBox="0 0 24 24"><path d="M4 12 20 4l-4 16-4-6.5zM12 13.5 20 4"/></symbol>
       <symbol id="i-ia" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18.5 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></symbol>
@@ -558,6 +559,23 @@
   <dialog id="photo-dialog" class="photo-dialog">
     <img id="photo-dialog-img" alt="Foto do comprovante">
     <form method="dialog"><button class="primary">Fechar</button></form>
+  </dialog>
+
+  <dialog id="editar-dialog" class="novidades-dialog pix-dialog" aria-labelledby="editar-titulo">
+    <form method="dialog" id="editar-form" novalidate>
+      <header><h2 id="editar-titulo">Editar lançamento</h2></header>
+      <div class="pix-corpo">
+        <div class="row2">
+          <label class="field"><span>Valor (R$)</span><input id="ed-valor" type="text" inputmode="decimal"></label>
+          <label class="field"><span>Data</span><input id="ed-data" type="date"></label>
+        </div>
+        <label class="field"><span>Descrição</span><input id="ed-nota" type="text" maxlength="120"></label>
+        <label class="field"><span id="ed-cat-rotulo">Categoria</span><select id="ed-cat"></select></label>
+        <p class="muted small" id="ed-aviso" hidden></p>
+        <p class="erro" id="ed-erro" role="alert" hidden></p>
+        <menu class="pix-botoes"><button value="" class="ghost" formnovalidate>Cancelar</button><button value="ok" class="primary" id="ed-salvar">Salvar</button></menu>
+      </div>
+    </form>
   </dialog>
 
   <dialog id="pix-dialog" class="novidades-dialog pix-dialog" aria-labelledby="pix-titulo">

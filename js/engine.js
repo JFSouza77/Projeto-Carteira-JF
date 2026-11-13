@@ -1245,3 +1245,34 @@ export function simularCompra({ valorCents, parcelas = 1 }, { sobraCents, baseCe
   }
   return { situacao, parcelaCents, parcelas: n, sobraDepoisCents, faltaCents: Math.max(0, -sobraDepoisCents), parcelasQueCabem };
 }
+
+// ---------- Editar lançamento (fase 2 da repaginada, 13/11) ----------
+/**
+ * Devolve uma cópia do gasto ou da entrada com as mudanças (valor, descrição, data, categoria ou fonte). Só leitura.
+ * Guarda o `createdAt` (a ofensiva não muda) e marca `editadoEm`. Conta rachada não muda de valor: as partes dos
+ * amigos foram calculadas em cima dele (apaga e lança de novo).
+ */
+export function editarLancamento(x, { amountCents, note, date, categoryId, sourceId }, { kind = 'gasto', categories = null, now = Date.now() } = {}) {
+  const novo = { ...x };
+  if (amountCents !== undefined && amountCents !== x.amountCents) {
+    if (!Number.isInteger(amountCents) || amountCents <= 0) throw new Error('Digite um valor, tipo 25,90.');
+    if (amountCents > 100_000_000_00) throw new Error('Valor alto demais. Confere aí.');
+    if (Array.isArray(x.racha) && x.racha.length) throw new Error('Essa conta foi dividida com amigos: pra mudar o valor, apague e lance de novo.');
+    novo.amountCents = amountCents;
+  }
+  if (note !== undefined) novo.note = String(note).trim().slice(0, 120);
+  if (date !== undefined) {
+    if (!isValidISODate(date)) throw new Error('Data inválida.');
+    novo.date = date; novo.month = monthKey(date);
+  }
+  if (kind === 'gasto' && categoryId !== undefined) {
+    if (categories && !categories.some(c => c.id === categoryId)) throw new Error('Escolha uma categoria.');
+    novo.categoryId = categoryId;
+  }
+  if (kind === 'entrada' && sourceId !== undefined) {
+    if (!INCOME_SOURCES.some(s => s.id === sourceId)) throw new Error('Escolha de onde veio o dinheiro.');
+    novo.sourceId = sourceId;
+  }
+  novo.editadoEm = now;
+  return novo;
+}

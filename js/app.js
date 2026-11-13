@@ -10,7 +10,7 @@ import {
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
   TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
-  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, simularCompra, ofensiva, MARCOS_OFENSIVA,
+  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, simularCompra, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
@@ -385,6 +385,7 @@ function render() {
         <span class="exp-main"><span>${esc(x.note || s2?.name || 'Entrada')}</span>
           <small>${dataTxt} · entrada${conta ? ` · ${esc(accountLabel(conta))}` : ''}</small></span>
         <span class="num">+${formatBRL(x.amountCents)}</span>
+        <button class="icon-btn edit" data-edit="${esc(x.id)}" data-kind="entrada" aria-label="Editar entrada">${ic('i-editar')}</button>
         <button class="icon-btn del" data-del="${esc(x.id)}" data-kind="entrada" aria-label="Apagar entrada">×</button>
       </li>`;
     }
@@ -396,6 +397,7 @@ function render() {
         <small>${dataTxt}${x.note && c ? ` · ${esc(c.name)}` : ''}${conta ? ` · ${esc(accountLabel(conta))}` : ''}${x.forma && !conta ? ` · ${esc(FORMAS_PAGAMENTO[x.forma].slice(2).trim())}` : ''}${x.parcelas > 1 ? ` · ${x.parcelas}x de ${formatBRL(Math.floor(x.amountCents / x.parcelas))}` : ''}
         ${x.imageId ? `<button class="thumb-btn" data-photo="${esc(x.imageId)}" aria-label="Ver foto">${ic('i-foto')}</button>` : ''}</small></span>
       <span class="num">${x.racha ? `<span title="Sua parte">${formatBRL(valorProprio(x))}</span><small class="racha-tag">${ic('i-dividir')} de ${formatBRL(x.amountCents)}</small>` : formatBRL(x.amountCents)}</span>
+      <button class="icon-btn edit" data-edit="${esc(x.id)}" data-kind="gasto" aria-label="Editar gasto">${ic('i-editar')}</button>
       <button class="icon-btn del" data-del="${esc(x.id)}" data-kind="gasto" aria-label="Apagar gasto">×</button>
     </li>`;
   }).join('');
@@ -879,6 +881,60 @@ async function lerFotoComIA() {
   } finally {
     btn.disabled = false;
     btn.innerHTML = `${ic('i-ia')} Ler com IA`;
+  }
+}
+
+/** Editar lançamento (13/11): janelinha com valor, data, descrição e categoria (ou fonte). */
+async function editar(id, kind) {
+  const entrada = kind === 'entrada';
+  const x = (entrada ? state.incomes : state.expenses).find(i => i.id === id);
+  if (!x) return;
+  const dlg = $('#editar-dialog');
+  $('#editar-titulo').textContent = entrada ? 'Editar entrada' : 'Editar gasto';
+  $('#ed-valor').value = centsToInput(x.amountCents);
+  const rachada = Array.isArray(x.racha) && x.racha.length > 0;
+  $('#ed-valor').disabled = rachada;
+  $('#ed-data').value = x.date;
+  $('#ed-nota').value = x.note || '';
+  $('#ed-cat-rotulo').textContent = entrada ? 'De onde veio' : 'Categoria';
+  $('#ed-cat').innerHTML = (entrada ? INCOME_SOURCES : state.categories).map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+  $('#ed-cat').value = entrada ? x.sourceId : x.categoryId;
+  const avisos = [];
+  if (rachada) avisos.push('Essa conta foi dividida com amigos: o valor fica travado (pra mudar, apague e lance de novo).');
+  if (x.parcelas > 1) avisos.push(`Parcelado em ${x.parcelas}x: o valor é o total da compra.`);
+  $('#ed-aviso').hidden = !avisos.length;
+  $('#ed-aviso').textContent = avisos.join(' ');
+  $('#ed-erro').hidden = true;
+  dlg.dataset.id = id;
+  dlg.dataset.kind = kind;
+  dlg.returnValue = '';
+  dlg.showModal();
+}
+
+async function salvarEdicao(ev) {
+  const dlg = $('#editar-dialog');
+  if (ev.submitter?.value !== 'ok') return; // Cancelar fecha sozinho
+  ev.preventDefault();
+  const kind = dlg.dataset.kind === 'entrada' ? 'entrada' : 'gasto';
+  const lista = kind === 'entrada' ? state.incomes : state.expenses;
+  const id = dlg.dataset.id;
+  const x = lista.find(i => i.id === id);
+  if (!x) return dlg.close();
+  try {
+    const valor = $('#ed-valor').disabled ? x.amountCents : parseAmount($('#ed-valor').value);
+    const novo = editarLancamento(x, {
+      amountCents: valor ?? 0, note: $('#ed-nota').value, date: $('#ed-data').value,
+      ...(kind === 'entrada' ? { sourceId: $('#ed-cat').value } : { categoryId: $('#ed-cat').value }),
+    }, { kind, categories: state.categories });
+    await db.put(kind === 'entrada' ? db.STORES.incomes : db.STORES.expenses, novo);
+    if (kind === 'entrada') state.incomes = state.incomes.map(i => (i.id === id ? novo : i));
+    else state.expenses = state.expenses.map(i => (i.id === id ? novo : i));
+    dlg.close();
+    render();
+    toast(kind === 'entrada' ? 'Entrada atualizada.' : 'Gasto atualizado.');
+  } catch (e) {
+    $('#ed-erro').textContent = e.message || 'Não deu para salvar.';
+    $('#ed-erro').hidden = false;
   }
 }
 
@@ -2220,11 +2276,14 @@ function bind() {
   $('#exp-list').addEventListener('click', e => {
     const f = e.target.closest('[data-photo]');
     if (f) return verFoto(f.dataset.photo);
+    const ed = e.target.closest('[data-edit]');
+    if (ed) return editar(ed.dataset.edit, ed.dataset.kind).catch(er => toast(er.message || 'Não deu.'));
     const b = e.target.closest('[data-del]');
     if (b) onDelete(b.dataset.del, b.dataset.kind);
   });
 
   $('#sem-gasto').addEventListener('click', hojeNaoGastei);
+  $('#editar-form').addEventListener('submit', salvarEdicao);
   $('#estudio-btn').addEventListener('click', () => alternarEstudio());
   $('#glos-busca').addEventListener('input', renderGlossario);
   for (const id of ['#calc-valor', '#calc-taxa', '#calc-meses', '#calc-periodo']) $(id).addEventListener('input', renderCalculadora);
