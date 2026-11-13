@@ -25,6 +25,7 @@ export const NOVIDADES = Object.freeze([
       '👋 Tudo bem?: agora ele responde do jeito certo, e entende "como vai fechar o mês?".',
       '🔒 E os meus dados?: pergunta que ele explica pra onde vai cada coisa.',
       '😤 Entende desabafo: palavrão e abreviação (até "krlh"), sem responder com palavrão.',
+      '🎣 Paciência tem limite: xingou demais, ele escala, fica quietinho e depois volta.',
     ],
   },
   {

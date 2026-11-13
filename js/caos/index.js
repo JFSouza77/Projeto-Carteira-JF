@@ -14,7 +14,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '2.0.9'; // 2.0.9 (13/11): entende palavrão e abreviação (krlh, vsf…) sem responder com palavrão. 2.0.8: avatares
+export const CAOS_VERSAO = '2.1.0'; // 2.1.0 (13/11): paciência que acaba (escala e fica quieto). Regra do 9: 2.0.9 vira 2.1.0. 2.0.9: palavrão
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -48,6 +48,8 @@ const COOLDOWN = {
   a_receber: 24 * 3_600_000,
 };
 const RADAR_COOLDOWN = 6 * 3_600_000;
+const PACIENCIA_ZERA = 30 * 60_000; // xingamento de mais de meia hora atrás não conta pra escalada
+const SILENCIO_MS = 3 * 60_000; // quanto tempo ele fica quietinho depois da última resposta
 const LIMITES_INTERVALO = 6 * 60 * 60 * 1000; // "1 vez por conversa ou assunto" (núcleo 1.4.0)
 const ALERTAS = new Set(['cartao_limite', 'cartao_vence', 'categoria_estourada', 'orcamento_80', 'delivery_repetido', 'ritmo_alto', 'mes_negativo', 'conta_negativa', 'compromisso_vence', 'compromisso_atrasado', 'a_receber']);
 
@@ -230,6 +232,35 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   let mem = normalizarMem(memory, now);
   const d = congelar(dados);
   let intencao = entender(texto, { ...d, anterior: mem.conversa || null });
+  // Paciência (JF, 13/11 à noite): xingou o C.A.O.S.? Ele escala aos poucos: calmo → firme → "vai pescar, filho" →
+  // última resposta e fica quietinho uns minutos. Quando a pessoa volta, ele pergunta se passou a raiva.
+  // Pedido de desculpa encerra na hora. No humor Suave a escalada é séria, sem zoeira (2ª lei).
+  const pac = { n: 0, em: 0, silencioAte: 0, emburrou: false, ...(mem.paciencia || {}) };
+  const txp = String(texto).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const desculpa = /\b(desculpa|desculpe|foi mal|perdao|me perdoa|sorry|nao foi por mal)\b/.test(txp);
+  let assunto = null; // o que manda no avatar e no balde de fala (xingamento_2, silencio…)
+  let passouRaiva = false;
+  if (pac.n && now - pac.em > PACIENCIA_ZERA && !pac.emburrou) { pac.n = 0; }
+  if (desculpa && (pac.n || pac.emburrou)) {
+    intencao = { ...intencao, intent: 'xingamento', palpite: false };
+    assunto = 'desculpa_aceita';
+    Object.assign(pac, { n: 0, silencioAte: 0, emburrou: false });
+  } else if (intencao.intent === 'xingamento') {
+    pac.n += 1; pac.em = now;
+    const forte = humor !== 'suave';
+    if (pac.emburrou || pac.n >= 5) {
+      assunto = forte ? 'xingamento_fim_forte' : 'xingamento_fim';
+      Object.assign(pac, { silencioAte: now + SILENCIO_MS, emburrou: true });
+    } else if (pac.n === 4) assunto = forte ? 'xingamento_3_forte' : 'xingamento_3';
+    else if (pac.n >= 2) assunto = 'xingamento_2';
+  } else if (pac.emburrou && now < pac.silencioAte) {
+    intencao = { ...intencao, intent: 'xingamento', palpite: false };
+    assunto = 'silencio';
+  } else if (pac.emburrou) {
+    passouRaiva = true;
+    Object.assign(pac, { n: 0, silencioAte: 0, emburrou: false });
+  }
+  mem = { ...mem, paciencia: pac };
   // Esperando um valor (12/11): perguntou "quanto foi?" e a pessoa respondeu só o número
   const espera = mem.aguardando && now - (mem.aguardando.em || 0) < 15 * 60_000 ? mem.aguardando : null;
   if (espera?.tipo === 'valor_gasto' && intencao.valor && String(texto).trim().split(/\s+/).length <= 5
@@ -279,6 +310,7 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   mem = { ...mem, estab: est.estab };
   const emocao = est.emocao;
   let resp = responder(intencao, { ...d, anterior: mem.conversa || null }, { today: today || toISODate(new Date(now)), emocao: rostoDe(emocao).nome, perfil, now });
+  if (assunto) resp = { gatilho: assunto, sugestoes: assunto === 'silencio' ? ['Desculpa'] : [] };
   // gasto novo: pergunta como pagou antes de propor (pula o que a pessoa já disse)
   if (resp.pagamento && resp.acao) {
     const q = proximaPerguntaPagamento(resp.acao, d.accounts || []);
@@ -296,10 +328,10 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   // 2.0.5 (núcleo 1.4.0, "limites"): em pergunta de decisão (investir, parcelar, qual comprar) ele ajuda e termina com
   // o lembrete de que é IA de bolso e quem decide é a pessoa. No máximo 1 vez por assunto a cada 6 h, pra não virar
   // robô pedindo desculpa (cuidado pedido pelo Code). O mercado usa o mesmo controle com as falas dele.
-  const assunto = resp.aviso ? 'investimento' : resp.decisao || null;
-  if (assunto && fato && !(now - ((mem.limites || {})[assunto] || 0) < LIMITES_INTERVALO)) {
+  const tema = resp.aviso ? 'investimento' : resp.decisao || null;
+  if (tema && fato && !(now - ((mem.limites || {})[tema] || 0) < LIMITES_INTERVALO)) {
     const av = montar(resp.aviso ? 'aviso_mercado' : 'lembrete_limites', {}, { humor, emocao, mem, now, rng, perfil });
-    mem = { ...mem, gerador: av.gerador, limites: { ...(mem.limites || {}), [assunto]: now } };
+    mem = { ...mem, gerador: av.gerador, limites: { ...(mem.limites || {}), [tema]: now } };
     fato = `${fato} ${av.texto}`;
   }
   if (resp.alertas && resp.alertas.length) {
@@ -332,11 +364,17 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
     const dz = montar('desabafo_curto', {}, { humor, emocao, mem, now, rng, perfil });
     if (dz.texto) { saida = `${dz.texto} ${saida}`; mem = { ...mem, gerador: dz.gerador }; }
   }
+  if (passouRaiva) {
+    const pr = montar('passou_raiva', {}, { humor, emocao, mem, now, rng, perfil });
+    mem = { ...mem, gerador: pr.gerador };
+    saida = ['nao_entendi', 'como_esta', 'saudacao', 'retomar'].includes(intencao.intent) || !saida ? pr.texto : `${pr.texto} ${saida}`;
+    assunto = 'passou_raiva';
+  }
   // Papo avulso demais seguido (06/11): na 5ª pergunta fora do dinheiro, ele chama de volta (sem bronca no Suave)
   const AVULSAS = new Set(['piada', 'identidade', 'significado', 'criador', 'origem', 'como_funciona', 'limites', 'elogio', 'xingamento', 'desabafo', 'como_esta', 'nao_entendi', 'sobre_jf', 'saudacao', 'agradecimento']);
   const avulsas = AVULSAS.has(intencao.intent) ? (mem.avulsas || 0) + 1 : 0;
   mem = { ...mem, avulsas };
-  if (avulsas >= 5 && avulsas % 5 === 0 && saida) {
+  if (avulsas >= 5 && avulsas % 5 === 0 && saida && !assunto) { // na escalada da paciência, nada de "adoro conversar"
     const pd = montar('papo_demais', {}, { humor, emocao, mem, now, rng, perfil });
     if (pd.texto) { saida = `${saida} ${pd.texto}`; mem = { ...mem, gerador: pd.gerador }; }
   }
@@ -371,7 +409,7 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
       filaIA: resp.filaIA || null, // pergunta que precisa do servidor: o app responde agora ou guarda na fila
       entendeu: intencao.intent !== 'nao_entendi' && !intencao.palpite && !(intencao.intent === 'retomar' && !retomada),
       palpite: !!intencao.palpite,
-      intent: intencao.intent, // 2.0.8: o assunto da conversa (o app escolhe a forma do avatar com ele)
+      intent: assunto || intencao.intent, // 2.0.8: o assunto da conversa (o app escolhe a forma do avatar com ele)
     },
     memoria: mem,
   };

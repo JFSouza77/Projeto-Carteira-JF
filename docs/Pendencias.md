@@ -100,6 +100,11 @@ Atualizada pelo Wally a cada rodada.
   assunto. Falta ligar no IR quando ele existir.
 - ~~**Tela de carregamento**~~ Feito em 13/11 (2.0.1): abertura com a versão; com servidor e sem conta oferece "Entrar".
 
+## Esperando o Code
+
+- **Núcleo 1.4.1?** Marco "ganhei corpo (avatar), primeiro na Carteira" (ok do JF em 13/11) e a proposta da
+  paciência como jeito de tratar. Recado: `correio/para_o_code/2026-11-13_nucleo_corpo_e_paciencia.md`.
+
 ## Esperando o JF
 
 - **Selo de criador:** quando o servidor for pro ar, pôr o apelido da conta do JF em `CRIADOR_CONTAS`.

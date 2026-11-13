@@ -1016,6 +1016,105 @@ export const GERADORES = {
     },
   },
 
+  // 2.1.0 (JF, 13/11 à noite): paciência que acaba. Xingou de novo, ele escala; no fim fica quietinho e depois
+  // pergunta se passou a raiva. As versões _forte ("vai pescar, filho") só saem nos humores Normal e Ácido (2ª lei).
+  xingamento_2: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Ei, de novo? Tô aqui pra te ajudar, não pra brigar.',
+        'Tá estressadinho hoje, né? Respira. Não fui eu que gastei.',
+        'Opa, segunda patada. Bora focar no que dá pra resolver?',
+        'Entendo que irrita, mas me xingar não abaixa a fatura.',
+        'Calma lá. Se o problema é o mês, a gente olha junto.',
+      ],
+    },
+  },
+  xingamento_3: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Olha, eu tô do seu lado, mas assim fica difícil. Vamos respirar um pouco?',
+        'Tô percebendo muita raiva. Que tal dar uma pausa e voltar depois?',
+        'Não precisa disso. Eu continuo aqui, mas com respeito a gente vai mais longe.',
+        'Já entendi que o dia tá pesado. Mas descontar em mim não ajuda nenhum de nós.',
+        'Conselho de amigo: dá uma volta, bebe uma água e depois a gente conversa.',
+      ],
+    },
+  },
+  xingamento_3_forte: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Tá estressadinho, hein? Vai pescar, filho. Relaxa. Não me culpe, tô aqui pra te ajudar.',
+        'Ô, calma! Vai dar uma volta, pescar, sei lá. Quem gastou não fui eu.',
+        'Nervosinho, né? Vai pescar, respira o ar do lago e volta mais leve.',
+        'Já deu, né? Vai tomar um açaí, pescar, qualquer coisa. Depois a gente conversa.',
+        'Tá bravo comigo por quê? Eu só somo. Vai pescar, filho, que faz bem.',
+      ],
+    },
+  },
+  xingamento_fim: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Tudo bem. Já que você não quer se acalmar, vou ficar quietinho um pouco. Quando passar, me chama.',
+        'Certo. Vou dar um tempo pra gente. Volto a falar quando você estiver mais calmo.',
+        'Tá bom. Vou ficar em silêncio um pouco. Respira, que eu continuo aqui.',
+        'Ok. Pausa. Quando a raiva passar, eu tô aqui do mesmo jeito.',
+        'Entendido. Vou me recolher um pouquinho. A porta continua aberta.',
+      ],
+    },
+  },
+  xingamento_fim_forte: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Tá bom, filho. Já que você não quer se acalmar, essa é minha resposta: vou ficar quieto. Fui.',
+        'Beleza. Você não quer conversa, eu também não. Volto quando a raiva passar.',
+        'Tá bom, então. Cartão vermelho pra você. Vou ficar na minha um tempo.',
+        'Chega, né? Vou ficar na minha. Quando você esfriar a cabeça, a gente conversa.',
+        'Ok, campeão. Expulso de campo. Volta quando a raiva passar.',
+      ],
+    },
+  },
+  silencio: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        '…',
+        '(…)',
+        '(quietinho)',
+        '(em silêncio)',
+        '(…ainda dando um tempo)',
+      ],
+    },
+  },
+  passou_raiva: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'E aí, passou a raiva? Podemos conversar normal agora?',
+        'Voltou mais calmo? Que bom. Bora conversar direito?',
+        'Opa! Passou a tempestade? Tô aqui, do mesmo jeito de sempre.',
+        'E aí, mais tranquilo? Sem ressentimento da minha parte.',
+        'Respirou? Ótimo. Então bora: em que posso ajudar?',
+      ],
+    },
+  },
+  desculpa_aceita: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Tudo bem, desculpa aceita! Bora seguir?',
+        'De boa, acontece. Dinheiro estressa todo mundo.',
+        'Tá desculpado. Eu não guardo rancor, só lançamentos.',
+        'Valeu por pedir desculpa. Tamo junto de novo.',
+        'Esquecido! Agora, em que posso ajudar?',
+      ],
+    },
+  },
+
   // 2.0.9 (JF, 13/11): ele entende palavrão, mas responde sem palavrão. Desabafo = palavrão sem xingar ninguém.
   desabafo: {
     moldes: ['{inteira}'],
