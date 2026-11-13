@@ -61,8 +61,9 @@ h2 { font-size: 1rem; font-weight: 600; margin-bottom: 12px; }
 small, .small { font-size: .8rem; }
 .muted { color: var(--muted); margin: 6px 0 0; }
 .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+html, body { overflow-x: clip; } /* a página nunca rola pro lado (o macaco achou na troca de aba, 13/11) */
 
-button, input { font: inherit; color: inherit; }
+button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 input[type="text"], input[type="date"], input[type="url"], input[type="time"], input[type="number"], input[type="search"], select {
   background: var(--card-2);
@@ -92,10 +93,15 @@ input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); ou
 .card { background: var(--card); border-radius: var(--radius); padding: 16px; }
 details.card > summary { list-style: none; cursor: pointer; }
 details.card > summary::-webkit-details-marker { display: none; }
-details.card > summary h2 { margin: 0; display: flex; justify-content: space-between; }
-details.card > summary h2::after { content: "＋"; color: var(--muted); }
-details.card[open] > summary h2 { margin-bottom: 8px; }
-details.card[open] > summary h2::after { content: "－"; }
+/* cartão que abre (13/11, JF: "mais delimitação"): título à esquerda, ícone colorido e botão + neon à direita */
+details.card > summary h2 { margin: 0; display: flex; align-items: center; justify-content: flex-start; gap: 10px; text-align: left; min-height: 36px; }
+details.card > summary h2 > .ico { color: var(--cyan); flex: none; }
+details.card > summary h2::after { content: "+"; margin-left: auto; flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
+  color: var(--accent); font-weight: 700; background: color-mix(in srgb, var(--accent) 12%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 70%, transparent);
+  transition: transform .2s; }
+details.card[open] > summary h2 { margin-bottom: 10px; }
+details.card[open] > summary h2::after { content: "+"; transform: rotate(45deg); }
+details.card[open] { border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
 
 .summary .label { margin: 0; color: var(--muted); }
 .summary .big { margin: 2px 0 10px; font-size: 2.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -409,7 +415,11 @@ select { appearance: none; -webkit-appearance: none; }
 .plan-form { display: grid; grid-template-columns: 1fr 120px auto; gap: 8px; margin-top: 10px; }
 .plan-form .primary { padding: 10px 14px; }
 .sub-form { margin-top: 10px; }
-.sub-form > summary { cursor: pointer; color: var(--accent); font-weight: 600; padding: 6px 0; }
+.sub-form > summary { cursor: pointer; color: var(--accent); font-weight: 600; padding: 12px; list-style: none; text-align: center;
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 12px; margin-top: 8px; transition: background .2s; }
+.sub-form > summary::-webkit-details-marker { display: none; }
+.sub-form > summary:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.sub-form[open] > summary { border-style: solid; margin-bottom: 10px; }
 #comp-form { display: grid; gap: 10px; margin-top: 8px; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .sugestao { margin: 0; font-size: .85rem; color: var(--caos); }
@@ -887,3 +897,21 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   #relatorio-print td:last-child, #relatorio-print th:last-child { text-align: right; }
   #relatorio-print .r-tot td { font-size: 14pt; font-weight: 700; }
 }
+
+/* Botões mais vivos e com cor por intenção (13/11, pedido do JF) */
+button, .chip, .atalho, summary { transition: transform .12s ease, box-shadow .2s ease, background-color .2s ease, border-color .2s ease; -webkit-tap-highlight-color: transparent; }
+button:active:not(:disabled), .chip:active, .atalho:active { transform: scale(.96); }
+@media (hover: hover) {
+  .ghost:hover:not(:disabled), .chip:hover, .atalho:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); box-shadow: 0 0 12px -6px var(--accent); }
+}
+.menos-mov button:active, .menos-mov .chip:active, .menos-mov .atalho:active { transform: none; }
+@media (prefers-reduced-motion: reduce) { button:active, .chip:active, .atalho:active { transform: none; } }
+select:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* ação boa (verde), ajuste (ciano) e apagar (vermelho), em todos os cartões */
+[data-meta-guardar], [data-inv-aporte], [data-compra-cartao], [data-fatura-paga], [data-comp-lancar] { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, var(--line)) !important; }
+[data-acc-update], [data-inv-atualizar] { color: var(--cyan); border-color: color-mix(in srgb, var(--cyan) 45%, var(--line)) !important; }
+[data-acc-del], [data-inv-del], [data-meta-del], [data-comp-del] { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, var(--line)) !important; }
+/* Contas: cada conta com a lateral na cor do banco e o total aceso */
+.banco-partes > li { border-left: 3px solid var(--banco-cor, var(--line)); }
+#tela-contas .summary #bank-total { color: var(--text); text-shadow: 0 0 18px color-mix(in srgb, var(--cyan) 45%, transparent); }
+#tela-contas .summary { border-color: color-mix(in srgb, var(--cyan) 35%, var(--line)); }

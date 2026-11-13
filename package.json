@@ -9,6 +9,7 @@
     "test:servidor": "cd servidor && npm test",
     "build": "node ferramentas/montar_site.js",
     "serve": "python3 -m http.server 8080",
-    "test:telas": "node ferramentas/teste_telas.cjs"
+    "test:telas": "node ferramentas/teste_telas.cjs",
+    "test:macaco": "node ferramentas/teste_macaco.cjs"
   }
 }
