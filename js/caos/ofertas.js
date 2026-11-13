@@ -114,6 +114,10 @@ function lerDetalhes(seg) {
     if (m[2]) d.parcelaCents = valor(m[2]);
     if (m[3]) d.semJuros = true;
   }
+  // parcelamento sem os detalhes (JF, 13/11): "parcelado", "com juros", "sem juros" soltos → ele pergunta o que falta
+  if (/\bsem juros\b/.test(seg)) d.semJuros = true;
+  if (/\bcom juros\b/.test(seg)) d.comJuros = true;
+  if (!d.parcelas && /\b(parcelad[oa]|parcelar|parcelando|em parcelas|a prazo|no credito parcelado)\b/.test(seg)) d.parcelado = true;
   return d;
 }
 
@@ -156,7 +160,10 @@ export function lerOfertas(t) {
 export function completarOfertas(ofertas, t) {
   const novas = ofertas.map(o => ({ ...o }));
   let mexeu = false;
-  let anterior = null; // "amazon 10x de 380 e frete 50": o frete vale pra loja de antes
+  // "amazon 10x de 380 e frete 50": o frete vale pra loja de antes. Se só uma loja tem dúvida de parcela,
+  // um "sim, sem juros" solto é a resposta dela (JF, 13/11)
+  const comDuvida = novas.filter(o => (o.parcelas > 1 && !o.parcelaCents && !o.semJuros) || (o.parcelado && !o.parcelas));
+  let anterior = comDuvida.length === 1 ? comDuvida[0] : null;
   for (const seg of t.split(/\s*;\s*|,(?!\d)\s*|\s+e\s+(?=(?:na |no |a |o )?[a-z0-9])/)) {
     // "cartão do mercado pago 10%" vale pro Mercado Livre, mesmo sem falar o nome da loja
     const doCartao = /\bcartao\b/.test(seg) ? lojaDoCartao(seg) : null;
@@ -210,7 +217,7 @@ export function analisarOfertas(ofertas) {
   }
   const confiaveis = linhas.filter(l => !l.suspeita);
   return { linhas, melhor: linhas[0], melhorConfiavel: confiaveis[0] || null, pior: linhas[linhas.length - 1],
-    temPagamento: ofertas.some(o => o.freteCents != null || o.pixPct || o.vistaCents || o.parcelas || o.cartaoPct || o.cupomPct || o.cupomCents) };
+    temPagamento: ofertas.some(o => o.freteCents != null || o.pixPct || o.vistaCents || o.parcelas || o.cartaoPct || o.cupomPct || o.cupomCents || o.parcelado || o.semJuros || o.comJuros) };
 }
 
 /** O texto da análise, pronto pra fala do C.A.O.S. */
@@ -225,7 +232,9 @@ export function textoOfertas(a, produto) {
     if (l.pixPct) extras.push(`${fmtPct(l.pixPct)} de desconto à vista`);
     if (l.cartaoPct) extras.push(`${fmtPct(l.cartaoPct)} no cartão da loja${l.jeito === 'cartao_loja' ? ' (o melhor jeito aqui)' : ''}`);
     if (l.cashbackCents) extras.push(`${BRL(l.cashbackCents)} de cashback`);
-    if (l.parcelas > 1) extras.push(l.jurosCents ? `${l.parcelas}x de ${BRL(l.parceladoCents / l.parcelas)} = ${BRL(l.parceladoCents)}, sendo ${BRL(l.jurosCents)} de juros` : `${l.parcelas}x sem juros`);
+    if (l.parcelas > 1) extras.push(l.jurosCents ? `${l.parcelas}x de ${BRL(l.parceladoCents / l.parcelas)} = ${BRL(l.parceladoCents)}, sendo ${BRL(l.jurosCents)} de juros`
+      : l.semJuros || l.parcelaCents ? `${l.parcelas}x sem juros` : `${l.parcelas}x, juros a confirmar`);
+    else if (l.parcelado) extras.push('parcelado, falta saber em quantas vezes');
     const dif = l.custoCents - a.melhor.custoCents;
     partes.push(`${i + 1}º ${l.loja}: ${BRL(l.custoCents)}${extras.length ? ` (${extras.join('; ')})` : ''}${dif > 0 ? `, ${BRL(dif)} a mais que ${art(a.melhor.loja)}` : ''}.`);
   });
@@ -245,8 +254,17 @@ export function textoOfertas(a, produto) {
   }
   const juros = a.linhas.find(l => l.jurosCents > 0);
   if (juros) partes.push(`No parcelado ${art(juros.loja, 'do')} você paga ${BRL(juros.jurosCents)} só de juros: se der pra pagar à vista sem apertar o mês, compensa.`);
-  if (!a.temPagamento) partes.push(perguntasDeCompra(a.linhas.map(l => l.loja)));
-  else partes.push('Quer ver se cabe no mês? No Mês tem o "E se eu comprar?".');
+  // Pix com desconto x parcelado sem juros na mesma loja: quanto custa a comodidade de parcelar
+  for (const l of a.linhas) {
+    if (l.parcelas > 1 && l.semJuros && !l.jurosCents && (l.pixPct || l.vistaCents != null) && l.vistaCents < l.precoCents + (l.freteCents || 0)) {
+      const dif = l.precoCents + (l.freteCents || 0) - l.vistaCents;
+      partes.push(`${cap(art(l.loja, 'no'))}: à vista sai ${BRL(dif)} mais barato; em ${l.parcelas}x sem juros você paga o preço cheio, mas sem tirar tudo de uma vez. Se o dinheiro já está guardado, o desconto do Pix ganha; se não está, sem juros não te cobra nada a mais.`);
+    }
+  }
+  const duvidas = duvidasDeParcela(a.linhas);
+  if (duvidas.length) partes.push(duvidas.join(' '));
+  else if (!a.temPagamento) partes.push(perguntasDeCompra(a.linhas.map(l => l.loja)));
+  else if (!duvidas.length) partes.push('Quer ver se cabe no mês? No Mês tem o "E se eu comprar?".');
   return partes.join(' ');
 }
 
@@ -309,4 +327,23 @@ export function resumoDoPrint(lido) {
     return p.join(', ');
   });
   return lista.length ? `Li no print${lido.produto ? ` (${lido.produto})` : ''}: ${lista.join('; ')}.` : null;
+}
+
+/**
+ * O que falta saber do parcelado (JF, 13/11): "é sem juros? até quantas vezes? se tiver juros, quanto é a parcela?".
+ * Sem isso, ele não chuta: pergunta.
+ */
+export function duvidasDeParcela(linhas) {
+  const q = [];
+  for (const l of linhas) {
+    const loja = art(l.loja, 'no');
+    if (l.parcelado && !l.parcelas) q.push(`${cap(loja)}, parcela em até quantas vezes sem juros? E com juros, quanto fica cada parcela?`);
+    else if (l.parcelas > 1 && !l.parcelaCents && !l.semJuros) {
+      q.push(l.comJuros
+        ? `${cap(loja)}, com juros: quanto fica cada parcela das ${l.parcelas}x? Com esse número eu mostro quanto é só de juros.`
+        : `${cap(loja)}, essas ${l.parcelas}x são sem juros? Se tiver juros, me diz o valor de cada parcela (tipo "${l.parcelas}x de 380").`);
+    }
+  }
+  if (q.length) q.push('Responde do seu jeito, tipo "amazon 10x sem juros" ou "mercado livre 12x de 320".');
+  return q;
 }

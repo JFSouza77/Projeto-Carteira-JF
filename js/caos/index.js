@@ -13,7 +13,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '2.0.3'; // núcleo 1.3.0 (13/11): regra do 9, número próprio do C.A.O.S.
+export const CAOS_VERSAO = '2.0.4'; // núcleo 1.3.0 (13/11): regra do 9, número próprio do C.A.O.S.
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
