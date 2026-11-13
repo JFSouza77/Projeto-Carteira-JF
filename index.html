@@ -460,12 +460,29 @@
     </main>
   </section>
 
+  <!-- Painel "C.A.O.S. ao vivo" (13/11, repaginada do AI Studio): só no computador (tela larga) -->
+  <aside class="painel-caos" id="painel-caos" aria-label="C.A.O.S. ao vivo">
+    <div class="pc-cabeca">
+      <span class="caos-face pc-face" id="painel-face" aria-hidden="true">(•‿•)</span>
+      <p class="pc-nome">C.A.O.S. · <span id="painel-mood">calmo</span></p>
+      <div class="pc-barra" role="img" id="painel-int-barra" aria-label="Intensidade da emoção"><i id="painel-int"></i></div>
+      <small class="muted" id="painel-int-txt"></small>
+    </div>
+    <section class="pc-bloco"><h3>Observação atual</h3><p id="painel-obs">…</p></section>
+    <section class="pc-bloco"><h3>Radar rápido</h3><ul id="painel-radar" class="pc-radar"></ul></section>
+    <section class="pc-bloco"><h3>Perguntar agora</h3><div id="painel-perguntas" class="pc-perguntas"></div></section>
+    <div class="pc-acoes"><a href="#conversa" class="primary pc-conversar">Conversar</a><button type="button" class="ghost" id="painel-ocultar">Ocultar C.A.O.S.</button></div>
+  </aside>
+  <button type="button" class="ghost painel-mostrar" id="painel-mostrar" hidden>Mostrar C.A.O.S.</button>
+
   <nav class="tabbar" aria-label="Navegação">
+    <div class="nav-marca" aria-hidden="true"><span class="nav-logo">C</span><span><strong>C.A.O.S. Finanças</strong><small id="nav-ola">Olá!</small></span></div>
     <a href="#conversa" data-tab="conversa"><svg class="ico" aria-hidden="true"><use href="#i-conversa"/></svg>C.A.O.S.</a>
     <a href="#contas" data-tab="contas"><svg class="ico" aria-hidden="true"><use href="#i-contas"/></svg>Contas</a>
     <a href="#lancar" data-tab="lancar" class="tab-inicio" aria-label="Lançar gasto ou entrada"><span class="tab-inicio-bola"><svg class="ico" aria-hidden="true"><use href="#i-lancar"/></svg></span>Lançar</a>
     <a href="#mes" data-tab="mes"><svg class="ico" aria-hidden="true"><use href="#i-mes"/></svg>Mês</a>
     <a href="#inicio" data-tab="inicio" aria-current="page"><svg class="ico" aria-hidden="true"><use href="#i-inicio"/></svg>Início</a>
+      <div class="nav-resumo"><small class="muted">Saldo em contas</small><strong id="nav-saldo">—</strong><span id="nav-fogo"></span></div>
   </nav>
   <button type="button" class="me-ajuda" id="me-ajuda" aria-label="Me ajuda: o C.A.O.S. te guia"><svg class="ico" aria-hidden="true"><use href="#i-ajuda"/></svg><span class="me-ajuda-txt"> Me ajuda</span></button>
 
