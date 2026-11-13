@@ -28,6 +28,16 @@ Atualizada pelo Wally a cada rodada.
   - Criar mais avatares onde fizer sentido, por exemplo **"espantado"**: o susto com um valor absurdo, tipo "R$ 17 mil
     na Cacau Show?". Ele reage ao "valor fora do normal".
   - O que for traço dele vai pro núcleo, com o ok do JF e aviso ao Code.
+- **Contas em outras moedas (ideia do JF, 13/11):** conta global em dólar ou euro (C6 em dólar e euro, Inter em dólar,
+  PicPay em dólar e euro desde nov/2025) e o **Meli Dólar** do Mercado Pago. O Meli Dólar é uma stablecoin, uma moeda
+  digital (cripto) atrelada ao dólar, comprada com o saldo em reais dentro do app; não é conta bancária e não serve pra
+  pagar no exterior.
+  - **Plano:** campo `moeda` na conta (BRL, USD, EUR ou Meli Dólar), saldo guardado na moeda dela e mostrado
+    "US$ 120,00 ≈ R$ 650,00 (cotação de dd/mm)".
+  - **Cotação:** a do servidor (mercado, todo dia útil) quando estiver no ar; antes disso, a pessoa informa.
+  - **Total em reais:** soma com a cotação do dia, avisando que é estimativa.
+  - **Avisos:** saldo em moeda estrangeira não tem FGC; o Meli Dólar é cripto. O C.A.O.S. explica no glossário.
+  - Lançar gasto em outra moeda fica pra depois.
 - **Tela de carregamento** ao abrir o app, com área de login: um respiro curto, não demora. Nada de abrir de forma
   instantânea e seca.
 
