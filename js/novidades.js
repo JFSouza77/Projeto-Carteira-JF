@@ -7,6 +7,19 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.27',
+    data: '13/11/2026',
+    nome: 'Estúdio do C.A.O.S.',
+    t: 'Na aba C.A.O.S., o botão Estúdio abre um cantinho pra aprender sobre dinheiro no seu ritmo.',
+    itens: [
+      '📚 Glossário com busca: 60 palavras do dinheiro explicadas sem complicar, do Pix ao CDI.',
+      '🧮 Calculadora de juros: mexa no valor, na taxa e no tempo e compare simples com compostos.',
+      '🕰️ Linha do tempo: a história do C.A.O.S., do Perfil JF até aqui.',
+      '⚖️ As 3 leis: as regras que o C.A.O.S. nunca quebra.',
+    ],
+    qol: [],
+  },
+  {
     v: '1.26',
     data: '13/11/2026',
     nome: 'Dinheiro que Muda de Lugar',

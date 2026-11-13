@@ -223,11 +223,39 @@
     <header class="topbar chat-top">
       <span class="caos-face small" id="chat-face" aria-hidden="true">(•‿•)</span>
       <h1>C.A.O.S. <small id="chat-mood" class="muted"></small></h1>
+      <button class="ghost small estudio-btn" id="estudio-btn" type="button" aria-pressed="false" aria-controls="estudio"><svg class="ico" aria-hidden="true"><use href="#i-livro"/></svg> Estúdio</button>
       <button class="icon-btn" id="chat-clear" aria-label="Limpar conversa"><svg class="ico" aria-hidden="true"><use href="#i-limpar"/></svg></button>
     </header>
     <main class="chat">
       <ol class="chat-log" id="chat-log" aria-live="polite"></ol>
       <div class="chips scroll" id="chat-suggestions"></div>
+    </main>
+    <main class="estudio" id="estudio" hidden>
+      <section class="card">
+        <h2>Glossário</h2>
+        <p class="muted small">Palavras do dinheiro explicadas sem complicar. <span id="glos-total"></span></p>
+        <input id="glos-busca" type="search" placeholder="Procurar (ex.: juros, Pix, CDI)" aria-label="Procurar no glossário">
+        <div class="glos-lista" id="glos-lista"></div>
+      </section>
+      <section class="card">
+        <h2>Calculadora de juros</h2>
+        <p class="muted small">Mexa nos valores e veja a diferença entre juros simples e compostos.</p>
+        <div class="calc-grid">
+          <label class="field"><span>Valor (R$)</span><input id="calc-valor" type="text" inputmode="decimal" value="1.000"></label>
+          <label class="field"><span>Taxa (%)</span><input id="calc-taxa" type="number" inputmode="decimal" min="0" max="100" step="0.1" value="1"></label>
+          <label class="field"><span>A taxa é</span><select id="calc-periodo"><option value="mes">ao mês</option><option value="ano">ao ano</option></select></label>
+        </div>
+        <label class="field calc-meses"><span>Tempo: <b id="calc-meses-txt">12 meses</b></span><input id="calc-meses" type="range" min="1" max="120" value="12"></label>
+        <div class="calc-res" id="calc-res" aria-live="polite"></div>
+      </section>
+      <section class="card">
+        <h2>As 3 leis do C.A.O.S.</h2>
+        <ol class="leis" id="leis"></ol>
+      </section>
+      <section class="card">
+        <h2>Minha linha do tempo</h2>
+        <ol class="linha-tempo" id="linha-tempo"></ol>
+      </section>
     </main>
     <form class="chat-bar" id="chat-form" autocomplete="off">
       <label class="icon-btn" aria-label="Mandar foto"><svg class="ico" aria-hidden="true"><use href="#i-clipe"/></svg><input type="file" id="chat-photo" accept="image/*" hidden></label>
