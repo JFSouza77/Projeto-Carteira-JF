@@ -836,3 +836,14 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .rosca-leg .num { margin-left: auto; color: var(--muted); }
 .rosca-leg .ponto { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 @media (max-width: 380px) { .cat-rosca { grid-template-columns: 1fr; justify-items: center; } }
+
+/* Lançar colorido (V2 do AI Studio, 13/11) */
+.valor-rapido { margin-top: -4px; display: grid; grid-template-columns: repeat(5, 1fr) 1.3fr; gap: 6px; }
+.valor-rapido .chip { min-width: 0; padding-left: 4px; padding-right: 4px; justify-content: center; font-size: .85rem; font-variant-numeric: tabular-nums; }
+.valor-rapido .chip.limpar { color: var(--muted); }
+.chip.colorido .ico { color: var(--cor-chip); }
+.chip.colorido[aria-checked="true"] { background: color-mix(in srgb, var(--cor-chip) 16%, var(--card)); color: var(--text);
+  border-color: var(--cor-chip); box-shadow: 0 0 12px -4px var(--cor-chip), inset 0 0 0 1px var(--cor-chip); }
+.chip.colorido[aria-checked="true"] .ico { color: var(--cor-chip); }
+#entry-form[data-kind="entrada"] #submit-btn { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok);
+  box-shadow: inset 0 0 0 1.5px var(--ok), 0 0 14px -3px color-mix(in srgb, var(--ok) 70%, transparent); }

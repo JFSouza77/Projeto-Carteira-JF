@@ -208,6 +208,9 @@
             <span>R$</span>
             <input id="amount" name="amount" type="text" inputmode="decimal" placeholder="0,00" aria-label="Valor" required>
           </label>
+          <div class="chips valor-rapido" id="valor-rapido" aria-label="Somar ao valor">
+            <button type="button" class="chip" data-somar="1000">+10</button><button type="button" class="chip" data-somar="2000">+20</button><button type="button" class="chip" data-somar="5000">+50</button><button type="button" class="chip" data-somar="10000">+100</button><button type="button" class="chip" data-somar="20000">+200</button><button type="button" class="chip limpar" data-somar="0">Limpar</button>
+          </div>
           <div class="chips" id="category-chips" role="radiogroup" aria-label="Categoria"></div>
           <p class="sugestao" id="cat-sugestao" hidden></p>
           <div class="row">

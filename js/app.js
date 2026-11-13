@@ -639,13 +639,14 @@ function renderLancar() {
   $('#category-chips').setAttribute('aria-label', gasto ? 'Categoria' : 'De onde veio');
   $('#racha-box').hidden = !gasto;
   $('#category-chips').innerHTML = opcoes.map(c => `
-    <button type="button" class="chip" role="radio" aria-checked="${c.id === sel}" data-cat="${esc(c.id)}">${gasto ? icCat(c) : icFonte(c)} ${esc(c.name)}</button>`).join('');
+    <button type="button" class="chip colorido" style="--cor-chip:${gasto ? corCategoria(c.id) : corFonte(c.id)}" role="radio" aria-checked="${c.id === sel}" data-cat="${esc(c.id)}">${gasto ? icCat(c) : icFonte(c)} ${esc(c.name)}</button>`).join('');
+  $('#entry-form').dataset.kind = gasto ? 'gasto' : 'entrada';
   $('#submit-btn').textContent = gasto ? 'Adicionar gasto' : 'Adicionar entrada';
   // Pagou como? (P8): a forma escolhe que contas aparecem e o que mais perguntar
   const forma = gasto ? state.forma : null;
   $('#forma-field').hidden = !gasto;
   $('#forma-chips').innerHTML = Object.entries(FORMAS_PAGAMENTO).map(([id, nome]) =>
-    `<button type="button" class="chip" role="radio" aria-checked="${id === forma}" data-forma="${id}">${ic(ICONE_FORMA[id])} ${esc(nome.replace(/^\S+\s/, ''))}</button>`).join('');
+    `<button type="button" class="chip colorido" style="--cor-chip:${corForma(id)}" role="radio" aria-checked="${id === forma}" data-forma="${id}">${ic(ICONE_FORMA[id])} ${esc(nome.replace(/^\S+\s/, ''))}</button>`).join('');
   const filtro = !gasto ? a => a.tipo !== 'cartao' // entrada não cai no cartão de crédito
     : forma === 'credito' ? a => a.tipo === 'cartao'
     : forma ? a => a.tipo !== 'cartao' : () => true;
@@ -2475,6 +2476,14 @@ function bind() {
     if (state.kind === 'gasto') { state.selectedCategory = b.dataset.cat; state.catSugerida = false; $('#cat-sugestao').hidden = true; }
     else state.selectedSource = b.dataset.cat;
     renderLancar();
+  });
+  // valor rápido (V2 do AI Studio, 13/11): soma ao que já está digitado; Limpar zera
+  $('#valor-rapido').addEventListener('click', e => {
+    const b = e.target.closest('[data-somar]');
+    if (!b) return;
+    const soma = Number(b.dataset.somar);
+    $('#amount').value = soma ? centsToInput((parseAmount($('#amount').value) || 0) + soma) : '';
+    $('#amount').dispatchEvent(new Event('input', { bubbles: true }));
   });
   $('#forma-chips').addEventListener('click', e => {
     const b = e.target.closest('[data-forma]');
