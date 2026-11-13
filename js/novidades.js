@@ -7,6 +7,19 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.21',
+    data: '13/11/2026',
+    nome: 'Nada Passa Batido',
+    t: 'Lançamento esquecido, assinatura que cai no fim do mês e assinatura que você nem usa mais.',
+    itens: [
+      '🙈 Esqueci de lançar: fala isso pro C.A.O.S. que ele pergunta quanto, em quê e quando.',
+      '📆 Data no lançamento: "gastei 50 ontem" ou "paguei a luz dia 10" já vão com a data certa.',
+      '🔮 Previsão completa: contas fixas e assinaturas que ainda vão cair no mês já entram na previsão.',
+      '🧹 Auditor de assinaturas: no começo do mês ele pergunta se uma assinatura ainda vale a pena.',
+    ],
+    qol: [],
+  },
+  {
     v: '1.20',
     data: '13/11/2026',
     nome: 'Um C.A.O.S. Só',

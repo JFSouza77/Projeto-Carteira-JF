@@ -13,10 +13,9 @@ Atualizada pelo Wally a cada rodada.
 
 ## Próxima rodada (sexta 13/11)
 
-0. Núcleo único, parte 2: emoções 7 → 10 (com apelidos), depois temperamento do dia e estabilizador (JF aprovou 12/11).
-1. P9: cobranças atrasadas (assinatura perto do dia 20 entra na previsão), "esqueci de lançar", Auditor de assinaturas.
-2. P12: revisão de cada tela (cabeçalho igual em todas, "Me ajuda" sem tampar conteúdo).
-3. Professor de finanças: glossário offline (~60 termos), explicação em camadas, "vale a pena parcelar?",
+0. Núcleo único, parte 3: temperamento do dia, estabilizador e paciência (emoções 7 → 10 já foram, 1.20).
+1. P12: revisão de cada tela (cabeçalho igual em todas, "Me ajuda" sem tampar conteúdo).
+2. Professor de finanças: glossário offline (~60 termos), explicação em camadas, "vale a pena parcelar?",
    calculadora de juros simples e compostos.
 4. Começar a quebrar o `app.js` em um arquivo por tela (com o Code revisando o plano).
 5. Avatar: 10 formas principais (depois do teste do Code em 19/11, ou antes se o JF pedir).
