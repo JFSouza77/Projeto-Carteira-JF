@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 2.0 Alfa | 13/11/2026 | Alfa 2.0 (JF: o app já tem carga pra fase 2.0; ajustes pequenos entram aqui até a 2.0 final) |
 | 1.28 | 13/11/2026 | Início Mais Vivo |
 | 1.27 | 13/11/2026 | Estúdio do C.A.O.S. |
 | 1.26 | 13/11/2026 | Dinheiro que Muda de Lugar |

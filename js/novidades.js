@@ -7,6 +7,16 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.0 Alfa',
+    data: '13/11/2026',
+    nome: 'Alfa 2.0',
+    t: 'O app entra na fase 2.0: cara nova, gráficos vivos e neon. Esta é a Alfa, a primeira etapa.',
+    itens: [
+      '🍩 Rosca em neon: as categorias acendem como o resto do app, e a escolhida brilha mais.',
+    ],
+    qol: [],
+  },
+  {
     v: '1.28',
     data: '13/11/2026',
     nome: 'Início Mais Vivo',
