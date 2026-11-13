@@ -13,6 +13,9 @@ export const NOVIDADES = Object.freeze([
     t: 'Funções novas da repaginada, começando pela transferência entre contas.',
     itens: [
       '🔁 Transferir entre contas: em Contas, mova dinheiro da conta pra poupança ou cofrinho sem virar gasto.',
+      '🧾 Filtros no extrato: veja só gastos, só entradas ou só transferências.',
+      '👆 Toque na categoria: em "Por categoria", tocar numa delas mostra só os lançamentos dela.',
+      '📤 Exportar CSV: leve o extrato pra planilha (abre certinho no Excel e no Google Planilhas).',
     ],
     qol: [],
   },

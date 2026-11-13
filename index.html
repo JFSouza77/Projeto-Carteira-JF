@@ -138,6 +138,16 @@
         <h2 id="exp-titulo">Lançamentos do mês</h2>
         <label class="busca"><svg class="ico" aria-hidden="true"><use href="#i-lupa"/></svg>
           <input id="busca" type="search" placeholder="Buscar por nome, categoria ou valor" aria-label="Buscar lançamentos" autocomplete="off" enterkeyhint="search"></label>
+        <div class="extrato-filtros">
+          <div class="chips" id="filtro-tipo" role="radiogroup" aria-label="Mostrar">
+            <button type="button" class="chip" role="radio" data-tipo="" aria-checked="true">Todos</button>
+            <button type="button" class="chip" role="radio" data-tipo="gasto" aria-checked="false">Gastos</button>
+            <button type="button" class="chip" role="radio" data-tipo="entrada" aria-checked="false">Entradas</button>
+            <button type="button" class="chip" role="radio" data-tipo="transf" aria-checked="false">Transf.</button>
+          </div>
+          <button type="button" class="chip filtro-cat" id="filtro-cat" hidden></button>
+          <button type="button" class="ghost small" id="exportar-csv">Exportar CSV</button>
+        </div>
         <ul class="exp-list" id="exp-list"></ul>
         <p class="muted" id="exp-empty">Nenhum lançamento neste mês.</p>
       </section>

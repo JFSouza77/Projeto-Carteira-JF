@@ -688,3 +688,12 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 #transf-card[hidden] { display: none; }
 #transf-form { display: grid; gap: 10px; margin-top: 10px; }
 .exp-list li.transf .exp-emoji .ico { color: var(--muted); }
+/* extrato: filtros e CSV (13/11, repaginada) */
+.extrato-filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; }
+.extrato-filtros .chips { flex-wrap: nowrap; }
+.extrato-filtros #exportar-csv { margin-left: auto; }
+.filtro-cat[hidden] { display: none; }
+.filtro-cat { background: var(--fill); color: var(--fill-ink); box-shadow: var(--fill-glow); }
+.cat-filtra { cursor: pointer; border-radius: 10px; }
+.cat-filtra:hover, .cat-filtra:focus-visible { background: var(--card-2); }
+.cat-filtra.ativa { outline: 1.5px solid var(--accent); outline-offset: 4px; }

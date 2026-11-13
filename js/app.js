@@ -273,8 +273,9 @@ function render() {
     <li class="${a.severity}">${ic(ICONE_ALERTA[a.type] || 'i-alerta')}<span>${esc(cap(nomeAlerta(a)))}</span></li>`).join('');
 
   const rows = s.rows.filter(r => r.spentCents > 0 || r.budgetCents > 0).sort((a, b) => b.spentCents - a.spentCents);
+  // toque na categoria: filtra o extrato (13/11, repaginada)
   $('#cat-list').innerHTML = rows.length ? rows.map(r => `
-    <li>
+    <li class="cat-filtra${state.filtroCat === r.id ? ' ativa' : ''}" data-filtra-cat="${esc(r.id)}" role="button" tabindex="0" aria-label="Ver lançamentos de ${esc(r.name)}">
       <div class="cat-head">
         <span>${icCat(r)} ${esc(r.name)}</span>
         <span class="num">${formatBRL(r.spentCents)}${r.budgetCents ? `<small> / ${formatBRL(r.budgetCents)}</small>` : ''}</span>
@@ -293,7 +294,14 @@ function render() {
     ...state.expenses.filter(doMes).map(e => ({ ...e, kind: 'gasto' })),
     ...state.incomes.filter(doMes).map(i => ({ ...i, kind: 'entrada' })),
     ...state.transferencias.filter(doMes).map(t => ({ ...t, kind: 'transf' })),
-  ].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt).slice(0, busca ? 100 : Infinity);
+  ].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt)
+    .filter(x => (!state.filtroTipo || x.kind === state.filtroTipo) && (!state.filtroCat || x.categoryId === state.filtroCat))
+    .slice(0, busca ? 100 : Infinity);
+  state.extratoVisivel = lanc;
+  for (const b of document.querySelectorAll('#filtro-tipo [data-tipo]')) b.setAttribute('aria-checked', String(b.dataset.tipo === (state.filtroTipo || '')));
+  const catF = state.filtroCat && catById(state.filtroCat);
+  $('#filtro-cat').hidden = !catF;
+  if (catF) $('#filtro-cat').textContent = `${catF.name} ×`;
   $('#exp-titulo').textContent = busca ? `Busca: ${lanc.length} ${lanc.length === 1 ? 'lançamento' : 'lançamentos'}` : 'Lançamentos do mês';
   $('#exp-empty').textContent = busca ? 'Nada encontrado. Tente outra palavra ou um valor, tipo 49,90.' : 'Nenhum lançamento neste mês.';
   $('#exp-empty').hidden = lanc.length > 0;
@@ -589,6 +597,30 @@ function renderGraficos() {
 
 function nomeMesCurto(month) {
   return ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][Number(month.slice(5, 7)) - 1];
+}
+
+/** Exportar CSV (13/11, repaginada): o que está na lista agora, com ; e BOM (abre certinho no Excel e nas planilhas). */
+function exportarCSV() {
+  const linhas = state.extratoVisivel || [];
+  if (!linhas.length) return toast('Nada pra exportar com esse filtro.');
+  const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const reais = c => (c / 100).toFixed(2).replace('.', ',');
+  const corpo = linhas.map(x => {
+    const conta = x.accountId && state.accounts.find(a => a.id === x.accountId);
+    const tipo = x.kind === 'gasto' ? 'Gasto' : x.kind === 'entrada' ? 'Entrada' : 'Transferência';
+    const cat = x.kind === 'gasto' ? catById(x.categoryId)?.name : x.kind === 'entrada' ? srcById(x.sourceId)?.name : '';
+    const contaTxt = x.kind === 'transf'
+      ? `${accountLabel(state.accounts.find(a => a.id === x.deId) || { bank: '?' })} → ${accountLabel(state.accounts.find(a => a.id === x.paraId) || { bank: '?' })}`
+      : conta ? accountLabel(conta) : '';
+    const valor = x.kind === 'gasto' ? -x.amountCents : x.amountCents;
+    return [x.date, tipo, x.note || '', cat || '', contaTxt, x.forma || '', x.parcelas > 1 ? x.parcelas : '', reais(valor)].map(q).join(';');
+  });
+  const csv = '\ufeff' + ['Data;Tipo;Descrição;Categoria;Conta;Forma;Parcelas;Valor (R$)', ...corpo].join('\r\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const a = Object.assign(document.createElement('a'), { href: url, download: `caos-financas-${state.viewMonth}.csv` });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast(`Exportei ${linhas.length} ${linhas.length === 1 ? 'lançamento' : 'lançamentos'}.`);
 }
 
 /** Filtro da busca: palavra no nome/categoria/fonte/conta, ou valor ("49,90", "50" acha 50,00 e 50,xx). */
@@ -2120,6 +2152,23 @@ function bind() {
   });
   $('#painel-ocultar').addEventListener('click', () => { state.settings.painelOculto = true; saveSettings(); renderPainel(); });
   $('#painel-mostrar').addEventListener('click', () => { state.settings.painelOculto = false; saveSettings(); renderPainel(); });
+  $('#filtro-tipo').addEventListener('click', e => {
+    const b = e.target.closest('[data-tipo]');
+    if (b) { state.filtroTipo = b.dataset.tipo || null; render(); }
+  });
+  $('#filtro-cat').addEventListener('click', () => { state.filtroCat = null; render(); });
+  const filtrarCat = e => {
+    const li = e.target.closest('[data-filtra-cat]');
+    if (!li || (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ')) return;
+    e.preventDefault();
+    state.filtroCat = state.filtroCat === li.dataset.filtraCat ? null : li.dataset.filtraCat;
+    state.filtroTipo = state.filtroCat ? 'gasto' : state.filtroTipo;
+    render();
+    $('#exp-titulo').scrollIntoView({ behavior: MENOS_MOVIMENTO.matches ? 'auto' : 'smooth', block: 'start' });
+  };
+  $('#cat-list').addEventListener('click', filtrarCat);
+  $('#cat-list').addEventListener('keydown', filtrarCat);
+  $('#exportar-csv').addEventListener('click', exportarCSV);
   $('#busca').addEventListener('input', () => { clearTimeout(state.buscaTimer); state.buscaTimer = setTimeout(render, 150); });
   $('#chat-log').addEventListener('click', e => {
     const b = e.target.closest('[data-acao]');
