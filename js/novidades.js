@@ -7,6 +7,24 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.0.1 Alfa',
+    data: '13/11/2026',
+    nome: 'Cara de Marca',
+    t: 'O app ganhou abertura, letra de título nova e um C.A.O.S. que leva susto com valor estranho.',
+    itens: [
+      '✨ Abertura com a cara do app: o C.A.O.S., a frase e a versão por um instante ao abrir.',
+      '😲 C.A.O.S. espantado: valor muito fora do normal? Ele leva um susto e pergunta antes de gravar.',
+      '🆘 Me ajuda do seu jeito: arraste pra qualquer canto, e o toque abre a ajuda rápida.',
+      '🔤 Letra nova nos títulos: a mesma do Perfil JF, redonda e fácil de ler.',
+      '🎒 IA de bolso: ele ajuda e faz a conta, mas lembra que quem decide é você.',
+    ],
+    qol: [
+      '🎤 Microfone que explica: se não ouvir, diz o motivo e ensina a usar o ditado do teclado.',
+      '⏰ Lembretes arrumados: o horário cabe no cartão e tudo ficou alinhado.',
+      '🔁 Lembrete sem repetir: o aviso de que ele não é consultor aparece só uma vez por assunto.',
+    ],
+  },
+  {
     v: '2.0.0 Alfa',
     data: '13/11/2026',
     nome: 'Repaginada',

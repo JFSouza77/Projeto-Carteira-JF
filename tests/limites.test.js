@@ -35,3 +35,12 @@ test('lembrete de limites não entra em conta simples', () => {
   const r = conversar('quanto gastei este mês?', d, { now });
   assert.ok(!temLembrete(r.fala.texto));
 });
+
+test('rosto espantado: 5 jogos de 4 quadros, reação e não emoção', async () => {
+  const { ROSTO_ESPANTADO, rostoEspantado } = await import('../js/caos/rostos.js');
+  assert.equal(ROSTO_ESPANTADO.length % 5, 0);
+  for (const q of ROSTO_ESPANTADO) assert.equal(q.length, 4);
+  const r = rostoEspantado(() => 0);
+  assert.equal(r.nome, 'espantado');
+  assert.ok(!Object.keys(NUCLEO.emocoes || {}).includes('espantado'));
+});

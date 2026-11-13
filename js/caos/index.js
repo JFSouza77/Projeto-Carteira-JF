@@ -7,13 +7,14 @@ import { formatBRL, INCOME_SOURCES, daysInMonth, toISODate, idadeDe, faixaEtaria
 import { congelar, protegido } from './espinha.js';
 import { NUCLEO } from './nucleo.js';
 import { sentir, emocaoAtual, emocoesIniciais, intensidade, ROSTO } from './emocoes.js';
-import { escolherRosto, memoriaRostoInicial, rostoAnalista } from './rostos.js';
+import { escolherRosto, memoriaRostoInicial, rostoAnalista, rostoEspantado } from './rostos.js';
+export { rostoEspantado };
 import { gerarFala } from './gerador.js';
 import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '2.0.5'; // 2.0.5 (13/11): núcleo 1.4.0, IA de bolso e o lembrete de limites (1 vez por assunto)
+export const CAOS_VERSAO = '2.0.6'; // 2.0.6 (13/11): rosto espantado no valor fora do comum. 2.0.5: núcleo 1.4.0 e lembrete de limites
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
