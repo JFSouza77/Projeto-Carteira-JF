@@ -197,3 +197,4 @@ Pedido do JF: "a geladeira tá 3.500 no Mercado Livre, 3.400 na Amazon e 2.100 n
   - oferta de uma loja só: ele guarda e pergunta (já olhou em outra loja? tem cupom? desconto no cartão da loja?);
   - **print:** "mandar print" ou foto com uma comparação aberta. A IA online lê pela rota `/ia/ofertas`, e o resultado
     vira a frase que a pessoa escreveria.
+- **2.0.4 (13/11):** parcelado sem detalhe → pergunta se é sem juros, em quantas vezes e quanto é a parcela (com juros); um "sim, sem juros" solto vale pra única loja com dúvida; Pix com desconto × sem juros na mesma loja: explica quando cada um ganha.

@@ -118,3 +118,21 @@ test('cartões de loja na lista de bancos (múltiplo de 5) com cor própria', ()
   assert.equal(BANKS.length % 5, 0);
   assert.equal(temaBanco('Cartão Amazon').letra, '#FF9900');
 });
+
+test('parcelado sem detalhe: pergunta se é sem juros, em quantas vezes e quanto é a parcela (JF, 13/11)', () => {
+  const r = lerOfertas(n('geladeira 3500 no mercado livre e 3400 na amazon'));
+  let c = completarOfertas(r.ofertas, n('amazon 10x, mercado livre parcelado'));
+  let t = textoOfertas(analisarOfertas(c), 'geladeira');
+  assert.match(t, /essas 10x são sem juros/);
+  assert.match(t, /até quantas vezes sem juros/);
+  assert.doesNotMatch(t, /cabe no mês/, 'primeiro tira a dúvida');
+  // "com juros" sem a parcela: pede o valor
+  t = textoOfertas(analisarOfertas(completarOfertas(r.ofertas, n('amazon 10x com juros'))));
+  assert.match(t, /quanto fica cada parcela das 10x/);
+  // resposta solta vale pra única loja com dúvida
+  c = completarOfertas(completarOfertas(r.ofertas, n('amazon 10x')), n('sim, sem juros'));
+  assert.equal(c.find(o => o.loja === 'Amazon').semJuros, true);
+  // Pix com desconto x sem juros na mesma loja
+  t = textoOfertas(analisarOfertas(completarOfertas(r.ofertas, n('amazon 10x sem juros e 5% no pix'))));
+  assert.match(t, /à vista sai R\$\s170,00 mais barato/);
+});

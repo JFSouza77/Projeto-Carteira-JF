@@ -12,7 +12,7 @@ export const NOVIDADES = Object.freeze([
     nome: 'Repaginada',
     t: 'O app entra na fase 2.0: cara nova, gráficos vivos e neon. Esta é a Alfa, a primeira etapa.',
     itens: [
-      '🏷️ C.A.O.S. compara ofertas: escreva os preços ou mande o print; ele põe os óculos de analista e acha a melhor compra.',
+      '🏷️ C.A.O.S. compara ofertas: escreva os preços ou mande o print; ele pergunta o que falta (sem juros? quantas vezes?) e acha a melhor compra.',
       '🔍 Banco por dentro: toque no nome do banco e veja cada conta e de onde vem o limite do cartão.',
       '🐷 Cofrinhos completos: quanto rende (% do CDI) e se o dinheiro é seu ou de outra pessoa.',
       '🏦 Cores dos bancos de verdade: C6 preto, Nubank roxo, BB amarelo, Itaú laranja e muitos outros.',
