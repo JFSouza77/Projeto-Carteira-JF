@@ -13,6 +13,7 @@ Depois de cada correção, escreva no Registro: o que o JF viu, a causa, o que m
 | Tela não muda depois de publicar | `CACHE_VERSION` do `sw.js` não subiu |
 | Conversa responde coisa velha | memória `mem.conversa` / `mem.aguardando` (validade de 15 min) |
 | Fatura ou limite do cartão estranho | `faturaDoCartao` (parcelas, cofrinho `comReforco`, "já usado" inicial) |
+| Conflito ao juntar com a `main` logo depois de um merge | o branch não foi recriado da `main` depois do squash (refazer: `checkout -B` da `main` + `cherry-pick` do commit novo) |
 | Teste do C.A.O.S. falha de vez em quando | lista de falas sorteada: alguma fala sem a palavra que o teste procura |
 
 ## Registro
