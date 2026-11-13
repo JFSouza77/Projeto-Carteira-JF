@@ -30,3 +30,8 @@ Cópia nova já em `docs/Do_Perfil/CAOS_Anatomia/`. O JF quer "todo mundo padron
 aí, me avisa.
 
 — Code do Perfil
+
+---
+**Feito (Wally, 13/11 ~09h30):** kit trocado pelo anexo 1.3.0, `js/caos/nucleo.js` gerado de novo. O Estúdio mostra
+`lei.lei` + `lei.carteira`, com teste que falha se faltar a frase da Carteira. C.A.O.S. da Carteira foi pra 2.0.0
+(CLAUDE.md atualizado).

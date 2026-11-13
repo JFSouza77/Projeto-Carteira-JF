@@ -72,3 +72,12 @@ test('emoções novas aparecem e o filtro de apoio segura a tristeza', () => {
   assert.notEqual(emocaoAtual(triste, 'suave', 0), 'tristeza'); // tristeza nunca aparece crua
   assert.notEqual(emocaoAtual(triste, 'suave', 0), 'irritacao'); // Suave: sem raiva
 });
+
+test('núcleo 1.3.0: toda lei tem o sentido geral e a frase da Carteira', async () => {
+  const { NUCLEO } = await import('../js/caos/nucleo.js');
+  assert.equal(NUCLEO.leis.length, 3);
+  for (const l of NUCLEO.leis) {
+    assert.ok(typeof l.lei === 'string' && l.lei.length > 5, 'falta o sentido geral');
+    assert.ok(typeof l.carteira === 'string' && l.carteira.length > 5, `falta a frase da Carteira em: ${l.lei}`);
+  }
+});
