@@ -51,7 +51,6 @@ test('backup com gasto inválido é recusado (valor, data, mês, categoria, cont
     e => { e.date = '2026-02-30'; e.month = '2026-02'; },
     e => { e.month = '2026-10'; },
     e => { e.categoryId = 'nao-existe'; },
-    e => { e.accountId = 'conta-fantasma'; },
     e => { e.compromissoId = 'comp-fantasma'; },
     e => { e.id = '<b>'; },
   ]) {

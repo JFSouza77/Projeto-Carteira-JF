@@ -456,7 +456,7 @@ export function rendimentoEstimado(saldoCents, rendeCdiPct, cdiAnualPct) {
  * e cada cofrinho que soma nele.
  */
 export function raioXCartao(cartao, accounts = [], expenses = [], incomes = [], transferencias = []) {
-  const cofrinhos = accounts.filter(a => a.reforcaCartaoId === cartao.id && a.tipo !== 'cartao')
+  const cofrinhos = accounts.filter(a => a.reforcaCartaoId === cartao.id && a.tipo !== 'cartao' && a.subtipo === 'cofrinho')
     .map(a => ({ id: a.id, conta: a, saldoCents: Math.max(0, accountBalance(a, expenses, incomes, transferencias)) }));
   const doCofrinhoCents = cofrinhos.reduce((t, c) => t + c.saldoCents, 0);
   return { limiteCartaoCents: cartao.limiteCents, cofrinhos, doCofrinhoCents, limiteTotalCents: cartao.limiteCents + doCofrinhoCents };
@@ -508,7 +508,7 @@ export function agruparPorBanco(accounts) {
 /** Cartão com o reforço dos cofrinhos ligados a ele (o valor guardado aumenta o limite). */
 export function comReforco(cartao, accounts = [], expenses = [], incomes = [], transferencias = []) {
   if (!cartao || cartao.tipo !== 'cartao') return cartao;
-  const reforcoCents = accounts.filter(a => a.reforcaCartaoId === cartao.id && a.tipo !== 'cartao')
+  const reforcoCents = accounts.filter(a => a.reforcaCartaoId === cartao.id && a.tipo !== 'cartao' && a.subtipo === 'cofrinho')
     .reduce((t, a) => t + Math.max(0, accountBalance(a, expenses, incomes, transferencias)), 0);
   return reforcoCents ? { ...cartao, reforcoCents } : cartao;
 }
@@ -552,6 +552,8 @@ export function createTransferencia({ deId, paraId, amountCents, date, note = ''
   for (const c of [deId, paraId]) {
     const a = accounts.find(x => x.id === c);
     if (!a || a.tipo === 'cartao') throw new Error('Transferência é só entre contas (cartão de crédito não entra).');
+    // dinheiro guardado pra outra pessoa (achado do GPT, 13/11): mexer nele pelo app faria ele "virar seu" no saldo
+    if (a.paraQuem) throw new Error(`Essa conta guarda dinheiro de ${a.paraQuem}: atualize o saldo dela direto, sem transferir.`);
   }
   const day = date || toISODate(now);
   if (!isValidISODate(day)) throw new Error('Data inválida.');
@@ -983,7 +985,15 @@ export function validarBackup(bruto) {
         || ![a.fechamentoDia, a.vencimentoDia].every(d => Number.isInteger(d) && d >= 1 && d <= 31)))) erro(`Conta ${i + 1} do backup está com dado inválido.`);
   });
   const contaIds = unicos(accounts.filter(obj), 'conta');
-  const contaOk = id => id == null || contaIds.has(id);
+  // conta removida (achado do GPT, 13/11): o app promete manter os lançamentos dela, então um lançamento que aponta pra
+  // uma conta que não existe mais é aceito (só deixa de contar no saldo). O formato do id continua conferido.
+  const contaOk = id => id == null || (typeof id === 'string' && ID_RE.test(id));
+  // cofrinho que aumenta limite: tem que ser cofrinho e apontar pra um cartão que existe (achado do GPT, 13/11)
+  const cartaoIds = new Set(accounts.filter(a => obj(a) && a.tipo === 'cartao').map(a => a.id));
+  accounts.forEach((a, i) => {
+    if (obj(a) && a.reforcaCartaoId != null && contaIds.has(a.reforcaCartaoId)
+      && (a.tipo === 'cartao' || a.subtipo !== 'cofrinho' || !cartaoIds.has(a.reforcaCartaoId))) erro(`Conta ${i + 1} do backup aumenta um limite que não pode (só cofrinho, só de cartão).`);
+  });
 
   compromissos.forEach((c, i) => {
     const dia = c?.dia;
@@ -1042,6 +1052,9 @@ export function validarBackup(bruto) {
     if (!obj(p) || !textoOuNada(p.nome, 40) || !textoOuNada(p.apelido, 40) || !['descontraido', 'formal', undefined].includes(p.tratamento)
       || !(p.foco == null || (Array.isArray(p.foco) && p.foco.length <= 10 && p.foco.every(f => texto(f, 40))))
       || !(p.aniversario == null || isValidISODate(p.aniversario))
+      || !(p.cdiAnualPct == null || (typeof p.cdiAnualPct === 'number' && p.cdiAnualPct > 0 && p.cdiAnualPct < 100))
+      || !(p.cdiEm == null || Number.isFinite(p.cdiEm))
+      || !(p.orcamentoDiarioCents == null || centavos(p.orcamentoDiarioCents, 1))
       || !(p.diasSemGasto == null || (Array.isArray(p.diasSemGasto) && p.diasSemGasto.length <= 400 && p.diasSemGasto.every(isValidISODate)))) erro('O perfil do backup está com dado inválido.');
     else perfil = { ...p };
   }
@@ -1051,7 +1064,9 @@ export function validarBackup(bruto) {
   return {
     ok: true, erros: [],
     dados: {
-      categories: copia(categories), expenses: copia(expenses), incomes: copia(incomes), accounts: copia(accounts),
+      categories: copia(categories), expenses: copia(expenses), incomes: copia(incomes),
+      // cofrinho que aumentava um cartão que não existe mais: solta o vínculo
+      accounts: copia(accounts).map(a => (a.reforcaCartaoId != null && !contaIds.has(a.reforcaCartaoId) ? { ...a, reforcaCartaoId: null } : a)),
       compromissos: copia(compromissos), planos: copia(planos), metas: copia(metas), investimentos: copia(investimentos), transferencias: copia(transferencias), perfil,
     },
   };

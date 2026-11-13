@@ -25,6 +25,9 @@ test('backup guarda e confere as transferências', () => {
   const ok = validarBackup({ app: 'carteira-jf', version: 1, categories: DEFAULT_CATEGORIES, expenses: [], accounts: [cc, poup], transferencias: [t] });
   assert.ok(ok.ok, ok.erros?.join(' '));
   assert.equal(ok.dados.transferencias.length, 1);
-  const ruim = validarBackup({ app: 'carteira-jf', version: 1, categories: DEFAULT_CATEGORIES, expenses: [], accounts: [cc], transferencias: [{ ...t, paraId: 'nao-existe' }] });
+  // conta removida (13/11): a transferência pra ela continua no histórico e o backup ainda restaura
+  const orfa = validarBackup({ app: 'carteira-jf', version: 1, categories: DEFAULT_CATEGORIES, expenses: [], accounts: [cc], transferencias: [{ ...t, paraId: 'nao-existe' }] });
+  assert.equal(orfa.ok, true);
+  const ruim = validarBackup({ app: 'carteira-jf', version: 1, categories: DEFAULT_CATEGORIES, expenses: [], accounts: [cc], transferencias: [{ ...t, paraId: '<b>' }] });
   assert.equal(ruim.ok, false);
 });

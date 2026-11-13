@@ -587,7 +587,7 @@ async function recebi(expenseId, pessoaId) {
 
 // ---------- Transferência entre contas (13/11, repaginada) ----------
 function renderTransf() {
-  const contas = state.accounts.filter(a => a.tipo !== 'cartao');
+  const contas = state.accounts.filter(a => a.tipo !== 'cartao' && !a.paraQuem); // dinheiro de outra pessoa não entra (achado do GPT, 13/11)
   $('#transf-card').hidden = contas.length < 2;
   const opts = opcoesDeConta(a => a.tipo !== 'cartao').replace('<option value="">Sem conta</option>', '');
   for (const sel of ['#transf-de', '#transf-para']) { const v = $(sel).value; $(sel).innerHTML = opts; if (contas.some(a => a.id === v)) $(sel).value = v; }
@@ -1676,7 +1676,14 @@ function itemConta(a) {
 const raioXAberto = new Set();
 
 function raioXDoBanco(g) {
-  const cdi = state.perfil?.cdiAnualPct || null;
+  // CDI: o mais recente entre o que a pessoa digitou e o do servidor (mercado, atualizado todo dia útil)
+  const manual = state.perfil?.cdiAnualPct ? { v: state.perfil.cdiAnualPct, em: state.perfil.cdiEm || 0 } : null;
+  const doMercado = Number(state.mercado?.cdi?.valor) > 0 ? { v: Number(state.mercado.cdi.valor), em: Date.parse(state.mercado.atualizadoEm) || 0 } : null;
+  const fonte = [manual, doMercado].filter(Boolean).sort((a, b) => b.em - a.em)[0] || null;
+  const cdi = fonte?.v || null;
+  // data do CDI (achado do GPT, 13/11): a taxa muda; depois de 30 dias avisa que pode estar velha
+  const cdiEm = fonte?.em || null;
+  const cdiVelho = !!(cdi && (!cdiEm || Date.now() - cdiEm > 30 * 864e5));
   const linhas = g.contas.map(a => {
     if (a.tipo === 'cartao') {
       const r = raioXCartao(a, state.accounts, state.expenses, state.incomes, state.transferencias);
@@ -1706,7 +1713,7 @@ function raioXDoBanco(g) {
   const temCdi = g.contas.some(a => a.rendeCdiPct);
   return `<div class="raio-x" id="rx-${esc(g.bank)}">
     <ul class="rx-lista">${linhas}</ul>
-    ${temCdi ? `<p class="rx-cdi muted">${cdi ? `Conta feita com o CDI de ${String(cdi).replace('.', ',')}% ao ano. É uma estimativa.` : 'Pra eu estimar quanto rende, me diga o CDI de hoje.'} <button type="button" class="ghost small" data-cdi>${cdi ? 'Mudar o CDI' : 'Informar o CDI'}</button></p>` : ''}
+    ${temCdi ? `<p class="rx-cdi muted${cdiVelho ? ' velho' : ''}">${cdi ? `Estimativa com o CDI de ${String(cdi).replace('.', ',')}% ao ano${cdiEm ? `, informado em ${new Date(cdiEm).toLocaleDateString('pt-BR')}` : ''}.${cdiVelho ? ' Faz mais de um mês: confira se mudou.' : ''}` : 'Pra eu estimar quanto rende, me diga o CDI de hoje.'} <button type="button" class="ghost small" data-cdi>${cdi ? 'Mudar o CDI' : 'Informar o CDI'}</button></p>` : ''}
   </div>`;
 }
 
@@ -1767,7 +1774,7 @@ async function informarCdi() {
   if (r == null) return;
   const v = Number(r.trim().replace(',', '.').replace('%', ''));
   if (!(v > 0 && v < 100)) return toast('Digite só o número, ex.: 10,65.');
-  state.perfil = { ...(state.perfil || {}), cdiAnualPct: Math.round(v * 100) / 100 };
+  state.perfil = { ...(state.perfil || {}), cdiAnualPct: Math.round(v * 100) / 100, cdiEm: Date.now() };
   await db.setMeta('perfil', state.perfil);
   renderContas();
   toast(`CDI anotado: ${String(state.perfil.cdiAnualPct).replace('.', ',')}% ao ano.`);
@@ -1906,6 +1913,12 @@ async function onRemoveAccount(id) {
   if (!a || !confirm(`Remover ${accountLabel(a)}? Os lançamentos continuam, só deixam de contar no saldo.`)) return;
   await db.remove(db.STORES.accounts, id);
   state.accounts = state.accounts.filter(x => x.id !== id);
+  // cartão removido: os cofrinhos que aumentavam o limite dele deixam de apontar pra ele (achado do GPT, 13/11)
+  for (const c of state.accounts.filter(x => x.reforcaCartaoId === id)) {
+    const solto = { ...c, reforcaCartaoId: null };
+    await db.put(db.STORES.accounts, solto);
+    state.accounts = state.accounts.map(x => (x.id === c.id ? solto : x));
+  }
   renderContas();
   renderLancar();
   render();
@@ -2014,13 +2027,14 @@ async function importBackup(file) {
     if (!v.ok) throw new Error(`Não importei: ${v.erros[0]}`);
     const d = v.dados;
     if (!confirm(`Substituir os dados atuais por ${d.expenses.length} gastos, ${d.incomes.length} entradas, ${d.accounts.length} contas e ${d.compromissos.length} compromissos do backup?`)) return;
-    await db.replaceAll({ expenses: d.expenses, categories: d.categories, incomes: d.incomes, accounts: d.accounts, compromissos: d.compromissos, planos: d.planos });
-    Object.assign(state, { expenses: d.expenses, categories: d.categories, incomes: d.incomes, accounts: d.accounts, compromissos: d.compromissos, planos: d.planos });
-    if (d.perfil) { state.perfil = d.perfil; await db.setMeta('perfil', d.perfil); renderPerfil(); }
-    await salvarMetas(d.metas);
-    await salvarInvestimentos(d.investimentos);
-    state.transferencias = d.transferencias || [];
-    await db.setMeta('transferencias', state.transferencias);
+    // tudo numa gravação só (achado do GPT, 13/11): ou entra o backup inteiro, ou nada muda; a tela só troca depois
+    await db.replaceAll({ expenses: d.expenses, categories: d.categories, incomes: d.incomes, accounts: d.accounts, compromissos: d.compromissos, planos: d.planos },
+      { perfil: d.perfil, metas: d.metas, investimentos: d.investimentos, transferencias: d.transferencias || [] });
+    Object.assign(state, { expenses: d.expenses, categories: d.categories, incomes: d.incomes, accounts: d.accounts, compromissos: d.compromissos, planos: d.planos,
+      metas: d.metas, investimentos: d.investimentos, transferencias: d.transferencias || [] });
+    // backup sem perfil (decisão do Wally, 13/11): mantém quem você é neste aparelho (nome, aniversário, selo)
+    if (d.perfil) { state.perfil = d.perfil; renderPerfil(); }
+    renderMetas(); renderInvestimentos();
     renderLancar();
     renderBudgets();
     render();

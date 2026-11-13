@@ -12,7 +12,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '2.0.0'; // núcleo 1.3.0 (13/11): regra do 9, número próprio do C.A.O.S.
+export const CAOS_VERSAO = '2.0.1'; // núcleo 1.3.0 (13/11): regra do 9, número próprio do C.A.O.S.
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -235,12 +235,23 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   // Pergunta ou pedido diferente não completa nada (o rascunho só cai fora).
   const tx = String(texto).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   const cancela = /^(cancela|cancelar|deixa|deixa pra (la|depois)|esquece|nao quero|depois)\b/.test(tx);
-  if (espera && ['esqueci', 'valor_gasto'].includes(espera.tipo) && cancela) {
+  if (espera && ['esqueci', 'valor_gasto', 'desc_gasto'].includes(espera.tipo) && cancela) {
     intencao = { ...intencao, intent: 'pagamento_resposta', resposta: { fato: 'Tranquilo, não anotei nada. Quando lembrar, é só me falar.', cru: true, sugestoes: [] }, palpite: false };
   } else if (espera?.tipo === 'esqueci' && ['nao_entendi', 'registrar_gasto', 'gasto_sem_valor'].includes(intencao.intent) && !/\?/.test(tx)) {
     const t2 = /^(gastei|paguei|comprei)\b/.test(intencao.t) ? intencao.t : `gastei ${intencao.t}`;
-    if (intencao.valor) intencao = { ...intencao, t: t2, intent: 'registrar_gasto', palpite: false };
+    // só o valor ("79,90"), sem dizer em quê (achado do GPT, 13/11): não inventa "Outros"; guarda o valor e pergunta
+    const soValor = intencao.valor && !intencao.categoria && !/[a-z]{3,}/.test(tx.replace(/\b(r\$|reais|real|conto|pila|gastei|paguei|comprei|foi|uns?|umas?)\b/g, ''));
+    if (soValor) {
+      intencao = { ...intencao, intent: 'pagamento_resposta', palpite: false, resposta: {
+        fato: `Guardei os ${formatBRL(intencao.valor)} aqui no rascunho. Foi em quê? Tipo "mercado", "uber" ou "farmácia". Se foi outro dia, junta a data: "farmácia ontem".`,
+        cru: true, sugestoes: ['Mercado', 'Delivery', 'Transporte', 'Deixa pra depois'], aguardar: { tipo: 'desc_gasto', valor: intencao.valor } } };
+    } else if (intencao.valor) intencao = { ...intencao, t: t2, intent: 'registrar_gasto', palpite: false };
     else if (intencao.categoria || intencao.intent !== 'nao_entendi') intencao = { ...intencao, t: t2, intent: 'gasto_sem_valor', palpite: false };
+  } else if (espera?.tipo === 'desc_gasto' && !/\?/.test(tx)) {
+    // resposta do "foi em quê?": junta com o valor guardado e vira a proposta (a pessoa ainda confirma)
+    const reais = (espera.valor / 100).toFixed(2).replace('.', ',');
+    const junto = entender(`gastei ${reais} ${texto}`, { ...d, anterior: null });
+    if (junto.valor) intencao = { ...junto, intent: 'registrar_gasto', palpite: false };
   }
   if (espera?.tipo === 'pagamento') {
     const resposta = continuarPagamento(espera.acao, texto, d);

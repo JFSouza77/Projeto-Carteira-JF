@@ -940,3 +940,4 @@ button.banco-head:hover { background: color-mix(in srgb, var(--banco-cor) 8%, tr
 [data-acc-edit] { color: var(--cyan); border-color: color-mix(in srgb, var(--cyan) 45%, var(--line)) !important; }
 #conta-dialog .erro { color: var(--danger); margin: 0; }
 #cd-reforca-campo[hidden], #cd-quem-campo[hidden] { display: none; }
+.rx-cdi.velho { color: var(--warn); }

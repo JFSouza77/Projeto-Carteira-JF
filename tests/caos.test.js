@@ -234,7 +234,10 @@ test('entende "C.A.O.S." com pontinhos e o "não posso" fica com o sentido certo
   assert.equal(entender('O que significa C.A.O.S.?', { categories: cats }).intent, 'significado');
   const t = conversar('o que você pode fazer?', dados(), { now: NOW, today: hoje }).fala.texto;
   assert.match(t, /Não posso gravar, apagar ou mudar nada sozinho, nem acessar seu banco/);
-  assert.match(t, /seus dados ficam no seu aparelho: não mando pra ninguém/);
+  // privacidade (achado do GPT, 13/11): sem promessa absoluta; diz o que vai quando a IA online opcional está ligada
+  assert.match(t, /lançamentos ficam no seu aparelho/);
+  assert.match(t, /IA online \(é opcional\)/);
+  assert.doesNotMatch(t, /não mando pra ninguém/);
 });
 
 import { escolherRosto, escada, EMOS } from '../js/caos/rostos.js';
@@ -443,4 +446,25 @@ test('bancos: ajuda na hora com a conta do CDI e pede o servidor pra comparaçã
 
 test('todas as 5 frases de aviso do mercado deixam claro que não é recomendação garantida', () => {
   for (const f of GERADORES.aviso_mercado.inteira.geral) assert.match(f, /recomendação|garant|consultor|errar|profissional/i, f);
+});
+
+test('"esqueci de lançar" + só o valor: pergunta "em quê?" antes de propor; depois junta (achado do GPT, 13/11)', () => {
+  const d = dados();
+  let r = conversar('esqueci de lançar um gasto', d, { now: NOW, today: hoje });
+  r = conversar('79,90', d, { now: NOW + 1000, today: hoje, memory: r.memoria });
+  assert.equal(r.fala.acao, null, 'não pode propor sem saber em quê');
+  assert.match(r.fala.texto, /Foi em quê/);
+  r = conversar('farmácia ontem', d, { now: NOW + 2000, today: hoje, memory: r.memoria });
+  // com contas cadastradas ele ainda pergunta "como pagou?": a proposta fica guardada no rascunho até lá
+  const acao = r.fala.acao || r.memoria.aguardando?.acao;
+  assert.equal(acao?.tipo, 'registrar_gasto');
+  assert.equal(acao.amountCents, 7990);
+  assert.notEqual(acao.categoryId, 'outros');
+  assert.notEqual(acao.date, hoje, 'ontem é ontem');
+  // e dá pra desistir no meio
+  let c = conversar('esqueci de lançar', d, { now: NOW, today: hoje });
+  c = conversar('50', d, { now: NOW + 1000, today: hoje, memory: c.memoria });
+  c = conversar('deixa pra depois', d, { now: NOW + 2000, today: hoje, memory: c.memoria });
+  assert.equal(c.fala.acao, null);
+  assert.match(c.fala.texto, /não anotei nada/);
 });
