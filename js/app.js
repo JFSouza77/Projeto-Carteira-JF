@@ -13,7 +13,9 @@ import {
   valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, simularCompra, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta, diaEspecial } from './caos/index.js';
-import { extrairNome, textoMeta } from './caos/conversa.js';
+import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
+import { GLOSSARIO, ATUALIZADO_EM } from './caos/glossario.js';
+import { NUCLEO } from './caos/nucleo.js';
 import { NOVIDADES, VERSAO_APP, temNovidade, partesDoItem } from './novidades.js';
 import { falar, vozDisponivel, ditadoDisponivel, ouvir, setVelocidade } from './voz.js';
 import * as imagens from './imagens.js';
@@ -180,6 +182,61 @@ function irPara(tela, { lado = null } = {}) {
   }
   if (t === 'contas') renderContas();
   if (t === 'mes') renderMes();
+}
+
+// ======================================================================
+// Estúdio & Professor (fase 2 da repaginada, 13/11): glossário, calculadora, leis e linha do tempo.
+// Só leitura: os textos vêm do C.A.O.S. (glossário e núcleo); a conta vem do calcularJuros dele.
+// ======================================================================
+
+function alternarEstudio(ligar = $('#estudio').hidden) {
+  $('#estudio').hidden = !ligar;
+  $('#tela-conversa').classList.toggle('modo-estudio', ligar);
+  $('#estudio-btn').setAttribute('aria-pressed', String(ligar));
+  if (ligar) { renderEstudio(); window.scrollTo(0, 0); }
+}
+
+let estudioMontado = false;
+function renderEstudio() {
+  if (!estudioMontado) {
+    estudioMontado = true;
+    $('#leis').innerHTML = NUCLEO.leis.map(l => `<li>${esc(l.replace(/^\d+ª:\s*/, ''))}</li>`).join('');
+    const dataBR = iso => { const [a, m, d] = iso.split('-'); return `${d}/${m}/${a}`; };
+    $('#linha-tempo').innerHTML = NUCLEO.vida.map(v => `<li><small>${dataBR(v.data)}</small>${esc(v.fato)}</li>`).join('');
+  }
+  renderGlossario();
+  renderCalculadora();
+}
+
+const semAcento = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+function renderGlossario() {
+  const q = semAcento($('#glos-busca').value.trim());
+  const achados = GLOSSARIO.filter(g => !q || semAcento(g.termo).includes(q) || g.chaves.some(k => semAcento(k).includes(q)) || semAcento(g.adulto).includes(q));
+  $('#glos-total').textContent = q ? `${achados.length} de ${GLOSSARIO.length} termos.` : `${GLOSSARIO.length} termos.`;
+  $('#glos-lista').innerHTML = achados.length ? achados.map(g => `
+    <details><summary>${esc(g.termo)}</summary>
+      <p>${esc(g.adulto)}</p>
+      <p class="mais">${esc(g.mais)}</p>
+      ${g.governo ? `<p class="mais">Regra de ${esc(ATUALIZADO_EM)}: confira no canal oficial, porque muda com o tempo.</p>` : ''}
+    </details>`).join('') : '<p class="muted">Não achei esse termo. Tente outra palavra ou pergunte pro C.A.O.S. na conversa.</p>';
+}
+
+function renderCalculadora() {
+  const valor = parseAmount($('#calc-valor').value) || 0;
+  const pct = Math.max(0, Math.min(100, Number(String($('#calc-taxa').value).replace(',', '.')) || 0)) / 100;
+  const meses = Number($('#calc-meses').value);
+  const anual = $('#calc-periodo').value === 'ano';
+  $('#calc-meses-txt').textContent = meses % 12 === 0 && meses >= 12 ? `${meses} meses (${meses / 12} ${meses === 12 ? 'ano' : 'anos'})` : `${meses} ${meses === 1 ? 'mês' : 'meses'}`;
+  if (!valor) { $('#calc-res').innerHTML = '<p class="muted">Digite um valor.</p>'; return; }
+  // mesma regra da conversa: ao ano vira mensal equivalente no composto e ÷12 no simples
+  const s = calcularJuros({ tipo: 'simples', valor, taxa: anual ? pct / 12 : pct, meses });
+  const c = calcularJuros({ tipo: 'compostos', valor, taxa: anual ? Math.pow(1 + pct, 1 / 12) - 1 : pct, meses });
+  const dif = c.finalCents - s.finalCents;
+  $('#calc-res').innerHTML = `
+    <div><small>Juros simples</small><b>${formatBRL(s.finalCents)}</b><small>+ ${formatBRL(s.jurosCents)} de juros</small></div>
+    <div><small>Juros compostos</small><b>${formatBRL(c.finalCents)}</b><small>+ ${formatBRL(c.jurosCents)} de juros</small></div>
+    <p class="dif">${dif > 0 ? `A bola de neve dos compostos dá ${formatBRL(dif)} a mais. Ótimo quando você investe, perigoso quando você deve.` : 'Com esses números, as duas contas dão igual.'}</p>`;
 }
 
 // ======================================================================
@@ -2159,6 +2216,9 @@ function bind() {
   });
 
   $('#sem-gasto').addEventListener('click', hojeNaoGastei);
+  $('#estudio-btn').addEventListener('click', () => alternarEstudio());
+  $('#glos-busca').addEventListener('input', renderGlossario);
+  for (const id of ['#calc-valor', '#calc-taxa', '#calc-meses', '#calc-periodo']) $(id).addEventListener('input', renderCalculadora);
   $('#sim-parcelas').innerHTML = Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}">${i + 1 === 1 ? 'À vista' : `${i + 1}x`}</option>`).join('');
   $('#sim-form').addEventListener('submit', onSimular);
   $('#receber-list').addEventListener('click', e => {
