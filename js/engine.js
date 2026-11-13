@@ -1038,11 +1038,15 @@ export function faturaDoCartao(cartao, expenses, today = toISODate()) {
   // parcelas das próximas faturas: no modo "total" elas continuam presas no limite
   const futurasCents = soma(proxFech, '9999-12-31');
   const presoFuturoCents = soma(proxFech, '9999-12-31', doCartao.filter(e => e.modo === 'total'));
-  const fechadaCents = soma(penultFech, ultimoFech) + (criadoEm > penultFech && criadoEm <= ultimoFech ? inicial : 0);
+  // Desde o último "Paguei a fatura", tudo o que já fechou continua devendo, mesmo se passou mais de um fechamento
+  // sem marcar (achado do Gemini, 12/11). Sem nenhuma marca, conta só a última fatura fechada (não prende histórico antigo).
+  const desde = cartao.faturaPagaAte && cartao.faturaPagaAte < penultFech ? cartao.faturaPagaAte : penultFech;
+  const fechadaCents = soma(desde, ultimoFech) + (criadoEm > desde && criadoEm <= ultimoFech ? inicial : 0);
   // Fatura só é paga quando a pessoa marca "Paguei a fatura" (achado do GPT, 12/11): vencer não é pagar.
   // Antes, depois do vencimento a fatura sumia do limite mesmo sem pagamento.
   const pagaJa = !!cartao.faturaPagaAte && cartao.faturaPagaAte >= ultimoFech;
-  const atrasada = !pagaJa && today > vencimento;
+  // atrasada: venceu a última, ou ainda tem fatura de ciclo anterior sem pagar
+  const atrasada = !pagaJa && (today > vencimento || desde < penultFech);
   const usadoCents = abertaCents + (pagaJa ? 0 : fechadaCents) + presoFuturoCents;
   const limiteCents = (cartao.limiteCents || 0) + (cartao.reforcoCents || 0);
   return {

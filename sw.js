@@ -1,6 +1,6 @@
 // Service worker: app shell em cache para funcionar offline + lembretes.
 // Mudou algum arquivo abaixo? Suba CACHE_VERSION.
-const CACHE_VERSION = 'v45';
+const CACHE_VERSION = 'v46';
 const CACHE = `carteira-jf-${CACHE_VERSION}`;
 const APP_SHELL = [
   './',
@@ -120,8 +120,12 @@ async function vencendo(db, gastos) {
     const dia = Math.min(c.dia, ultimoDia);
     const falta = dia - d.getDate();
     if (falta !== 0 && falta !== 1) continue;
-    const pago = gastos.filter(e => e.compromissoId === c.id && e.month === mes).reduce((s, e) => s + e.amountCents, 0);
-    if (pago < c.valorCents) out.push(`${c.nome} vence ${falta === 0 ? 'hoje' : 'amanhã'} (${brl(c.valorCents - pago)})`);
+    // mesma regra do motor: conta sem valor fixo (0) só sai quando tem pagamento lançado (achado do Gemini)
+    const pagos = gastos.filter(e => e.compromissoId === c.id && e.month === mes);
+    const pago = pagos.reduce((s, e) => s + e.amountCents, 0);
+    if (!pagos.length || pago < c.valorCents) {
+      out.push(`${c.nome} vence ${falta === 0 ? 'hoje' : 'amanhã'}${c.valorCents > pago ? ` (${brl(c.valorCents - pago)})` : ''}`);
+    }
   }
   return out;
 }

@@ -23,6 +23,8 @@ export const NOVIDADES = Object.freeze([
       '🔢 Números na descrição: "gastei 30 no 99" guarda o 99.',
       '📆 Dia 31: em mês de 30 dias, vira o último dia do mês.',
       '☁️ Sincronização: um registro que falhou ao abrir é pedido de novo, em vez de ficar perdido.',
+      '💳 Fatura esquecida: se passar mais de um fechamento sem marcar, tudo continua no limite.',
+      '🗣️ Voz: lê valores grandes direito e fala com o jeito das emoções novas.',
     ],
   },
   {

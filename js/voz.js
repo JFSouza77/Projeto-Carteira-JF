@@ -31,13 +31,15 @@ const JEITO = {
   alegria: [1.08, 1.1], radiante: [1.1, 1.12], orgulho: [1.02, 1.05], preocupacao: [0.95, 0.97],
   protetor: [0.96, 0.97], tenso: [1.04, 0.95], irritacao: [1.05, 0.9], tedio: [0.88, 0.85],
   curiosidade: [1.02, 1.08], carinho: [0.95, 1.02], calmo: [1, 1],
+  // emoções novas do núcleo (13/11, achado do Gemini): assustado fala um pouco mais rápido e agudo; enjoado e sem graça, mais baixo
+  medo: [1.06, 1.08], nojo: [0.92, 0.9], vergonha: [0.94, 0.96],
 };
 
 export function textoParaVoz(t) {
   return String(t || '')
     .replace(/[\p{Extended_Pictographic}️‍]/gu, '')
     .replace(/C\.A\.O\.S\./g, 'Caos')
-    .replace(/R\$\s?([\d.]+),(\d{2})/g, (m, r, c) => `${r.replace(/\./g, '')} reais${c !== '00' ? ` e ${Number(c)} centavos` : ''}`)
+    .replace(/R\$\s?(\d[\d.]*)(?:,(\d{2}))?/g, (m, r, c) => `${r.replace(/\./g, '')} reais${c && c !== '00' ? ` e ${Number(c)} centavos` : ''}`)
     .replace(/(\d+)%/g, '$1 por cento')
     .replace(/\s*(?:\.{2,}|…)\s*/g, ', ')
     .replace(/\s+/g, ' ')

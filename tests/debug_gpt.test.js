@@ -57,3 +57,16 @@ test('"recebi 1500 de salário no nubank" cai na conta do Nubank', () => {
   const d = { expenses: [], incomes: [], categories: cats, accounts: [nu, cartao], compromissos: [], planos: [] };
   assert.equal(conversar('recebi 1500 de salario no nubank', d, { now: NOW, today: '2026-11-13' }).fala.acao.accountId, 'nu-1');
 });
+
+// ---- Parte 2 do Gemini (12/11) ----
+import { faturaDoCartao } from '../js/engine.js';
+
+test('fatura não paga não some quando passa mais um fechamento (desde o último "Paguei")', () => {
+  const nov = createExpense({ amountCents: 10000, categoryId: 'compras', date: '2026-11-20', accountId: 'cart-1', forma: 'credito' }, { categories: cats });
+  const c = { ...cartao, faturaPagaAte: '2026-10-05' };
+  const f = faturaDoCartao(c, [compra, nov], '2026-12-08'); // fechou 05/11 (300) e 05/12 (100): nada marcado como pago
+  assert.equal(f.fechadaCents, 40000);
+  assert.equal(f.atrasada, true);
+  const pago = faturaDoCartao({ ...cartao, faturaPagaAte: f.ultimoFechamento }, [compra, nov], '2026-12-08');
+  assert.equal(pago.fechadaCents, 0);
+});
