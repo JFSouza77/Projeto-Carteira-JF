@@ -28,6 +28,11 @@ Falta do celular: cabeçalho com rostinho e os 4 cartões de resumo.
 - ✅ Botão "Novo lançamento" no topo do Início; cartão do C.A.O.S. com dois atalhos ("Previsão do mês", "Simulador").
 
 ### Fase 2 — Funções novas
+
+**Andamento (madrugada de 13/11, 1.26 e 1.27):** feito tudo, menos "C.A.O.S. reage enquanto você preenche" (fica pra
+próxima, porque mexe no C.A.O.S. e sobe a versão dele). O simulador saiu na versão simples (valor + parcelas → sobra antes e
+depois, e em quantas vezes caberia); "planos a adiar" e "limite do cartão antes/depois" ficam pra uma melhoria. Filtro por
+forma de pagamento no extrato também ficou pra depois (hoje: tipo, categoria e busca).
 - ✅ **Transferência entre contas** (Lançar → Transferência): move dinheiro sem virar gasto nem entrada.
 - ✅ **Ritmo de gastos no mês:** acumulado real × linha ideal do orçamento/entrada.
 - ✅ **Fluxo dos últimos 6 meses em barras** (entradas × gastos) no lugar da nossa linha.
@@ -35,7 +40,7 @@ Falta do celular: cabeçalho com rostinho e os 4 cartões de resumo.
   **editar lançamento** + **Exportar CSV**.
 - ✅ **Simulador "E se eu comprar?"** na aba Mês (valor, parcelas, cartão → nova sobra, planos a adiar, limite antes/depois).
 - ✅ **Rachadinha: botão "Cobrar"** (copia mensagem pronta pro WhatsApp).
-- ✅ **C.A.O.S. reage enquanto você preenche o lançamento** (antes de salvar: "isso estoura Delivery").
+- 🕒 **C.A.O.S. reage enquanto você preenche o lançamento** (antes de salvar: "isso estoura Delivery").
 - ✅ **Estúdio & Professor** dentro da aba C.A.O.S.: glossário pesquisável, calculadoras com controles, linha do tempo e
   as 3 leis.
 - ✅ **Calendário da ofensiva** (28 dias) com "dia sem gasto" em 1 toque.
