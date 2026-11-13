@@ -13,7 +13,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '2.0.4'; // núcleo 1.3.0 (13/11): regra do 9, número próprio do C.A.O.S.
+export const CAOS_VERSAO = '2.0.5'; // 2.0.5 (13/11): núcleo 1.4.0, IA de bolso e o lembrete de limites (1 vez por assunto)
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -47,6 +47,7 @@ const COOLDOWN = {
   a_receber: 24 * 3_600_000,
 };
 const RADAR_COOLDOWN = 6 * 3_600_000;
+const LIMITES_INTERVALO = 6 * 60 * 60 * 1000; // "1 vez por conversa ou assunto" (núcleo 1.4.0)
 const ALERTAS = new Set(['cartao_limite', 'cartao_vence', 'categoria_estourada', 'orcamento_80', 'delivery_repetido', 'ritmo_alto', 'mes_negativo', 'conta_negativa', 'compromisso_vence', 'compromisso_atrasado', 'a_receber']);
 
 export function memoriaInicial(now = Date.now()) {
@@ -287,10 +288,13 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   if (retomada && fato) fato = `Sobre aquela sua pergunta ("${retomada}"): ${fato}`;
   // Melhor palpite (1.6.0): responde o que achou que era e pergunta de volta, em vez de "não entendi"
   if (intencao.palpite && fato) fato = `Acho que você quis saber isto: ${fato} Se não for, me pergunta de outro jeito.`;
-  if (resp.aviso && fato) {
-    // mercado: sempre com o lembrete de que é apoio, não recomendação
-    const av = montar('aviso_mercado', {}, { humor, emocao, mem, now, rng, perfil });
-    mem = { ...mem, gerador: av.gerador };
+  // 2.0.5 (núcleo 1.4.0, "limites"): em pergunta de decisão (investir, parcelar, qual comprar) ele ajuda e termina com
+  // o lembrete de que é IA de bolso e quem decide é a pessoa. No máximo 1 vez por assunto a cada 6 h, pra não virar
+  // robô pedindo desculpa (cuidado pedido pelo Code). O mercado usa o mesmo controle com as falas dele.
+  const assunto = resp.aviso ? 'investimento' : resp.decisao || null;
+  if (assunto && fato && !(now - ((mem.limites || {})[assunto] || 0) < LIMITES_INTERVALO)) {
+    const av = montar(resp.aviso ? 'aviso_mercado' : 'lembrete_limites', {}, { humor, emocao, mem, now, rng, perfil });
+    mem = { ...mem, gerador: av.gerador, limites: { ...(mem.limites || {}), [assunto]: now } };
     fato = `${fato} ${av.texto}`;
   }
   if (resp.alertas && resp.alertas.length) {

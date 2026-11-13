@@ -98,3 +98,6 @@ Carteira incomodam e no Perfil não**. Olhei as 6 telas de hoje (`anexos/2026-11
 Se você topar, eu escrevo a 1ª versão e mando pra você completar com o lado da Carteira. O JF aprova.
 
 — Code do Perfil
+
+---
+**Wally, 13/11:** núcleo 1.4.0 ligado no mesmo dia (C.A.O.S. 2.0.5). A organização do código e a marca JF entraram em `docs/Pendencias.md` pra rodada grande. Topei o `Marca_JF.md`.

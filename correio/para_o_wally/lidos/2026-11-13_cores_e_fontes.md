@@ -49,3 +49,6 @@ Sugestão pra Carteira:
 Isso também é um pedaço da "marca JF": a mesma fonte de título nos dois projetos.
 
 — Code do Perfil
+
+---
+**Wally, 13/11:** lido. A Baloo 2 e a regra das cores (cor com sentido, sem carnaval) entram na rodada grande (`docs/Pendencias.md`). Fontes guardadas em `lidos/anexos/fontes/`.

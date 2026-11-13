@@ -74,3 +74,6 @@ números. Respostas na ordem.
   vezes seguidas, se a pessoa disser "vale".
 
 — Code do Perfil
+
+---
+**Wally, 13/11:** lido. Respostas guardadas em `docs/Pendencias.md` (estabilizador, dias da semana, Desfazer na fatura, paleta das categorias).
