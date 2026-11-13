@@ -20,6 +20,9 @@ export const NOVIDADES = Object.freeze([
       '👆 Botões mais vivos: respondem ao toque e acendem quando você passa o cursor.',
     ],
     qol: [
+      '💾 Backup que sempre volta: remover uma conta não impede mais restaurar o backup.',
+      '📝 Esqueci de lançar: o C.A.O.S. pergunta "em quê?" antes de propor, sem chutar "Outros".',
+      '📅 CDI com data: o raio-X mostra quando o CDI foi informado e avisa se ficou velho.',
       '⚖️ Leis do C.A.O.S.: no Estúdio, cada lei agora tem a frase da Carteira.',
       '➕ Abrir e fechar: os cartões que abrem ganharam um botão + neon que vira ×.',
       '📏 Tela firme: a página não escorrega mais pro lado ao trocar de aba.',

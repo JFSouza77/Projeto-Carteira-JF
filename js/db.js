@@ -191,29 +191,36 @@ export function setMeta(key, value) {
   return put(STORES.meta, { key, value });
 }
 
-/** Troca todos os dados financeiros de uma vez (restauração de backup). Tudo ou nada. Fotos ficam como estão. */
-export async function replaceAll({ expenses, categories, incomes = [], accounts = [], compromissos = [], planos = [] }) {
+/**
+ * Troca todos os dados de uma vez (restauração de backup). Tudo ou nada (achado do GPT, 13/11): as seis listas e os
+ * metadados (perfil, metas, investimentos, transferências) vão na MESMA transação; a fila da sincronia só é marcada
+ * depois que a gravação deu certo. Fotos ficam como estão. `meta`: { chave: valor }; perfil null não apaga o perfil.
+ */
+export async function replaceAll({ expenses, categories, incomes = [], accounts = [], compromissos = [], planos = [] }, meta = {}) {
   const db = await openDB();
   const names = [STORES.expenses, STORES.categories, STORES.incomes, STORES.accounts, STORES.compromissos, STORES.planos];
-  // com conta: o que some no backup vira "apagado" nos outros aparelhos, e o que entra vai pra eles
+  const novos = { expenses, categories, incomes, accounts, compromissos, planos };
+  const metas = Object.entries(meta).filter(([k, v]) => v !== undefined && !(k === 'perfil' && v == null));
+  // com conta: o que some no backup vira "apagado" nos outros aparelhos, e o que entra vai pra eles (marcado no fim)
+  const lista = [];
   if (rastrear) {
-    const novos = { expenses, categories, incomes, accounts, compromissos, planos };
-    const lista = [];
     for (const n of names) {
       const ids = new Set(novos[n].map(x => x.id));
       for (const velho of await getAll(n)) if (!ids.has(velho.id)) lista.push({ store: n, id: velho.id, em: agora(), rec: null });
       for (const x of novos[n]) { x.atualizadoEm = agora(); lista.push({ store: n, id: x.id, em: x.atualizadoEm, rec: x }); }
     }
-    await marcar(lista);
+    for (const [k, v] of metas) if (META_SYNC.has(k)) lista.push({ store: k, id: k, em: agora(), rec: { valor: v } });
   }
-  const tx = db.transaction(names, 'readwrite');
-  const data = [expenses, categories, incomes, accounts, compromissos, planos];
-  names.forEach((n, i) => {
-    const s = tx.objectStore(n);
-    s.clear();
-    for (const x of data[i]) s.put(x);
+  const tx = db.transaction([...names, STORES.meta], 'readwrite');
+  names.forEach(n => {
+    const st = tx.objectStore(n);
+    st.clear();
+    for (const x of novos[n]) st.put(x);
   });
-  return done(tx);
+  const sm = tx.objectStore(STORES.meta);
+  for (const [key, value] of metas) sm.put({ key, value });
+  await done(tx);
+  if (lista.length) await marcar(lista);
 }
 
 /** Pede ao navegador para não apagar os dados sozinho (ajuda no iPhone). */

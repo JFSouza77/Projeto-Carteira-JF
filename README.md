@@ -5,23 +5,25 @@ Um app de controle de gastos com uma IA para te auxiliar.
 PWA offline-first (HTML + JavaScript puro) para Android e iPhone, com o **C.A.O.S.**, um narrador que comenta
 os gastos e avisa quando um orçamento aperta, sem nunca alterar os dados.
 
-## O que já faz
+## O que já faz (versão 2.0 Alfa · C.A.O.S. 2.0.1)
 
-- **Lançar gastos e entradas** (salário, freela, rendimentos…), com conta e foto do comprovante
-- **Contas bancárias:** escolhe o banco, informa o saldo, e o app acompanha o saldo estimado com os lançamentos
-- Total do mês, entradas, saldo do mês, gasto por categoria e **orçamento** com barra verde / amarela / vermelha
+- **Lançar gastos e entradas** (salário, freela, rendimentos…), com conta, forma de pagamento, parcelas, foto do
+  comprovante e **conta rachada** com os amigos (com botão "Cobrar" no WhatsApp); editar e apagar lançamentos
+- **Contas, cartões e cofrinhos:** cor e sigla de cada banco; **raio-X do banco** (toque no nome) com o que é cada conta e
+  de onde vem o limite do cartão (limite próprio + cofrinho); cofrinho com **rendimento em % do CDI**, dinheiro
+  **guardado pra outra pessoa** (fora do seu saldo), transferência entre contas, fatura do cartão e investimentos
+- **Início:** gasto do mês, **orçamento de hoje**, atalhos, ofensiva com calendário de 4 semanas, gráficos que respondem
+  ao toque (ritmo do mês, 6 meses, rosca das categorias, dias mais pesados) e extrato com busca, filtros e exportar CSV
+- **Mês:** sobra prevista, compromissos, planos, **"E se eu comprar?"**, metas com anel e **exportar o mês** (planilha ou PDF)
 - **Alertas:** orçamento em 80%, categoria estourada, ritmo acima do orçamento, saindo mais do que entrando, conta
-  no negativo, delivery repetido, dias sem anotar
-- **C.A.O.S. 1.0** (trazido do Perfil JF): emoções, falas montadas por contexto sem repetir, 3 humores (Suave é o
-  padrão), voz opcional, e **conversa**: pergunte "quanto gastei em delivery?", "tive rendimentos?", "vai dar até o
-  fim do mês?", ou diga "gastei 30 no mercado" que ele prepara o registro pra você confirmar
-- **Planejamento do mês (aba 📅 Mês):** compromissos (contas fixas, faturas, assinaturas e planos que se repetem a
-  cada N meses), planos de compra do mês e a sobra prevista; o C.A.O.S. avisa vencimentos e diz se cabe
-- **Primeiro acesso:** o C.A.O.S. pergunta seu nome e como quer ser tratado, e aprende suas categorias pelo histórico
-- **Mercado:** dólar, euro, bolsa, Selic e CDI atualizados todo dia útil às 10h pelo servidor, guardados pra usar offline
-- **Lembretes** para anotar os gastos
-- **IA online opcional** (servidor próprio no Cloudflare): lê foto de comprovante e responde perguntas livres
-- Offline, instala na tela inicial, backup em JSON
+  no negativo, cartão no limite, assinatura esquecida, dias sem anotar
+- **C.A.O.S.** (narrador com número próprio de versão; o núcleo é o mesmo do Perfil JF): 10 emoções com rostinho,
+  3 humores (Suave é o padrão), voz opcional, Estúdio com glossário e calculadora de juros, e **conversa**: "quanto gastei
+  em delivery?", "vai dar até o fim do mês?", "gastei 30 no mercado" (ele prepara o registro e você confirma). Ele nunca
+  grava nada sozinho
+- **Mercado:** dólar, euro, bolsa, Selic e CDI pelo servidor (quando ligado), guardados pra usar offline
+- **Lembretes**, **conta com sincronização ponta a ponta** (opcional), offline, instala na tela inicial, backup em JSON
+- **IA online opcional** (servidor próprio no Cloudflare): recebe só totais do mês; a foto só vai quando você pede a leitura
 
 ## Rodar no computador
 
@@ -29,7 +31,8 @@ os gastos e avisa quando um orçamento aperta, sem nunca alterar os dados.
 npm run serve
 ```
 
-Abra http://localhost:8080. Testes: `npm test` (Node 18+, sem dependências).
+Abra http://localhost:8080. Testes: `npm test` (Node 18+, sem dependências), `npm run test:telas` e
+`npm run test:macaco` (toques ao acaso em todas as telas; precisam do Playwright).
 
 ## Publicar o site (Cloudflare Pages)
 

@@ -47,7 +47,7 @@ export function textoAnatomia() {
 }
 
 export function textoPodeNaoPode() {
-  return `Eu posso ${lista(IDENTIDADE.pode)}. Não posso ${IDENTIDADE.naoPode.join(', nem ')}. E seus dados ficam no seu aparelho: não mando pra ninguém.`;
+  return `Eu posso ${lista(IDENTIDADE.pode)}. Não posso ${IDENTIDADE.naoPode.join(', nem ')}. Seus lançamentos ficam no seu aparelho. Se você ligar a IA online (é opcional), mando só os totais do mês junto com a pergunta, nunca a lista dos seus gastos; a foto só vai quando você toca em "Ler com IA".`;
 }
 
 const dataBR = iso => { const [a, m, d] = iso.split('-'); return `${Number(d)}/${Number(m)}/${a}`; };
