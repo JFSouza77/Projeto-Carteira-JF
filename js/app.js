@@ -10,7 +10,7 @@ import {
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
   TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
-  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, progressoOrcamentoDiario, simularCompra, ofensiva, MARCOS_OFENSIVA,
+  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, progressoOrcamentoDiario, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
@@ -1547,12 +1547,16 @@ function renderContas() {
   renderTransf();
   $('#bank-total').textContent = formatBRL(totalBalance(state.accounts, state.expenses, state.incomes, state.transferencias));
   $('#account-list').innerHTML = agruparPorBanco(state.accounts).map(g => {
-    const dinheiro = g.contas.filter(a => a.tipo !== 'cartao').reduce((t, a) => t + accountBalance(a, state.expenses, state.incomes, state.transferencias), 0);
+    const dinheiro = g.contas.filter(a => a.tipo !== 'cartao' && !a.paraQuem).reduce((t, a) => t + accountBalance(a, state.expenses, state.incomes, state.transferencias), 0);
     const temDinheiro = g.contas.some(a => a.tipo !== 'cartao');
     const tema = temaBanco(g.bank === 'Outro' ? (g.contas[0]?.nickname || 'Outro') : g.bank);
     return `
     <li class="banco-grupo" style="--banco-cor:${tema.cor};--banco-apoio:${tema.apoio};--banco-fundo:${tema.fundo};--banco-letra:${tema.letra}">
-      <div class="banco-head"><strong><span class="banco-sigla" aria-hidden="true">${esc(tema.sigla)}</span>${esc(g.bank === 'Outro' ? 'Outros' : g.bank)}</strong>${temDinheiro && g.contas.length > 1 ? `<span class="num muted">${formatBRL(dinheiro)} no total</span>` : ''}</div>
+      <button type="button" class="banco-head" data-raiox="${esc(g.bank)}" aria-expanded="${raioXAberto.has(g.bank)}">
+        <strong><span class="banco-sigla" aria-hidden="true">${esc(tema.sigla)}</span>${esc(g.bank === 'Outro' ? 'Outros' : g.bank)}</strong>
+        <span class="banco-dir">${temDinheiro && g.contas.length > 1 ? `<span class="num muted">${formatBRL(dinheiro)} seus</span>` : ''}<span class="rx-seta" aria-hidden="true">${raioXAberto.has(g.bank) ? 'fechar' : 'ver por dentro'}</span></span>
+      </button>
+      ${raioXAberto.has(g.bank) ? raioXDoBanco(g) : ''}
       <ul class="banco-partes">${g.contas.map(a => (a.tipo === 'cartao' ? itemCartao(a) : itemConta(a))).join('')}</ul>
     </li>`;
   }).join('');
@@ -1649,15 +1653,124 @@ function itemConta(a) {
   const bal = accountBalance(a, state.expenses, state.incomes, state.transferencias);
   const desde = new Date(a.balanceAt).toLocaleDateString('pt-BR');
   const reforca = a.reforcaCartaoId && state.accounts.find(c => c.id === a.reforcaCartaoId);
+  // etiquetas (13/11): o que essa conta é, quanto rende, se aumenta limite, se o dinheiro é de outra pessoa
+  const tags = [
+    a.rendeCdiPct ? `<span class="tag rende">rende ${String(a.rendeCdiPct).replace('.', ',')}% do CDI</span>` : '',
+    reforca ? `<span class="tag reforca">aumenta o limite do ${esc(accountLabel(reforca))}</span>` : '',
+    a.paraQuem ? `<span class="tag outro">guardado pra ${esc(a.paraQuem)}</span>` : '',
+  ].join('');
   return `
-    <li>
+    <li class="${a.paraQuem ? 'de-outro' : ''}">
       <div class="account-head"><strong>${iconeConta(a)} ${esc(accountLabel(a))}</strong><span class="num ${bal < 0 ? 'bad' : ''}">${formatBRL(bal)}</span></div>
-      <small class="muted">Saldo informado ${formatBRL(a.balanceCents)} em ${desde}${bal !== a.balanceCents ? ', mais os lançamentos desde então' : ''}.${reforca ? ` Aumenta o limite do ${esc(accountLabel(reforca))}.` : ''}</small>
+      ${tags ? `<div class="tags">${tags}</div>` : ''}
+      <small class="muted">Saldo informado ${formatBRL(a.balanceCents)} em ${desde}${bal !== a.balanceCents ? ', mais os lançamentos desde então' : ''}.${a.paraQuem ? ' Não entra no seu saldo total.' : ''}</small>
       <div class="account-actions">
         <button class="ghost" data-acc-update="${esc(a.id)}">Atualizar saldo</button>
+        <button class="ghost" data-acc-edit="${esc(a.id)}">Editar</button>
         <button class="ghost" data-acc-del="${esc(a.id)}">Remover</button>
       </div>
     </li>`;
+}
+
+// ---------- Raio-X do banco (JF, 13/11): toca no banco e vê o que é cada conta e de onde vem o limite do cartão ----------
+const raioXAberto = new Set();
+
+function raioXDoBanco(g) {
+  const cdi = state.perfil?.cdiAnualPct || null;
+  const linhas = g.contas.map(a => {
+    if (a.tipo === 'cartao') {
+      const r = raioXCartao(a, state.accounts, state.expenses, state.incomes, state.transferencias);
+      const f = faturaDoCartao(comReforco(a, state.accounts, state.expenses, state.incomes, state.transferencias), state.expenses, toISODate());
+      return `<li class="rx-cartao"><strong>${ic('a-cartao')} ${esc(accountLabel(a))}</strong>
+        <dl class="rx-conta">
+          <dt>Limite do próprio cartão</dt><dd>${formatBRL(r.limiteCartaoCents)}</dd>
+          ${r.cofrinhos.map(c => `<dt>+ do cofrinho ${esc(accountLabel(c.conta))}</dt><dd>${formatBRL(c.saldoCents)}</dd>`).join('')}
+          <dt class="soma">= Limite que você vê</dt><dd class="soma">${formatBRL(r.limiteTotalCents)}</dd>
+          <dt>Já usado</dt><dd>${formatBRL(f.usadoCents)}</dd>
+          <dt>Livre agora</dt><dd>${formatBRL(f.disponivelCents)}</dd>
+        </dl>
+        ${r.cofrinhos.length ? `<small class="muted">Se tirar dinheiro do cofrinho, o limite diminui junto.</small>` : '<small class="muted">Nenhum cofrinho aumenta esse limite. Se um aumenta, toque em Editar no cofrinho.</small>'}</li>`;
+    }
+    const bal = accountBalance(a, state.expenses, state.incomes, state.transferencias);
+    const rende = rendimentoEstimado(bal, a.rendeCdiPct, cdi);
+    const reforca = a.reforcaCartaoId && state.accounts.find(c => c.id === a.reforcaCartaoId);
+    return `<li><strong>${iconeConta(a)} ${esc(accountLabel(a))}</strong>
+      <dl class="rx-conta">
+        <dt>O que é</dt><dd>${esc(TIPOS_CONTA[a.subtipo || 'corrente'] || 'Conta')}</dd>
+        <dt>Saldo</dt><dd>${formatBRL(bal)}</dd>
+        <dt>Rendimento</dt><dd>${a.rendeCdiPct ? `${String(a.rendeCdiPct).replace('.', ',')}% do CDI${rende ? ` · ~${formatBRL(rende.mesCents)} por mês` : ''}` : '<span class="muted">não informado</span>'}</dd>
+        ${reforca ? `<dt>Aumenta o limite de</dt><dd>${esc(accountLabel(reforca))}</dd>` : ''}
+        <dt>De quem é</dt><dd>${a.paraQuem ? `de ${esc(a.paraQuem)} (fora do seu saldo)` : 'seu'}</dd>
+      </dl></li>`;
+  }).join('');
+  const temCdi = g.contas.some(a => a.rendeCdiPct);
+  return `<div class="raio-x" id="rx-${esc(g.bank)}">
+    <ul class="rx-lista">${linhas}</ul>
+    ${temCdi ? `<p class="rx-cdi muted">${cdi ? `Conta feita com o CDI de ${String(cdi).replace('.', ',')}% ao ano. É uma estimativa.` : 'Pra eu estimar quanto rende, me diga o CDI de hoje.'} <button type="button" class="ghost small" data-cdi>${cdi ? 'Mudar o CDI' : 'Informar o CDI'}</button></p>` : ''}
+  </div>`;
+}
+
+/** Janelinha de editar conta: tipo, cartão que o cofrinho reforça, % do CDI e pra quem é. */
+function abrirEditarConta(id) {
+  const a = state.accounts.find(x => x.id === id);
+  if (!a) return;
+  const dlg = $('#conta-dialog');
+  dlg.dataset.id = id;
+  $('#cd-titulo').textContent = `Editar ${accountLabel(a)}`;
+  $('#cd-apelido').value = a.nickname || '';
+  $('#cd-tipo').value = a.subtipo || 'corrente';
+  const cartoes = state.accounts.filter(c => c.tipo === 'cartao');
+  $('#cd-reforca').innerHTML = '<option value="">Não aumenta limite</option>' + cartoes.map(c => `<option value="${esc(c.id)}">${esc(accountLabel(c))}</option>`).join('');
+  $('#cd-reforca').value = a.reforcaCartaoId || '';
+  $('#cd-cdi').value = a.rendeCdiPct ? String(a.rendeCdiPct).replace('.', ',') : '';
+  $('#cd-outro').checked = !!a.paraQuem;
+  $('#cd-quem').value = a.paraQuem || '';
+  $('#cd-erro').hidden = true;
+  mostrarCamposConta();
+  dlg.returnValue = '';
+  dlg.showModal();
+}
+
+function mostrarCamposConta() {
+  $('#cd-reforca-campo').hidden = $('#cd-tipo').value !== 'cofrinho' || !state.accounts.some(c => c.tipo === 'cartao');
+  $('#cd-quem-campo').hidden = !$('#cd-outro').checked;
+}
+
+async function salvarConta(ev) {
+  if (ev.submitter?.value !== 'ok') return;
+  ev.preventDefault();
+  const dlg = $('#conta-dialog');
+  const a = state.accounts.find(x => x.id === dlg.dataset.id);
+  if (!a) return dlg.close();
+  try {
+    const cdiTxt = $('#cd-cdi').value.trim().replace(',', '.').replace('%', '');
+    if (cdiTxt && !Number.isFinite(Number(cdiTxt))) throw new Error('Rendimento: só o número, ex.: 102.');
+    if ($('#cd-outro').checked && !$('#cd-quem').value.trim()) throw new Error('De quem é esse dinheiro?');
+    const novo = editarConta(a, {
+      nickname: $('#cd-apelido').value, subtipo: $('#cd-tipo').value, reforcaCartaoId: $('#cd-reforca').value || null,
+      rendeCdiPct: cdiTxt ? Number(cdiTxt) : null, paraQuem: $('#cd-outro').checked ? $('#cd-quem').value : '',
+    }, { accounts: state.accounts });
+    await db.put(db.STORES.accounts, novo);
+    state.accounts = state.accounts.map(x => (x.id === novo.id ? novo : x));
+    dlg.close();
+    renderContas(); renderLancar(); render();
+    toast(`${accountLabel(novo)} atualizada.`);
+  } catch (e) {
+    $('#cd-erro').textContent = e.message;
+    $('#cd-erro').hidden = false;
+  }
+}
+
+async function informarCdi() {
+  const atual = state.perfil?.cdiAnualPct;
+  const r = prompt('CDI de hoje, em % ao ano (ex.: 10,65). Confira no site do Banco Central ou no app do seu banco:', atual ? String(atual).replace('.', ',') : '');
+  if (r == null) return;
+  const v = Number(r.trim().replace(',', '.').replace('%', ''));
+  if (!(v > 0 && v < 100)) return toast('Digite só o número, ex.: 10,65.');
+  state.perfil = { ...(state.perfil || {}), cdiAnualPct: Math.round(v * 100) / 100 };
+  await db.setMeta('perfil', state.perfil);
+  renderContas();
+  toast(`CDI anotado: ${String(state.perfil.cdiAnualPct).replace('.', ',')}% ao ano.`);
 }
 
 function itemCartao(a) {
@@ -2519,6 +2632,9 @@ function bind() {
     salvarLimiteDiario(v).catch(er => toast(er.message || 'Não deu.'));
   });
   $('#editar-form').addEventListener('submit', salvarEdicao);
+  $('#conta-form').addEventListener('submit', ev => { salvarConta(ev).catch(er => toast(er.message)); });
+  $('#cd-tipo').addEventListener('change', mostrarCamposConta);
+  $('#cd-outro').addEventListener('change', mostrarCamposConta);
   $('#estudio-btn').addEventListener('click', () => alternarEstudio());
   $('#glos-busca').addEventListener('input', renderGlossario);
   for (const id of ['#calc-valor', '#calc-taxa', '#calc-meses', '#calc-periodo']) $(id).addEventListener('input', renderCalculadora);
@@ -2657,6 +2773,11 @@ function bind() {
     if (fp) return marcarFaturaPaga(fp.dataset.faturaPaga);
     const cc = e.target.closest('[data-compra-cartao]');
     if (cc) return compraNoCartao(cc.dataset.compraCartao);
+    const rx = e.target.closest('[data-raiox]');
+    if (rx) { const b = rx.dataset.raiox; raioXAberto.has(b) ? raioXAberto.delete(b) : raioXAberto.add(b); return renderContas(); }
+    const ed = e.target.closest('[data-acc-edit]');
+    if (ed) return abrirEditarConta(ed.dataset.accEdit);
+    if (e.target.closest('[data-cdi]')) return informarCdi().catch(er => toast(er.message));
     const d = e.target.closest('[data-acc-del]');
     if (d) onRemoveAccount(d.dataset.accDel);
   });
