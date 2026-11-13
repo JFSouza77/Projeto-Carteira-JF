@@ -41,7 +41,7 @@ export function resumoAgregado(dados, today = toISODate()) {
     gastoTotalCentavos: s.totalCents,
     entradasCentavos: incomeIn(dados.incomes, mes),
     previsaoMesCentavos: f.projectedCents,
-    saldoContasCentavos: dados.accounts.length ? totalBalance(dados.accounts, dados.expenses, dados.incomes) : null,
+    saldoContasCentavos: dados.accounts.length ? totalBalance(dados.accounts, dados.expenses, dados.incomes, dados.transferencias || []) : null,
     categorias: s.rows.filter(r => r.spentCents || r.budgetCents)
       .map(r => ({ nome: r.name, gastoCentavos: r.spentCents, orcamentoCentavos: r.budgetCents })),
     alertas: analyze(dados, today).map(a => a.type),

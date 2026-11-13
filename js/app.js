@@ -10,7 +10,7 @@ import {
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
   TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
-  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, ofensiva, MARCOS_OFENSIVA,
+  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta } from './caos/conversa.js';
@@ -44,6 +44,7 @@ const state = {
   planos: [],
   perfil: null, // { nome, apelido, tratamento, foco[] } (primeiro acesso)
   metas: [], // meta/metas (1.8.0)
+  transferencias: [], // meta/transferencias (13/11): entre contas suas, não é gasto nem entrada
   investimentos: [], // meta/investimentos (app 1.8)
   metaFlow: null, // perguntas da meta nova em andamento
   onboarding: null, // { passo, dados } enquanto o C.A.O.S. está conhecendo a pessoa
@@ -53,7 +54,7 @@ const state = {
 
 const dados = () => ({
   expenses: state.expenses, incomes: state.incomes, categories: state.categories, accounts: state.accounts,
-  compromissos: state.compromissos, planos: state.planos, mercado: state.mercado, metas: state.metas, investimentos: state.investimentos,
+  compromissos: state.compromissos, planos: state.planos, mercado: state.mercado, metas: state.metas, investimentos: state.investimentos, transferencias: state.transferencias,
 });
 const catById = id => state.categories.find(c => c.id === id);
 const srcById = id => INCOME_SOURCES.find(s => s.id === id);
@@ -230,7 +231,7 @@ function renderPainel() {
   $('#painel-perguntas').innerHTML = PERGUNTAS_PAINEL.map(q => `<button type="button" class="chip" data-pergunta="${esc(q)}">${esc(q)}</button>`).join('');
   // menu lateral: saudação, saldo e foguinho
   $('#nav-ola').textContent = state.perfil?.apelido ? `Olá, ${state.perfil.apelido}` : 'Olá!';
-  $('#nav-saldo').textContent = state.accounts.some(a => a.tipo !== 'cartao') ? formatBRL(totalBalance(state.accounts, state.expenses, state.incomes)) : '—';
+  $('#nav-saldo').textContent = state.accounts.some(a => a.tipo !== 'cartao') ? formatBRL(totalBalance(state.accounts, state.expenses, state.incomes, state.transferencias)) : '—';
   const o = ofensivaAgora();
   $('#nav-fogo').textContent = o.dias ? `🔥 ${o.dias}d` : '';
 }
@@ -260,7 +261,7 @@ function render() {
   $('#stat-in').textContent = formatBRL(inc);
   $('#stat-net').textContent = formatBRL(net);
   $('#stat-net').className = `num ${net < 0 ? 'bad' : net > 0 ? 'ok' : ''}`;
-  $('#stat-bank').textContent = state.accounts.length ? formatBRL(totalBalance(state.accounts, state.expenses, state.incomes)) : '—';
+  $('#stat-bank').textContent = state.accounts.length ? formatBRL(totalBalance(state.accounts, state.expenses, state.incomes, state.transferencias)) : '—';
 
   renderOfensiva();
   renderAReceber();
@@ -291,6 +292,7 @@ function render() {
   const lanc = [
     ...state.expenses.filter(doMes).map(e => ({ ...e, kind: 'gasto' })),
     ...state.incomes.filter(doMes).map(i => ({ ...i, kind: 'entrada' })),
+    ...state.transferencias.filter(doMes).map(t => ({ ...t, kind: 'transf' })),
   ].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt).slice(0, busca ? 100 : Infinity);
   $('#exp-titulo').textContent = busca ? `Busca: ${lanc.length} ${lanc.length === 1 ? 'lançamento' : 'lançamentos'}` : 'Lançamentos do mês';
   $('#exp-empty').textContent = busca ? 'Nada encontrado. Tente outra palavra ou um valor, tipo 49,90.' : 'Nenhum lançamento neste mês.';
@@ -299,6 +301,17 @@ function render() {
     const [a, m, d] = x.date.split('-');
     const dataTxt = busca && x.month !== monthKey(toISODate()) ? `${d}/${m}/${a.slice(2)}` : `${d}/${m}`;
     const conta = x.accountId && state.accounts.find(a => a.id === x.accountId);
+    if (x.kind === 'transf') {
+      const de = state.accounts.find(a => a.id === x.deId), para = state.accounts.find(a => a.id === x.paraId);
+      return `
+      <li class="transf">
+        <span class="exp-emoji" aria-hidden="true">${ic('i-transf')}</span>
+        <span class="exp-main"><span>${esc(x.note || 'Transferência')}</span>
+          <small>${dataTxt} · ${esc(de ? accountLabel(de) : '?')} → ${esc(para ? accountLabel(para) : '?')}</small></span>
+        <span class="num muted">${formatBRL(x.amountCents)}</span>
+        <button class="icon-btn del" data-del="${esc(x.id)}" data-kind="transf" aria-label="Apagar transferência">×</button>
+      </li>`;
+    }
     if (x.kind === 'entrada') {
       const s2 = srcById(x.sourceId);
       return `
@@ -434,6 +447,35 @@ async function recebi(expenseId, pessoaId) {
   const conta = destino && state.accounts.find(a => a.id === destino && a.tipo !== 'cartao');
   render();
   toast(`Recebido: ${formatBRL(p.valorCents)} de ${p.nome}.${conta ? ` Voltou pro saldo de ${accountLabel(conta)}.` : ''}`);
+}
+
+// ---------- Transferência entre contas (13/11, repaginada) ----------
+function renderTransf() {
+  const contas = state.accounts.filter(a => a.tipo !== 'cartao');
+  $('#transf-card').hidden = contas.length < 2;
+  const opts = opcoesDeConta(a => a.tipo !== 'cartao').replace('<option value="">Sem conta</option>', '');
+  for (const sel of ['#transf-de', '#transf-para']) { const v = $(sel).value; $(sel).innerHTML = opts; if (contas.some(a => a.id === v)) $(sel).value = v; }
+  if ($('#transf-de').value === $('#transf-para').value && contas[1]) $('#transf-para').value = contas[1].id;
+  if (!$('#transf-data').value) $('#transf-data').value = toISODate();
+}
+
+async function onTransferir(ev) {
+  ev.preventDefault();
+  const err = $('#transf-erro');
+  err.hidden = true;
+  try {
+    const t = createTransferencia({ deId: $('#transf-de').value, paraId: $('#transf-para').value, amountCents: parseAmount($('#transf-valor').value) || 0, date: $('#transf-data').value },
+      { accounts: state.accounts });
+    const de = state.accounts.find(a => a.id === t.deId), para = state.accounts.find(a => a.id === t.paraId);
+    if (!confirm(`Transferir ${formatBRL(t.amountCents)} de ${accountLabel(de)} para ${accountLabel(para)}?`)) return;
+    state.transferencias = [...state.transferencias, t];
+    await db.setMeta('transferencias', state.transferencias);
+    $('#transf-valor').value = '';
+    renderContas(); render();
+    toast(`Pronto, anotei: ${formatBRL(t.amountCents)} foram de ${accountLabel(de)} pra ${accountLabel(para)}.`);
+  } catch (e) {
+    err.textContent = e.message; err.hidden = false;
+  }
 }
 
 function nomesDoRacha() {
@@ -589,18 +631,18 @@ async function registrarGasto({ amountCents, categoryId, note, date, accountId, 
   if (rachaNomes?.length) expense.racha = dividirIgual(amountCents, rachaNomes);
   const conta = accountId && state.accounts.find(a => a.id === accountId);
   const cartao = conta?.tipo === 'cartao';
-  const antes = conta ? (cartao ? faturaDoCartao(comReforco(conta, state.accounts, state.expenses, state.incomes), state.expenses, toISODate()).pct : accountBalance(conta, state.expenses, state.incomes)) : null;
+  const antes = conta ? (cartao ? faturaDoCartao(comReforco(conta, state.accounts, state.expenses, state.incomes, state.transferencias), state.expenses, toISODate()).pct : accountBalance(conta, state.expenses, state.incomes, state.transferencias)) : null;
   await db.put(db.STORES.expenses, expense);
   state.expenses.push(expense);
   const events = detectExpenseEvents({ expenses: state.expenses, categories: state.categories, newExpense: expense });
   if (conta && cartao) {
     // passou de 80% ou de 100% do limite com esta compra: o C.A.O.S. avisa na hora
-    const f = faturaDoCartao(comReforco(conta, state.accounts, state.expenses, state.incomes), state.expenses, toISODate());
+    const f = faturaDoCartao(comReforco(conta, state.accounts, state.expenses, state.incomes, state.transferencias), state.expenses, toISODate());
     if ((antes < 80 && f.pct >= 80) || (antes < 100 && f.pct >= 100)) {
       events.push({ type: 'cartao_limite', accountName: f.nome, pct: f.pct, amountCents: f.usadoCents, leftCents: f.disponivelCents, budgetCents: f.limiteCents });
     }
   } else if (conta) {
-    const depois = accountBalance(conta, state.expenses, state.incomes);
+    const depois = accountBalance(conta, state.expenses, state.incomes, state.transferencias);
     if (antes >= 0 && depois < 0) events.push({ type: 'conta_negativa', accountName: accountLabel(conta), balanceCents: depois });
   }
   if (expense.racha) {
@@ -705,6 +747,14 @@ async function lerFotoComIA() {
 }
 
 async function onDelete(id, kind) {
+  if (kind === 'transf') {
+    const t = state.transferencias.find(x => x.id === id);
+    if (!t || !confirm(`Apagar a transferência de ${formatBRL(t.amountCents)}?`)) return;
+    state.transferencias = state.transferencias.filter(x => x.id !== id);
+    await db.setMeta('transferencias', state.transferencias);
+    render(); renderContas();
+    return toast('Transferência apagada.');
+  }
   const lista = kind === 'entrada' ? state.incomes : state.expenses;
   const x = lista.find(i => i.id === id);
   if (!x || !confirm(`Apagar ${formatBRL(x.amountCents)}${x.note ? ` (${x.note})` : ''}?`)) return;
@@ -1092,9 +1142,10 @@ async function fotoNoChat(arquivo) {
 
 function renderContas() {
   renderInvestimentos();
-  $('#bank-total').textContent = formatBRL(totalBalance(state.accounts, state.expenses, state.incomes));
+  renderTransf();
+  $('#bank-total').textContent = formatBRL(totalBalance(state.accounts, state.expenses, state.incomes, state.transferencias));
   $('#account-list').innerHTML = agruparPorBanco(state.accounts).map(g => {
-    const dinheiro = g.contas.filter(a => a.tipo !== 'cartao').reduce((t, a) => t + accountBalance(a, state.expenses, state.incomes), 0);
+    const dinheiro = g.contas.filter(a => a.tipo !== 'cartao').reduce((t, a) => t + accountBalance(a, state.expenses, state.incomes, state.transferencias), 0);
     const temDinheiro = g.contas.some(a => a.tipo !== 'cartao');
     return `
     <li class="banco-grupo">
@@ -1192,7 +1243,7 @@ async function acaoInvestimento(e) {
 }
 
 function itemConta(a) {
-  const bal = accountBalance(a, state.expenses, state.incomes);
+  const bal = accountBalance(a, state.expenses, state.incomes, state.transferencias);
   const desde = new Date(a.balanceAt).toLocaleDateString('pt-BR');
   const reforca = a.reforcaCartaoId && state.accounts.find(c => c.id === a.reforcaCartaoId);
   return `
@@ -1207,7 +1258,7 @@ function itemConta(a) {
 }
 
 function itemCartao(a) {
-  const f = faturaDoCartao(comReforco(a, state.accounts, state.expenses, state.incomes), state.expenses, toISODate());
+  const f = faturaDoCartao(comReforco(a, state.accounts, state.expenses, state.incomes, state.transferencias), state.expenses, toISODate());
   const cls = f.pct >= 100 ? 'cheio' : f.pct >= 80 ? 'alto' : '';
   const dia = iso => `${iso.slice(8)}/${iso.slice(5, 7)}`;
   return `
@@ -1227,7 +1278,7 @@ function itemCartao(a) {
 async function marcarFaturaPaga(id) {
   const cartao = state.accounts.find(a => a.id === id);
   if (!cartao) return;
-  const f = faturaDoCartao(comReforco(cartao, state.accounts, state.expenses, state.incomes), state.expenses, toISODate());
+  const f = faturaDoCartao(comReforco(cartao, state.accounts, state.expenses, state.incomes, state.transferencias), state.expenses, toISODate());
   if (!confirm(`Marcar a fatura de ${formatBRL(f.fechadaCents)} do ${accountLabel(cartao)} como paga?`)) return;
   const novo = { ...cartao, faturaPagaAte: f.ultimoFechamento };
   await db.put(db.STORES.accounts, novo);
@@ -1307,7 +1358,7 @@ async function onAddAccount(ev) {
 async function onUpdateAccount(id) {
   const a = state.accounts.find(x => x.id === id);
   if (!a) return;
-  const atual = accountBalance(a, state.expenses, state.incomes);
+  const atual = accountBalance(a, state.expenses, state.incomes, state.transferencias);
   const r = prompt(`Saldo atual de ${accountLabel(a)} (como está no app do banco):`, centsToInput(atual) || '0');
   if (r == null) return;
   const bal = parseSignedAmount(r);
@@ -1411,7 +1462,7 @@ function exportBackup() {
   const data = {
     app: 'carteira-jf', version: 3, exportedAt: new Date().toISOString(),
     categories: state.categories, expenses: state.expenses, incomes: state.incomes, accounts: state.accounts,
-    compromissos: state.compromissos, planos: state.planos, perfil: state.perfil, metas: state.metas, investimentos: state.investimentos,
+    compromissos: state.compromissos, planos: state.planos, perfil: state.perfil, metas: state.metas, investimentos: state.investimentos, transferencias: state.transferencias,
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -1438,6 +1489,8 @@ async function importBackup(file) {
     if (d.perfil) { state.perfil = d.perfil; await db.setMeta('perfil', d.perfil); renderPerfil(); }
     await salvarMetas(d.metas);
     await salvarInvestimentos(d.investimentos);
+    state.transferencias = d.transferencias || [];
+    await db.setMeta('transferencias', state.transferencias);
     renderLancar();
     renderBudgets();
     render();
@@ -1662,6 +1715,7 @@ async function recarregarDoBanco() {
     db.getAll(db.STORES.compromissos), db.getAll(db.STORES.planos), db.getMeta('perfil'), db.getMeta('metas', []),
   ]);
   state.investimentos = await db.getMeta('investimentos', []);
+  state.transferencias = await db.getMeta('transferencias', []);
   const order = DEFAULT_CATEGORIES.map(c => c.id);
   Object.assign(state, {
     categories: cats.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id)), expenses, incomes,
@@ -2095,6 +2149,7 @@ function bind() {
   $('#bank-subtipo').addEventListener('change', renderFormConta);
   $('#bank-select').addEventListener('change', renderFormConta);
   $('#card-form').addEventListener('submit', onAddCartao);
+  $('#transf-form').addEventListener('submit', onTransferir);
   $('#inv-form').addEventListener('submit', onAddInvestimento);
   $('#inv-list').addEventListener('click', acaoInvestimento);
   $('#account-list').addEventListener('click', e => {
@@ -2253,7 +2308,7 @@ async function init() {
       db.getAll(db.STORES.planos),
       db.getMeta('perfil'),
     ]);
-    Object.assign(state, { compromissos, planos, perfil: perfil || null, mercado: await db.getMeta('mercado'), metas: await db.getMeta('metas', []), investimentos: await db.getMeta('investimentos', []) });
+    Object.assign(state, { compromissos, planos, perfil: perfil || null, mercado: await db.getMeta('mercado'), metas: await db.getMeta('metas', []), investimentos: await db.getMeta('investimentos', []), transferencias: await db.getMeta('transferencias', []) });
     if (cats.length === 0) {
       state.categories = DEFAULT_CATEGORIES.map(c => ({ ...c }));
       await db.putMany(db.STORES.categories, state.categories, { padrao: true });

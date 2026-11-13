@@ -4,7 +4,7 @@
 // Quem mudou por último ganha (por registro). O servidor carimba cada mudança aceita com um número de versão (v),
 // e cada aparelho pede "o que mudou depois da versão X". Sem DOM, sem rede, sem banco: só dados.
 
-export const STORES_SINCRONIZADOS = Object.freeze(['expenses', 'incomes', 'accounts', 'compromissos', 'planos', 'categories', 'metas', 'perfil', 'investimentos']);
+export const STORES_SINCRONIZADOS = Object.freeze(['expenses', 'incomes', 'accounts', 'compromissos', 'planos', 'categories', 'metas', 'perfil', 'investimentos', 'transferencias']);
 export const LIMITE_MUDANCAS = 5000;
 
 const ID_OK = /^[A-Za-z0-9_.:-]{1,80}$/;

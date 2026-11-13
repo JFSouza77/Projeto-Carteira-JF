@@ -7,6 +7,16 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.26',
+    data: '13/11/2026',
+    nome: 'Dinheiro que Muda de Lugar',
+    t: 'Funções novas da repaginada, começando pela transferência entre contas.',
+    itens: [
+      '🔁 Transferir entre contas: em Contas, mova dinheiro da conta pra poupança ou cofrinho sem virar gasto.',
+    ],
+    qol: [],
+  },
+  {
     v: '1.25',
     data: '13/11/2026',
     nome: 'Cara Nova no Computador',

@@ -685,3 +685,6 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   .me-ajuda, .me-ajuda.mini { left: 12px; right: auto; bottom: 128px; width: 208px; justify-content: center; }
   body:not(.sem-painel) .me-ajuda { right: auto; }
 }
+#transf-card[hidden] { display: none; }
+#transf-form { display: grid; gap: 10px; margin-top: 10px; }
+.exp-list li.transf .exp-emoji .ico { color: var(--muted); }

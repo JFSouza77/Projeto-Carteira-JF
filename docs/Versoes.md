@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 1.26 | 13/11/2026 | Dinheiro que Muda de Lugar |
 | 1.25 | 13/11/2026 | Cara Nova no Computador |
 | 1.24 | 13/11/2026 | Gráficos e Faxina |
 | 1.23 | 13/11/2026 | Achou, Achou |
