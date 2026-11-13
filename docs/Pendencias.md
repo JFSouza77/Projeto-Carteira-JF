@@ -14,7 +14,7 @@ Atualizada pelo Wally a cada rodada.
    - **dá pra arrastar:** segurar e arrastar pra qualquer canto, e o app lembra onde ficou;
    - **toque rápido abre um menuzinho de ajuda rápida**, com perguntas prontas que já abrem a conversa do C.A.O.S. com
      aquela pergunta.
-3. **Microfone não funciona** (a mensagem do JF cortou em "o C.A.O.S. não consegue…", provavelmente "ouvir"). O
+3. **Microfone não funciona:** o C.A.O.S. não consegue ouvir o que o JF fala (confirmado por ele). O
    `js/voz.js` não mudou desde 12/11. Suspeita: o iPhone bloqueia o ditado do navegador no app instalado na tela
    inicial. Investigar:
    - conferir a permissão do microfone;
