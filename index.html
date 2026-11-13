@@ -147,14 +147,18 @@
       <section class="card graficos" id="graficos-card">
         <h2>Como anda o seu dinheiro</h2>
         <figure class="grafico" id="ritmo-fig">
-          <figcaption id="ritmo-titulo">Ritmo de gastos no mês</figcaption>
+          <div class="g-topo"><figcaption id="ritmo-titulo">Ritmo de gastos no mês</figcaption>
+            <div class="seg" role="group" aria-label="Como ver o ritmo"><button type="button" data-ritmo="acum" aria-pressed="true">Acumulado</button><button type="button" data-ritmo="dia" aria-pressed="false">Por dia</button></div></div>
           <div id="grafico-ritmo"></div>
-          <p class="legenda"><span class="traco real"></span>Gasto acumulado <span class="traco ideal"></span>Ritmo ideal</p>
+          <p class="g-info" id="ritmo-info" aria-live="polite"></p>
+          <p class="legenda" id="ritmo-legenda"><span class="traco real"></span>Gasto acumulado <span class="traco ideal"></span>Ritmo ideal</p>
         </figure>
         <figure class="grafico">
-          <figcaption>Últimos 6 meses</figcaption>
+          <div class="g-topo"><figcaption>Últimos 6 meses</figcaption>
+            <div class="seg" role="group" aria-label="Como ver os 6 meses"><button type="button" data-meses="comparar" aria-pressed="true">Comparar</button><button type="button" data-meses="saldo" aria-pressed="false">Saldo</button></div></div>
           <div id="grafico-meses"></div>
-          <p class="legenda"><span class="ponto entrada"></span>Entradas <span class="ponto gasto"></span>Gastos</p>
+          <p class="g-info" id="meses-info" aria-live="polite"></p>
+          <p class="legenda" id="meses-legenda"><span class="ponto entrada"></span>Entradas <span class="ponto gasto"></span>Gastos</p>
         </figure>
         <figure class="grafico">
           <figcaption id="calor-titulo">Dias com mais gasto</figcaption>
@@ -164,7 +168,9 @@
       </section>
 
       <section class="card">
-        <h2>Por categoria</h2>
+        <div class="g-topo"><h2>Por categoria</h2>
+          <div class="seg" role="group" aria-label="Como ver as categorias"><button type="button" data-catvista="barras" aria-pressed="true">Barras</button><button type="button" data-catvista="rosca" aria-pressed="false">Rosca</button></div></div>
+        <div class="cat-rosca" id="cat-rosca" hidden></div>
         <ul class="cat-list" id="cat-list"></ul>
       </section>
 
@@ -202,6 +208,9 @@
             <span>R$</span>
             <input id="amount" name="amount" type="text" inputmode="decimal" placeholder="0,00" aria-label="Valor" required>
           </label>
+          <div class="chips valor-rapido" id="valor-rapido" aria-label="Somar ao valor">
+            <button type="button" class="chip" data-somar="1000">+10</button><button type="button" class="chip" data-somar="2000">+20</button><button type="button" class="chip" data-somar="5000">+50</button><button type="button" class="chip" data-somar="10000">+100</button><button type="button" class="chip" data-somar="20000">+200</button><button type="button" class="chip limpar" data-somar="0">Limpar</button>
+          </div>
           <div class="chips" id="category-chips" role="radiogroup" aria-label="Categoria"></div>
           <p class="sugestao" id="cat-sugestao" hidden></p>
           <div class="row">
@@ -303,6 +312,12 @@
         <p class="big vazio" id="plan-sobra">Lance sua entrada pra eu calcular</p>
         <ul class="plan-linhas" id="plan-linhas"></ul>
         <p class="caos-dica" id="plan-caos"></p>
+      </section>
+
+      <section class="card" id="exportar-card">
+        <h2>Levar o mês pra fora</h2>
+        <p class="muted small">Todos os lançamentos do mês, sem filtro. O PDF abre a impressão: escolha "Salvar como PDF".</p>
+        <div class="exportar-botoes"><button type="button" class="ghost" id="mes-csv">Planilha (CSV)</button><button type="button" class="ghost" id="mes-pdf">Resumo em PDF</button></div>
       </section>
 
       <section class="card" id="sim-card">

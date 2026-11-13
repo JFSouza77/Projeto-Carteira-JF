@@ -15,6 +15,7 @@ import {
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
 import { GLOSSARIO, ATUALIZADO_EM } from './caos/glossario.js';
+import { corCategoria, corFonte, corForma, temaBanco } from './cores.js';
 import { NUCLEO } from './caos/nucleo.js';
 import { NOVIDADES, VERSAO_APP, temNovidade, partesDoItem } from './novidades.js';
 import { falar, vozDisponivel, ditadoDisponivel, ouvir, setVelocidade } from './voz.js';
@@ -385,11 +386,15 @@ function render() {
   $('#cat-list').innerHTML = rows.length ? rows.map(r => `
     <li class="cat-filtra${state.filtroCat === r.id ? ' ativa' : ''}" data-filtra-cat="${esc(r.id)}" role="button" tabindex="0" aria-label="Ver lançamentos de ${esc(r.name)}">
       <div class="cat-head">
-        <span>${icCat(r)} ${esc(r.name)}</span>
+        <span style="--cor-cat:${corCategoria(r.id)}" class="cat-nome">${icCat(r)} ${esc(r.name)}</span>
         <span class="num">${formatBRL(r.spentCents)}${r.budgetCents ? `<small> / ${formatBRL(r.budgetCents)}</small>` : ''}</span>
       </div>
       ${r.budgetCents ? `<div class="bar"><div class="bar-fill" style="${barStyle(r.ratio)}"></div></div>` : ''}
     </li>`).join('') : '<li class="muted">Sem gastos ainda.</li>';
+  marcarSeg('catvista', grafico.cat);
+  $('#cat-rosca').hidden = grafico.cat !== 'rosca';
+  $('#cat-list').hidden = grafico.cat === 'rosca';
+  if (grafico.cat === 'rosca') renderRosca(rows);
 
   renderGraficos();
   renderPainel();
@@ -634,13 +639,14 @@ function renderLancar() {
   $('#category-chips').setAttribute('aria-label', gasto ? 'Categoria' : 'De onde veio');
   $('#racha-box').hidden = !gasto;
   $('#category-chips').innerHTML = opcoes.map(c => `
-    <button type="button" class="chip" role="radio" aria-checked="${c.id === sel}" data-cat="${esc(c.id)}">${gasto ? icCat(c) : icFonte(c)} ${esc(c.name)}</button>`).join('');
+    <button type="button" class="chip colorido" style="--cor-chip:${gasto ? corCategoria(c.id) : corFonte(c.id)}" role="radio" aria-checked="${c.id === sel}" data-cat="${esc(c.id)}">${gasto ? icCat(c) : icFonte(c)} ${esc(c.name)}</button>`).join('');
+  $('#entry-form').dataset.kind = gasto ? 'gasto' : 'entrada';
   $('#submit-btn').textContent = gasto ? 'Adicionar gasto' : 'Adicionar entrada';
   // Pagou como? (P8): a forma escolhe que contas aparecem e o que mais perguntar
   const forma = gasto ? state.forma : null;
   $('#forma-field').hidden = !gasto;
   $('#forma-chips').innerHTML = Object.entries(FORMAS_PAGAMENTO).map(([id, nome]) =>
-    `<button type="button" class="chip" role="radio" aria-checked="${id === forma}" data-forma="${id}">${ic(ICONE_FORMA[id])} ${esc(nome.replace(/^\S+\s/, ''))}</button>`).join('');
+    `<button type="button" class="chip colorido" style="--cor-chip:${corForma(id)}" role="radio" aria-checked="${id === forma}" data-forma="${id}">${ic(ICONE_FORMA[id])} ${esc(nome.replace(/^\S+\s/, ''))}</button>`).join('');
   const filtro = !gasto ? a => a.tipo !== 'cartao' // entrada não cai no cartão de crédito
     : forma === 'credito' ? a => a.tipo === 'cartao'
     : forma ? a => a.tipo !== 'cartao' : () => true;
@@ -676,34 +682,21 @@ function previaParcelas() {
 // ---------- Gráficos (13/11): SVG feito à mão, sem biblioteca e sem internet ----------
 const brlCurto = c => (c >= 100000 ? `R$ ${(c / 100000).toFixed(1).replace('.', ',')} mil` : formatBRL(c).replace(',00', ''));
 
+// Gráficos vivos (V2 do AI Studio, 13/11): cada um tem dois jeitos de ver e mostra o detalhe ao tocar/passar o cursor.
+const grafico = { ritmo: 'acum', meses: 'comparar', cat: 'barras', diaSel: null, mesSel: null };
+
+function marcarSeg(attr, valor) {
+  for (const b of document.querySelectorAll(`[data-${attr}]`)) b.setAttribute('aria-pressed', String(b.dataset[attr] === valor));
+}
+
 function renderGraficos() {
   const card = $('#graficos-card');
   if (!card) return;
   const temAlgo = state.expenses.length + state.incomes.length > 0;
   card.hidden = !temAlgo;
   if (!temAlgo) return;
-  // Barras: entradas x gastos dos últimos 6 meses (13/11, repaginada do AI Studio)
-  const serie = serieMensal(state.expenses, state.incomes, state.viewMonth, 6);
-  const W = 320, H = 150, P = { l: 6, r: 6, t: 16, b: 22 };
-  const max = Math.max(1, ...serie.flatMap(m => [m.gastosCents, m.entradasCents]));
-  const temEntrada = serie.some(m => m.entradasCents > 0);
-  const larg = (W - P.l - P.r) / serie.length;
-  const bw = Math.min(16, larg / 3);
-  const alt = v => (v / max) * (H - P.t - P.b);
-  const barra = (x, v, cls, nome, m) => v ? `<rect x="${x.toFixed(1)}" y="${(H - P.b - alt(v)).toFixed(1)}" width="${bw}" height="${Math.max(1, alt(v)).toFixed(1)}" rx="3" class="${cls}"><title>${nomeMesCurto(m)}: ${nome} ${formatBRL(v)}</title></rect>` : '';
-  const desc = `Últimos 6 meses: ${serie.map(m => `${nomeMesCurto(m.month)} gastos ${formatBRL(m.gastosCents)}${temEntrada ? `, entradas ${formatBRL(m.entradasCents)}` : ''}`).join('; ')}.`;
-  $('#grafico-meses').innerHTML = `
-    <svg viewBox="0 0 ${W} ${H}" class="g-linha g-barras" role="img" aria-label="${esc(desc)}">
-      <line x1="${P.l}" x2="${W - P.r}" y1="${H - P.b}" y2="${H - P.b}" class="eixo"/>
-      ${serie.map((m, i) => {
-        const cx = P.l + larg * i + larg / 2;
-        return (temEntrada ? barra(cx - bw - 1, m.entradasCents, 'b-entrada', 'entradas', m.month) + barra(cx + 1, m.gastosCents, 'b-gasto', 'gastos', m.month)
-          : barra(cx - bw / 2, m.gastosCents, 'b-gasto', 'gastos', m.month))
-          + `<text x="${cx.toFixed(1)}" y="${H - 6}" text-anchor="middle">${nomeMesCurto(m.month)}</text>`;
-      }).join('')}
-    </svg>`;
+  renderMeses();
   renderRitmo();
-  $('#grafico-meses').nextElementSibling.hidden = !temEntrada;
   // Calendário de calor: quanto mais forte a cor, mais gasto no dia
   const dias = gastoPorDia(state.expenses, state.viewMonth);
   const topo = Math.max(...dias);
@@ -717,7 +710,55 @@ function renderGraficos() {
   $('#calor-legenda').textContent = topo ? `O dia mais pesado foi o ${maior + 1}: ${formatBRL(topo)}.` : 'Nenhum gasto neste mês ainda.';
 }
 
-/** Ritmo do mês: gasto acumulado dia a dia x linha ideal (orçamento ou entradas divididos pelos dias). */
+/** 6 meses: "Comparar" (entradas x gastos) ou "Saldo" (entradas − gastos, pra cima ou pra baixo do zero). */
+function renderMeses() {
+  const serie = serieMensal(state.expenses, state.incomes, state.viewMonth, 6);
+  const modo = grafico.meses;
+  marcarSeg('meses', modo);
+  const W = 320, H = 150, P = { l: 6, r: 6, t: 14, b: 22 };
+  const larg = (W - P.l - P.r) / serie.length;
+  const temEntrada = serie.some(m => m.entradasCents > 0);
+  const sel = serie.find(m => m.month === grafico.mesSel) ? grafico.mesSel : serie[serie.length - 1].month;
+  let corpo = '';
+  if (modo === 'saldo') {
+    const saldos = serie.map(m => m.entradasCents - m.gastosCents);
+    // o zero fica onde a proporção pede: sem mês no vermelho, ele vai lá pra baixo e as barras usam a altura toda
+    const maxPos = Math.max(0, ...saldos), maxNeg = Math.max(0, ...saldos.map(v => -v));
+    const util = H - P.t - P.b, soma = Math.max(1, maxPos + maxNeg);
+    const zero = P.t + util * (maxPos / soma);
+    const bw = Math.min(26, larg * 0.55);
+    corpo = `<line x1="${P.l}" x2="${W - P.r}" y1="${zero.toFixed(1)}" y2="${zero.toFixed(1)}" class="eixo"/>` + serie.map((m, i) => {
+      const v = saldos[i], h = Math.max(1, (Math.abs(v) / soma) * util), cx = P.l + larg * i + larg / 2;
+      return `<rect x="${(cx - bw / 2).toFixed(1)}" y="${(v >= 0 ? zero - h : zero).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="3" class="${v >= 0 ? 'b-pos' : 'b-neg'}${m.month === sel ? ' sel' : ''}"/>`
+        + `<text x="${cx.toFixed(1)}" y="${H - 6}" text-anchor="middle" class="${m.month === sel ? 'sel' : ''}">${nomeMesCurto(m.month)}</text>`;
+    }).join('');
+  } else {
+    const max = Math.max(1, ...serie.flatMap(m => [m.gastosCents, m.entradasCents]));
+    const bw = Math.min(16, larg / 3);
+    const alt = v => (v / max) * (H - P.t - P.b);
+    const barra = (x, v, cls) => v ? `<rect x="${x.toFixed(1)}" y="${(H - P.b - alt(v)).toFixed(1)}" width="${bw}" height="${Math.max(1, alt(v)).toFixed(1)}" rx="3" class="${cls}"/>` : '';
+    corpo = `<line x1="${P.l}" x2="${W - P.r}" y1="${H - P.b}" y2="${H - P.b}" class="eixo"/>` + serie.map((m, i) => {
+      const cx = P.l + larg * i + larg / 2;
+      return (m.month === sel ? `<rect x="${(cx - larg / 2 + 2).toFixed(1)}" y="${P.t - 8}" width="${(larg - 4).toFixed(1)}" height="${H - P.b - P.t + 8}" rx="8" class="foco"/>` : '')
+        + (temEntrada ? barra(cx - bw - 1, m.entradasCents, 'b-entrada') + barra(cx + 1, m.gastosCents, 'b-gasto') : barra(cx - bw / 2, m.gastosCents, 'b-gasto'))
+        + `<text x="${cx.toFixed(1)}" y="${H - 6}" text-anchor="middle" class="${m.month === sel ? 'sel' : ''}">${nomeMesCurto(m.month)}</text>`;
+    }).join('');
+  }
+  // faixas invisíveis pra tocar em cada mês
+  const alvos = serie.map((m, i) => `<rect x="${(P.l + larg * i).toFixed(1)}" y="0" width="${larg.toFixed(1)}" height="${H}" class="alvo" data-mes="${m.month}"/>`).join('');
+  const desc = `Últimos 6 meses: ${serie.map(m => `${nomeMesCurto(m.month)} entradas ${formatBRL(m.entradasCents)}, gastos ${formatBRL(m.gastosCents)}`).join('; ')}.`;
+  $('#grafico-meses').innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="g-linha g-barras" role="img" aria-label="${esc(desc)}">${corpo}${alvos}</svg>`;
+  const m = serie.find(x => x.month === sel);
+  const saldo = m.entradasCents - m.gastosCents;
+  const poupado = m.entradasCents > 0 && saldo > 0 ? ` · ${Math.round((saldo / m.entradasCents) * 100)}% poupado` : '';
+  $('#meses-info').innerHTML = `<strong>${nomeMesCurto(m.month)}</strong>: entrou ${formatBRL(m.entradasCents)}, saiu ${formatBRL(m.gastosCents)} · saldo <span class="${saldo < 0 ? 'bad' : 'ok'}">${formatBRL(saldo)}</span>${poupado}`;
+  $('#meses-legenda').innerHTML = modo === 'saldo'
+    ? '<span class="ponto pos"></span>Sobrou <span class="ponto neg"></span>Faltou'
+    : `<span class="ponto entrada"></span>Entradas <span class="ponto gasto"></span>Gastos`;
+  $('#meses-legenda').hidden = modo === 'comparar' && !temEntrada;
+}
+
+/** Ritmo do mês: "Acumulado" (gasto somado x linha ideal) ou "Por dia" (gasto de cada dia x média ideal por dia). */
 function renderRitmo() {
   const mes = state.viewMonth;
   const dias = gastoPorDia(state.expenses, mes);
@@ -729,27 +770,76 @@ function renderRitmo() {
   const fig = $('#ritmo-fig');
   fig.hidden = !ate || !base;
   if (fig.hidden) return;
+  const modo = grafico.ritmo;
+  marcarSeg('ritmo', modo);
   const acum = []; dias.reduce((t, v, i) => (acum[i] = t + v), 0);
   const W = 320, H = 140, P = { l: 6, r: 6, t: 14, b: 20 };
-  const max = Math.max(base, acum[ate - 1] || 0, 1);
-  const x = d => P.l + ((d - 1) / Math.max(1, total - 1)) * (W - P.l - P.r);
-  const y = v => P.t + (1 - v / max) * (H - P.t - P.b);
-  const real = acum.slice(0, ate).map((v, i) => `${i ? 'L' : 'M'}${x(i + 1).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-  const area = `${real} L${x(ate).toFixed(1)},${y(0).toFixed(1)} L${x(1).toFixed(1)},${y(0).toFixed(1)} Z`;
+  const passo = (W - P.l - P.r) / total;
+  const xc = d => P.l + passo * (d - 0.5); // centro da coluna do dia
+  const porDiaIdeal = base / total;
+  const sel = grafico.diaSel && grafico.diaSel <= total ? grafico.diaSel : ate;
   const ideal = Math.round((base * ate) / total);
   const gasto = acum[ate - 1] || 0;
   const acima = gasto > ideal;
+  let corpo;
+  if (modo === 'dia') {
+    const max = Math.max(porDiaIdeal * 1.2, ...dias.slice(0, ate), 1);
+    const y = v => P.t + (1 - v / max) * (H - P.t - P.b);
+    const bw = Math.max(2, passo * 0.62);
+    corpo = `<line x1="${P.l}" x2="${W - P.r}" y1="${y(0)}" y2="${y(0)}" class="eixo"/>`
+      + dias.slice(0, ate).map((v, i) => v ? `<rect x="${(xc(i + 1) - bw / 2).toFixed(1)}" y="${y(v).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1, y(0) - y(v)).toFixed(1)}" rx="2" class="b-dia${v > porDiaIdeal ? ' acima' : ''}${i + 1 === sel ? ' sel' : ''}"/>` : '').join('')
+      + `<line x1="${P.l}" x2="${W - P.r}" y1="${y(porDiaIdeal).toFixed(1)}" y2="${y(porDiaIdeal).toFixed(1)}" class="l-media"/>`;
+  } else {
+    const max = Math.max(base, gasto, 1);
+    const y = v => P.t + (1 - v / max) * (H - P.t - P.b);
+    const pts = acum.slice(0, ate).map((v, i) => `${xc(i + 1).toFixed(1)},${y(v).toFixed(1)}`);
+    const real = `M${pts.join(' L')}`;
+    const area = `${real} L${xc(ate).toFixed(1)},${y(0).toFixed(1)} L${xc(1).toFixed(1)},${y(0).toFixed(1)} Z`;
+    corpo = `<defs><linearGradient id="grad-ritmo" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="var(--cyan)"/><stop offset=".6" stop-color="var(--accent)"/><stop offset="1" stop-color="${acima ? 'var(--caos)' : 'var(--accent)'}"/></linearGradient></defs>`
+      + `<line x1="${P.l}" x2="${W - P.r}" y1="${y(0)}" y2="${y(0)}" class="eixo"/>`
+      + `<path d="M${xc(1)},${y(0)} L${xc(total)},${y(base)}" class="l-ideal"/>`
+      + `<path d="${area}" class="a-real"/><path d="${real}" class="l-real" style="stroke:url(#grad-ritmo)"/>`
+      + (sel <= ate ? `<line x1="${xc(sel).toFixed(1)}" x2="${xc(sel).toFixed(1)}" y1="${P.t}" y2="${y(0)}" class="guia"/><circle cx="${xc(sel).toFixed(1)}" cy="${y(acum[sel - 1]).toFixed(1)}" r="4.5" class="p-real"/>` : '');
+  }
+  const alvos = dias.map((_, i) => `<rect x="${(P.l + passo * i).toFixed(1)}" y="0" width="${passo.toFixed(2)}" height="${H}" class="alvo" data-dia="${i + 1}"/>`).join('');
   $('#ritmo-titulo').textContent = `Ritmo de gastos no mês: dia ${ate}, ${formatBRL(gasto)} de ${formatBRL(ideal)} ideais`;
   $('#grafico-ritmo').innerHTML = `
     <svg viewBox="0 0 ${W} ${H}" class="g-linha g-ritmo ${acima ? 'acima' : ''}" role="img"
       aria-label="${esc(`Até o dia ${ate}, você gastou ${formatBRL(gasto)}. No ritmo ideal (${orc ? 'orçamento' : 'entradas'} de ${formatBRL(base)} no mês), seriam ${formatBRL(ideal)}.`)}">
-      <line x1="${P.l}" x2="${W - P.r}" y1="${y(0)}" y2="${y(0)}" class="eixo"/>
-      <path d="M${x(1)},${y(0)} L${x(total)},${y(base)}" class="l-ideal"/>
-      <path d="${area}" class="a-real"/>
-      <path d="${real}" class="l-real"/>
-      <circle cx="${x(ate).toFixed(1)}" cy="${y(gasto).toFixed(1)}" r="4" class="p-real"/>
+      ${corpo}${alvos}
       <text x="${P.l}" y="${H - 4}">dia 1</text><text x="${W - P.r}" y="${H - 4}" text-anchor="end">dia ${total}</text>
     </svg>`;
+  const idealAte = Math.round(porDiaIdeal * sel);
+  $('#ritmo-info').innerHTML = sel > ate
+    ? `<strong>Dia ${sel}</strong>: ainda não chegou. O ideal até lá é ${formatBRL(idealAte)}.`
+    : `<strong>Dia ${sel}</strong>: ${formatBRL(dias[sel - 1])} no dia · acumulado ${formatBRL(acum[sel - 1])} · ideal ${formatBRL(idealAte)}`;
+  $('#ritmo-legenda').innerHTML = modo === 'dia'
+    ? '<span class="ponto gasto"></span>Gasto do dia <span class="traco ideal"></span>Média ideal por dia'
+    : '<span class="traco real"></span>Gasto acumulado <span class="traco ideal"></span>Ritmo ideal';
+}
+
+/** Rosca das categorias: cada fatia filtra o extrato ao tocar (mesma ação da lista). */
+function renderRosca(rows) {
+  const el = $('#cat-rosca');
+  const com = rows.filter(r => r.spentCents > 0);
+  const total = com.reduce((t, r) => t + r.spentCents, 0);
+  if (!total) { el.innerHTML = '<p class="muted">Sem gastos ainda.</p>'; return; }
+  const R = 52, C = 2 * Math.PI * R;
+  let ac = 0;
+  const fatias = com.map(r => {
+    const frac = r.spentCents / total, len = Math.max(0, frac * C - (com.length > 1 ? 2 : 0));
+    const f = `<circle cx="70" cy="70" r="${R}" class="fatia${state.filtroCat === r.id ? ' ativa' : ''}" style="stroke:${corCategoria(r.id)}" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-ac * C).toFixed(2)}" data-filtra-cat="${esc(r.id)}"><title>${esc(r.name)}: ${formatBRL(r.spentCents)}</title></circle>`;
+    ac += frac;
+    return f;
+  }).join('');
+  const foco = com.find(r => r.id === state.filtroCat) || com[0];
+  el.innerHTML = `
+    <svg viewBox="0 0 140 140" class="rosca" role="img" aria-label="${esc(com.map(r => `${r.name} ${Math.round((r.spentCents / total) * 100)}%`).join(', '))}">
+      <g transform="rotate(-90 70 70)">${fatias}</g>
+      <text x="70" y="64" class="r-nome">${esc(foco.name)}</text>
+      <text x="70" y="82" class="r-valor">${Math.round((foco.spentCents / total) * 100)}%</text>
+    </svg>
+    <ul class="rosca-leg">${com.map(r => `<li data-filtra-cat="${esc(r.id)}" role="button" tabindex="0" class="${state.filtroCat === r.id ? 'ativa' : ''}"><span class="ponto" style="background:${corCategoria(r.id)}"></span>${esc(r.name)} <span class="num">${Math.round((r.spentCents / total) * 100)}%</span></li>`).join('')}</ul>`;
 }
 
 function nomeMesCurto(month) {
@@ -757,8 +847,16 @@ function nomeMesCurto(month) {
 }
 
 /** Exportar CSV (13/11, repaginada): o que está na lista agora, com ; e BOM (abre certinho no Excel e nas planilhas). */
-function exportarCSV() {
-  const linhas = state.extratoVisivel || [];
+/** Todos os lançamentos do mês que está na tela (gastos, entradas e transferências), do mais antigo pro mais novo. */
+function lancamentosDoMes(mes = state.viewMonth) {
+  return [
+    ...state.expenses.filter(e => e.month === mes).map(e => ({ ...e, kind: 'gasto' })),
+    ...state.incomes.filter(i => i.month === mes).map(i => ({ ...i, kind: 'entrada' })),
+    ...(state.transferencias || []).filter(t => String(t.date).slice(0, 7) === mes).map(t => ({ ...t, kind: 'transf' })),
+  ].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function exportarCSV(linhas = state.extratoVisivel || [], nomeArquivo = `caos-financas-${state.viewMonth}.csv`) {
   if (!linhas.length) return toast('Nada pra exportar com esse filtro.');
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const reais = c => (c / 100).toFixed(2).replace('.', ',');
@@ -770,14 +868,48 @@ function exportarCSV() {
       ? `${accountLabel(state.accounts.find(a => a.id === x.deId) || { bank: '?' })} → ${accountLabel(state.accounts.find(a => a.id === x.paraId) || { bank: '?' })}`
       : conta ? accountLabel(conta) : '';
     const valor = x.kind === 'gasto' ? -x.amountCents : x.amountCents;
-    return [x.date, tipo, x.note || '', cat || '', contaTxt, x.forma || '', x.parcelas > 1 ? x.parcelas : '', reais(valor)].map(q).join(';');
+    const parte = x.kind === 'gasto' ? -valorProprio(x) : valor;
+    return [x.date, tipo, x.note || '', cat || '', contaTxt, x.forma || '', x.parcelas > 1 ? x.parcelas : '', reais(valor), reais(parte)].map(q).join(';');
   });
-  const csv = '\ufeff' + ['Data;Tipo;Descrição;Categoria;Conta;Forma;Parcelas;Valor (R$)', ...corpo].join('\r\n');
+  const csv = '\ufeff' + ['Data;Tipo;Descrição;Categoria;Conta;Forma;Parcelas;Valor (R$);Sua parte (R$)', ...corpo].join('\r\n');
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  const a = Object.assign(document.createElement('a'), { href: url, download: `caos-financas-${state.viewMonth}.csv` });
+  const a = Object.assign(document.createElement('a'), { href: url, download: nomeArquivo });
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
   toast(`Exportei ${linhas.length} ${linhas.length === 1 ? 'lançamento' : 'lançamentos'}.`);
+}
+
+/** PDF do mês (V2 do AI Studio, 13/11): monta um resumo limpo e abre a impressão do navegador ("Salvar como PDF"). */
+function exportarPDF() {
+  const mes = state.viewMonth;
+  const linhas = lancamentosDoMes(mes);
+  if (!linhas.length) return toast('Nada lançado neste mês ainda.');
+  const s = summarizeMonth(state.expenses, state.categories, mes);
+  const entradas = incomeIn(state.incomes, mes);
+  const cats = s.rows.filter(r => r.spentCents > 0).sort((a, b) => b.spentCents - a.spentCents);
+  const nomeLinha = x => x.kind === 'gasto' ? (x.note || catById(x.categoryId)?.name || 'Gasto')
+    : x.kind === 'entrada' ? (x.note || srcById(x.sourceId)?.name || 'Entrada') : (x.note || 'Transferência');
+  const valor = x => x.kind === 'gasto' ? `−${formatBRL(valorProprio(x))}` : x.kind === 'entrada' ? `+${formatBRL(x.amountCents)}` : formatBRL(x.amountCents);
+  const el = document.createElement('div');
+  el.id = 'relatorio-print';
+  el.innerHTML = `
+    <h1>C.A.O.S. Finanças · ${esc(cap(monthLabel(mes)))}</h1>
+    <p class="r-sub">Resumo gerado em ${new Date().toLocaleDateString('pt-BR')}${state.perfil?.apelido ? ` para ${esc(state.perfil.apelido)}` : ''}.</p>
+    <table class="r-tot"><tr><th>Entradas</th><th>Gastos</th><th>Saldo do mês</th></tr>
+      <tr><td>${formatBRL(entradas)}</td><td>${formatBRL(s.totalCents)}</td><td>${formatBRL(entradas - s.totalCents)}</td></tr></table>
+    <h2>Gastos por categoria</h2>
+    <table><tr><th>Categoria</th><th>Gasto</th><th>Limite</th></tr>
+      ${cats.map(r => `<tr><td>${esc(r.name)}</td><td>${formatBRL(r.spentCents)}</td><td>${r.budgetCents ? formatBRL(r.budgetCents) : '—'}</td></tr>`).join('')}</table>
+    <h2>Lançamentos (${linhas.length})</h2>
+    <table><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Valor</th></tr>
+      ${linhas.map(x => `<tr><td>${x.date.slice(8)}/${x.date.slice(5, 7)}</td><td>${esc(nomeLinha(x))}</td><td>${x.kind === 'gasto' ? 'Gasto' : x.kind === 'entrada' ? 'Entrada' : 'Transf.'}</td><td>${valor(x)}</td></tr>`).join('')}</table>
+    <p class="r-sub">Gasto em conta rachada aparece só com a sua parte.</p>`;
+  document.body.append(el);
+  document.body.classList.add('imprimindo');
+  const limpar = () => { document.body.classList.remove('imprimindo'); el.remove(); };
+  window.addEventListener('afterprint', limpar, { once: true });
+  window.print();
+  setTimeout(() => { if (document.body.contains(el) && !matchMedia('print').matches) limpar(); }, 60000);
 }
 
 /** Filtro da busca: palavra no nome/categoria/fonte/conta, ou valor ("49,90", "50" acha 50,00 e 50,xx). */
@@ -1168,22 +1300,40 @@ async function salvarMetas(lista) {
   renderMetas();
 }
 
+// Anel de progresso das metas (V2 do AI Studio, 13/11): SVG simples, sem D3. Enche do valor anterior pro novo.
+const ANEL_R = 26, ANEL_C = 2 * Math.PI * ANEL_R;
+const pctAnteriorMeta = new Map();
+const anelMeta = (pct, batida, pctInicio) => `
+  <svg class="anel${batida ? ' batida' : ''}" viewBox="0 0 64 64" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="${pct}% da meta">
+    <circle class="anel-fundo" cx="32" cy="32" r="${ANEL_R}"/>
+    <circle class="anel-valor" cx="32" cy="32" r="${ANEL_R}" stroke-dasharray="${ANEL_C.toFixed(2)}" stroke-dashoffset="${(ANEL_C * (1 - pctInicio / 100)).toFixed(2)}" data-alvo="${(ANEL_C * (1 - pct / 100)).toFixed(2)}"/>
+    <text x="32" y="32" class="anel-txt">${pct}%</text>
+  </svg>`;
+
 function renderMetas() {
   const el = $('#meta-list');
   if (!el) return;
   const hoje = toISODate();
   el.innerHTML = state.metas.map(m => {
     const p = progressoMeta(m, hoje);
-    return `<li>
-      <div class="account-head"><strong>${ic(p.batida ? 'i-trofeu' : 'i-meta')} ${esc(m.nome)}</strong><span class="num">${p.pct}%</span></div>
-      <div class="limite-bar" role="img" aria-label="${p.pct}% da meta"><i style="width:${p.pct}%"></i></div>
-      <small class="muted">${esc(p.batida ? `Meta batida! ${formatBRL(m.alvoCents)} guardados.` : textoMeta(p))}</small>
-      <div class="account-actions">
-        ${p.batida ? '' : `<button class="ghost" data-meta-guardar="${esc(m.id)}">＋ Guardar</button>`}
-        <button class="ghost" data-meta-del="${esc(m.id)}">Remover</button>
+    const antes = pctAnteriorMeta.has(m.id) ? pctAnteriorMeta.get(m.id) : p.pct;
+    pctAnteriorMeta.set(m.id, p.pct);
+    return `<li class="meta-item">
+      ${anelMeta(p.pct, p.batida, antes)}
+      <div class="meta-corpo">
+        <strong>${ic(p.batida ? 'i-trofeu' : 'i-meta')} ${esc(m.nome)}</strong>
+        <small class="muted">${esc(p.batida ? `Meta batida! ${formatBRL(m.alvoCents)} guardados. 🎉` : textoMeta(p))}</small>
+        <div class="account-actions">
+          ${p.batida ? '' : `<button class="ghost" data-meta-guardar="${esc(m.id)}">＋ Guardar</button>`}
+          <button class="ghost" data-meta-del="${esc(m.id)}">Remover</button>
+        </div>
       </div>
     </li>`;
   }).join('') || '<li class="muted small">Nenhuma meta ainda. Monta uma com o C.A.O.S.!</li>';
+  // dois quadros depois, o anel anda do valor anterior pro novo (a transição do CSS faz o resto)
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    for (const c of el.querySelectorAll('.anel-valor')) c.setAttribute('stroke-dashoffset', c.dataset.alvo);
+  }));
 }
 
 async function guardarEmMeta(id, valorCents) {
@@ -1390,9 +1540,10 @@ function renderContas() {
   $('#account-list').innerHTML = agruparPorBanco(state.accounts).map(g => {
     const dinheiro = g.contas.filter(a => a.tipo !== 'cartao').reduce((t, a) => t + accountBalance(a, state.expenses, state.incomes, state.transferencias), 0);
     const temDinheiro = g.contas.some(a => a.tipo !== 'cartao');
+    const tema = temaBanco(g.bank === 'Outro' ? (g.contas[0]?.nickname || 'Outro') : g.bank);
     return `
-    <li class="banco-grupo">
-      <div class="banco-head"><strong>${esc(g.bank === 'Outro' ? 'Outros' : g.bank)}</strong>${temDinheiro && g.contas.length > 1 ? `<span class="num muted">${formatBRL(dinheiro)} no total</span>` : ''}</div>
+    <li class="banco-grupo" style="--banco-cor:${tema.cor};--banco-apoio:${tema.apoio}">
+      <div class="banco-head"><strong><span class="banco-sigla" aria-hidden="true">${esc(tema.sigla)}</span>${esc(g.bank === 'Outro' ? 'Outros' : g.bank)}</strong>${temDinheiro && g.contas.length > 1 ? `<span class="num muted">${formatBRL(dinheiro)} no total</span>` : ''}</div>
       <ul class="banco-partes">${g.contas.map(a => (a.tipo === 'cartao' ? itemCartao(a) : itemConta(a))).join('')}</ul>
     </li>`;
   }).join('');
@@ -1504,17 +1655,31 @@ function itemCartao(a) {
   const f = faturaDoCartao(comReforco(a, state.accounts, state.expenses, state.incomes, state.transferencias), state.expenses, toISODate());
   const cls = f.pct >= 100 ? 'cheio' : f.pct >= 80 ? 'alto' : '';
   const dia = iso => `${iso.slice(8)}/${iso.slice(5, 7)}`;
+  const sit = f.pct >= 100 ? ['critico', 'Limite crítico'] : f.pct >= 80 ? ['atencao', 'Atenção'] : ['saudavel', 'Saudável'];
   return `
-    <li>
-      <div class="account-head"><strong>${ic('a-cartao')} ${esc(accountLabel(a))}</strong><span class="num ${f.pct >= 100 ? 'bad' : ''}">${formatBRL(f.disponivelCents)} livre</span></div>${f.reforcoCents ? `<small class="muted">Limite ${formatBRL(a.limiteCents)} + ${formatBRL(f.reforcoCents)} do cofrinho.</small>` : ''}
+    <li class="cartao-item">
+      <div class="account-head"><strong>${ic('a-cartao')} ${esc(accountLabel(a))} <span class="sit-limite ${sit[0]}">${sit[1]}</span></strong><span class="num ${f.pct >= 100 ? 'bad' : ''}">${formatBRL(f.disponivelCents)} livre</span></div>${f.reforcoCents ? `<small class="muted">Limite ${formatBRL(a.limiteCents)} + ${formatBRL(f.reforcoCents)} do cofrinho.</small>` : ''}
       <div class="limite-bar ${cls}" role="img" aria-label="${f.pct}% do limite usado"><i style="width:${Math.min(100, Math.max(0, f.pct))}%"></i></div>
       <small class="muted">Usado ${formatBRL(f.usadoCents)} de ${formatBRL(f.limiteCents)} (${f.pct}%). Fatura aberta ${formatBRL(f.abertaCents)}, fecha ${dia(f.fechamento)}.${f.fechadaCents ? ` Fatura fechada ${formatBRL(f.fechadaCents)} vence ${dia(f.vencimento)}.` : ''}${f.futurasCents ? ` Parcelas das próximas faturas: ${formatBRL(f.futurasCents)}${f.presoFuturoCents ? ` (${formatBRL(f.presoFuturoCents)} preso no limite)` : ''}.` : ''}</small>
       ${f.atrasada ? `<small class="bad">A fatura de ${formatBRL(f.fechadaCents)} venceu dia ${dia(f.vencimento)}. Já pagou? Marca aqui que ela sai do limite.</small>` : ''}
       <div class="account-actions">
+        <button class="ghost" data-compra-cartao="${esc(a.id)}">＋ Lançar compra neste cartão</button>
         ${f.fechadaCents > 0 ? `<button class="ghost" data-fatura-paga="${esc(a.id)}">Paguei a fatura</button>` : ''}
         <button class="ghost" data-acc-del="${esc(a.id)}">Remover</button>
       </div>
     </li>`;
+}
+
+/** "Lançar compra neste cartão" (V2 do AI Studio, 13/11): abre o Lançar já no crédito e com o cartão escolhido. */
+function compraNoCartao(id) {
+  document.querySelector('input[name="kind"][value="gasto"]').checked = true;
+  state.kind = 'gasto';
+  state.forma = 'credito';
+  location.hash = 'lancar';
+  renderLancar();
+  const sel = $('#account-select');
+  if ([...sel.options].some(o => o.value === id)) sel.value = id;
+  setTimeout(() => $('#amount').focus(), 50);
 }
 
 /** "Paguei a fatura" (12/11): a fatura fechada sai do limite usado. Só a pessoa marca; vencer não é pagar. */
@@ -2369,6 +2534,14 @@ function bind() {
     else state.selectedSource = b.dataset.cat;
     renderLancar();
   });
+  // valor rápido (V2 do AI Studio, 13/11): soma ao que já está digitado; Limpar zera
+  $('#valor-rapido').addEventListener('click', e => {
+    const b = e.target.closest('[data-somar]');
+    if (!b) return;
+    const soma = Number(b.dataset.somar);
+    $('#amount').value = soma ? centsToInput((parseAmount($('#amount').value) || 0) + soma) : '';
+    $('#amount').dispatchEvent(new Event('input', { bubbles: true }));
+  });
   $('#forma-chips').addEventListener('click', e => {
     const b = e.target.closest('[data-forma]');
     if (!b) return;
@@ -2417,7 +2590,25 @@ function bind() {
   };
   $('#cat-list').addEventListener('click', filtrarCat);
   $('#cat-list').addEventListener('keydown', filtrarCat);
-  $('#exportar-csv').addEventListener('click', exportarCSV);
+  $('#cat-rosca').addEventListener('click', filtrarCat);
+  $('#cat-rosca').addEventListener('keydown', filtrarCat);
+  // gráficos vivos: alternar o jeito de ver e tocar/passar o cursor pra ver o detalhe
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-ritmo],[data-meses],[data-catvista]');
+    if (!b) return;
+    if (b.dataset.ritmo) { grafico.ritmo = b.dataset.ritmo; renderRitmo(); }
+    else if (b.dataset.meses) { grafico.meses = b.dataset.meses; renderMeses(); }
+    else { grafico.cat = b.dataset.catvista; render(); }
+  });
+  const escolherDia = e => { const a = e.target.closest('[data-dia]'); if (a && Number(a.dataset.dia) !== grafico.diaSel) { grafico.diaSel = Number(a.dataset.dia); renderRitmo(); } };
+  const escolherMes = e => { const a = e.target.closest('[data-mes]'); if (a && a.dataset.mes !== grafico.mesSel) { grafico.mesSel = a.dataset.mes; renderMeses(); } };
+  $('#grafico-ritmo').addEventListener('pointerover', escolherDia);
+  $('#grafico-ritmo').addEventListener('click', escolherDia);
+  $('#grafico-meses').addEventListener('pointerover', escolherMes);
+  $('#grafico-meses').addEventListener('click', escolherMes);
+  $('#exportar-csv').addEventListener('click', () => exportarCSV());
+  $('#mes-csv').addEventListener('click', () => exportarCSV(lancamentosDoMes(), `caos-financas-${state.viewMonth}-completo.csv`));
+  $('#mes-pdf').addEventListener('click', exportarPDF);
   $('#busca').addEventListener('input', () => { clearTimeout(state.buscaTimer); state.buscaTimer = setTimeout(render, 150); });
   $('#chat-log').addEventListener('click', e => {
     const b = e.target.closest('[data-acao]');
@@ -2455,6 +2646,8 @@ function bind() {
     if (u) return onUpdateAccount(u.dataset.accUpdate);
     const fp = e.target.closest('[data-fatura-paga]');
     if (fp) return marcarFaturaPaga(fp.dataset.faturaPaga);
+    const cc = e.target.closest('[data-compra-cartao]');
+    if (cc) return compraNoCartao(cc.dataset.compraCartao);
     const d = e.target.closest('[data-acc-del]');
     if (d) onRemoveAccount(d.dataset.accDel);
   });

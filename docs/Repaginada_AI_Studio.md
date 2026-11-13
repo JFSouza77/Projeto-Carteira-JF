@@ -66,3 +66,21 @@ forma de pagamento no extrato também ficou pra depois (hoje: tipo, categoria e 
 - Lei 1 em tudo: transferência, edição e "dia sem gasto" pedem confirmação; o C.A.O.S. só propõe.
 - Cada fase em PRs pequenos, com `npm test`, `npm run test:telas` e prints (celular e computador, claro e escuro).
 - Dados de exemplo do protótipo (`seed.ts`) não entram no app.
+
+## V2 do AI Studio (JF, 13/11 de manhã)
+
+O JF trouxe a versão 2 do protótipo (zip e prints fora do repositório, só no rascunho do Wally). O que entra, na ordem:
+
+| # | Item | Veredito |
+| --- | --- | --- |
+| 1 | Orçamento de hoje (limite por dia + barra) e atalhos Gasto/Entrada/Transferir no Início | ✅ no ar (1.28, PR #94) |
+| 2 | Metas com anel de progresso que enche ao guardar | ✅ em SVG simples, ❌ D3 (biblioteca pesada, offline) |
+| 3 | Gráficos vivos: ritmo Acumulado/Por dia com toque no dia; 6 meses Comparar/Saldo líquido; categorias Barras/Donut; toque no dia da ofensiva | ✅ |
+| 4 | Lançar: chips +10/+20/+50/+100/+200 e Limpar; cores por forma de pagamento | ✅ |
+| 5 | Contas: cor por banco, cartão com faixa do banco e situação do limite (Saudável/Atenção/Crítico), "Lançar compra neste cartão" | ✅ |
+| 6 | Exportar o mês (CSV e PDF pela impressão do navegador) no Mês | ✅ |
+| 7 | Dica do Dia no Início (muda com o humor, Outra dica, Aprofundar) | ✅ mexe no C.A.O.S. (versão nova, listas em múltiplo de 5, 2ª lei: ácido nunca no formal nem pra criança) |
+| 8 | "Melhorar falas, glossário, emoções, rostinhos, brilhos" | 🕒 rodada própria do C.A.O.S., com o Code (núcleo só com o ok do JF) |
+
+Publicação: o item 1 foi antes das 08h. O resto vai em pedaços depois da rodada de teste do ChatGPT (09h), pra não mudar o
+app no meio do teste dele.

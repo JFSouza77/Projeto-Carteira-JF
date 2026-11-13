@@ -99,6 +99,19 @@ details.card[open] > summary h2::after { content: "－"; }
 
 .summary .label { margin: 0; color: var(--muted); }
 .summary .big { margin: 2px 0 10px; font-size: 2.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Anel das metas (13/11) */
+.meta-item { display: grid; grid-template-columns: 72px 1fr; gap: 12px; align-items: center; }
+.meta-corpo { display: grid; gap: 2px; min-width: 0; }
+.anel { width: 72px; height: 72px; transform: rotate(-90deg); overflow: visible; }
+.anel circle { fill: none; stroke-width: 7; }
+.anel-fundo { stroke: var(--card-2); }
+.anel-valor { stroke: var(--cyan); stroke-linecap: round; transition: stroke-dashoffset .9s cubic-bezier(.2,.8,.2,1);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--cyan) 60%, transparent)); }
+.anel.batida .anel-valor { stroke: var(--ok); filter: drop-shadow(0 0 5px color-mix(in srgb, var(--ok) 70%, transparent)); }
+.anel-txt { transform: rotate(90deg); transform-origin: 32px 32px; fill: currentColor; font-size: 14px; font-weight: 700;
+  text-anchor: middle; dominant-baseline: central; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .anel-valor { transition: none; } }
+.menos-mov .anel-valor { transition: none; }
 /* Atalhos e orçamento de hoje (V2 do AI Studio, 13/11) */
 .atalhos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .atalho { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 46px; border-radius: 12px;
@@ -786,3 +799,82 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .g-ritmo.acima .a-real { fill: color-mix(in srgb, var(--warn) 14%, transparent); }
 .traco { width: 16px; height: 0; border-top: 2.5px solid var(--accent); display: inline-block; }
 .traco.ideal { border-top: 2px dashed var(--muted); margin-left: 8px; }
+
+/* Gráficos vivos (V2 do AI Studio, 13/11) */
+.g-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.g-topo h2, .g-topo figcaption { margin: 0; }
+.seg { display: inline-flex; background: var(--card-2); border: 1px solid var(--line); border-radius: 99px; padding: 2px; }
+.seg button { border: 0; background: none; color: var(--muted); font: inherit; font-size: .78rem; padding: 6px 10px; border-radius: 99px; min-height: 32px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--fill); color: var(--fill-ink); box-shadow: var(--fill-glow); font-weight: 700; }
+.g-info { margin: 6px 0 0; font-size: .85rem; color: var(--muted); min-height: 1.3em; }
+.g-info strong { color: var(--text); }
+.g-linha .alvo { fill: transparent; cursor: pointer; }
+.g-linha text.sel { fill: var(--text); font-weight: 700; }
+.g-barras .b-entrada { fill: var(--ok); filter: drop-shadow(0 0 3px color-mix(in srgb, var(--ok) 50%, transparent)); }
+.g-barras .b-gasto { fill: var(--caos); filter: drop-shadow(0 0 3px color-mix(in srgb, var(--caos) 50%, transparent)); }
+.g-barras .foco { fill: color-mix(in srgb, var(--cyan) 10%, transparent); stroke: color-mix(in srgb, var(--cyan) 45%, transparent); }
+.g-barras .b-pos { fill: var(--ok); } .g-barras .b-neg { fill: var(--danger); }
+.g-barras .b-pos.sel, .g-barras .b-neg.sel { filter: drop-shadow(0 0 5px currentColor); stroke: var(--text); stroke-width: 1; }
+.g-ritmo .l-real { stroke-width: 3; }
+.g-ritmo .guia { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 3; }
+.g-ritmo .b-dia { fill: var(--cyan); } .g-ritmo .b-dia.acima { fill: var(--caos); }
+.g-ritmo .b-dia.sel { stroke: var(--text); stroke-width: 1; }
+.g-ritmo .l-media { stroke: var(--muted); stroke-dasharray: 4 4; stroke-width: 1.5; }
+.ponto.pos { background: var(--ok); } .ponto.neg { background: var(--danger); margin-left: 8px; }
+.cat-nome .ico { color: var(--cor-cat); }
+.cat-rosca { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: center; }
+.cat-rosca[hidden] { display: none; }
+.cat-list[hidden] { display: none; }
+.rosca { width: 150px; height: 150px; }
+.rosca .fatia { fill: none; stroke-width: 18; cursor: pointer; transition: stroke-width .2s; }
+.rosca .fatia.ativa, .rosca .fatia:hover { stroke-width: 24; }
+.rosca .r-nome { font-size: 10px; fill: var(--muted); text-anchor: middle; }
+.rosca .r-valor { font-size: 18px; font-weight: 800; fill: var(--text); text-anchor: middle; }
+.rosca-leg { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: .88rem; }
+.rosca-leg li { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 8px; cursor: pointer; min-height: 32px; }
+.rosca-leg li.ativa { background: var(--card-2); }
+.rosca-leg .num { margin-left: auto; color: var(--muted); }
+.rosca-leg .ponto { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+@media (max-width: 380px) { .cat-rosca { grid-template-columns: 1fr; justify-items: center; } }
+
+/* Lançar colorido (V2 do AI Studio, 13/11) */
+.valor-rapido { margin-top: -4px; display: grid; grid-template-columns: repeat(5, 1fr) 1.3fr; gap: 6px; }
+.valor-rapido .chip { min-width: 0; padding-left: 4px; padding-right: 4px; justify-content: center; font-size: .85rem; font-variant-numeric: tabular-nums; }
+.valor-rapido .chip.limpar { color: var(--muted); }
+.chip.colorido .ico { color: var(--cor-chip); }
+.chip.colorido[aria-checked="true"] { background: color-mix(in srgb, var(--cor-chip) 16%, var(--card)); color: var(--text);
+  border-color: var(--cor-chip); box-shadow: 0 0 12px -4px var(--cor-chip), inset 0 0 0 1px var(--cor-chip); }
+.chip.colorido[aria-checked="true"] .ico { color: var(--cor-chip); }
+#entry-form[data-kind="entrada"] #submit-btn { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok);
+  box-shadow: inset 0 0 0 1.5px var(--ok), 0 0 14px -3px color-mix(in srgb, var(--ok) 70%, transparent); }
+
+/* Contas com a cor do banco (V2 do AI Studio, 13/11) */
+.banco-grupo { border-top: 3px solid var(--banco-cor, var(--line)); }
+.banco-head strong { display: inline-flex; align-items: center; gap: 8px; }
+.banco-sigla { display: inline-grid; place-items: center; min-width: 32px; height: 32px; padding: 0 6px; border-radius: 10px; font-size: .8rem; font-weight: 800;
+  color: var(--banco-cor); background: color-mix(in srgb, var(--banco-cor) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--banco-cor) 55%, transparent); }
+.cartao-item { position: relative; overflow: hidden; border-radius: 12px; padding-top: 14px !important; }
+.cartao-item::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 4px; background: linear-gradient(90deg, var(--banco-cor), var(--banco-apoio)); }
+.cartao-item .limite-bar > i { background: linear-gradient(90deg, var(--banco-cor), var(--banco-apoio)); }
+.cartao-item .limite-bar.alto > i { background: var(--warn); } .cartao-item .limite-bar.cheio > i { background: var(--danger); }
+.sit-limite { font-size: .7rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; vertical-align: middle; }
+.sit-limite.saudavel { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.sit-limite.atencao { color: var(--warn); background: color-mix(in srgb, var(--warn) 16%, transparent); }
+.sit-limite.critico { color: var(--danger); background: color-mix(in srgb, var(--danger) 16%, transparent); }
+
+/* Exportar o mês (13/11) */
+.exportar-botoes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.exportar-botoes button { min-height: 46px; }
+#relatorio-print { display: none; }
+@media print {
+  body.imprimindo > *:not(#relatorio-print) { display: none !important; }
+  body.imprimindo { background: #fff !important; color: #111 !important; }
+  body.imprimindo #relatorio-print { display: block; font: 12pt/1.4 system-ui, sans-serif; color: #111; }
+  #relatorio-print h1 { font-size: 18pt; margin: 0 0 4pt; }
+  #relatorio-print h2 { font-size: 13pt; margin: 14pt 0 6pt; }
+  #relatorio-print .r-sub { color: #555; font-size: 10pt; }
+  #relatorio-print table { width: 100%; border-collapse: collapse; }
+  #relatorio-print th, #relatorio-print td { text-align: left; padding: 4pt 6pt; border-bottom: 1px solid #ddd; }
+  #relatorio-print td:last-child, #relatorio-print th:last-child { text-align: right; }
+  #relatorio-print .r-tot td { font-size: 14pt; font-weight: 700; }
+}
