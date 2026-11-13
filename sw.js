@@ -15,6 +15,7 @@ const APP_SHELL = [
   './js/notificacoes.js',
   './js/mercado.js',
   './js/novidades.js',
+  './js/cores.js',
   './js/sincronia.js',
   './js/conta.js',
   './js/cripto.js',

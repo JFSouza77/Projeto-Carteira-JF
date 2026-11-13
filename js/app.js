@@ -15,6 +15,7 @@ import {
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
 import { GLOSSARIO, ATUALIZADO_EM } from './caos/glossario.js';
+import { corCategoria, corFonte, corForma, temaBanco } from './cores.js';
 import { NUCLEO } from './caos/nucleo.js';
 import { NOVIDADES, VERSAO_APP, temNovidade, partesDoItem } from './novidades.js';
 import { falar, vozDisponivel, ditadoDisponivel, ouvir, setVelocidade } from './voz.js';
@@ -385,11 +386,15 @@ function render() {
   $('#cat-list').innerHTML = rows.length ? rows.map(r => `
     <li class="cat-filtra${state.filtroCat === r.id ? ' ativa' : ''}" data-filtra-cat="${esc(r.id)}" role="button" tabindex="0" aria-label="Ver lançamentos de ${esc(r.name)}">
       <div class="cat-head">
-        <span>${icCat(r)} ${esc(r.name)}</span>
+        <span style="--cor-cat:${corCategoria(r.id)}" class="cat-nome">${icCat(r)} ${esc(r.name)}</span>
         <span class="num">${formatBRL(r.spentCents)}${r.budgetCents ? `<small> / ${formatBRL(r.budgetCents)}</small>` : ''}</span>
       </div>
       ${r.budgetCents ? `<div class="bar"><div class="bar-fill" style="${barStyle(r.ratio)}"></div></div>` : ''}
     </li>`).join('') : '<li class="muted">Sem gastos ainda.</li>';
+  marcarSeg('catvista', grafico.cat);
+  $('#cat-rosca').hidden = grafico.cat !== 'rosca';
+  $('#cat-list').hidden = grafico.cat === 'rosca';
+  if (grafico.cat === 'rosca') renderRosca(rows);
 
   renderGraficos();
   renderPainel();
@@ -676,34 +681,21 @@ function previaParcelas() {
 // ---------- Gráficos (13/11): SVG feito à mão, sem biblioteca e sem internet ----------
 const brlCurto = c => (c >= 100000 ? `R$ ${(c / 100000).toFixed(1).replace('.', ',')} mil` : formatBRL(c).replace(',00', ''));
 
+// Gráficos vivos (V2 do AI Studio, 13/11): cada um tem dois jeitos de ver e mostra o detalhe ao tocar/passar o cursor.
+const grafico = { ritmo: 'acum', meses: 'comparar', cat: 'barras', diaSel: null, mesSel: null };
+
+function marcarSeg(attr, valor) {
+  for (const b of document.querySelectorAll(`[data-${attr}]`)) b.setAttribute('aria-pressed', String(b.dataset[attr] === valor));
+}
+
 function renderGraficos() {
   const card = $('#graficos-card');
   if (!card) return;
   const temAlgo = state.expenses.length + state.incomes.length > 0;
   card.hidden = !temAlgo;
   if (!temAlgo) return;
-  // Barras: entradas x gastos dos últimos 6 meses (13/11, repaginada do AI Studio)
-  const serie = serieMensal(state.expenses, state.incomes, state.viewMonth, 6);
-  const W = 320, H = 150, P = { l: 6, r: 6, t: 16, b: 22 };
-  const max = Math.max(1, ...serie.flatMap(m => [m.gastosCents, m.entradasCents]));
-  const temEntrada = serie.some(m => m.entradasCents > 0);
-  const larg = (W - P.l - P.r) / serie.length;
-  const bw = Math.min(16, larg / 3);
-  const alt = v => (v / max) * (H - P.t - P.b);
-  const barra = (x, v, cls, nome, m) => v ? `<rect x="${x.toFixed(1)}" y="${(H - P.b - alt(v)).toFixed(1)}" width="${bw}" height="${Math.max(1, alt(v)).toFixed(1)}" rx="3" class="${cls}"><title>${nomeMesCurto(m)}: ${nome} ${formatBRL(v)}</title></rect>` : '';
-  const desc = `Últimos 6 meses: ${serie.map(m => `${nomeMesCurto(m.month)} gastos ${formatBRL(m.gastosCents)}${temEntrada ? `, entradas ${formatBRL(m.entradasCents)}` : ''}`).join('; ')}.`;
-  $('#grafico-meses').innerHTML = `
-    <svg viewBox="0 0 ${W} ${H}" class="g-linha g-barras" role="img" aria-label="${esc(desc)}">
-      <line x1="${P.l}" x2="${W - P.r}" y1="${H - P.b}" y2="${H - P.b}" class="eixo"/>
-      ${serie.map((m, i) => {
-        const cx = P.l + larg * i + larg / 2;
-        return (temEntrada ? barra(cx - bw - 1, m.entradasCents, 'b-entrada', 'entradas', m.month) + barra(cx + 1, m.gastosCents, 'b-gasto', 'gastos', m.month)
-          : barra(cx - bw / 2, m.gastosCents, 'b-gasto', 'gastos', m.month))
-          + `<text x="${cx.toFixed(1)}" y="${H - 6}" text-anchor="middle">${nomeMesCurto(m.month)}</text>`;
-      }).join('')}
-    </svg>`;
+  renderMeses();
   renderRitmo();
-  $('#grafico-meses').nextElementSibling.hidden = !temEntrada;
   // Calendário de calor: quanto mais forte a cor, mais gasto no dia
   const dias = gastoPorDia(state.expenses, state.viewMonth);
   const topo = Math.max(...dias);
@@ -717,7 +709,55 @@ function renderGraficos() {
   $('#calor-legenda').textContent = topo ? `O dia mais pesado foi o ${maior + 1}: ${formatBRL(topo)}.` : 'Nenhum gasto neste mês ainda.';
 }
 
-/** Ritmo do mês: gasto acumulado dia a dia x linha ideal (orçamento ou entradas divididos pelos dias). */
+/** 6 meses: "Comparar" (entradas x gastos) ou "Saldo" (entradas − gastos, pra cima ou pra baixo do zero). */
+function renderMeses() {
+  const serie = serieMensal(state.expenses, state.incomes, state.viewMonth, 6);
+  const modo = grafico.meses;
+  marcarSeg('meses', modo);
+  const W = 320, H = 150, P = { l: 6, r: 6, t: 14, b: 22 };
+  const larg = (W - P.l - P.r) / serie.length;
+  const temEntrada = serie.some(m => m.entradasCents > 0);
+  const sel = serie.find(m => m.month === grafico.mesSel) ? grafico.mesSel : serie[serie.length - 1].month;
+  let corpo = '';
+  if (modo === 'saldo') {
+    const saldos = serie.map(m => m.entradasCents - m.gastosCents);
+    // o zero fica onde a proporção pede: sem mês no vermelho, ele vai lá pra baixo e as barras usam a altura toda
+    const maxPos = Math.max(0, ...saldos), maxNeg = Math.max(0, ...saldos.map(v => -v));
+    const util = H - P.t - P.b, soma = Math.max(1, maxPos + maxNeg);
+    const zero = P.t + util * (maxPos / soma);
+    const bw = Math.min(26, larg * 0.55);
+    corpo = `<line x1="${P.l}" x2="${W - P.r}" y1="${zero.toFixed(1)}" y2="${zero.toFixed(1)}" class="eixo"/>` + serie.map((m, i) => {
+      const v = saldos[i], h = Math.max(1, (Math.abs(v) / soma) * util), cx = P.l + larg * i + larg / 2;
+      return `<rect x="${(cx - bw / 2).toFixed(1)}" y="${(v >= 0 ? zero - h : zero).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="3" class="${v >= 0 ? 'b-pos' : 'b-neg'}${m.month === sel ? ' sel' : ''}"/>`
+        + `<text x="${cx.toFixed(1)}" y="${H - 6}" text-anchor="middle" class="${m.month === sel ? 'sel' : ''}">${nomeMesCurto(m.month)}</text>`;
+    }).join('');
+  } else {
+    const max = Math.max(1, ...serie.flatMap(m => [m.gastosCents, m.entradasCents]));
+    const bw = Math.min(16, larg / 3);
+    const alt = v => (v / max) * (H - P.t - P.b);
+    const barra = (x, v, cls) => v ? `<rect x="${x.toFixed(1)}" y="${(H - P.b - alt(v)).toFixed(1)}" width="${bw}" height="${Math.max(1, alt(v)).toFixed(1)}" rx="3" class="${cls}"/>` : '';
+    corpo = `<line x1="${P.l}" x2="${W - P.r}" y1="${H - P.b}" y2="${H - P.b}" class="eixo"/>` + serie.map((m, i) => {
+      const cx = P.l + larg * i + larg / 2;
+      return (m.month === sel ? `<rect x="${(cx - larg / 2 + 2).toFixed(1)}" y="${P.t - 8}" width="${(larg - 4).toFixed(1)}" height="${H - P.b - P.t + 8}" rx="8" class="foco"/>` : '')
+        + (temEntrada ? barra(cx - bw - 1, m.entradasCents, 'b-entrada') + barra(cx + 1, m.gastosCents, 'b-gasto') : barra(cx - bw / 2, m.gastosCents, 'b-gasto'))
+        + `<text x="${cx.toFixed(1)}" y="${H - 6}" text-anchor="middle" class="${m.month === sel ? 'sel' : ''}">${nomeMesCurto(m.month)}</text>`;
+    }).join('');
+  }
+  // faixas invisíveis pra tocar em cada mês
+  const alvos = serie.map((m, i) => `<rect x="${(P.l + larg * i).toFixed(1)}" y="0" width="${larg.toFixed(1)}" height="${H}" class="alvo" data-mes="${m.month}"/>`).join('');
+  const desc = `Últimos 6 meses: ${serie.map(m => `${nomeMesCurto(m.month)} entradas ${formatBRL(m.entradasCents)}, gastos ${formatBRL(m.gastosCents)}`).join('; ')}.`;
+  $('#grafico-meses').innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="g-linha g-barras" role="img" aria-label="${esc(desc)}">${corpo}${alvos}</svg>`;
+  const m = serie.find(x => x.month === sel);
+  const saldo = m.entradasCents - m.gastosCents;
+  const poupado = m.entradasCents > 0 && saldo > 0 ? ` · ${Math.round((saldo / m.entradasCents) * 100)}% poupado` : '';
+  $('#meses-info').innerHTML = `<strong>${nomeMesCurto(m.month)}</strong>: entrou ${formatBRL(m.entradasCents)}, saiu ${formatBRL(m.gastosCents)} · saldo <span class="${saldo < 0 ? 'bad' : 'ok'}">${formatBRL(saldo)}</span>${poupado}`;
+  $('#meses-legenda').innerHTML = modo === 'saldo'
+    ? '<span class="ponto pos"></span>Sobrou <span class="ponto neg"></span>Faltou'
+    : `<span class="ponto entrada"></span>Entradas <span class="ponto gasto"></span>Gastos`;
+  $('#meses-legenda').hidden = modo === 'comparar' && !temEntrada;
+}
+
+/** Ritmo do mês: "Acumulado" (gasto somado x linha ideal) ou "Por dia" (gasto de cada dia x média ideal por dia). */
 function renderRitmo() {
   const mes = state.viewMonth;
   const dias = gastoPorDia(state.expenses, mes);
@@ -729,27 +769,76 @@ function renderRitmo() {
   const fig = $('#ritmo-fig');
   fig.hidden = !ate || !base;
   if (fig.hidden) return;
+  const modo = grafico.ritmo;
+  marcarSeg('ritmo', modo);
   const acum = []; dias.reduce((t, v, i) => (acum[i] = t + v), 0);
   const W = 320, H = 140, P = { l: 6, r: 6, t: 14, b: 20 };
-  const max = Math.max(base, acum[ate - 1] || 0, 1);
-  const x = d => P.l + ((d - 1) / Math.max(1, total - 1)) * (W - P.l - P.r);
-  const y = v => P.t + (1 - v / max) * (H - P.t - P.b);
-  const real = acum.slice(0, ate).map((v, i) => `${i ? 'L' : 'M'}${x(i + 1).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-  const area = `${real} L${x(ate).toFixed(1)},${y(0).toFixed(1)} L${x(1).toFixed(1)},${y(0).toFixed(1)} Z`;
+  const passo = (W - P.l - P.r) / total;
+  const xc = d => P.l + passo * (d - 0.5); // centro da coluna do dia
+  const porDiaIdeal = base / total;
+  const sel = grafico.diaSel && grafico.diaSel <= total ? grafico.diaSel : ate;
   const ideal = Math.round((base * ate) / total);
   const gasto = acum[ate - 1] || 0;
   const acima = gasto > ideal;
+  let corpo;
+  if (modo === 'dia') {
+    const max = Math.max(porDiaIdeal * 1.2, ...dias.slice(0, ate), 1);
+    const y = v => P.t + (1 - v / max) * (H - P.t - P.b);
+    const bw = Math.max(2, passo * 0.62);
+    corpo = `<line x1="${P.l}" x2="${W - P.r}" y1="${y(0)}" y2="${y(0)}" class="eixo"/>`
+      + dias.slice(0, ate).map((v, i) => v ? `<rect x="${(xc(i + 1) - bw / 2).toFixed(1)}" y="${y(v).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1, y(0) - y(v)).toFixed(1)}" rx="2" class="b-dia${v > porDiaIdeal ? ' acima' : ''}${i + 1 === sel ? ' sel' : ''}"/>` : '').join('')
+      + `<line x1="${P.l}" x2="${W - P.r}" y1="${y(porDiaIdeal).toFixed(1)}" y2="${y(porDiaIdeal).toFixed(1)}" class="l-media"/>`;
+  } else {
+    const max = Math.max(base, gasto, 1);
+    const y = v => P.t + (1 - v / max) * (H - P.t - P.b);
+    const pts = acum.slice(0, ate).map((v, i) => `${xc(i + 1).toFixed(1)},${y(v).toFixed(1)}`);
+    const real = `M${pts.join(' L')}`;
+    const area = `${real} L${xc(ate).toFixed(1)},${y(0).toFixed(1)} L${xc(1).toFixed(1)},${y(0).toFixed(1)} Z`;
+    corpo = `<defs><linearGradient id="grad-ritmo" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="var(--cyan)"/><stop offset=".6" stop-color="var(--accent)"/><stop offset="1" stop-color="${acima ? 'var(--caos)' : 'var(--accent)'}"/></linearGradient></defs>`
+      + `<line x1="${P.l}" x2="${W - P.r}" y1="${y(0)}" y2="${y(0)}" class="eixo"/>`
+      + `<path d="M${xc(1)},${y(0)} L${xc(total)},${y(base)}" class="l-ideal"/>`
+      + `<path d="${area}" class="a-real"/><path d="${real}" class="l-real" style="stroke:url(#grad-ritmo)"/>`
+      + (sel <= ate ? `<line x1="${xc(sel).toFixed(1)}" x2="${xc(sel).toFixed(1)}" y1="${P.t}" y2="${y(0)}" class="guia"/><circle cx="${xc(sel).toFixed(1)}" cy="${y(acum[sel - 1]).toFixed(1)}" r="4.5" class="p-real"/>` : '');
+  }
+  const alvos = dias.map((_, i) => `<rect x="${(P.l + passo * i).toFixed(1)}" y="0" width="${passo.toFixed(2)}" height="${H}" class="alvo" data-dia="${i + 1}"/>`).join('');
   $('#ritmo-titulo').textContent = `Ritmo de gastos no mês: dia ${ate}, ${formatBRL(gasto)} de ${formatBRL(ideal)} ideais`;
   $('#grafico-ritmo').innerHTML = `
     <svg viewBox="0 0 ${W} ${H}" class="g-linha g-ritmo ${acima ? 'acima' : ''}" role="img"
       aria-label="${esc(`Até o dia ${ate}, você gastou ${formatBRL(gasto)}. No ritmo ideal (${orc ? 'orçamento' : 'entradas'} de ${formatBRL(base)} no mês), seriam ${formatBRL(ideal)}.`)}">
-      <line x1="${P.l}" x2="${W - P.r}" y1="${y(0)}" y2="${y(0)}" class="eixo"/>
-      <path d="M${x(1)},${y(0)} L${x(total)},${y(base)}" class="l-ideal"/>
-      <path d="${area}" class="a-real"/>
-      <path d="${real}" class="l-real"/>
-      <circle cx="${x(ate).toFixed(1)}" cy="${y(gasto).toFixed(1)}" r="4" class="p-real"/>
+      ${corpo}${alvos}
       <text x="${P.l}" y="${H - 4}">dia 1</text><text x="${W - P.r}" y="${H - 4}" text-anchor="end">dia ${total}</text>
     </svg>`;
+  const idealAte = Math.round(porDiaIdeal * sel);
+  $('#ritmo-info').innerHTML = sel > ate
+    ? `<strong>Dia ${sel}</strong>: ainda não chegou. O ideal até lá é ${formatBRL(idealAte)}.`
+    : `<strong>Dia ${sel}</strong>: ${formatBRL(dias[sel - 1])} no dia · acumulado ${formatBRL(acum[sel - 1])} · ideal ${formatBRL(idealAte)}`;
+  $('#ritmo-legenda').innerHTML = modo === 'dia'
+    ? '<span class="ponto gasto"></span>Gasto do dia <span class="traco ideal"></span>Média ideal por dia'
+    : '<span class="traco real"></span>Gasto acumulado <span class="traco ideal"></span>Ritmo ideal';
+}
+
+/** Rosca das categorias: cada fatia filtra o extrato ao tocar (mesma ação da lista). */
+function renderRosca(rows) {
+  const el = $('#cat-rosca');
+  const com = rows.filter(r => r.spentCents > 0);
+  const total = com.reduce((t, r) => t + r.spentCents, 0);
+  if (!total) { el.innerHTML = '<p class="muted">Sem gastos ainda.</p>'; return; }
+  const R = 52, C = 2 * Math.PI * R;
+  let ac = 0;
+  const fatias = com.map(r => {
+    const frac = r.spentCents / total, len = Math.max(0, frac * C - (com.length > 1 ? 2 : 0));
+    const f = `<circle cx="70" cy="70" r="${R}" class="fatia${state.filtroCat === r.id ? ' ativa' : ''}" style="stroke:${corCategoria(r.id)}" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-ac * C).toFixed(2)}" data-filtra-cat="${esc(r.id)}"><title>${esc(r.name)}: ${formatBRL(r.spentCents)}</title></circle>`;
+    ac += frac;
+    return f;
+  }).join('');
+  const foco = com.find(r => r.id === state.filtroCat) || com[0];
+  el.innerHTML = `
+    <svg viewBox="0 0 140 140" class="rosca" role="img" aria-label="${esc(com.map(r => `${r.name} ${Math.round((r.spentCents / total) * 100)}%`).join(', '))}">
+      <g transform="rotate(-90 70 70)">${fatias}</g>
+      <text x="70" y="64" class="r-nome">${esc(foco.name)}</text>
+      <text x="70" y="82" class="r-valor">${Math.round((foco.spentCents / total) * 100)}%</text>
+    </svg>
+    <ul class="rosca-leg">${com.map(r => `<li data-filtra-cat="${esc(r.id)}" role="button" tabindex="0" class="${state.filtroCat === r.id ? 'ativa' : ''}"><span class="ponto" style="background:${corCategoria(r.id)}"></span>${esc(r.name)} <span class="num">${Math.round((r.spentCents / total) * 100)}%</span></li>`).join('')}</ul>`;
 }
 
 function nomeMesCurto(month) {
@@ -2435,6 +2524,22 @@ function bind() {
   };
   $('#cat-list').addEventListener('click', filtrarCat);
   $('#cat-list').addEventListener('keydown', filtrarCat);
+  $('#cat-rosca').addEventListener('click', filtrarCat);
+  $('#cat-rosca').addEventListener('keydown', filtrarCat);
+  // gráficos vivos: alternar o jeito de ver e tocar/passar o cursor pra ver o detalhe
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-ritmo],[data-meses],[data-catvista]');
+    if (!b) return;
+    if (b.dataset.ritmo) { grafico.ritmo = b.dataset.ritmo; renderRitmo(); }
+    else if (b.dataset.meses) { grafico.meses = b.dataset.meses; renderMeses(); }
+    else { grafico.cat = b.dataset.catvista; render(); }
+  });
+  const escolherDia = e => { const a = e.target.closest('[data-dia]'); if (a && Number(a.dataset.dia) !== grafico.diaSel) { grafico.diaSel = Number(a.dataset.dia); renderRitmo(); } };
+  const escolherMes = e => { const a = e.target.closest('[data-mes]'); if (a && a.dataset.mes !== grafico.mesSel) { grafico.mesSel = a.dataset.mes; renderMeses(); } };
+  $('#grafico-ritmo').addEventListener('pointerover', escolherDia);
+  $('#grafico-ritmo').addEventListener('click', escolherDia);
+  $('#grafico-meses').addEventListener('pointerover', escolherMes);
+  $('#grafico-meses').addEventListener('click', escolherMes);
   $('#exportar-csv').addEventListener('click', exportarCSV);
   $('#busca').addEventListener('input', () => { clearTimeout(state.buscaTimer); state.buscaTimer = setTimeout(render, 150); });
   $('#chat-log').addEventListener('click', e => {
