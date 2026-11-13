@@ -870,8 +870,9 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 /* Contas com a cor do banco (V2 do AI Studio, 13/11) */
 .banco-grupo { border-top: 3px solid var(--banco-cor, var(--line)); }
 .banco-head strong { display: inline-flex; align-items: center; gap: 8px; }
-.banco-sigla { display: inline-grid; place-items: center; min-width: 32px; height: 32px; padding: 0 6px; border-radius: 10px; font-size: .8rem; font-weight: 800;
-  color: var(--banco-cor); background: color-mix(in srgb, var(--banco-cor) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--banco-cor) 55%, transparent); }
+.banco-sigla { display: inline-grid; place-items: center; min-width: 34px; height: 34px; padding: 0 6px; border-radius: 10px; font-size: .78rem; font-weight: 800;
+  letter-spacing: -.01em; color: var(--banco-letra, #fff); background: var(--banco-fundo, var(--indigo));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16), 0 0 12px -4px var(--banco-cor); }
 .cartao-item { position: relative; overflow: hidden; border-radius: 12px; padding-top: 14px !important; }
 .cartao-item::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 4px; background: linear-gradient(90deg, var(--banco-cor), var(--banco-apoio)); }
 .cartao-item .limite-bar > i { background: linear-gradient(90deg, var(--banco-cor), var(--banco-apoio)); }
