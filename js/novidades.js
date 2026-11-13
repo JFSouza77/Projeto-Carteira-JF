@@ -7,9 +7,9 @@
 
 export const NOVIDADES = Object.freeze([
   {
-    v: '2.0 Alfa',
+    v: '2.0.0 Alfa',
     data: '13/11/2026',
-    nome: 'Alfa 2.0',
+    nome: 'Repaginada',
     t: 'O app entra na fase 2.0: cara nova, gráficos vivos e neon. Esta é a Alfa, a primeira etapa.',
     itens: [
       '🔍 Banco por dentro: toque no nome do banco e veja cada conta e de onde vem o limite do cartão.',
