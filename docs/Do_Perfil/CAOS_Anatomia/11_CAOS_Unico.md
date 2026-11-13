@@ -56,6 +56,7 @@ vai levar: tem que estar completo e em dia pra quando esse dia chegar.
 
 | Versão | Data | O que mudou |
 |---|---|---|
+| 1.3.0 | 13/11/2026 | O JF aprovou: cada lei tem a frase do Perfil e a da Carteira (mesmo sentido); regra dos números (`numeros`): regra do 9 em tudo, e o C.A.O.S. com número próprio em cada casa, separado do app. |
 | 1.2.0 | 13/11/2026 | Entraram o futuro dele (`futuro`: virar um agente virtual) e a regra de ouro. |
 | 1.1.0 | 12/11/2026 | O JF aprovou. Entraram o aniversário da Carteira (5/11) e o calendário de dias (`dias`): 10 datas especiais e os dias da semana, iguais nos dois projetos. |
 | 1.0.0 | 12/11/2026 | Primeira versão: identidade, vida, datas, criador, leis, 10 emoções, formas do avatar. |
