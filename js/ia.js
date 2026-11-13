@@ -64,6 +64,11 @@ export async function lerImagem(base, { base64, categorias }) {
   });
 }
 
+/** Lê ofertas num print (loja, preço, parcelas, frete). A imagem só vai quando a pessoa manda o print da oferta. */
+export async function lerOfertas(base, { base64 }) {
+  return chamar(base, '/ia/ofertas', { imagem: base64, tipo: 'image/jpeg' });
+}
+
 /** Explica um print do banco/fatura. A imagem só vai quando a pessoa pede ("explica esse print"). */
 export async function explicarImagem(base, { base64, duvida, humor }) {
   const j = await chamar(base, '/ia/explicar', { imagem: base64, tipo: 'image/jpeg', duvida: String(duvida || '').slice(0, 300), humor });

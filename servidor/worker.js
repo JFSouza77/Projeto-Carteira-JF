@@ -11,6 +11,7 @@
  *   GET  /saude           → { ok, ia, push } (o que está configurado)
  *   POST /ia/perguntar    → { pergunta, humor, resumo } → { texto }
  *   POST /ia/imagem       → { imagem (base64), tipo, categorias:[{id,nome}] } → { valor_centavos, data, … }
+ *   POST /ia/ofertas      → { imagem (base64), tipo } → { produto, ofertas:[{ loja, preco_centavos, parcelas, … }] } (print de oferta)
  *   GET  /push/chave      → { chave } (chave pública VAPID)
  *   POST /push/inscrever  → { inscricao, hora "HH:MM", fuso }
  *   POST /push/sair       → { endpoint }
@@ -258,6 +259,70 @@ export function esquemaImagem(ids) {
     },
     required: ['tipo', 'valor_centavos', 'data', 'estabelecimento', 'categoria', 'resumo', 'confianca'],
     additionalProperties: false,
+  };
+}
+
+/** Esquema do print de oferta (13/11): loja, preço, parcelas, frete e desconto no Pix de cada oferta visível. */
+export function esquemaOfertas() {
+  const oferta = {
+    type: 'object',
+    properties: {
+      loja: { type: 'string', description: 'Nome da loja ou marketplace (ex.: Amazon, Mercado Livre, Shopee). Vazio se não aparecer.' },
+      preco_centavos: { type: 'integer', description: 'Preço à vista do produto, em centavos. 0 se não achar.' },
+      parcelas: { type: 'integer', description: 'Número de parcelas oferecido (ex.: 10). 0 se não aparecer.' },
+      parcela_centavos: { type: 'integer', description: 'Valor de cada parcela, em centavos. 0 se não aparecer.' },
+      sem_juros: { type: 'boolean' },
+      frete_centavos: { type: 'integer', description: 'Frete em centavos. 0 se grátis ou se não aparecer.' },
+      frete_gratis: { type: 'boolean' },
+      desconto_pix_pct: { type: 'number', description: 'Desconto no Pix/à vista em %, se aparecer. 0 se não.' },
+    },
+    required: ['loja', 'preco_centavos', 'parcelas', 'parcela_centavos', 'sem_juros', 'frete_centavos', 'frete_gratis', 'desconto_pix_pct'],
+    additionalProperties: false,
+  };
+  return {
+    type: 'object',
+    properties: {
+      produto: { type: 'string', description: 'O produto, curto (ex.: geladeira 400 L). Vazio se não der pra saber.' },
+      ofertas: { type: 'array', items: oferta, description: 'Uma por loja visível no print, no máximo 6.' },
+    },
+    required: ['produto', 'ofertas'],
+    additionalProperties: false,
+  };
+}
+
+async function iaOfertas(req, env) {
+  const corpo = await lerCorpo(req);
+  const imagem = String(corpo.imagem || '');
+  const tipo = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(corpo.tipo) ? corpo.tipo : null;
+  if (!imagem || !tipo) throw new ErroHttp(400, 'Mande a imagem (base64) e o tipo.');
+  if (imagem.length > MAX_IMAGEM_B64 || !/^[A-Za-z0-9+/=]+$/.test(imagem)) throw new ErroHttp(400, 'Imagem inválida ou grande demais.');
+  const client = clienteIA(env);
+  await conferirLimite(req, env);
+  const r = await client.beta.messages.create({
+    model: modelo(env),
+    max_tokens: 4000,
+    output_config: { effort: 'medium', format: { type: 'json_schema', schema: esquemaOfertas() } },
+    system: 'Você lê prints de ofertas de lojas online no Brasil para um app pessoal que compara preços. Extraia só o que estiver visível no print. Não invente: se não aparecer, use 0, vazio ou false.',
+    messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: tipo, data: imagem } }, { type: 'text', text: 'Leia as ofertas deste print.' }] }],
+    ...extras(env),
+  });
+  const texto = textoDa(r);
+  if (!texto) throw new ErroHttp(422, 'A IA não conseguiu ler esse print.');
+  let dados;
+  try { dados = JSON.parse(texto); } catch { throw new ErroHttp(502, 'A IA respondeu num formato inesperado.'); }
+  const inteiro = v => (Number.isInteger(v) && v > 0 && v < 10_000_000_00 ? v : 0);
+  return {
+    produto: String(dados.produto || '').slice(0, 60),
+    ofertas: (Array.isArray(dados.ofertas) ? dados.ofertas : []).slice(0, 6).map(o => ({
+      loja: String(o?.loja || '').replace(/[<>"'`]/g, '').slice(0, 30),
+      preco_centavos: inteiro(o?.preco_centavos),
+      parcelas: Number.isInteger(o?.parcelas) && o.parcelas > 0 && o.parcelas <= 48 ? o.parcelas : 0,
+      parcela_centavos: inteiro(o?.parcela_centavos),
+      sem_juros: o?.sem_juros === true,
+      frete_centavos: inteiro(o?.frete_centavos),
+      frete_gratis: o?.frete_gratis === true,
+      desconto_pix_pct: typeof o?.desconto_pix_pct === 'number' && o.desconto_pix_pct > 0 && o.desconto_pix_pct < 90 ? Math.round(o.desconto_pix_pct * 10) / 10 : 0,
+    })).filter(o => o.loja && o.preco_centavos),
   };
 }
 
@@ -612,7 +677,7 @@ export default {
         return json({ chave: env.VAPID_PUBLIC_KEY }, 200, h);
       }
       if (req.method === 'POST') {
-        const rotas = { '/ia/perguntar': iaPerguntar, '/ia/imagem': iaImagem, '/ia/explicar': iaExplicar, '/ia/bancos': iaBancos, '/push/inscrever': pushInscrever, '/push/sair': pushSair,
+        const rotas = { '/ia/perguntar': iaPerguntar, '/ia/imagem': iaImagem, '/ia/ofertas': iaOfertas, '/ia/explicar': iaExplicar, '/ia/bancos': iaBancos, '/push/inscrever': pushInscrever, '/push/sair': pushSair,
           '/conta/criar': contaCriar, '/conta/entrar': contaEntrar, '/conta/sair': contaSair, '/sync': sincronizar };
         const rota = rotas[url.pathname];
         if (rota) return json(await rota(req, env), 200, h);

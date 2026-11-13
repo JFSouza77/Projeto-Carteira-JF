@@ -135,3 +135,18 @@ export function escolherRosto({ emocao = 'calmo', evento, humor = 'suave', inten
 }
 
 export { EMOS };
+
+// Modo analista (JF, 13/11): quando ele compara ofertas e faz conta de porcentagem, ganha um rosto próprio de "óculos
+// de analista". Não é uma emoção (as 10 do núcleo continuam iguais): é o rosto do modo de trabalho, só da Carteira.
+export const ROSTO_ANALISTA = Object.freeze([
+  Object.freeze(['(⌐■_■)', '(⌐■_■)🔍', '(⌐■_■)', '(•_•)🔍']),
+  Object.freeze(['(⌐■_■)💲', '(⌐■_■)', '(⌐■_■)🧮', '(⌐■_■)']),
+  Object.freeze(['(⌐□_□)', '(⌐□_□)🔍', '(⌐□_□)', '(⌐□_□)📊']),
+  Object.freeze(['(¬‿¬)🔍', '(⌐■_■)', '(¬‿¬)🏷️', '(⌐■_■)']),
+  Object.freeze(['(⌐■‿■)', '(⌐■‿■)✔', '(⌐■_■)', '(⌐■_■)🔍']),
+]);
+
+export function rostoAnalista(rng = Math.random) {
+  const quadros = ROSTO_ANALISTA[Math.floor(rng() * ROSTO_ANALISTA.length)] || ROSTO_ANALISTA[0];
+  return { emo: 'analista', nome: 'analista', cor: '#3ad4ff', bg: 'rgba(8,34,46,0.96)', fr: 900, per: 2600, amp: 0.3, quadros, mistura: false };
+}

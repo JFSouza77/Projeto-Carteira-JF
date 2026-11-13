@@ -374,6 +374,8 @@ const BANCOS_AZ = [
   'Banco BMG', 'Banco Genial', 'HSBC', 'Porto Bank', 'RappiBank', 'RecargaPay', 'NG Cash', 'Creditas', 'Conta Simples',
   'Hotmart', 'Revolut', 'Wise', 'DollarApp', 'Ailos', 'Cresol', 'Unicred', 'Sisprime', 'Woop (Sicredi)', 'Credsystem',
   'VerdeCard', 'Sem Parar', 'ByBit', 'Crypto.com', 'Foxbit',
+  // cartões de loja (JF, 13/11: "o cartão da Amazon está virando um cartão de crédito mesmo", emitido pelo Bradesco)
+  'Cartão Amazon', 'Cartão Magalu', 'Cartão Carrefour', 'Cartão Renner', 'Cartão Riachuelo',
   // cartões de benefício (vale-refeição e vale-alimentação)
   'Alelo', 'VR Benefícios', 'Sodexo (Pluxee)', 'Ticket (Edenred)', 'Swile', 'Caju',
 ].sort((a, b) => a.localeCompare(b, 'pt-BR'));
