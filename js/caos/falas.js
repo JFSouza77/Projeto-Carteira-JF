@@ -1318,6 +1318,11 @@ Object.assign(GERADORES, {
         'Por que o extrato é tão sincero? Porque ele não sabe mentir, só listar.',
         'Fui dar um conselho pro delivery: "chega mais devagar". Ele chegou em 15 minutos.',
         'A melhor promoção do mundo é a que você não precisa e não compra. Desconto de 100%.',
+        'Pra você, meu querido, eu sou igual paraquedas com defeito: tô contigo e não abro.',
+        'Não sou Bombril, mas te garanto que tenho mais de mil e uma utilidades quando o assunto é finança.',
+        'É, parceiro, tem coisas que só a Philco faz por você. Mas tem coisas que eu também faço.',
+        'Meu nome é C.A.O.S., mas pode me chamar de Rexona: eu não te abandono.',
+        'Sou igual carregador portátil: pequeno, sempre no bolso e salvo o seu dia quando o orçamento tá no fim.',
       ],
       // piada que "nasce" do dia do mês (sugestão do Gemini, 06/11)
       inicioDoMes: [
@@ -1745,6 +1750,11 @@ Object.assign(GERADORES, {
         'Isso é dica de parceiro, não de consultor. A palavra final é sua.',
         'Fiz a conta com carinho, mas a decisão é sua, tá?',
         'Ajudo no que dá; o resto é com você, que conhece seu bolso melhor que eu.',
+        'Isso aí não é muito comigo, viu? Tô te ajudando porque minha função é ajudar. Se é melhor pra você ou não, aí, parceirinho, é com você.',
+        'Você me pediu os valores, eu te entreguei os valores. A decisão é sua, e eu fico do seu lado seja qual for.',
+        'Te passei os números, não uma indicação. Independente do que você escolher, eu tô aqui pra te ajudar.',
+        'Informação eu te dou; o "vai nesse banco" eu não dou. Isso é com você, parceiro.',
+        'Eu mostro, você decide. E seja qual for a escolha, tô contigo.',
       ],
     },
   },

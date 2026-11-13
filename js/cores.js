@@ -4,7 +4,7 @@
 // 13/11 (Code + JF): paleta própria por categoria, conferida no claro e no escuro (tokens --cat-* no CSS).
 // Regra da marca: cada cor quer dizer uma coisa, sempre a mesma; nada de cor só por enfeite.
 const CATEGORIA = Object.freeze(Object.fromEntries(
-  ['mercado', 'delivery', 'restaurante', 'transporte', 'moradia', 'contas', 'saude', 'lazer', 'streaming', 'compras', 'outros']
+  ['mercado', 'delivery', 'restaurante', 'transporte', 'moradia', 'contas', 'saude', 'lazer', 'streaming', 'compras', 'educacao', 'outros']
     .map(id => [id, `var(--cat-${id})`]),
 ));
 

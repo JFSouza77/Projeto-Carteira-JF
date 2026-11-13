@@ -290,7 +290,7 @@ function barStyle(ratio) {
 
 // Ícones de traço no lugar dos emojis (JF, 12/11: "mais limpo"). Os símbolos ficam no <svg> do index.html.
 const ic = id => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
-const CAT_COM_ICONE = new Set(['mercado', 'delivery', 'restaurante', 'transporte', 'moradia', 'contas', 'saude', 'lazer', 'streaming', 'compras', 'outros']);
+const CAT_COM_ICONE = new Set(['mercado', 'delivery', 'restaurante', 'transporte', 'moradia', 'contas', 'saude', 'lazer', 'streaming', 'compras', 'educacao', 'outros']);
 const FONTE_COM_ICONE = new Set(['salario', 'freela', 'rendimento', 'presente', 'outros']);
 /** Ícone da categoria: as que vêm com o app têm desenho próprio; a criada pela pessoa mantém o emoji dela. */
 const icCat = c => (c && CAT_COM_ICONE.has(c.id) ? ic(`c-${c.id}`) : esc(c?.emoji ?? '') || ic('c-outros'));

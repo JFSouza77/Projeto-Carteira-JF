@@ -17,7 +17,7 @@ import { textoTendencia, quandoFoi, mercadoVelho } from '../mercado.js';
 const norm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   .replace(/\bc\.\s?a\.\s?o\.\s?s\b\.?/g, 'caos') // "C.A.O.S." = "caos"
   .replace(/%/g, ' porcento ') // "1%" vira "1 porcento" (a calculadora de juros precisa)
-  .replace(/[^\w\s,.$-]/g, ' ').replace(/\s+/g, ' ').trim();
+  .replace(/[^\w\s,.$+*/×÷-]/g, ' ').replace(/\s+/g, ' ').trim(); // + * / × ÷ ficam: matemática básica (13/11)
 
 // Palavras que levam a cada categoria (além do próprio nome dela)
 const SINONIMOS = {
@@ -34,6 +34,8 @@ const SINONIMOS = {
     'paramount plus', 'prime video', 'amazon prime', 'globoplay', 'apple tv', 'crunchyroll', 'spotify', 'deezer',
     'youtube premium', 'star plus', 'telecine', 'assinatura de filme'],
   compras: ['compras', 'roupa', 'tenis', 'sapato', 'shopping', 'presente', 'eletronico', 'loja', 'shopee', 'amazon', 'mercado livre', 'shein', 'aliexpress'],
+  // Educação (JF, 13/11): faculdade e bolsa de estudos
+  educacao: ['educacao', 'faculdade', 'mensalidade', 'curso', 'escola', 'colegio', 'material escolar', 'livro', 'apostila', 'matricula', 'pos graduacao', 'pos', 'ingles', 'idiomas', 'cursinho', 'universidade', 'fies'],
   outros: ['outros', 'outro', 'diversos'],
 };
 
@@ -163,7 +165,8 @@ const CONHECIDAS = [
   'sobra', 'sobrar', 'falta', 'faltam', 'planejo', 'anotar', 'lancar', 'quero', 'investido', 'investida', 'investidos',
   'investimento', 'investimentos', 'aplicado', 'aplicacao', 'aplicacoes', 'rendeu', 'renderam', 'semanas', 'meses', 'dias', 'ano', 'anos', 'contar', 'contei', 'conte',
 ];
-const VOCAB_SET = new Set([...VOCAB, ...CONHECIDAS]);
+// palavras do glossário não são "corrigidas" (bug de 13/11: "pé de meia" virava "pé de média")
+const VOCAB_SET = new Set([...VOCAB, ...CONHECIDAS, ...GLOSSARIO.flatMap(g => g.chaves.flatMap(k => k.split(' ')))]);
 
 /** Distância de edição com troca de letras vizinhas contando 1 ("gastie" ~ "gastei"). */
 function distancia(a, b, max) {
@@ -301,12 +304,67 @@ export function entender(texto, { categories = [], anterior = null } = {}) {
   return r0;
 }
 
+// ---------- O que ele tem anotado do mercado (pesquisado em 13/11/2026) ----------
+// JF (13/11): "ele pode informar os valores, mas deixa claro que é o que tem anotado até tal dia; não é verdade
+// absoluta; vale conferir com o banco". Atualizar a data quando atualizar os números.
+export const ANOTADO_EM = '13 de novembro de 2026';
+export const AVISO_DATA = `Isso é o que eu tinha anotado até ${ANOTADO_EM}: não é verdade absoluta, valores mudam todo dia. Confere com o banco.`;
+const SELIC_ANOTADA = 'Selic em 13,75% ao ano (Copom de 4/11). '; // só quando não tem o dado ao vivo do servidor
+const RENDIMENTOS_ANOTADOS = 'Com condições (campanha, depósito mínimo ou assinatura), os cofrinhos do PicPay e do Mercado Pago chegam a uns 120% do CDI, e o Nubank a 120% pra alguns clientes. Sem condição, Nubank, Inter e C6 ficam perto de 100%.';
+
+// ---------- Matemática básica (JF, 13/11 à noite) ----------
+// "quanto é 7 x 8?", "15 vezes 23", "1200 dividido por 12", "350 + 80". Ele faz a conta e ensina um atalho.
+const NUM_C = '(\\d+(?:[.,]\\d+)?)';
+const OPS = { x: '*', vezes: '*', '*': '*', '×': '*', mais: '+', '+': '+', menos: '-', '-': '-', 'dividido por': '/', 'divido por': '/', '/': '/', '÷': '/' };
+export function lerConta(t) {
+  const m = t.match(new RegExp(`^(?:quanto (?:e|da|fica|vale)\\s+|calcula\\s+|faz (?:a conta|ai)\\s+)?${NUM_C}\\s*(x|vezes|\\*|×|mais|\\+|menos|-|dividido por|divido por|/|÷)\\s*${NUM_C}\\s*\\??$`));
+  if (!m) return null;
+  const n = v => Number(v.replace(',', '.'));
+  const a = n(m[1]), b = n(m[3]), op = OPS[m[2]];
+  if (!Number.isFinite(a) || !Number.isFinite(b) || !op) return null;
+  if (op === '-' && !/^(quanto|calcula|faz)/.test(t)) return null; // "50-60 reais" sozinho não é conta
+  return { a, b, op };
+}
+const fmtNum = v => Number(v.toFixed(2)).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+export function textoConta({ a, b, op }) {
+  const A = fmtNum(a), B = fmtNum(b);
+  if (op === '/') {
+    if (b === 0) return 'Dividir por zero não dá, nem pra mim. Nenhum número cabe zero vezes certinho.';
+    const r = a / b;
+    return `${A} ÷ ${B} = ${fmtNum(r)}. Pra conferir, faz o caminho de volta: ${fmtNum(r)} × ${B} = ${A}.`;
+  }
+  if (op === '*') {
+    const r = a * b;
+    const inteiros = Number.isInteger(a) && Number.isInteger(b);
+    // atalho: quebra o número maior em dezenas + unidades (15 × 23 = 15 × 20 + 15 × 3)
+    const [p, q] = b >= a ? [a, b] : [b, a];
+    if (inteiros && q >= 11 && q % 10 !== 0) {
+      const dez = q - (q % 10), uni = q % 10;
+      return `${A} × ${B} = ${fmtNum(r)}. Atalho: ${fmtNum(p)} × ${fmtNum(dez)} = ${fmtNum(p * dez)} e ${fmtNum(p)} × ${uni} = ${fmtNum(p * uni)}; somando, ${fmtNum(r)}.`;
+    }
+    if (inteiros && a <= 10 && b <= 10) return `${A} × ${B} = ${fmtNum(r)}. É somar o ${A} ${B} vezes (ou o ${B}, ${A} vezes).`;
+    return `${A} × ${B} = ${fmtNum(r)}.`;
+  }
+  if (op === '+') {
+    const r = a + b;
+    const redondo = Math.ceil(b / 10) * 10;
+    return Number.isInteger(b) && b % 10 !== 0 && b > 10
+      ? `${A} + ${B} = ${fmtNum(r)}. Atalho: soma ${fmtNum(redondo)} (dá ${fmtNum(a + redondo)}) e tira ${fmtNum(redondo - b)}.`
+      : `${A} + ${B} = ${fmtNum(r)}.`;
+  }
+  const r = a - b;
+  return `${A} − ${B} = ${fmtNum(r)}.${r < 0 ? ' Deu negativo: o segundo número é maior que o primeiro.' : ` Pra conferir: ${fmtNum(r)} + ${B} = ${A}.`}`;
+}
+
 function entenderSimples(t, { categories = [] } = {}) {
   // "dia 10" é data, não valor (P9, "esqueci de lançar": "gastei 50 no mercado dia 10")
   const r = { t, categoria: acharCategoria(t, categories), periodo: acharPeriodo(t), valor: acharValor(t.replace(/\bdia \d{1,2}\b/g, ' ')), fonte: acharFonte(t) };
   const pergunta = /\b(quanto|qual|quais|onde|como|tive|teve|tenho|vai|posso|consigo|algum|alguma)\b|\?/.test(t);
 
   if (!t) return { ...r, intent: 'nao_entendi' };
+  // Matemática básica (JF, 13/11 à noite: "ele ensina matemática básica pra gente"): "quanto é 15 x 23?"
+  const conta = lerConta(t);
+  if (conta) return { ...r, intent: 'conta', conta };
   // Ofertas e porcentagem (JF, 13/11): "3500 no mercado livre, 3400 na amazon e 2100 na shopee", "15% de 3500",
   // "3500 com 10% de desconto", "de 3500 por 2800". Antes do registro: preço em loja não é gasto.
   if (!/\b(gastei|paguei|comprei|torrei|recebi|ganhei)\b/.test(t)) {
@@ -1051,7 +1109,8 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       }
       const quais = bancos.length > 1 ? `entre ${bancos.slice(0, -1).join(', ')} e ${bancos[bancos.length - 1]}` : bancos.length ? `do ${bancos[0]}` : 'entre os seus bancos';
       return {
-        fato: `Boa pergunta! Comparar o rendimento ${quais} pede dados que mudam toda hora (o percentual do CDI de cada conta ou caixinha).${conta} O jeito certo de comparar: veja no app de cada banco quanto "% do CDI" ele paga; quanto maior, melhor, e confira se o dinheiro fica disponível na hora.`,
+        fato: `${cdi ? '' : SELIC_ANOTADA}${RENDIMENTOS_ANOTADOS} Pra comparar ${quais}, olha o "% do CDI" no app de cada um.${conta} ${AVISO_DATA}`,
+        decisao: 'investimento', cru: true,
         filaIA: bancos.length ? { tipo: 'bancos', bancos, pergunta: intencao.t } : null,
         sugestoes: ['Qual a Selic?', 'Como está o mercado?'],
       };
@@ -1126,10 +1185,12 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       return { fato: textoPrivacidade(), sugestoes: ['O que você pode fazer?', 'Como faço backup?'] };
     case 'tutorial':
       return { fato: TUTORIAL[intencao.tema] || TUTORIAL.geral, sugestoes: ['Como adiciono uma conta?', 'Como ponho orçamento?', 'Como mando foto?'] };
+    case 'conta':
+      return { fato: textoConta(intencao.conta), cru: true, sugestoes: ['Quanto é 15% de 200?', 'O que é regra de três?'] };
     case 'limite_investido':
       // pesquisado em 13/11/2026 (sites dos bancos e notícias); muda com o tempo, por isso a data e o "confira no app"
       return {
-        fato: 'Dá sim! Alguns bancos transformam dinheiro guardado em limite: C6 (Limite Garantido: R$ 1 aplicado vira R$ 1 de limite), Inter (CDB Mais Limite), Nubank (Caixinhas) e PicPay (Cofrinho do cartão). O dinheiro rende, mas fica preso como garantia. Dado de novembro de 2026: confira no app do banco.',
+        fato: `Dá sim! Alguns bancos transformam dinheiro guardado em limite: C6 (Limite Garantido: R$ 1 aplicado vira R$ 1 de limite), Inter (CDB Mais Limite), Nubank (Caixinhas) e PicPay (Cofrinho do cartão). O dinheiro rende, mas fica preso como garantia. ${AVISO_DATA}`,
         cru: true, decisao: 'investimento', sugestoes: ['O que é limite garantido?', 'O que é CDB?'],
       };
     case 'ajuda':

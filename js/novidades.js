@@ -7,6 +7,22 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.0.3 Alfa',
+    data: '13/11/2026',
+    nome: 'Professor',
+    t: 'O C.A.O.S. aprendeu bastante coisa nova sobre dinheiro, benefícios e matemática.',
+    itens: [
+      '🎓 Categoria Educação: faculdade, curso, escola e material agora têm o lugar deles.',
+      '🏛️ Benefícios do governo: Bolsa Família, Pé-de-Meia, BPC, Minha Casa Minha Vida e mais.',
+      '🧾 Impostos do dia a dia: IPTU, IPVA, licenciamento e o que é alíquota.',
+      '📚 Bolsa tem vários sentidos: de valores, de estudos, parcial ou integral.',
+      '🧮 Matemática básica: pergunta "quanto é 15 x 23" e ele ensina o atalho.',
+      '💰 Onde rende mais: os números que ele tem anotado, com data e sem indicar banco.',
+      '😂 Piadas novas: paraquedas com defeito, Rexona e companhia.',
+    ],
+    qol: ['📖 Glossário com 100 termos: tudo que envolve dinheiro, explicado simples.'],
+  },
+  {
     v: '2.0.2 Alfa',
     data: '13/11/2026',
     nome: 'Avatares',
