@@ -7,7 +7,7 @@ import {
   incomeIn, monthKey, shiftMonth, monthLabel, accountBalance, accountLabel, totalBalance, analyze,
   spentIn, toISODate, INCOME_SOURCES, situacaoCompromissos, analisarPlanejamento, cabeNoMes, sugerirCategoria, palavrasDe, faturaDoCartao, progressoMeta, resumoInvestimentos,
 } from '../engine.js';
-import { IDENTIDADE, textoAnatomia, textoPodeNaoPode } from './identidade.js';
+import { IDENTIDADE, textoAnatomia, textoPodeNaoPode, textoVida } from './identidade.js';
 import { textoTendencia, quandoFoi, mercadoVelho } from '../mercado.js';
 
 const norm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -257,7 +257,9 @@ function entenderSimples(t, { categories = [] } = {}) {
   // Memória da conversa: "e agora?", "já sabe responder essa?" voltam na última pergunta que ficou sem resposta
   if (/^(e agora|e ai|e entao|ja (sabe|consegue|saber|sabes) (responder|me responder)|ja sabe|conseguiu (responder)?|lembra (da|daquela) (minha )?pergunta)\b/.test(t)) return { ...r, intent: 'retomar' };
   if (/(quem (te |o )?(criou|fez|programou|inventou|desenvolveu|construiu)|seu criador|seu pai|seu dono|quem e (o )?jf|quem manda em voce)/.test(t)) return { ...r, intent: 'criador' };
-  if (/(de onde (voce )?(veio|vem|surgiu|saiu)|sua origem|sua historia|onde (voce )?nasceu|projeto perfil|veio do perfil)/.test(t)) return { ...r, intent: 'origem' };
+  // a vida dele (núcleo único, 12/11): quando nasceu, aniversário, a história toda
+  if (/(quando (voce |vc )?nasceu|seu aniversario|aniversario (seu|do caos)|quantos anos (voce |vc )?tem|sua historia|sua vida|conta (a )?sua historia)/.test(t)) return { ...r, intent: 'vida' };
+  if (/(de onde (voce )?(veio|vem|surgiu|saiu)|sua origem|onde (voce )?nasceu|projeto perfil|veio do perfil)/.test(t)) return { ...r, intent: 'origem' };
   if (/(como voce funciona|como (e|funciona) (o )?seu cerebro|seu cerebro|sistema nervoso|sua espinha|seus bracos|voce pensa|voce sente|como voce e feito|do que voce e feito)/.test(t)) return { ...r, intent: 'como_funciona' };
   if (/(o que voce (nao )?pode|o que voce nao faz|seus limites|voce (pode|consegue) (mexer|apagar|alterar|gastar|acessar|ver)|acessa (meu|o) banco|ve minha conta|minhas regras|suas regras|suas leis)/.test(t)) return { ...r, intent: 'limites' };
   if (/(quem e voce|quem (e|eh) tu|quem es tu|o que (e|eh) voce|se apresent|apresente.se|qual (e )?(o )?seu nome|como (voce )?se chama|voce e (uma )?(ia|inteligencia|robo|humano|gente|pessoa)|^caos\??$)/.test(t)) return { ...r, intent: 'identidade' };
@@ -885,6 +887,8 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       return { gatilho: 'salario_caos', vars: {}, sugestoes: ['O que vc acha do JF?', 'Quanto gastei este mês?'] };
     case 'sobre_jf':
       return { gatilho: 'sobre_jf', vars: { criador: IDENTIDADE.criador }, sugestoes: SUG_IDENTIDADE };
+    case 'vida':
+      return { fato: textoVida(), sugestoes: SUG_IDENTIDADE };
     case 'significado': case 'criador': case 'origem': case 'identidade': case 'piada':
       return { gatilho: intencao.intent, vars: { sigla: IDENTIDADE.sigla, criador: IDENTIDADE.criador, origem: IDENTIDADE.origem, slogan: IDENTIDADE.slogan }, sugestoes: SUG_IDENTIDADE };
     case 'como_funciona':

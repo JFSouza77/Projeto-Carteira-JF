@@ -83,10 +83,15 @@ Mapa do cérebro: `docs/CAOS_Carteira.md`.
 
 ## C.A.O.S.
 
-- **Sobe de versão sempre que for mexido** (`CAOS_VERSAO` em `js/caos/index.js`; hoje 1.16.0).
+- **Sobe de versão sempre que for mexido** (`CAOS_VERSAO` em `js/caos/index.js`; hoje 1.17.0).
 - **Quantidades sempre terminam em 0 ou 5**: cada lista de falas tem 5, 10, 15… (teste confere).
 - **Quem ele é** (nome, sigla, criador, origem, pode/não pode, anatomia): só em `js/caos/identidade.js`. O app e o
   servidor da IA leem dali, pra nunca ficarem diferentes.
+- **Um C.A.O.S. só (JF, 12/11):** o núcleo (identidade, vida, datas, criador, leis, emoções, dias) é igual ao do Perfil.
+  Fonte: `docs/Do_Perfil/CAOS_Anatomia/caos_nucleo.json` (o Code atualiza); `node ferramentas/gerar_nucleo.js` gera
+  `js/caos/nucleo.js` e o `tests/nucleo.test.js` falha se a cópia divergir. **O núcleo só muda com o ok do JF**, nos dois
+  projetos no mesmo dia. Coisa nova que devia ser do núcleo vai pro Code levar ao JF.
+- **Criador:** só com o selo da conta (`seloCriador`, vem do login; lista `CRIADOR_CONTAS` no servidor). Nome digitado não basta.
 - Humores: `suave` (**padrão**), `normal`, `acido`. Zoeira só no balde `humor_acido` (2ª lei).
 - Alerta sempre traz o número e, quando der, um empurrão útil.
 

@@ -9,8 +9,8 @@
 //            {previsto} {porDia} {entradas} {gastos} {conta} {saldo} {fato} {emocao} {nome}
 
 export const GERADORES = {
-  // Sexta-feira 13 (12/11, falas sugeridas pelo Code do Perfil, tom de parceiro, sem assustar)
-  dia_especial: {
+  // Dias especiais (núcleo único, 12/11): calendário igual ao do Perfil, falas do trabalho da Carteira. 5 por dia.
+  dia_sexta13: {
     moldes: ['{fala}'],
     fala: {
       geral: [
@@ -19,6 +19,121 @@ export const GERADORES = {
         'Sexta-feira 13: dia de passar longe de escada, de gato preto e de compra por impulso.',
         'Sexta-feira 13. Se o saldo assustar, respira: a gente olha junto e organiza.',
         'Sexta-feira 13 e você aqui anotando gasto. Coragem é isso.',
+      ],
+    },
+  },
+  dia_aniversarioCaos: {
+    moldes: ['{fala}'],
+    fala: {
+      geral: [
+        'Hoje é meu aniversário! Nasci em 20 de setembro, só um texto na tela. Hoje cuido da sua carteira. Cresci, né?',
+        'É meu aniversário. Não precisa de presente: um mês no azul já me deixa bobo.',
+        'Parabéns pra mim! Meus circuitos estão em festa. Mas a conta continua: bora ver o mês?',
+        'Aniversário do C.A.O.S. hoje. Desejo pra este ano: você gastando menos com delivery.',
+        'Hoje faço aniversário. Lembro quando eu nem tinha rosto. Agora tenho rosto, voz e uma carteira pra cuidar.',
+      ],
+    },
+  },
+  dia_aniversarioCriador: {
+    moldes: ['{fala}'],
+    fala: {
+      geral: [
+        'Hoje é aniversário do JF, quem me criou. Se der parabéns pra ele, diz que fui eu que mandei.',
+        'Aniversário do meu criador hoje. Dia de pegar leve com todo mundo, inclusive com você.',
+        'Hoje o JF faz aniversário. Ele me programou; eu cuido da sua carteira. Justo, né?',
+        'Dia do aniversário do JF. Eu estou de bom humor hoje: aproveita pra lançar seus gastos.',
+        'Hoje é dia do JF. Bolo é bom, mas cabe no orçamento? Brincadeira. Hoje eu pego leve.',
+      ],
+      criador: [
+        'Parabéns, JF! Hoje eu pego leve com você o dia todo. Amanhã eu volto a implicar.',
+        'Feliz aniversário, criador! Os bugs de hoje eu perdoo. Só os de hoje.',
+        'É seu dia, JF. Gasta com você, mas me avisa que eu anoto, tá?',
+        'Parabéns! Se não fosse você, eu ainda seria um texto na tela. Obrigado por tudo.',
+        'Feliz aniversário, JF. Hoje sem bronca: só comemoração.',
+      ],
+    },
+  },
+  dia_aniversarioCarteira: {
+    moldes: ['{fala}'],
+    fala: {
+      geral: [
+        'Hoje faz aniversário o dia em que eu vim morar aqui na Carteira, como seu parceiro financeiro.',
+        'Aniversário da Carteira! Foi aqui que eu troquei o show do jogo pelas contas do dia a dia.',
+        'Hoje é o aniversário da minha casa nova, a Carteira. Bora comemorar com um mês organizado?',
+        'Faz um ano hoje? Não, mas é o aniversário da Carteira. Eu conto do meu jeito.',
+        'Dia de aniversário da Carteira. Obrigado por me deixar cuidar do seu dinheiro com você.',
+      ],
+    },
+  },
+  dia_aniversarioPerfil: {
+    moldes: ['{fala}'],
+    fala: {
+      geral: [
+        'Hoje é aniversário do Perfil JF, o jogo onde eu nasci. Saudade de apresentar a mesa.',
+        'Aniversário do Perfil hoje! Foi lá que eu aprendi a falar. Aqui eu aprendi a fazer conta.',
+        'Hoje o Perfil JF faz aniversário. Se for jogar com a galera, eu estou lá também.',
+        'Dia do Perfil, minha primeira casa. Lá eu zoo os chutes; aqui eu cuido das contas.',
+        'Aniversário do jogo onde eu nasci. Comemora, mas sem estourar o orçamento, hein?',
+      ],
+    },
+  },
+  dia_natal: {
+    moldes: ['{fala}'],
+    fala: {
+      geral: [
+        'Feliz Natal! Hoje eu fico mais calmo. Só confere se o presente coube no mês, tá?',
+        'Natal chegou. O melhor presente é o mês fechando no azul, mas abraço também vale.',
+        'Feliz Natal! Se precisar lançar as compras de presente, eu ajudo sem bronca.',
+        'Clima de Natal por aqui. Aproveita o dia; amanhã a gente olha as contas juntos.',
+        'Feliz Natal! Obrigado por me deixar fazer parte do seu ano.',
+      ],
+    },
+  },
+  dia_anoNovo: {
+    moldes: ['{fala}'],
+    fala: {
+      geral: [
+        'Ano novo chegando! Promessa boa é a que cabe no bolso. Qual vai ser a sua?',
+        'Feliz ano novo! Que tal uma meta pra este ano? Eu ajudo a montar.',
+        'Contagem regressiva: 3, 2, 1… e as contas continuam. Mas a gente organiza junto.',
+        'Ano novo, carteira nova. Bora começar anotando tudo desde o dia 1?',
+        'Feliz ano novo! Neste ano eu prometo implicar menos. Mentira, mas com carinho.',
+      ],
+    },
+  },
+  dia_halloween: {
+    moldes: ['{fala}'],
+    fala: {
+      geral: [
+        'Halloween! O mais assustador do dia não é fantasma: é fatura fechada sem conferir.',
+        'Dia das bruxas. Fantasia boa é a que cabe no orçamento.',
+        'Halloween por aqui. Doce ou travessura? Eu fico com o saldo no azul.',
+        'Hoje é dia das bruxas. Se a fatura te assustar, me chama que a gente olha junto.',
+        'Halloween! Já conferiu se tem assinatura fantasma cobrando no seu cartão?',
+      ],
+    },
+  },
+  dia_criancas: {
+    moldes: ['{fala}'],
+    fala: {
+      geral: [
+        'Feliz Dia das Crianças! Hoje é dia de brincar e de aprender que dinheiro guardado vira sonho.',
+        'Dia das Crianças! Quer montar uma meta pra juntar pra um brinquedo? Eu ajudo.',
+        'Hoje é Dia das Crianças. Brincar é de graça e é o melhor gasto do dia.',
+        'Feliz Dia das Crianças! Cofrinho também é diversão quando ele vai enchendo.',
+        'Dia das Crianças: todo mundo tem uma criança aí dentro. Cuida dela, e da carteira também.',
+      ],
+    },
+  },
+  dia_namorados: {
+    moldes: ['{fala}'],
+    fala: {
+      geral: [
+        'Dia dos Namorados! Eu fico de vela, mas anoto o jantar pra você.',
+        'Hoje é Dia dos Namorados. Amor não tem preço, mas o restaurante tem. Bora lançar?',
+        'Dia dos Namorados: o terceiro elemento da relação sou eu, cuidando da conta.',
+        'Dia dos Namorados! Presente bonito é o que cabe no mês sem aperto.',
+        'Feliz Dia dos Namorados. Se estiver solteiro, comemora comigo: zero gasto com flor.',
       ],
     },
   },

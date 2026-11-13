@@ -7,6 +7,20 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.20',
+    data: '13/11/2026',
+    nome: 'Um C.A.O.S. Só',
+    t: 'O C.A.O.S. da Carteira e o do Perfil JF agora são o mesmo: mesma história, mesmas datas, mesmo jeito.',
+    itens: [
+      '🎂 Dias especiais: aniversários, Natal, Ano Novo, Halloween e outras datas ganham fala própria.',
+      '📖 A história dele: pergunte "quando você nasceu?" ou "conta sua história" que ele conta.',
+      '🤝 Um C.A.O.S. só: o mesmo parceiro do jogo Perfil JF, aqui cuidando do seu dinheiro.',
+    ],
+    qol: [
+      '🔒 Criador protegido: digitar o nome do criador não dá mais tratamento especial.',
+    ],
+  },
+  {
     v: '1.19',
     data: '12/11/2026',
     nome: 'Visual Mais Limpo',

@@ -125,8 +125,8 @@ test('sexta-feira 13: ele comenta o dia (uma vez)', async () => {
   assert.equal(diaEspecial('2026-11-12'), null);
   assert.equal(diaEspecial('2026-12-13'), null); // domingo
   const now = new Date(2026, 10, 13, 9).getTime();
-  const r = reagir([{ type: 'dia_especial', dia: 'sexta13' }, { type: 'boas_vindas' }], { now });
+  const r = reagir([{ type: 'dia_sexta13' }, { type: 'boas_vindas' }], { now });
   assert.match(r.fala.texto, /sexta-feira 13/i);
-  const de_novo = reagir([{ type: 'dia_especial', dia: 'sexta13' }], { now: now + 3_600_000, memory: r.memoria });
+  const de_novo = reagir([{ type: 'dia_sexta13' }], { now: now + 3_600_000, memory: r.memoria });
   assert.ok(!de_novo.fala || !/sexta-feira 13/i.test(de_novo.fala.texto));
 });

@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 1.20 | 13/11/2026 | Um C.A.O.S. Só |
 | 1.19 | 12/11/2026 | Visual Mais Limpo |
 | 1.18 | 12/11/2026 | Pagou Como? |
 | 1.17 | 12/11/2026 | Conversa Mais Esperta |
