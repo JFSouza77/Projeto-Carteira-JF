@@ -9,6 +9,27 @@ Atualizada pelo Wally a cada rodada.
 1. **Ajustes → Lembretes (UI):** a caixa do horário (20:30) passa da borda direita do cartão. O checkbox, o "Desligado." e o
    "Testar notificação" ficam soltos, sem espaçamento nem alinhamento. Provável causa: `input[type=time]` com largura
    fixa no iPhone. Arrumar junto com uma revisão do card.
+2. **Botão "Me ajuda":** encolhe pro "?" quando rola a tela e volta a crescer quando para. Isso incomoda o JF: tem que ter
+   **um formato só**. Pedido junto:
+   - **dá pra arrastar:** segurar e arrastar pra qualquer canto, e o app lembra onde ficou;
+   - **toque rápido abre um menuzinho de ajuda rápida**, com perguntas prontas que já abrem a conversa do C.A.O.S. com
+     aquela pergunta.
+3. **Microfone não funciona** (a mensagem do JF cortou em "o C.A.O.S. não consegue…", provavelmente "ouvir"). O
+   `js/voz.js` não mudou desde 12/11. Suspeita: o iPhone bloqueia o ditado do navegador no app instalado na tela
+   inicial. Investigar:
+   - conferir a permissão do microfone;
+   - mostrar um erro claro em vez de não fazer nada;
+   - plano B: ditado pelo teclado do iPhone (o microfone do próprio teclado).
+
+## Próxima rodada grande (pedidos do JF, 13/11)
+
+- **Avatares animados do C.A.O.S.** no lugar dos rostinhos (os rostinhos ficam só quando precisar, pra não poluir).
+  Os avatares já estão prontos (vieram do Perfil).
+  - Criar mais avatares onde fizer sentido, por exemplo **"espantado"**: o susto com um valor absurdo, tipo "R$ 17 mil
+    na Cacau Show?". Ele reage ao "valor fora do normal".
+  - O que for traço dele vai pro núcleo, com o ok do JF e aviso ao Code.
+- **Tela de carregamento** ao abrir o app, com área de login: um respiro curto, não demora. Nada de abrir de forma
+  instantânea e seca.
 
 ## Esperando o JF
 
