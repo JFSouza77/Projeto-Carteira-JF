@@ -7,6 +7,22 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.22',
+    data: '13/11/2026',
+    nome: 'Professor de Finanças',
+    t: 'O C.A.O.S. agora explica o mundo do dinheiro, sem jargão e sem internet.',
+    itens: [
+      '📚 Glossário: pergunte "o que é Selic?", "o que é CDB?" ou "meu pai falou de FGTS". São 60 termos.',
+      '🪜 Explicação em camadas: depois da resposta, peça "me explica melhor" que ele vai mais fundo.',
+      '🧮 Juros na ponta do lápis: "juros compostos de 1000 a 1% por 12 meses" e ele faz a conta.',
+      '💳 Vale a pena parcelar: mande "3000 à vista ou 10x de 330" que ele mostra o juro escondido.',
+      '🧒 Pra criança: quem tem até 12 anos recebe a explicação mais simples.',
+    ],
+    qol: [
+      '🏛️ Regras do governo: em FGTS, INSS e imposto, ele avisa a data da informação e manda conferir no oficial.',
+    ],
+  },
+  {
     v: '1.21',
     data: '13/11/2026',
     nome: 'Nada Passa Batido',

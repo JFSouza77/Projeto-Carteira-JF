@@ -170,3 +170,8 @@ orçamento ("quanto ainda posso gastar?"), alertas, previsão do mês, comparaç
 - Com o criador (JF), o balde `humor_acido` vale em qualquer humor (pedido dele: no Perfil o C.A.O.S. é ácido com ele).
   Tratamento formal e criança continuam tirando a zoeira.
 - Revisão completa: `docs/revisoes/2026-11-06_gemini.md`.
+
+## Professor de finanças (1.20.0, 13/11/2026)
+
+- `js/caos/glossario.js`: 60 termos (adulto, criança, camada a mais; `governo: true` cita a data e manda conferir no oficial). Nunca recomenda produto.
+- Conversa: intent `glossario` ("o que é…", "meu pai falou de…"), `calc_juros` (simples/compostos, taxa ao mês ou ao ano), `vale_parcelar` (mostra o juro escondido). "Me explica melhor" depois de um termo traz a camada a mais.
