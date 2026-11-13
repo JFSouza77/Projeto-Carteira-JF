@@ -98,7 +98,7 @@ function aplicarAcessibilidade() {
   const s = state.settings;
   const raiz = document.documentElement;
   raiz.dataset.letra = ['grande', 'maior'].includes(s.letra) ? s.letra : 'normal';
-  if (s.tema === 'claro' || s.tema === 'escuro') raiz.dataset.theme = s.tema; else delete raiz.dataset.theme;
+  if (['claro', 'escuro', 'contraste'].includes(s.tema)) raiz.dataset.theme = s.tema; else delete raiz.dataset.theme;
   raiz.classList.toggle('menos-mov', MENOS_MOVIMENTO.matches);
   setVelocidade(s.vozVel ?? 1);
 }
@@ -2128,7 +2128,7 @@ async function init() {
     Object.assign(state, { expenses, incomes, accounts: accounts.sort((a, b) => a.createdAt - b.createdAt) });
     if (settings) state.settings = { ...state.settings, ...settings };
     // escuro por padrão (JF + Code, 12/11): quem nunca escolheu tema ("do aparelho" de fábrica) passa pro escuro, uma vez só
-    if (settings && !settings.temaV) state.settings = { ...state.settings, tema: settings.tema === 'claro' ? 'claro' : 'escuro', temaV: 2 };
+    if (settings && !settings.temaV) state.settings = { ...state.settings, tema: ['claro', 'contraste'].includes(settings.tema) ? settings.tema : 'escuro', temaV: 2 };
     aplicarAcessibilidade();
     if (memory) state.caosMemory = memory;
     // fotos da conversa antiga não voltam (o link da imagem é da sessão); o texto volta

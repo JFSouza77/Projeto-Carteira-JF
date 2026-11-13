@@ -16,8 +16,11 @@ export const NOVIDADES = Object.freeze([
       '🎯 Dica de meta: o C.A.O.S. lembra no Início quanto guardar por mês pra chegar no prazo.',
       '🧭 Atalhos na conversa: botões pra ir direto pro Lançar, Contas ou Mês.',
       '🔔 Lembrete esperto: o aviso do celular conta quais contas fixas vencem hoje ou amanhã.',
+      '🌗 Alto contraste: novo tema em Ajustes → Acessibilidade, com preto puro e letras bem fortes.',
     ],
-    qol: [],
+    qol: [
+      '💬 Conversa mais nítida: a bolha do C.A.O.S. se destaca melhor do fundo.',
+    ],
   },
   {
     v: '1.22',

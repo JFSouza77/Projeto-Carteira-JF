@@ -29,7 +29,7 @@
   color-scheme: light;
 }
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme="escuro"]):not([data-theme="claro"]) {
+  :root:not([data-theme="escuro"]):not([data-theme="claro"]):not([data-theme="contraste"]) {
     --bg: #f4f6fa; --card: #ffffff; --card-2: #eef1f6; --line: #d5dbe5; --text: #121722; --muted: #566175;
     --accent: #5a7d00; --accent-ink: #ffffff; --caos: #c8155a; --ok: #12814f; --warn: #a86400; --danger: #c22727;
     --fill: var(--accent); --fill-ink: var(--accent-ink); --fill-glow: none;
@@ -416,8 +416,8 @@ select { appearance: none; -webkit-appearance: none; }
 /* modo claro: a cor da emoção escurece pra ter contraste no fundo branco */
 :root[data-theme="claro"] .caos-face, :root[data-theme="claro"] .caos .caos-name { color: color-mix(in srgb, var(--emo-cor) 55%, #000); text-shadow: none; }
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme="escuro"]):not([data-theme="claro"]) .caos-face,
-  :root:not([data-theme="escuro"]):not([data-theme="claro"]) .caos .caos-name { color: color-mix(in srgb, var(--emo-cor) 55%, #000); text-shadow: none; }
+  :root:not([data-theme="escuro"]):not([data-theme="claro"]):not([data-theme="contraste"]) .caos-face,
+  :root:not([data-theme="escuro"]):not([data-theme="claro"]):not([data-theme="contraste"]) .caos .caos-name { color: color-mix(in srgb, var(--emo-cor) 55%, #000); text-shadow: none; }
 }
 
 /* ---------- Botão Me ajuda (sempre à mão, menos na conversa) ---------- */
@@ -441,8 +441,8 @@ select { appearance: none; -webkit-appearance: none; }
 .me-ajuda .ico { color: var(--caos); }
 :root[data-theme="claro"] .big, :root[data-theme="claro"] .primary { text-shadow: none; box-shadow: none; }
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme="escuro"]):not([data-theme="claro"]) .big,
-  :root:not([data-theme="escuro"]):not([data-theme="claro"]) .primary { text-shadow: none; box-shadow: none; }
+  :root:not([data-theme="escuro"]):not([data-theme="claro"]):not([data-theme="contraste"]) .big,
+  :root:not([data-theme="escuro"]):not([data-theme="claro"]):not([data-theme="contraste"]) .primary { text-shadow: none; box-shadow: none; }
 }
 
 /* Campo de data no iPhone (06/11): o Safari dá uma largura mínima própria e o campo vazava do card */
@@ -553,3 +553,20 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .busca:focus-within { border-color: var(--accent); }
 .chip.atalho { border-style: dashed; color: var(--muted); }
 .chip.atalho .ico { width: 16px; height: 16px; vertical-align: -0.2em; }
+
+/* Alto contraste (13/11, ideia do AI Studio, acessibilidade): preto puro, texto branco, bordas fortes, sem brilho */
+:root[data-theme="contraste"] {
+  --bg: #000; --card: #000; --card-2: #111; --line: #fff; --text: #fff; --muted: #e6e6e6;
+  --accent: #e6ff00; --accent-ink: #000; --caos: #ff6aa8; --ok: #4dffb0; --warn: #ffd000; --danger: #ff5c5c;
+  --fill: var(--accent); --fill-ink: #000; --fill-glow: none;
+  --caos-bg1: #000; --caos-bg2: #000; --caos-line: #fff; --face-bg: #000;
+  color-scheme: dark;
+}
+:root[data-theme="contraste"] .card, :root[data-theme="contraste"] .msg.caos-msg, :root[data-theme="contraste"] .chip { border: 2px solid var(--line); }
+:root[data-theme="contraste"] *, :root[data-theme="contraste"] *::after { text-shadow: none !important; }
+:root[data-theme="contraste"] a, :root[data-theme="contraste"] button { text-decoration-thickness: 2px; }
+
+/* Conversa mais nítida (13/11): bolha do C.A.O.S. destacada do fundo e pontinhos de "digitando" com brilho */
+.msg.caos-msg { background: var(--card-2); border-color: color-mix(in srgb, var(--caos) 35%, var(--caos-line)); }
+.msg.digitando .pontos i { box-shadow: 0 0 6px color-mix(in srgb, var(--caos) 70%, transparent); }
+@keyframes digita { 0%, 80%, 100% { opacity: .3; transform: translateY(0) scale(.85); } 40% { opacity: 1; transform: translateY(-3px) scale(1); } }
