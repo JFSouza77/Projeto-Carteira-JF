@@ -7,6 +7,22 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.25',
+    data: '13/11/2026',
+    nome: 'Cara Nova no Computador',
+    t: 'No computador e no tablet, o app ganhou menu ao lado, duas colunas e o C.A.O.S. ao vivo.',
+    itens: [
+      '🖥️ Menu ao lado: no computador, as abas ficam à esquerda, com seu saldo e a ofensiva embaixo.',
+      '🤖 C.A.O.S. ao vivo: painel à direita com o rosto dele, como ele está se sentindo, o que está observando e o radar.',
+      '❓ Perguntar agora: três perguntas prontas no painel, em um toque.',
+      '🧩 Duas colunas: Início, Mês e Contas aproveitam a tela larga.',
+      '🙈 Ocultar C.A.O.S.: dá pra esconder o painel e mostrar de novo quando quiser.',
+    ],
+    qol: [
+      '❓ Me ajuda no menu: no computador, ele fica no menu e não cobre mais nada.',
+    ],
+  },
+  {
     v: '1.24',
     data: '13/11/2026',
     nome: 'Gráficos e Faxina',

@@ -601,3 +601,87 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .pix-corpo { padding: 12px 16px 16px; display: grid; gap: 10px; }
 .pix-botoes { display: flex; gap: 8px; justify-content: flex-end; margin: 0; padding: 0; }
 .pix-dialog { width: min(94vw, 420px); }
+
+/* ======================================================================
+   Computador (13/11, repaginada do AI Studio): menu à esquerda, conteúdo no meio, C.A.O.S. ao vivo à direita.
+   No celular nada disso aparece (a barra de baixo continua igual).
+   ====================================================================== */
+.painel-caos, .painel-mostrar, .nav-marca, .nav-resumo { display: none; }
+@media (min-width: 1024px) {
+  body { padding: 0 24px 48px 256px; }
+  .tabbar {
+    top: 0; bottom: 0; right: auto; width: 232px; z-index: 8;
+    display: flex; flex-direction: column; align-items: stretch; gap: 4px;
+    border-top: 0; border-right: 1px solid var(--line); padding: 18px 12px;
+  }
+  .nav-marca { display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px; }
+  .nav-marca strong { display: block; font-size: .95rem; }
+  .nav-marca small { color: var(--muted); font-size: .78rem; }
+  .nav-logo { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; font-weight: 800;
+    background: var(--fill); color: var(--fill-ink); box-shadow: var(--fill-glow); }
+  .tabbar a { grid-auto-flow: column; justify-content: start; align-items: center; gap: 12px; padding: 12px 14px; font-size: .95rem; }
+  .tabbar a[data-tab="inicio"] { order: 1; } .tabbar a[data-tab="lancar"] { order: 2; } .tabbar a[data-tab="mes"] { order: 3; }
+  .tabbar a[data-tab="contas"] { order: 4; } .tabbar a[data-tab="conversa"] { order: 5; }
+  .nav-marca { order: 0; } .nav-resumo { order: 9; }
+  .tabbar a[aria-current="page"] { background: var(--fill); color: var(--fill-ink); box-shadow: var(--fill-glow); }
+  .tabbar a[aria-current="page"]::after { display: none; }
+  .tabbar a[aria-current="page"] .ico { filter: none; }
+  .tabbar a.tab-inicio { font-weight: 600; color: var(--muted); }
+  .tabbar a.tab-inicio[aria-current="page"] { color: var(--fill-ink); }
+  .tab-inicio-bola, .tabbar a.tab-inicio:not([aria-current="page"]) .tab-inicio-bola {
+    width: auto; height: auto; margin: 0; border: 0; background: none; background-image: none; box-shadow: none; color: inherit; display: inline-grid;
+  }
+  .tabbar .tab-inicio .ico { width: 24px; height: 24px; }
+  .nav-resumo { display: grid; gap: 2px; margin-top: auto; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card-2); }
+  .nav-resumo strong { font-size: 1.05rem; }
+  .nav-resumo span { color: var(--warn); font-size: .85rem; }
+  main { max-width: 980px; }
+  .tela main { padding-bottom: 48px; }
+  /* Início, Mês e Contas em duas colunas; o que é largo ocupa as duas */
+  #tela-inicio main, #tela-mes main, #tela-contas main { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  #tela-inicio main > *, #tela-mes main > *, #tela-contas main > * { grid-column: 1 / -1; }
+  #tela-inicio main > #ofensiva-card, #tela-inicio main > #alerts-card, #tela-inicio main > #receber-card { grid-column: auto; }
+  #tela-lancar main, #tela-ajustes main { max-width: 640px; }
+  .chat-bar { left: 232px; bottom: 0; padding: 12px max(16px, calc((100% - 232px - 760px) / 2)); }
+  .me-ajuda { right: 24px; bottom: 24px; }
+  .toast { left: calc(232px + (100% - 232px) / 2); bottom: 32px; }
+}
+@media (min-width: 1280px) {
+  body:not(.sem-painel) { padding-right: 344px; }
+  .painel-caos {
+    display: flex; flex-direction: column; gap: 14px; position: fixed; top: 0; right: 0; bottom: 0; width: 320px; z-index: 6;
+    padding: 18px 16px; overflow-y: auto; background: var(--card); border-left: 1px solid var(--line);
+  }
+  body.sem-painel .painel-caos { display: none; }
+  .painel-mostrar:not([hidden]) { display: block; position: fixed; top: 14px; right: 16px; z-index: 6; }
+  body:not(.sem-painel) .chat-bar { right: 320px; }
+  body:not(.sem-painel) .me-ajuda { right: 344px; }
+  body:not(.sem-painel) .toast { left: calc(232px + (100% - 232px - 320px) / 2); }
+  .pc-cabeca { display: grid; justify-items: center; gap: 8px; padding: 16px; border: 1px solid var(--caos-line); border-radius: var(--radius);
+    background: linear-gradient(160deg, var(--caos-bg1), var(--caos-bg2)); text-align: center; }
+  .pc-face { font-size: 1.6rem; padding: 14px 18px; }
+  .pc-nome { margin: 0; font-weight: 700; letter-spacing: .08em; color: var(--caos); font-size: .85rem; text-transform: uppercase; }
+  .pc-barra { width: 100%; height: 6px; border-radius: 99px; background: var(--card-2); overflow: hidden; }
+  .pc-barra i { display: block; height: 100%; background: var(--caos); box-shadow: 0 0 8px var(--caos); transition: width .4s; }
+  .pc-bloco { padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
+  .pc-bloco h3 { margin: 0 0 8px; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .pc-bloco p { margin: 0; font-size: .92rem; line-height: 1.45; }
+  .pc-radar { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: .88rem; }
+  .pc-radar li::before { content: '●'; margin-right: 8px; color: var(--warn); }
+  .pc-radar li.alta::before { color: var(--danger); }
+  .pc-radar li.muted::before { content: ''; margin: 0; }
+  .pc-perguntas { display: grid; gap: 6px; }
+  .pc-perguntas .chip { justify-content: flex-start; text-align: left; width: 100%; }
+  .pc-acoes { margin-top: auto; display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  .pc-conversar { display: grid; place-items: center; text-decoration: none; }
+}
+@media (min-width: 1024px) {
+  .tabbar a.tab-inicio { padding: 12px 14px; gap: 12px; }
+  .tab-inicio-bola { order: 0; }
+  #tela-inicio main > .summary { order: 1; } #tela-inicio main > #caos { order: 2; } #tela-inicio main > #ofensiva-card { order: 3; }
+  #tela-inicio main > #alerts-card { order: 4; } #tela-inicio main > #receber-card { order: 5; } #tela-inicio main > * { order: 6; }
+  #tela-inicio main > .novidade-aviso { order: 0; }
+  /* "Me ajuda" mora no menu lateral, sem cobrir conteúdo (revisão do GPT) */
+  .me-ajuda, .me-ajuda.mini { left: 12px; right: auto; bottom: 128px; width: 208px; justify-content: center; }
+  body:not(.sem-painel) .me-ajuda { right: auto; }
+}

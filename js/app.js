@@ -2,6 +2,7 @@
 // Só este arquivo (via db.js) grava dados. O C.A.O.S. só sugere; quem confirma é a pessoa.
 
 import { normalizarApelido } from './sincronia.js';
+import { intensidade } from './caos/emocoes.js';
 import * as db from './db.js';
 import {
   DEFAULT_CATEGORIES, INCOME_SOURCES, BANKS, formatBRL, parseAmount, parseSignedAmount, toISODate, monthKey,
@@ -84,7 +85,9 @@ function pintarRosto(rosto) {
     || rostoAvulso(undefined, { mood: state.settings.mood, memory: state.caosMemory });
   setRosto($('#caos-face'), r);
   setRosto($('#chat-face'), r);
+  setRosto($('#painel-face'), r);
   $('#caos').style.setProperty('--emo-cor', r.cor);
+  if ($('#painel-mood')) $('#painel-mood').textContent = r.nome;
   $('#caos-mood').textContent = `· ${r.nome}`;
   $('#chat-mood').textContent = r.nome;
 }
@@ -134,6 +137,7 @@ function narrate(events, { ignoreCooldown = false } = {}) {
   pintarRosto(fala.rosto);
   const box = $('#caos');
   $('#caos-line').textContent = fala.texto;
+  if ($('#painel-obs')) $('#painel-obs').textContent = fala.texto;
   box.classList.toggle('alert', fala.alerta);
   box.classList.remove('pulse');
   void box.offsetWidth;
@@ -202,6 +206,35 @@ const ICONE_ALERTA = {
   confira_banco: 'i-lupa', auditor_assinatura: 'c-streaming', cartao_limite: 'a-cartao', cartao_vence: 'a-cartao', a_receber: 'i-recibo',
 };
 
+// ---------- Painel "C.A.O.S. ao vivo" e menu lateral (13/11, repaginada do AI Studio; só aparecem no computador) ----------
+const PERGUNTAS_PAINEL = ['Vai dar até o fim do mês?', 'Onde estou gastando mais?', 'O que tenho pra pagar?'];
+
+function renderPainel() {
+  if (!$('#painel-caos')) return;
+  const oculto = !!state.settings.painelOculto;
+  document.body.classList.toggle('sem-painel', oculto);
+  $('#painel-mostrar').hidden = !oculto;
+  const m = emocaoDoMomento(state.caosMemory, state.settings.mood);
+  const r = m.rosto || m.aparencia;
+  if (r?.quadros) setRosto($('#painel-face'), r);
+  $('#painel-mood').textContent = m.aparencia?.nome || 'calmo';
+  const pct = Math.round(intensidade(state.caosMemory?.emocoes, m.emocao) * 100);
+  $('#painel-int').style.width = `${pct}%`;
+  $('#painel-int-barra').setAttribute('aria-label', `Intensidade da emoção: ${pct}%`);
+  $('#painel-int-txt').textContent = `Intensidade emocional: ${pct}%`;
+  $('#painel-obs').textContent = $('#caos-line').textContent;
+  const radar = analyze(dados(), toISODate()).slice(0, 3);
+  $('#painel-radar').innerHTML = radar.length
+    ? radar.map(a => `<li class="${esc(a.severity)}">${esc(cap(nomeAlerta(a)))}</li>`).join('')
+    : '<li class="muted">Nada pedindo atenção agora.</li>';
+  $('#painel-perguntas').innerHTML = PERGUNTAS_PAINEL.map(q => `<button type="button" class="chip" data-pergunta="${esc(q)}">${esc(q)}</button>`).join('');
+  // menu lateral: saudação, saldo e foguinho
+  $('#nav-ola').textContent = state.perfil?.apelido ? `Olá, ${state.perfil.apelido}` : 'Olá!';
+  $('#nav-saldo').textContent = state.accounts.some(a => a.tipo !== 'cartao') ? formatBRL(totalBalance(state.accounts, state.expenses, state.incomes)) : '—';
+  const o = ofensivaAgora();
+  $('#nav-fogo').textContent = o.dias ? `🔥 ${o.dias}d` : '';
+}
+
 function render() {
   const s = summarizeMonth(state.expenses, state.categories, state.viewMonth);
   const isCurrent = state.viewMonth === monthKey(toISODate());
@@ -249,6 +282,7 @@ function render() {
     </li>`).join('') : '<li class="muted">Sem gastos ainda.</li>';
 
   renderGraficos();
+  renderPainel();
 
   // Busca (ideia do AI Studio, 13/11): com algo digitado, procura em todos os meses por nome, categoria ou valor
   const busca = ($('#busca')?.value || '').trim();
@@ -2026,6 +2060,12 @@ function bind() {
     const b = e.target.closest('[data-sug]');
     if (b) enviarPergunta(b.dataset.sug);
   });
+  $('#painel-perguntas').addEventListener('click', e => {
+    const b = e.target.closest('[data-pergunta]');
+    if (b) { location.hash = '#conversa'; enviarPergunta(b.dataset.pergunta); }
+  });
+  $('#painel-ocultar').addEventListener('click', () => { state.settings.painelOculto = true; saveSettings(); renderPainel(); });
+  $('#painel-mostrar').addEventListener('click', () => { state.settings.painelOculto = false; saveSettings(); renderPainel(); });
   $('#busca').addEventListener('input', () => { clearTimeout(state.buscaTimer); state.buscaTimer = setTimeout(render, 150); });
   $('#chat-log').addEventListener('click', e => {
     const b = e.target.closest('[data-acao]');

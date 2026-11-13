@@ -17,6 +17,9 @@ poucos, com teste e print a cada passo. Nada de React nem Tailwind no app.
 ## O que entra (✅), em fases
 
 ### Fase 1 — Cara nova (layout)
+
+**Andamento:** computador e tablet feitos na 1.25 (menu lateral, 2 colunas, painel C.A.O.S. ao vivo, Me ajuda no menu).
+Falta do celular: cabeçalho com rostinho e os 4 cartões de resumo.
 - ✅ **Computador/tablet (≥ 1024 px):** 3 colunas, igual aos prints: menu à esquerda (com saldo e ofensiva embaixo),
   conteúdo no meio, painel **"C.A.O.S. ao vivo"** à direita (rosto, intensidade da emoção, observação atual, radar
   rápido, perguntas prontas, Conversar). Botão "Ocultar C.A.O.S.".
