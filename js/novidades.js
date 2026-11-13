@@ -20,10 +20,10 @@ export const NOVIDADES = Object.freeze([
     ],
     qol: [
       '🏦 Entrada com banco: "recebi 1500 de salário no Nubank" já soma no saldo do Nubank.',
-      '🔢 Números na descrição: "gastei 30 no 99" guarda o 99.',
-      '📆 Dia 31: em mês de 30 dias, vira o último dia do mês.',
+      '🔢 Números e datas: "gastei 30 no 99" guarda o 99, e "dia 31" em mês de 30 dias vira o último dia.',
       '☁️ Sincronização: um registro que falhou ao abrir é pedido de novo, em vez de ficar perdido.',
       '💳 Fatura esquecida: se passar mais de um fechamento sem marcar, tudo continua no limite.',
+      '🙈 Esqueci de lançar: "esqueci de lançar 50 no mercado dia 10" já vira lançamento; se faltar algo, ele pergunta só isso.',
       '🍕 Rachadinha no cartão: ao marcar "Recebi", você escolhe em qual conta o Pix do amigo caiu.',
       '🗣️ Voz: lê valores grandes direito e fala com o jeito das emoções novas.',
     ],

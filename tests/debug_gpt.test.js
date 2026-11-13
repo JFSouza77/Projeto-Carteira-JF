@@ -83,3 +83,34 @@ test('rachadinha no cartão: o Pix do amigo soma na conta escolhida, não no car
   const debito = { ...pizza, accountId: 'nu-9', createdAt: new Date(2026, 9, 1).getTime() };
   assert.equal(accountBalance(nu, [marcarRecebido(debito, ana.id, new Date(2026, 10, 11).getTime())], []), 10000 + ana.valorCents);
 });
+
+// ---- "Esqueci de lançar" como rascunho (GPT, handoff de 12/11) ----
+const papoE = (frases) => {
+  const d = { expenses: [], incomes: [], categories: cats, accounts: [], compromissos: [], planos: [] };
+  let memory; let f;
+  for (const q of frases) { const r = conversar(q, d, { memory, now: NOW, today: '2026-11-13' }); memory = r.memoria; f = r.fala; }
+  return f;
+};
+
+test('1) "esqueci de lançar 50 no mercado dia 10" já chega na confirmação', () => {
+  const f = papoE(['esqueci de lançar 50 no mercado dia 10']);
+  assert.deepEqual([f.acao.amountCents, f.acao.categoryId, f.acao.date], [5000, 'mercado', '2026-11-10']);
+});
+
+test('2) "esqueci de lançar uma compra" pergunta e aceita respostas curtas', () => {
+  const f = papoE(['esqueci de lançar uma compra', 'mercado ontem', '50']);
+  assert.deepEqual([f.acao.amountCents, f.acao.categoryId, f.acao.date], [5000, 'mercado', '2026-11-12']);
+});
+
+test('3) pergunta diferente não completa o rascunho; 4) cancelar não grava nada', () => {
+  assert.equal(papoE(['esqueci de lançar', 'quanto gastei este mês?']).acao, null);
+  const c = papoE(['esqueci de lançar', 'deixa pra depois']);
+  assert.equal(c.acao, null);
+  assert.match(c.texto, /não anotei nada/);
+});
+
+test('5) sem dado, não presume: pergunta o valor em vez de chutar', () => {
+  const f = papoE(['esqueci de anotar o uber']);
+  assert.equal(f.acao, null);
+  assert.match(f.texto, /Quanto foi/);
+});

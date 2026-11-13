@@ -273,7 +273,13 @@ function entenderSimples(t, { categories = [] } = {}) {
     if (curtinha && (r.categoria || descricaoDe(t) || /^[a-z]+ \d/.test(t) || /^\d+([.,]\d+)? [a-z]/.test(t))) return { ...r, intent: 'registrar_gasto' };
   }
   // "Esqueci de lançar" (P9, vistoria do JF): um sustinho de brincadeira e as perguntas pra anotar
-  if (/\b(esqueci|esqueceu|esquecemos) de (lancar|anotar|colocar|registrar|botar|por)\b|\b(nao|n) (lancei|anotei|registrei)\b/.test(t)) {
+  const ESQUECI = /\b(esqueci|esqueceu|esquecemos) de (lancar|anotar|colocar|registrar|botar|por)\b|\b(nao|n) (lancei|anotei|registrei)\b/;
+  if (ESQUECI.test(t)) {
+    // aproveita o que a frase já trouxe (achado do GPT, 12/11): "esqueci de lançar 50 no mercado dia 10" já vira proposta
+    const resto = t.replace(/^.*?(esqueci|esqueceu|esquecemos|nao lancei|n lancei|nao anotei|nao registrei)( de (lancar|anotar|colocar|registrar|botar|por))?( um| uma| o| a)?( gasto| compra| coisa| conta)?\s*/, '').trim();
+    const comoGasto = `gastei ${resto}`.trim();
+    if (r.valor) return { ...r, t: comoGasto, intent: 'registrar_gasto' };
+    if (r.categoria || descricaoDe(comoGasto)) return { ...r, t: comoGasto, intent: 'gasto_sem_valor' };
     return { ...r, intent: 'esqueci_de_lancar' };
   }
   // Gasto sem valor (12/11, vistoria do JF): "gastei não sei quanto de internet" → ele pergunta quanto foi
@@ -710,9 +716,10 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
     }
     case 'esqueci_de_lancar':
       return {
-        fato: 'Esqueceu?! Quase caí da cadeira aqui. Brincadeira: acontece com todo mundo, e eu não conto pra ninguém. Me fala três coisas: quanto foi, em quê e quando. Tipo "gastei 50 no mercado ontem" ou "paguei 120 de luz dia 10".',
+        fato: 'Esqueceu?! Quase caí da cadeira aqui. Brincadeira: acontece com todo mundo, e eu não conto pra ninguém. Me fala três coisas: quanto foi, em quê e quando. Tipo "50 no mercado ontem" ou "120 de luz dia 10".',
         cru: true,
-        sugestoes: ['Gastei ontem', 'Foi no dia 10', 'Foi semana passada'],
+        aguardar: { tipo: 'esqueci' },
+        sugestoes: ['Deixa pra depois'],
       };
     case 'gasto_sem_valor': {
       const desc = descricaoDe(intencao.t);
