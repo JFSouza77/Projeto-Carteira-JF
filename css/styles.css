@@ -978,3 +978,24 @@ h1, h2 { font-weight: 700; letter-spacing: .005em; }
 /* Susto com valor fora do comum (13/11): rosto espantado no topo da pergunta */
 .espanto-dialog header { display: flex; align-items: center; gap: 12px; }
 .espanto-dialog h2 { margin: 0; }
+
+/* Abertura (JF, 13/11): respiro curto ao abrir, com a versão e, se tiver servidor e nenhuma conta, o "Entrar" */
+.abertura { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 24px;
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) 10%, var(--bg)), var(--bg) 70%);
+  transition: opacity .35s ease, visibility .35s; animation: abertura-socorro .3s 8s forwards; }
+.abertura.saindo { opacity: 0; visibility: hidden; pointer-events: none; }
+.abertura.esperando { animation: none; }
+@keyframes abertura-socorro { to { opacity: 0; visibility: hidden; pointer-events: none; } }
+.abertura-caixa { display: grid; justify-items: center; gap: 10px; text-align: center; max-width: 320px; }
+.abertura-rosto { font-family: ui-monospace, monospace; font-weight: 700; color: var(--caos); font-size: 1.1rem; padding: 6px 14px;
+  border: 1.5px solid var(--caos); border-radius: 14px; box-shadow: 0 0 18px -4px var(--caos); text-shadow: 0 0 8px var(--caos);
+  animation: abertura-pulso 1.4s ease-in-out infinite; }
+@keyframes abertura-pulso { 50% { transform: translateY(-4px); } }
+.abertura-titulo { margin: 6px 0 0; font-family: var(--font-display); font-size: 2.6rem; font-weight: 800; letter-spacing: .06em; color: var(--accent);
+  text-shadow: 0 0 22px color-mix(in srgb, var(--accent) 55%, transparent); line-height: 1; }
+.abertura-frase { margin: 0; color: var(--text); }
+.abertura-versao { margin: 0; color: var(--muted); font-size: .82rem; }
+.abertura-login { display: grid; gap: 8px; width: 100%; margin-top: 10px; }
+.abertura-login button { width: 100%; }
+.menos-mov .abertura-rosto { animation: none; }
+@media (prefers-reduced-motion: reduce) { .abertura-rosto { animation: none; } .abertura { transition: none; } }

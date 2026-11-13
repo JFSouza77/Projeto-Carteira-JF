@@ -3161,6 +3161,8 @@ async function init() {
   if ($('#caos-line').textContent === 'Iniciando…') $('#caos-line').textContent = 'De olho nos seus gastos. Toque aqui pra conversar.';
   pintarOlho();
 
+  await mostrarAbertura();
+
   // Conta: liga o registro de mudanças, sincroniza ao abrir, quando a internet volta, ao voltar pro app e a cada minuto
   if (await conta.contaAtual().catch(() => null)) db.setRastrear(true);
   db.setAoMarcar(sincronizarLogo);
@@ -3191,6 +3193,35 @@ async function init() {
       location.reload();
     });
   }
+}
+
+// ---------- Abertura (JF, 13/11) ----------
+// "Um respiro curto, não demora; nada de abrir seco." Mostra a versão por um instante (no mínimo ~0,9 s desde que a
+// página começou) e some. Com servidor ligado e sem conta, oferece "Entrar" uma vez; "Continuar sem conta" é lembrado.
+async function mostrarAbertura() {
+  const ab = $('#abertura');
+  if (!ab) return;
+  const n = NOVIDADES[0];
+  $('#abertura-versao').textContent = `Versão ${VERSAO_APP}${n.nome ? ` · ${n.nome}` : ''} · atualizada em ${n.data}`;
+  const fechar = () => { ab.classList.add('saindo'); setTimeout(() => ab.remove(), 400); };
+  const temConta = await conta.contaAtual().catch(() => null);
+  const oferecerLogin = !temConta && servidor() && state.perfil && !state.onboarding && !state.settings.aberturaSemConta;
+  if (!oferecerLogin) {
+    setTimeout(fechar, Math.max(0, 900 - performance.now()));
+    return;
+  }
+  ab.classList.add('esperando');
+  $('#abertura-login').hidden = false;
+  $('#abertura-entrar').addEventListener('click', () => {
+    fechar();
+    location.hash = 'ajustes';
+    setTimeout(() => { const c = $('#conta-card'); if (c) { c.open = true; c.scrollIntoView({ block: 'start' }); $('#conta-apelido')?.focus(); } }, 350);
+  }, { once: true });
+  $('#abertura-pular').addEventListener('click', () => {
+    state.settings.aberturaSemConta = true;
+    saveSettings();
+    fechar();
+  }, { once: true });
 }
 
 init();

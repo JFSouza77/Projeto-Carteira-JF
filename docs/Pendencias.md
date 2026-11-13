@@ -23,7 +23,7 @@ Atualizada pelo Wally a cada rodada.
 
 ## Do Code (13/11 à noite, pra rodada grande)
 
-- **Fonte de título Baloo 2** (a mesma do Perfil, "marca JF"): arquivos em `correio/para_o_wally/lidos/anexos/fontes/`
+- ~~**Fonte de título Baloo 2**~~ (feito em 13/11, 2.0.1) (a mesma do Perfil, "marca JF"): arquivos em `correio/para_o_wally/lidos/anexos/fontes/`
   (com a licença OFL). Embutida pra funcionar offline. Vai nos títulos, nos valores grandes em R$ e no botão principal; o
   texto corrido continua na fonte do sistema.
 - **Cores:** o JF quer variedade, sem carnaval. Cada cor tem um significado fixo e não entra cor só de enfeite. Na
@@ -54,7 +54,7 @@ Atualizada pelo Wally a cada rodada.
 
 - **Avatares animados do C.A.O.S.** no lugar dos rostinhos (os rostinhos ficam só quando precisar, pra não poluir).
   Os avatares já estão prontos (vieram do Perfil).
-  - Criar mais avatares onde fizer sentido, por exemplo **"espantado"**: o susto com um valor absurdo, tipo "R$ 17 mil
+  - Criar mais avatares onde fizer sentido, por exemplo **"espantado"** (o rosto saiu em 13/11, 2.0.1; falta o avatar animado): o susto com um valor absurdo, tipo "R$ 17 mil
     na Cacau Show?". Ele reage ao "valor fora do normal".
   - O que for traço dele vai pro núcleo, com o ok do JF e aviso ao Code.
 - **Contas em outras moedas (ideia do JF, 13/11):** conta global em dólar ou euro (C6 em dólar e euro, Inter em dólar,
@@ -98,8 +98,7 @@ Atualizada pelo Wally a cada rodada.
 - ~~**Deixar claro o que ele é (JF, 13/11): IA de bolso.**~~ Feito em 13/11 (C.A.O.S. 2.0.5, núcleo 1.4.0). Ele se
   apresenta como IA de bolso e, em pergunta de decisão (parcelar, qual comprar, investir), dá o lembrete curto 1 vez por
   assunto. Falta ligar no IR quando ele existir.
-- **Tela de carregamento** ao abrir o app, com área de login: um respiro curto, não demora. Nada de abrir de forma
-  instantânea e seca.
+- ~~**Tela de carregamento**~~ Feito em 13/11 (2.0.1): abertura com a versão; com servidor e sem conta oferece "Entrar".
 
 ## Esperando o JF
 

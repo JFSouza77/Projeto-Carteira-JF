@@ -17,6 +17,20 @@
   <script type="module" src="./js/app.js"></script>
 </head>
 <body>
+  <!-- Abertura (JF, 13/11): um respiro curto com a cara do app e a versão, como no Perfil. Fica no HTML pra aparecer na
+       hora, antes do JavaScript; se algo travar, o CSS some com ela sozinho depois de alguns segundos. -->
+  <div class="abertura" id="abertura" role="status" aria-live="polite">
+    <div class="abertura-caixa">
+      <span class="abertura-rosto" aria-hidden="true">(•‿•)</span>
+      <p class="abertura-titulo">C.A.O.S.</p>
+      <p class="abertura-frase">Um C.A.O.S. pra organizar o seu caos.</p>
+      <p class="abertura-versao" id="abertura-versao">Carregando…</p>
+      <div class="abertura-login" id="abertura-login" hidden>
+        <button type="button" class="primary" id="abertura-entrar">Entrar na conta</button>
+        <button type="button" class="ghost" id="abertura-pular">Continuar sem conta</button>
+      </div>
+    </div>
+  </div>
   <!-- Ícones próprios (06/11): traço simples, cor do texto, brilho neon na aba ativa -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <defs>
