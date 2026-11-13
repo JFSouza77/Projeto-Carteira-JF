@@ -24,7 +24,7 @@ import * as imagens from './imagens.js';
 import * as ia from './ia.js';
 import * as lembretes from './notificacoes.js';
 import * as conta from './conta.js';
-import { criarAvatar, formaPara, configurarAvatar } from './avatar.js';
+import { criarAvatar, formaPara, configurarAvatar, FORMAS } from './avatar.js';
 
 const $ = sel => document.querySelector(sel);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -110,6 +110,11 @@ function avatarFala(ms) {
   falaTimer = setTimeout(() => { for (const k of ['caos', 'chat', 'painel']) avatares[k]?.falando(false); }, ms);
 }
 
+// Bug do JF (13/11 à noite): o rostinho roxo do balão e o nome no topo ("deboche") não batiam com o avatar
+// (humorista). Agora tudo segue a FORMA do avatar: o nome no topo, a etiqueta e a cor do balão.
+const nomeForma = f => (FORMAS[f]?.nome || 'calmo').replace(/^[^A-Za-zÀ-ú]+/, '').toLowerCase();
+const formaDaMsg = m => (FORMAS[m.forma] ? m.forma : m.digitando ? 'pensando' : formaPara({ rosto: m.rosto, assunto: m.assunto }));
+
 function pintarRosto(rosto, assunto = null) {
   const r = rosto || emocaoDoMomento(state.caosMemory, state.settings.mood).rosto
     || rostoAvulso(undefined, { mood: state.settings.mood, memory: state.caosMemory });
@@ -119,9 +124,9 @@ function pintarRosto(rosto, assunto = null) {
   setRosto($('#chat-face'), r);
   setRosto($('#painel-face'), r);
   $('#caos').style.setProperty('--emo-cor', r.cor);
-  if ($('#painel-mood')) $('#painel-mood').textContent = r.nome;
-  $('#caos-mood').textContent = `· ${r.nome}`;
-  $('#chat-mood').textContent = r.nome;
+  if ($('#painel-mood')) $('#painel-mood').textContent = nomeForma(forma);
+  $('#caos-mood').textContent = `· ${nomeForma(forma)}`;
+  $('#chat-mood').textContent = nomeForma(forma);
 }
 
 // Anima todos os rostos na tela: troca os quadros, balança de leve, treme quando bravo (como no Perfil)
@@ -309,7 +314,7 @@ function renderPainel() {
   const m = emocaoDoMomento(state.caosMemory, state.settings.mood);
   const r = m.rosto || m.aparencia;
   if (r?.quadros) setRosto($('#painel-face'), r);
-  $('#painel-mood').textContent = m.aparencia?.nome || 'calmo';
+  $('#painel-mood').textContent = nomeForma(formaPara({ rosto: r }));
   const pct = Math.round(intensidade(state.caosMemory?.emocoes, m.emocao) * 100);
   $('#painel-int').style.width = `${pct}%`;
   $('#painel-int-barra').setAttribute('aria-label', `Intensidade da emoção: ${pct}%`);
@@ -1263,13 +1268,10 @@ function renderChat() {
       const acao = m.acao && !m.acaoFeita
         ? `<div class="acao"><button class="sim" data-acao="${i}" data-ok="1">${ic('i-ok')} Confirmar</button><button class="nao" data-acao="${i}" data-ok="0">Cancelar</button></div>`
         : '';
-      if (m.digitando) return `<li class="msg caos-msg pensando digitando" aria-label="C.A.O.S. está digitando"><span class="who" aria-label="C.A.O.S."><span class="caos-face mini" data-msg="${i}" aria-hidden="true"></span></span><span class="pontos" aria-hidden="true"><i></i><i></i><i></i></span> digitando</li>`;
-      return `<li class="msg caos-msg ${m.temp ? 'pensando' : ''}" style="--msg-cor:${esc(m.rosto?.cor || 'var(--caos)')}"><span class="who" aria-label="C.A.O.S.${m.ia ? ' com IA' : ''}"><span class="caos-face mini" data-msg="${i}" aria-hidden="true"></span>${m.ia ? '<span class="tag-ia">IA</span>' : ''}</span>${esc(m.texto)}${acao}</li>`;
+      const f = formaDaMsg(m), fcor = FORMAS[f]?.cor || 'var(--caos)';
+      if (m.digitando) return `<li class="msg caos-msg pensando digitando" style="--msg-cor:${fcor}" aria-label="C.A.O.S. está digitando"><span class="who" aria-hidden="true"><span class="msg-forma">${esc(FORMAS[f].nome)}</span></span><span class="pontos" aria-hidden="true"><i></i><i></i><i></i></span> digitando</li>`;
+      return `<li class="msg caos-msg ${m.temp ? 'pensando' : ''}" style="--msg-cor:${fcor}"><span class="who" aria-label="C.A.O.S.${m.ia ? ' com IA' : ''}"><span class="msg-forma" aria-hidden="true">${esc(FORMAS[f]?.nome || 'C.A.O.S.')}</span>${m.ia ? '<span class="tag-ia">IA</span>' : ''}</span>${esc(m.texto)}${acao}</li>`;
     }).join('');
-    for (const el of log.querySelectorAll('[data-msg]')) {
-      const r = state.chat[Number(el.dataset.msg)]?.rosto;
-      if (r) setRosto(el, r); else el.replaceWith(Object.assign(document.createElement('span'), { className: 'nome-caos', textContent: 'C.A.O.S.' }));
-    }
   }
   const ult = [...state.chat].reverse().find(m => m.de === 'caos');
   const sug = ult?.sugestoes?.length ? ult.sugestoes : SUGESTOES.slice(0, 6);
@@ -1314,7 +1316,7 @@ async function enviarPergunta(texto, { doPrint = false } = {}) {
     fala.texto = 'Ainda não sei responder isso, mas guardei sua pergunta. Quando eu tiver conexão com o servidor do C.A.O.S. Finanças, eu trago a resposta aqui.';
   }
   await respiro(fala.texto);
-  addMsg({ de: 'caos', texto: fala.texto, sugestoes: fala.sugestoes, acao: fala.acao, rosto: fala.rosto });
+  addMsg({ de: 'caos', texto: fala.texto, sugestoes: fala.sugestoes, acao: fala.acao, rosto: fala.rosto, assunto: fala.intent });
   pintarRosto(fala.rosto, fala.intent);
   avatarFala(Math.min(2600, 400 + fala.texto.length * 22));
   if (state.settings.voice) falar(fala.texto, fala.emocao);

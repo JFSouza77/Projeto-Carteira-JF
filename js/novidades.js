@@ -21,11 +21,12 @@ export const NOVIDADES = Object.freeze([
       '📚 Glossário maior: cheque especial, LCI e LCA, cripto, financiamento e mais.',
     ],
     qol: [
-      '🗨️ Balão com a cor da emoção: cada mensagem do C.A.O.S. tem a cor do humor dele.',
+      '🗨️ Balão igual ao avatar: a cor e o nome da mensagem batem com a forma dele.',
       '👋 Tudo bem?: agora ele responde do jeito certo, e entende "como vai fechar o mês?".',
       '🔒 E os meus dados?: pergunta que ele explica pra onde vai cada coisa.',
       '😤 Entende desabafo: palavrão e abreviação (até "krlh"), sem responder com palavrão.',
       '🎣 Paciência tem limite: xingou demais, ele escala, fica quietinho e depois volta.',
+      '🏦 Limite garantido: ele explica quais bancos dão limite pelo dinheiro guardado.',
     ],
   },
   {

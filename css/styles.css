@@ -1050,3 +1050,7 @@ h1, h2 { font-weight: 700; letter-spacing: .005em; }
 }
 .msg.caos-msg .who .nome-caos, .msg.caos-msg .who .tag-ia { color: var(--msg-cor); }
 :root[data-theme="claro"] .msg.caos-msg { box-shadow: none; background: color-mix(in srgb, var(--msg-cor) 6%, var(--card)); }
+
+/* Etiqueta da forma no balão (13/11 à noite): a mesma forma e a mesma cor do avatar, no lugar do rostinho de texto */
+.msg.caos-msg .msg-forma { display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .02em; padding: 2px 9px; border-radius: 99px;
+  border: 1px solid var(--msg-cor); color: var(--text); background: color-mix(in srgb, var(--msg-cor) 16%, transparent); margin: 0 6px 4px 0; }

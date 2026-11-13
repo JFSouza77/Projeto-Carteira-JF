@@ -30,7 +30,7 @@ const POR_ASSUNTO = Object.freeze({
   // paciência (13/11): firme → decepcionado → cartão vermelho → sem reação (quietinho) → de volta
   xingamento: 'parceiro', xingamento_2: 'desconfiado', xingamento_3: 'decepcionado', xingamento_3_forte: 'decepcionado',
   xingamento_fim: 'chocado', xingamento_fim_forte: 'vermelho', silencio: 'chocado', passou_raiva: 'anjinho', desculpa_aceita: 'parceiro',
-  desabafo: 'parceiro',
+  desabafo: 'parceiro', limite_investido: 'banqueiro', glossario: 'professor', privacidade: 'anjinho', como_esta: 'calmo',
 });
 
 /** Forma do avatar pro momento: o assunto (intenção ou evento) manda; senão, o rosto/emoção. */

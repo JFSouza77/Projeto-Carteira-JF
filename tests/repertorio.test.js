@@ -36,3 +36,14 @@ test('repertório maior e sempre de 5 em 5', () => {
   // regra que muda com o tempo sempre manda conferir no canal oficial
   for (const g of GLOSSARIO.filter(x => x.governo)) assert.match(g.mais, /confir|site|app/i, g.termo);
 });
+
+test('limite garantido (JF, 13/11): sabe quais bancos dão limite por investimento, com data e "confira"', () => {
+  const f = fala('quais bancos aumentam o limite se eu investir?');
+  assert.equal(f.intent, 'limite_investido');
+  for (const b of ['C6', 'Inter', 'Nubank', 'PicPay']) assert.match(f.texto, new RegExp(b));
+  assert.match(f.texto, /novembro de 2026/);
+  assert.match(f.texto, /confira/);
+  assert.ok(f.texto.length <= 450);
+  assert.equal(fala('o que é limite garantido?').intent, 'glossario');
+  assert.equal(GLOSSARIO.length, 75);
+});

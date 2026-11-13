@@ -21,3 +21,10 @@ test('toda forma que o app pode pedir existe no avatar', () => {
   for (const n of new Set(pedidas)) assert.ok(FORMAS[n], `forma ${n} não existe`);
   for (const n of ['anjinho', 'contador', 'professor', 'feliz', 'surpreso']) assert.ok(FORMAS[n]); // abertura e susto
 });
+
+test('toda forma do POR_ASSUNTO existe (o balão e o topo usam a mesma forma do avatar)', async () => {
+  const fonte = readFileSync(new URL('../js/avatar.js', import.meta.url), 'utf8');
+  const bloco = fonte.slice(fonte.indexOf('const POR_ASSUNTO'), fonte.indexOf('});', fonte.indexOf('const POR_ASSUNTO')));
+  for (const [, f] of bloco.matchAll(/:\s*'([a-zA-Z]+)'/g)) assert.ok(FORMAS[f], f);
+  assert.equal(formaPara({ assunto: 'limite_investido' }), 'banqueiro');
+});

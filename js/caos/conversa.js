@@ -380,6 +380,11 @@ function entenderSimples(t, { categories = [] } = {}) {
   // "o que é juros compostos?" é pergunta de glossário; conta só com números ou pedido de cálculo
   if (calc && (!calc.faltando || /(calcul|faz a conta|faca a conta|simul|quanto (rende|renderia|fica|vira))/.test(t))) return { ...r, intent: 'calc_juros', calc };
   if (/(vale a pena parcelar|parcelar ou (pagar )?(a vista)|a vista ou parcelad|compensa parcelar|devo parcelar|melhor parcelar)/.test(t)) return { ...r, intent: 'vale_parcelar', parc: lerParcelamento(t) };
+  // Limite garantido (JF, 13/11 à noite): "quais bancos aumentam o limite se eu investir?"
+  if (!/^(o que (e|sao|significa)|me explica|explica)\b/.test(t) && /(limite garantido|cdb (mais )?limite|limite (com|por) (garantia|investimento)|cdb cartao)/.test(t)
+    || (/limite/.test(t) && /(invest|aplica|guard|cdb|cofrinho|caixinha|poupanca)/.test(t) && /(aumenta|aumentar|ganh|liber|vira|transforma|banco|quais|como)/.test(t))) {
+    return { ...r, intent: 'limite_investido' };
+  }
   const termo = acharTermo(t);
   const contexto = t.match(/\b(meu|minha) (pai|mae|chefe|amigo|amiga|irmao|irma|avo|tio|tia|namorad[oa]|esposa|marido|professor[a]?|colega)\b.*\b(falou|disse|comentou|mencionou|falaram)\b/);
   if (termo && (contexto || /(o que (e|sao|significa|quer dizer)|\bque (e|sao)\b|me explica|explica|me ensina|como funciona|ouvi falar|vi falar|nunca entendi|nao entendo|nao sei o que)/.test(t))) {
@@ -1121,6 +1126,12 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       return { fato: textoPrivacidade(), sugestoes: ['O que você pode fazer?', 'Como faço backup?'] };
     case 'tutorial':
       return { fato: TUTORIAL[intencao.tema] || TUTORIAL.geral, sugestoes: ['Como adiciono uma conta?', 'Como ponho orçamento?', 'Como mando foto?'] };
+    case 'limite_investido':
+      // pesquisado em 13/11/2026 (sites dos bancos e notícias); muda com o tempo, por isso a data e o "confira no app"
+      return {
+        fato: 'Dá sim! Alguns bancos transformam dinheiro guardado em limite: C6 (Limite Garantido: R$ 1 aplicado vira R$ 1 de limite), Inter (CDB Mais Limite), Nubank (Caixinhas) e PicPay (Cofrinho do cartão). O dinheiro rende, mas fica preso como garantia. Dado de novembro de 2026: confira no app do banco.',
+        cru: true, decisao: 'investimento', sugestoes: ['O que é limite garantido?', 'O que é CDB?'],
+      };
     case 'ajuda':
       return {
         fato: 'Pode me perguntar dos seus gastos ("quanto gastei em delivery?"), do saldo, do orçamento ou de como o mês vai fechar. Também anoto: manda "gastei 30 no mercado" ou a foto do comprovante. Travou no app? Pergunta "como faço…".',
