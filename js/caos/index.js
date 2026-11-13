@@ -12,7 +12,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '1.23.0';
+export const CAOS_VERSAO = '1.24.0';
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -230,6 +230,17 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   if (espera?.tipo === 'valor_gasto' && intencao.valor && String(texto).trim().split(/\s+/).length <= 5
     && ['nao_entendi', 'registrar_gasto', 'gasto_sem_valor', 'cabe'].includes(intencao.intent)) {
     intencao = { ...intencao, intent: 'registrar_gasto', t: espera.t, categoria: intencao.categoria || espera.categoria, palpite: false };
+  }
+  // "esqueci de lançar" (12/11, achado do GPT): a resposta seguinte completa o rascunho, sem perguntar tudo de novo.
+  // Pergunta ou pedido diferente não completa nada (o rascunho só cai fora).
+  const tx = String(texto).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const cancela = /^(cancela|cancelar|deixa|deixa pra (la|depois)|esquece|nao quero|depois)\b/.test(tx);
+  if (espera && ['esqueci', 'valor_gasto'].includes(espera.tipo) && cancela) {
+    intencao = { ...intencao, intent: 'pagamento_resposta', resposta: { fato: 'Tranquilo, não anotei nada. Quando lembrar, é só me falar.', cru: true, sugestoes: [] }, palpite: false };
+  } else if (espera?.tipo === 'esqueci' && ['nao_entendi', 'registrar_gasto', 'gasto_sem_valor'].includes(intencao.intent) && !/\?/.test(tx)) {
+    const t2 = /^(gastei|paguei|comprei)\b/.test(intencao.t) ? intencao.t : `gastei ${intencao.t}`;
+    if (intencao.valor) intencao = { ...intencao, t: t2, intent: 'registrar_gasto', palpite: false };
+    else if (intencao.categoria || intencao.intent !== 'nao_entendi') intencao = { ...intencao, t: t2, intent: 'gasto_sem_valor', palpite: false };
   }
   if (espera?.tipo === 'pagamento') {
     const resposta = continuarPagamento(espera.acao, texto, d);
