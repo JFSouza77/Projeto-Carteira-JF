@@ -10,12 +10,20 @@ export const NOVIDADES = Object.freeze([
     v: '1.28',
     data: '13/11/2026',
     nome: 'Início Mais Vivo',
-    t: 'O Início ganhou atalhos e um limite pra cada dia.',
+    t: 'O app ficou mais colorido e os gráficos agora respondem ao toque.',
     itens: [
       '🎯 Orçamento de hoje: defina quanto quer gastar por dia e veja na barra quanto ainda dá.',
       '⚡ Atalhos no Início: Gasto, Entrada e Transferir a um toque, já no modo certo.',
+      '📊 Gráficos vivos: toque num dia ou mês pra ver o detalhe e troque o jeito de ver.',
+      '🍩 Categorias em rosca: veja a fatia de cada uma e toque pra filtrar o extrato.',
+      '⭕ Metas com anel: o anel enche na hora em que você guarda dinheiro.',
+      '🏦 Bancos coloridos: cada banco com sua cor, e o cartão mostra se o limite está saudável.',
+      '📄 Mês em PDF ou planilha: no Mês, leve o resumo e todos os lançamentos pra fora.',
     ],
-    qol: [],
+    qol: [
+      '➕ Valor rápido no Lançar: +10, +20, +50, +100, +200 e Limpar.',
+      '💳 Lançar compra neste cartão: em Contas, já abre no crédito e no cartão certo.',
+    ],
   },
   {
     v: '1.27',
