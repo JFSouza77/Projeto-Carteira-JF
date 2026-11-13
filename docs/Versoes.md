@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 1.24 | 13/11/2026 | Gráficos e Faxina |
 | 1.23 | 13/11/2026 | Achou, Achou |
 | 1.22 | 13/11/2026 | Professor de Finanças |
 | 1.21 | 13/11/2026 | Nada Passa Batido |

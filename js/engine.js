@@ -450,6 +450,23 @@ export function totalBalance(accounts, expenses, incomes) {
   return accounts.filter(a => a.tipo !== 'cartao').reduce((s, a) => s + accountBalance(a, expenses, incomes), 0);
 }
 
+// ---------- Gráficos (13/11, ideia do AI Studio): dados prontos, o desenho é do app ----------
+
+/** Gastos e entradas dos últimos `n` meses até `month` (o mais antigo primeiro). */
+export function serieMensal(expenses, incomes, month, n = 6) {
+  return Array.from({ length: n }, (_, i) => {
+    const m = shiftMonth(month, i - n + 1);
+    return { month: m, gastosCents: spentIn(expenses, m), entradasCents: incomeIn(incomes, m) };
+  });
+}
+
+/** Gasto de cada dia do mês (sua parte, sem a dos amigos), pro calendário de calor. */
+export function gastoPorDia(expenses, month) {
+  const dias = Array(daysInMonth(month)).fill(0);
+  for (const e of expenses) if (e.month === month) dias[Number(e.date.slice(8, 10)) - 1] += valorProprio(e);
+  return dias;
+}
+
 export function incomeIn(incomes, month, sourceId) {
   let t = 0;
   for (const i of incomes) if (i.month === month && (sourceId === undefined || i.sourceId === sourceId)) t += i.amountCents;
@@ -554,7 +571,10 @@ export function analyze({ expenses, incomes = [], categories, accounts = [], com
   for (const f of accounts.filter(a => a.tipo === 'cartao').map(a => faturaDoCartao(comReforco(a, accounts, expenses, incomes), expenses, today))) {
     if (f.pct >= 100) out.push({ type: 'cartao_limite', severity: 'alta', accountId: f.id, accountName: f.nome, pct: f.pct, amountCents: f.usadoCents, leftCents: f.disponivelCents, budgetCents: f.limiteCents });
     else if (f.pct >= 80) out.push({ type: 'cartao_limite', severity: 'media', accountId: f.id, accountName: f.nome, pct: f.pct, amountCents: f.usadoCents, leftCents: f.disponivelCents, budgetCents: f.limiteCents });
-    if (f.fechadaCents > 0 && f.diasParaVencer >= 0 && f.diasParaVencer <= 3) {
+    if (f.atrasada) {
+      // venceu e ninguém marcou como paga: lembra (pode ter sido paga fora do app; aí é só marcar)
+      out.push({ type: 'compromisso_atrasado', severity: 'alta', accountId: f.id, nome: `Fatura do ${f.nome}`, valorCents: f.fechadaCents, dia: Number(f.vencimento.slice(8)), days: -f.diasParaVencer });
+    } else if (f.fechadaCents > 0 && f.diasParaVencer >= 0 && f.diasParaVencer <= 3) {
       out.push({ type: 'cartao_vence', severity: f.diasParaVencer <= 1 ? 'alta' : 'media', accountId: f.id, accountName: f.nome, amountCents: f.fechadaCents, days: f.diasParaVencer, dia: Number(f.vencimento.slice(8)) });
     }
   }
@@ -847,6 +867,7 @@ export function validarBackup(bruto) {
       || !Number.isInteger(a.balanceCents) || Math.abs(a.balanceCents) > VALOR_MAX
       || !(a.tipo == null || a.tipo === 'cartao')
       || !(a.subtipo == null || TIPOS_CONTA[a.subtipo]) || !(a.reforcaCartaoId == null || ID_RE.test(a.reforcaCartaoId))
+      || !(a.faturaPagaAte == null || isValidISODate(a.faturaPagaAte))
       || (a.tipo === 'cartao' && (!centavos(a.limiteCents, 1) || !centavos(a.usadoInicialCents ?? 0, 0)
         || ![a.fechamentoDia, a.vencimentoDia].every(d => Number.isInteger(d) && d >= 1 && d <= 31)))) erro(`Conta ${i + 1} do backup está com dado inválido.`);
   });
@@ -1018,13 +1039,16 @@ export function faturaDoCartao(cartao, expenses, today = toISODate()) {
   const futurasCents = soma(proxFech, '9999-12-31');
   const presoFuturoCents = soma(proxFech, '9999-12-31', doCartao.filter(e => e.modo === 'total'));
   const fechadaCents = soma(penultFech, ultimoFech) + (criadoEm > penultFech && criadoEm <= ultimoFech ? inicial : 0);
-  const pagaJa = today > vencimento; // depois do vencimento, a fechada já foi (ou devia ter sido) paga
+  // Fatura só é paga quando a pessoa marca "Paguei a fatura" (achado do GPT, 12/11): vencer não é pagar.
+  // Antes, depois do vencimento a fatura sumia do limite mesmo sem pagamento.
+  const pagaJa = !!cartao.faturaPagaAte && cartao.faturaPagaAte >= ultimoFech;
+  const atrasada = !pagaJa && today > vencimento;
   const usadoCents = abertaCents + (pagaJa ? 0 : fechadaCents) + presoFuturoCents;
   const limiteCents = (cartao.limiteCents || 0) + (cartao.reforcoCents || 0);
   return {
     id: cartao.id, nome: accountLabel(cartao), limiteCents, reforcoCents: cartao.reforcoCents || 0, usadoCents, disponivelCents: limiteCents - usadoCents,
     pct: limiteCents ? Math.round((usadoCents / limiteCents) * 100) : 0,
-    abertaCents, fechadaCents: pagaJa ? 0 : fechadaCents, futurasCents, presoFuturoCents, fechamento: proxFech, ultimoFechamento: ultimoFech, vencimento,
+    abertaCents, fechadaCents: pagaJa ? 0 : fechadaCents, atrasada: atrasada && fechadaCents > 0, futurasCents, presoFuturoCents, fechamento: proxFech, ultimoFechamento: ultimoFech, vencimento,
     diasParaFechar: daysBetween(today, proxFech), diasParaVencer: daysBetween(today, vencimento),
   };
 }

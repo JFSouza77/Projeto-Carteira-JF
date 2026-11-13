@@ -25,3 +25,9 @@ Depois de cada correção, escreva no Registro: o que o JF viu, a causa, o que m
 | 12/11 | "C6 Bank" duas vezes (conta e cartão) | rótulo não dizia o tipo | `accountLabel` com "Cartão", "Poupança", "Cofrinho" | `tests/engine.test.js` (apelido da conta) |
 | 12/11 | "—" gigante na Sobra prevista parecia erro | placeholder sem texto | frase "Lance sua entrada pra eu calcular" | `npm run test:telas` (print) |
 | 12/11 | (achado do Code) Qualquer um que digitasse "JF" virava criador | `ehCriador` olhava só o nome digitado | criador só com `seloCriador`, que vem do login (lista `CRIADOR_CONTAS` no servidor) | `tests/idade.test.js`, `servidor/tests/conta.test.js` |
+| 13/11 | (GPT) Sair e entrar em outra conta levava os dados do aparelho pra ela | `entrar()` marcava tudo pra subir em qualquer login | `contaDona`: entrar em conta diferente pergunta antes | revisão manual (precisa do servidor pra teste de ponta a ponta) |
+| 13/11 | (GPT) Fatura vencida sumia do limite sem pagar | vencimento era tratado como pagamento | `faturaPagaAte` + botão "Paguei a fatura"; alerta de atraso | `tests/cartao.test.js`, `tests/debug_gpt.test.js` |
+| 13/11 | (GPT) Registro que não abria na sincronia ficava perdido | cursor avançava mesmo com registro ruim | com registro ruim, o cursor não avança | revisão manual |
+| 13/11 | (GPT) "O que tenho pra pagar?" ignorava a fatura | só olhava compromissos | fatura do cartão entra, sem duplicar a cadastrada | `tests/debug_gpt.test.js` |
+| 13/11 | (Gemini) "gastei 30 no 99" perdia o 99 | descrição usava o filtro do aprendizado de categoria (tira números) | descrição guarda números; só parcela sai | `tests/debug_gpt.test.js` |
+| 13/11 | (Gemini) "em 10 vezes de R$ 330" confundia parcela com à vista; "dia 31" em mês de 30 caía em hoje; entrada com banco ficava sem conta; `--bad` no CSS | regex e campos faltando | regex com R$ e milhar; último dia do mês; `accountId` na entrada; `--danger` | `tests/debug_gpt.test.js` |

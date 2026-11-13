@@ -406,7 +406,7 @@ select { appearance: none; -webkit-appearance: none; }
 .limite-bar { height: 8px; border-radius: 99px; background: var(--card-2); overflow: hidden; margin: 8px 0 4px; }
 .limite-bar > i { display: block; height: 100%; background: var(--accent); }
 .limite-bar.alto > i { background: var(--warn, #f5b942); }
-.limite-bar.cheio > i { background: var(--bad, #ff5d73); }
+.limite-bar.cheio > i { background: var(--danger); }
 
 /* ---------- Acessibilidade ---------- */
 .a11y-grupo { border: 0; margin: 0 0 12px; padding: 0; }
@@ -570,3 +570,31 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .msg.caos-msg { background: var(--card-2); border-color: color-mix(in srgb, var(--caos) 35%, var(--caos-line)); }
 .msg.digitando .pontos i { box-shadow: 0 0 6px color-mix(in srgb, var(--caos) 70%, transparent); }
 @keyframes digita { 0%, 80%, 100% { opacity: .3; transform: translateY(0) scale(.85); } 40% { opacity: 1; transform: translateY(-3px) scale(1); } }
+
+/* Gráficos (13/11): linha dos 6 meses e calendário de calor, sem biblioteca */
+.graficos[hidden] { display: none; }
+.grafico { margin: 0 0 14px; }
+.grafico figcaption { font-size: .85rem; color: var(--muted); margin-bottom: 6px; }
+.g-linha { width: 100%; height: auto; display: block; overflow: visible; }
+.g-linha .eixo { stroke: var(--line); stroke-width: 1; }
+.g-linha path { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.g-linha .l-gasto { stroke: var(--caos); filter: drop-shadow(0 0 4px color-mix(in srgb, var(--caos) 60%, transparent)); }
+.g-linha .l-entrada { stroke: var(--ok); stroke-dasharray: 4 4; }
+.g-linha .p-gasto circle { fill: var(--caos); }
+.g-linha .p-entrada circle { fill: var(--ok); }
+.g-linha text { font-size: 10px; fill: var(--muted); }
+.g-linha text.valor { fill: var(--text); font-weight: 700; font-size: 11px; }
+.legenda { font-size: .8rem; color: var(--muted); margin: 6px 0 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.legenda[hidden] { display: none; }
+.ponto { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.ponto.gasto { background: var(--caos); }
+.ponto.entrada { background: var(--ok); margin-left: 8px; }
+.calor { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.calor span { aspect-ratio: 1; border-radius: 6px; display: grid; place-items: center; font-size: .72rem; color: var(--muted); }
+.calor .sem { aspect-ratio: auto; font-weight: 700; }
+.calor .dia { background: var(--card-2); }
+.calor .n1 { background: color-mix(in srgb, var(--caos) 22%, var(--card-2)); color: var(--text); }
+.calor .n2 { background: color-mix(in srgb, var(--caos) 45%, var(--card-2)); color: var(--text); }
+.calor .n3 { background: color-mix(in srgb, var(--caos) 70%, var(--card-2)); color: #fff; }
+.calor .n4 { background: var(--caos); color: #fff; box-shadow: 0 0 8px -2px var(--caos); }
+.calor { max-width: 300px; margin: 0 auto; }

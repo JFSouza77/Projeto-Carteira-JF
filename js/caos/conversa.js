@@ -104,8 +104,8 @@ export function calcularJuros({ tipo, valor, taxa, meses }) {
 /** "parcelar 3000 em 10x de 330" ou "3000 a vista ou 10x de 330" → { vista, n, parcela }. */
 export function lerParcelamento(t) {
   const n = t.match(/(\d{1,2})\s*x|em (\d{1,2}) (vezes|parcelas)/);
-  const parcela = t.match(/(?:x|vezes|parcelas) de (?:r\$\s?)?(\d+(?:[.,]\d{1,2})?)/);
-  const resto = t.replace(/(\d{1,2})\s*x(?: de (?:r\$\s?)?\d+(?:[.,]\d{1,2})?)?/g, ' ').replace(/em \d{1,2} (vezes|parcelas)( de \d+(?:[.,]\d{1,2})?)?/g, ' ');
+  const parcela = t.match(/(?:x|vezes|parcelas) de (?:r\$\s?)?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)/);
+  const resto = t.replace(/(\d{1,2})\s*x(?: de (?:r\$\s?)?\d+(?:[.,]\d{1,2})?)?/g, ' ').replace(/em \d{1,2} (vezes|parcelas)(?: de (?:r\$\s?)?\d{1,3}(?:\.\d{3})*(?:[.,]\d{1,2})?)?/g, ' ');
   const vista = acharValor(resto);
   return { vista: vista || null, n: n ? Number(n[1] || n[2]) : null, parcela: parcela ? parseAmount(parcela[1]) : null };
 }
@@ -120,7 +120,8 @@ export function dataDoTexto(t, today) {
     const dia = Number(m[1]);
     const mes = Number(today.slice(8, 10)) >= dia ? today.slice(0, 7) : shiftMonth(today.slice(0, 7), -1);
     const ultimo = new Date(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0).getDate();
-    if (dia >= 1 && dia <= ultimo) return `${mes}-${String(dia).padStart(2, '0')}`;
+    // "dia 31" num mês de 30 dias: último dia do mês (achado do Gemini), em vez de cair calado em hoje
+    if (dia >= 1 && dia <= 31) return `${mes}-${String(Math.min(dia, ultimo)).padStart(2, '0')}`;
   }
   return today;
 }
@@ -473,7 +474,9 @@ function limparPagamento(desc, accounts = []) {
   const limpo = [];
   for (const [i, w] of palavras.entries()) {
     const n = norm(w);
-    if (doBanco.has(i) || /^(pix|debito|credito|cartao|dinheiro|especie|\d{1,2}x|vezes|parcelas|parcelado|vista|\d{1,2})$/.test(n) || bancos.has(n)) {
+    // número solto só sai se for parcela ("em 3 vezes"); "no 99", "padaria 2 irmãos" ficam (achado do Gemini, 12/11)
+    const parcela = /^\d{1,2}$/.test(n) && /^(vezes|parcelas|x)$/.test(norm(palavras[i + 1] || ''));
+    if (doBanco.has(i) || parcela || /^(pix|debito|credito|cartao|dinheiro|especie|\d{1,2}x|vezes|parcelas|parcelado|vista)$/.test(n) || bancos.has(n)) {
       while (limpo.length && LIGA.test(norm(limpo[limpo.length - 1]))) limpo.pop(); // "no" de "no pix"
       continue;
     }
@@ -623,7 +626,8 @@ function semBase() {
 export function descricaoDe(t) {
   const m = String(t).match(/\b(?:no|na|nos|nas|em|de|do|da|com|pro|pra)\s+([a-z0-9 ]{2,40})$/);
   if (!m) return '';
-  return palavrasDe(m[1]).slice(0, 3).join(' ');
+  // número fica na descrição ("no 99", "padaria 2 irmãos"); palavra vazia sai (achado do Gemini, 12/11)
+  return m[1].split(/\s+/).filter(w => /^\d{1,4}$/.test(w) || palavrasDe(w).length).slice(0, 3).join(' ');
 }
 
 /** Primeiro acesso: tira o nome de "meu nome é João", "sou a Ana", "João". */
@@ -727,7 +731,9 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       return {
         gatilho: 'proposta_registro',
         vars: { valor: formatBRL(intencao.valor), categoria: `entrada (${fonte.name})` },
-        acao: { tipo: 'registrar_entrada', amountCents: intencao.valor, sourceId: fonte.id, date: today, note: '' },
+        // "recebi 1500 de salário no nubank": a entrada cai na conta (achado do Gemini); cartão nunca recebe entrada
+        acao: { tipo: 'registrar_entrada', amountCents: intencao.valor, sourceId: fonte.id, date: dataDoTexto(intencao.t, today), note: '',
+          accountId: lerPagamento(intencao.t, (dados.accounts || []).filter(a => a.tipo !== 'cartao')).accountId || null },
       };
     }
     case 'gasto_total': {
@@ -901,15 +907,27 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         fato: `Quer que eu passe a te chamar de ${novo}?`, acao: { tipo: 'mudar_apelido', apelido: novo } };
     }
     case 'pagar': {
+      // fatura do cartão entra sozinha (achado do GPT, 12/11), menos se a pessoa já cadastrou essa fatura como
+      // compromisso (aí não conta duas vezes). Fatura não vira proposta de gasto: as compras já foram lançadas;
+      // pagar a fatura é marcar "Paguei a fatura" em Contas.
+      const comFaturaCadastrada = new Set(compromissos.filter(c => c.tipo === 'fatura' && c.accountId).map(c => c.accountId));
+      const faturas = accounts.filter(a => a.tipo === 'cartao' && !comFaturaCadastrada.has(a.id))
+        .map(a => faturaDoCartao(comReforco(a, accounts, expenses, incomes), expenses, today))
+        .filter(f => f.fechadaCents > 0);
+      const dia = iso => `${Number(iso.slice(8))}/${Number(iso.slice(5, 7))}`;
+      const txtFaturas = faturas.map(f => `fatura do ${f.nome} ${formatBRL(f.fechadaCents)} (${f.atrasada ? `venceu dia ${dia(f.vencimento)}` : `vence dia ${dia(f.vencimento)}`})`);
+      const totalFaturas = faturas.reduce((t, f) => t + f.fechadaCents, 0);
+      const dicaFatura = faturas.length ? ' Pagou a fatura? Marca em Contas, no cartão, em "Paguei a fatura".' : '';
       const sit = situacaoCompromissos(compromissos, expenses, today).filter(c => c.noMes);
-      if (!compromissos.length) return { fato: 'Você ainda não cadastrou compromissos. Na aba 📅 Mês dá pra pôr contas fixas, faturas, assinaturas e planos que se repetem, e eu lembro dos vencimentos.', sugestoes: ['O que planejei pro mês?'] };
+      if (!compromissos.length && !faturas.length) return { fato: 'Você ainda não cadastrou compromissos. Na aba 📅 Mês dá pra pôr contas fixas, faturas, assinaturas e planos que se repetem, e eu lembro dos vencimentos.', sugestoes: ['O que planejei pro mês?'] };
       const abertos = sit.filter(c => c.status !== 'pago');
-      if (!abertos.length) return { fato: `Tudo pago este mês! ${sit.length} ${sit.length === 1 ? 'compromisso' : 'compromissos'} em dia.`, sugestoes: ['Cabe no mês?'] };
-      const lista = abertos.map(c => `${c.nome} ${formatBRL(c.faltaCents)}${c.parcial ? ' que falta' : ''}${c.diaNoMes ? ` (${c.status === 'atrasado' ? `venceu dia ${c.diaNoMes}` : `dia ${c.diaNoMes}`})` : ''}`).join('; ');
-      const total = abertos.reduce((a, c) => a + c.faltaCents, 0);
+      if (!abertos.length && !faturas.length) return { fato: `Tudo pago este mês! ${sit.length} ${sit.length === 1 ? 'compromisso' : 'compromissos'} em dia.`, sugestoes: ['Cabe no mês?'] };
+      const lista = [...abertos.map(c => `${c.nome} ${formatBRL(c.faltaCents)}${c.parcial ? ' que falta' : ''}${c.diaNoMes ? ` (${c.status === 'atrasado' ? `venceu dia ${c.diaNoMes}` : `dia ${c.diaNoMes}`})` : ''}`), ...txtFaturas].join('; ');
+      const total = abertos.reduce((a, c) => a + c.faltaCents, 0) + totalFaturas;
       const prox = abertos.find(c => c.status === 'atrasado') || abertos[0];
+      if (!prox) return { fato: `Falta pagar ${formatBRL(total)}: ${lista}.${dicaFatura}`, sugestoes: ['Cabe no mês?'] };
       return {
-        fato: `Falta pagar ${formatBRL(total)} este mês: ${lista}. Já pagou ${prox.nome}? Se sim, confirma que eu lanço.`,
+        fato: `Falta pagar ${formatBRL(total)} este mês: ${lista}. Já pagou ${prox.nome}? Se sim, confirma que eu lanço.${dicaFatura}`,
         acao: { tipo: 'registrar_gasto', amountCents: prox.faltaCents || prox.valorCents, categoryId: prox.categoryId, date: today, note: prox.nome, compromissoId: prox.id, accountId: prox.accountId },
         sugestoes: ['Cabe no mês?', 'O que planejei pro mês?'],
       };

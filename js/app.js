@@ -1,6 +1,7 @@
 // UI: liga a tela ao motor, à persistência e ao narrador.
 // Só este arquivo (via db.js) grava dados. O C.A.O.S. só sugere; quem confirma é a pessoa.
 
+import { normalizarApelido } from './sincronia.js';
 import * as db from './db.js';
 import {
   DEFAULT_CATEGORIES, INCOME_SOURCES, BANKS, formatBRL, parseAmount, parseSignedAmount, toISODate, monthKey,
@@ -8,7 +9,7 @@ import {
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
   TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
-  valorProprio, dividirIgual, juntarNomes, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, ofensiva, MARCOS_OFENSIVA,
+  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta } from './caos/conversa.js';
@@ -247,6 +248,8 @@ function render() {
       ${r.budgetCents ? `<div class="bar"><div class="bar-fill" style="${barStyle(r.ratio)}"></div></div>` : ''}
     </li>`).join('') : '<li class="muted">Sem gastos ainda.</li>';
 
+  renderGraficos();
+
   // Busca (ideia do AI Studio, 13/11): com algo digitado, procura em todos os meses por nome, categoria ou valor
   const busca = ($('#busca')?.value || '').trim();
   const filtro = busca ? filtroDeBusca(busca) : null;
@@ -440,6 +443,52 @@ function previaParcelas() {
   $('#parcelas-previa').textContent = `${n}x de ${formatBRL(parcela)}. ` + (total
     ? `Agora o limite fica ${formatBRL(v)} menor e volta ${formatBRL(parcela)} a cada fatura paga.`
     : `Só ${formatBRL(parcela)} por mês ocupa o limite.`);
+}
+
+// ---------- Gráficos (13/11): SVG feito à mão, sem biblioteca e sem internet ----------
+const brlCurto = c => (c >= 100000 ? `R$ ${(c / 100000).toFixed(1).replace('.', ',')} mil` : formatBRL(c).replace(',00', ''));
+
+function renderGraficos() {
+  const card = $('#graficos-card');
+  if (!card) return;
+  const temAlgo = state.expenses.length + state.incomes.length > 0;
+  card.hidden = !temAlgo;
+  if (!temAlgo) return;
+  // Linha: gastos x entradas dos últimos 6 meses (até o mês que está na tela)
+  const serie = serieMensal(state.expenses, state.incomes, state.viewMonth, 6);
+  const W = 320, H = 140, P = { l: 8, r: 8, t: 14, b: 22 };
+  const max = Math.max(1, ...serie.flatMap(m => [m.gastosCents, m.entradasCents]));
+  const x = i => P.l + (i * (W - P.l - P.r)) / (serie.length - 1);
+  const y = v => P.t + (1 - v / max) * (H - P.t - P.b);
+  const linha = k => serie.map((m, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(m[k]).toFixed(1)}`).join(' ');
+  const pontos = k => serie.map((m, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(m[k]).toFixed(1)}" r="3"><title>${nomeMesCurto(m.month)}: ${formatBRL(m[k])}</title></circle>`).join('');
+  const temEntrada = serie.some(m => m.entradasCents > 0);
+  const ult = serie[serie.length - 1];
+  const desc = `Gastos dos últimos 6 meses: ${serie.map(m => `${nomeMesCurto(m.month)} ${formatBRL(m.gastosCents)}`).join(', ')}.`;
+  $('#grafico-meses').innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" class="g-linha" role="img" aria-label="${esc(desc)}">
+      <line x1="${P.l}" x2="${W - P.r}" y1="${H - P.b}" y2="${H - P.b}" class="eixo"/>
+      ${temEntrada ? `<path d="${linha('entradasCents')}" class="l-entrada"/><g class="p-entrada">${pontos('entradasCents')}</g>` : ''}
+      <path d="${linha('gastosCents')}" class="l-gasto"/><g class="p-gasto">${pontos('gastosCents')}</g>
+      ${serie.map((m, i) => `<text x="${x(i).toFixed(1)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : i === serie.length - 1 ? 'end' : 'middle'}">${nomeMesCurto(m.month)}</text>`).join('')}
+      <text x="${W - P.r}" y="${Math.max(10, y(ult.gastosCents) - 6).toFixed(1)}" text-anchor="end" class="valor">${brlCurto(ult.gastosCents)}</text>
+    </svg>`;
+  $('#grafico-meses').nextElementSibling.hidden = !temEntrada;
+  // Calendário de calor: quanto mais forte a cor, mais gasto no dia
+  const dias = gastoPorDia(state.expenses, state.viewMonth);
+  const topo = Math.max(...dias);
+  const primeiro = new Date(`${state.viewMonth}-01T12:00:00`).getDay(); // 0 = domingo
+  const vazio = Array(primeiro).fill('<span class="vazio"></span>').join('');
+  const nivel = v => (!v ? 0 : Math.min(4, 1 + Math.floor((v / topo) * 3.999)));
+  $('#grafico-calor').innerHTML = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(d => `<span class="sem">${d}</span>`).join('') + vazio
+    + dias.map((v, i) => `<span class="dia n${nivel(v)}" title="Dia ${i + 1}: ${formatBRL(v)}" aria-label="Dia ${i + 1}: ${v ? formatBRL(v) : 'sem gasto'}">${i + 1}</span>`).join('');
+  const maior = dias.indexOf(topo);
+  $('#calor-titulo').textContent = `Dias com mais gasto em ${nomeMesCurto(state.viewMonth)}`;
+  $('#calor-legenda').textContent = topo ? `O dia mais pesado foi o ${maior + 1}: ${formatBRL(topo)}.` : 'Nenhum gasto neste mês ainda.';
+}
+
+function nomeMesCurto(month) {
+  return ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][Number(month.slice(5, 7)) - 1];
 }
 
 /** Filtro da busca: palavra no nome/categoria/fonte/conta, ou valor ("49,90", "50" acha 50,00 e 50,xx). */
@@ -914,7 +963,7 @@ async function confirmarAcao(i, ok) {
       return;
     }
     const events = a.tipo === 'registrar_entrada'
-      ? await registrarEntrada({ amountCents: a.amountCents, sourceId: a.sourceId, note: a.note, date: a.date })
+      ? await registrarEntrada({ amountCents: a.amountCents, sourceId: a.sourceId, note: a.note, date: a.date, accountId: a.accountId || null })
       : await registrarGasto({ amountCents: a.amountCents, categoryId: a.categoryId, note: a.note, date: a.date, imageId: a.imageId, compromissoId: a.compromissoId, accountId: a.accountId,
           forma: a.forma || null, parcelas: a.parcelas || 1, limiteModo: a.limiteModo || 'total' });
     if (a.compromissoId) renderMes();
@@ -1108,10 +1157,25 @@ function itemCartao(a) {
       <div class="account-head"><strong>${ic('a-cartao')} ${esc(accountLabel(a))}</strong><span class="num ${f.pct >= 100 ? 'bad' : ''}">${formatBRL(f.disponivelCents)} livre</span></div>${f.reforcoCents ? `<small class="muted">Limite ${formatBRL(a.limiteCents)} + ${formatBRL(f.reforcoCents)} do cofrinho.</small>` : ''}
       <div class="limite-bar ${cls}" role="img" aria-label="${f.pct}% do limite usado"><i style="width:${Math.min(100, Math.max(0, f.pct))}%"></i></div>
       <small class="muted">Usado ${formatBRL(f.usadoCents)} de ${formatBRL(f.limiteCents)} (${f.pct}%). Fatura aberta ${formatBRL(f.abertaCents)}, fecha ${dia(f.fechamento)}.${f.fechadaCents ? ` Fatura fechada ${formatBRL(f.fechadaCents)} vence ${dia(f.vencimento)}.` : ''}${f.futurasCents ? ` Parcelas das próximas faturas: ${formatBRL(f.futurasCents)}${f.presoFuturoCents ? ` (${formatBRL(f.presoFuturoCents)} preso no limite)` : ''}.` : ''}</small>
+      ${f.atrasada ? `<small class="bad">A fatura de ${formatBRL(f.fechadaCents)} venceu dia ${dia(f.vencimento)}. Já pagou? Marca aqui que ela sai do limite.</small>` : ''}
       <div class="account-actions">
+        ${f.fechadaCents > 0 ? `<button class="ghost" data-fatura-paga="${esc(a.id)}">Paguei a fatura</button>` : ''}
         <button class="ghost" data-acc-del="${esc(a.id)}">Remover</button>
       </div>
     </li>`;
+}
+
+/** "Paguei a fatura" (12/11): a fatura fechada sai do limite usado. Só a pessoa marca; vencer não é pagar. */
+async function marcarFaturaPaga(id) {
+  const cartao = state.accounts.find(a => a.id === id);
+  if (!cartao) return;
+  const f = faturaDoCartao(comReforco(cartao, state.accounts, state.expenses, state.incomes), state.expenses, toISODate());
+  if (!confirm(`Marcar a fatura de ${formatBRL(f.fechadaCents)} do ${accountLabel(cartao)} como paga?`)) return;
+  const novo = { ...cartao, faturaPagaAte: f.ultimoFechamento };
+  await db.put(db.STORES.accounts, novo);
+  state.accounts = state.accounts.map(a => (a.id === id ? novo : a));
+  render();
+  toast(`Pronto, anotei: fatura do ${accountLabel(cartao)} paga.`);
 }
 
 async function onAddCartao(ev) {
@@ -1545,7 +1609,9 @@ async function recarregarDoBanco() {
     categories: cats.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id)), expenses, incomes,
     accounts: accounts.sort((a, b) => a.createdAt - b.createdAt), compromissos, planos, perfil: perfil || state.perfil, metas: metas || [],
   });
-  renderLancar(); renderBudgets(); renderPerfil(); renderContas(); renderMes(); render();
+  // perfil chegou de outro aparelho no meio do primeiro acesso: encerra a apresentação (achado do Gemini, 12/11)
+  if (perfil?.apelido && state.onboarding && !state.onboarding.unico) state.onboarding = null;
+  renderLancar(); renderBudgets(); renderPerfil(); renderContas(); renderMes(); render(); renderChat();
 }
 
 function quandoFoi(ms) {
@@ -1600,6 +1666,13 @@ async function entrarNaConta(criar) {
   if (!servidor()) { err.textContent = 'Primeiro coloque o endereço do servidor do C.A.O.S. Finanças em "IA online e servidor".'; err.hidden = false; return; }
   if (apelido.length < 3) { err.textContent = 'Escolha um apelido com pelo menos 3 letras.'; err.hidden = false; return; }
   if (senha.length < 6) { err.textContent = 'A senha precisa ter pelo menos 6 letras ou números.'; err.hidden = false; return; }
+  // Troca de conta (achado do GPT, 12/11): os dados deste aparelho são de outra conta? Não manda sem perguntar.
+  const dona = await conta.contaDona().catch(() => null);
+  const temDados = state.expenses.length + state.incomes.length + state.accounts.length > 0;
+  if (temDados && dona && dona !== (normalizarApelido(apelido) || apelido.trim().toLowerCase())) {
+    const ok = confirm(`Os dados deste aparelho são da conta "${dona}". Se você entrar em "${apelido}", eles vão junto pra essa conta.\n\nQuer mesmo juntar?\n\n(Se não, toque em Cancelar, faça um backup e apague os dados em Ajustes antes de entrar.)`);
+    if (!ok) return;
+  }
   const botoes = [$('#conta-entrar'), $('#conta-criar')];
   const textos = botoes.map(b => b.textContent);
   botoes.forEach(b => { b.disabled = true; });
@@ -1963,6 +2036,8 @@ function bind() {
   $('#account-list').addEventListener('click', e => {
     const u = e.target.closest('[data-acc-update]');
     if (u) return onUpdateAccount(u.dataset.accUpdate);
+    const fp = e.target.closest('[data-fatura-paga]');
+    if (fp) return marcarFaturaPaga(fp.dataset.faturaPaga);
     const d = e.target.closest('[data-acc-del]');
     if (d) onRemoveAccount(d.dataset.accDel);
   });

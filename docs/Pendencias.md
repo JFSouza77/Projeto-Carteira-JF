@@ -17,11 +17,14 @@ Atualizada pelo Wally a cada rodada.
 1. P12: revisão de cada tela, **depois** da repaginada que o JF vai trazer do Google AI Studio (12/11).
 2. Professor de finanças, parte 2: mais termos (até 100), "olhar de cuidado" (farmácia, combustível, luz, apostas).
 3. Relatório do mês em PDF (pela impressão do navegador) e passo final do primeiro acesso: cadastrar a 1ª conta.
-4. Gráficos em SVG: tendência dos últimos 6 meses e calendário de calor dos gastos (ideia do AI Studio).
 5. Começar a quebrar o `app.js` em um arquivo por tela (com o Code revisando o plano).
 6. Avatar: 10 formas principais (depois do teste do Code em 19/11, ou antes se o JF pedir).
 
 ## Depois do servidor
+
+- **Sincronização ao mesmo tempo (achado do GPT):** o `/sync` lê, junta e grava o estado inteiro no KV; dois aparelhos
+  sincronizando no mesmo segundo podem perder uma mudança. Plano: passar o estado da conta pra um Durable Object
+  (serializa as gravações) quando o servidor estiver no ar e com gente usando.
 
 - Jornal do C.A.O.S. (notícias 06h e 18h, fonte oficial + "o que muda pra você" calculado no aparelho).
 - Comparar rendimento dos bancos pela IA; perguntas da fila.
