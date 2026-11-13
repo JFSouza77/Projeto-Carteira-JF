@@ -38,6 +38,25 @@ Atualizada pelo Wally a cada rodada.
   - **Total em reais:** soma com a cotação do dia, avisando que é estimativa.
   - **Avisos:** saldo em moeda estrangeira não tem FGC; o Meli Dólar é cripto. O C.A.O.S. explica no glossário.
   - Lançar gasto em outra moeda fica pra depois.
+- **Criptomoedas (JF, 13/11):** pra quem investe em cripto e não em banco ou ações. Já existe uma base: o tipo
+  "Criptomoedas" nos investimentos, e o servidor do mercado já busca o Bitcoin.
+  - **Carteira cripto:** quantidade de cada moeda × preço do dia = quanto vale hoje e quanto ganhou ou perdeu. Moedas
+    mais conhecidas: Bitcoin, Ethereum, USDT/USDC (dólar digital), Solana, XRP e Meli Dólar. Precisa ser lista em
+    múltiplo de 5, então completar até 10 na hora.
+  - **Onde compra:** campo livre (PicPay, Mercado Pago, Nubank, corretora). Taxa e spread mudam: o app não afirma
+    "aqui é mais barato"; pergunta e faz a conta com o que a pessoa trouxer, como no analista de ofertas.
+  - **Preço do dia:** vem do servidor (mercado), junto com dólar e euro. Sem servidor, a pessoa informa.
+  - **Jornal do C.A.O.S.:** entra uma linha de cripto ("Bitcoin subiu X% na semana") com a regra do mercado: é
+    informação, não recomendação. Nunca chamar moeda de "mais rentável" nem dizer "vale comprar".
+  - **Avisos:** cripto oscila muito, não tem FGC e golpe é comum ("rendimento garantido" é sinal de golpe). O
+    glossário ganha Bitcoin, stablecoin, carteira (wallet) e exchange.
+- **Layout pensado pra moedas e cripto** (planejar antes de codar):
+  - **Contas:** o total em reais soma tudo (real + outras moedas pela cotação); cada banco mostra as contas em outra
+    moeda com a bandeirinha (🇺🇸, 🇪🇺).
+  - **Investimentos:** vira um cartão com abas: Renda fixa · Ações e fundos · Cripto.
+  - **Início:** um cartão pequeno "Patrimônio" (contas + investimentos + cripto), aberto só se a pessoa tiver algo
+    disso, pra não poluir.
+  - **Jornal:** fica no Início, embaixo, e na conversa ("o que tem de notícia?").
 - **Tela de carregamento** ao abrir o app, com área de login: um respiro curto, não demora. Nada de abrir de forma
   instantânea e seca.
 
