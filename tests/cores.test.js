@@ -5,7 +5,7 @@ import { corCategoria, corFonte, corForma, temaBanco } from '../js/cores.js';
 import { DEFAULT_CATEGORIES } from '../js/engine.js';
 
 test('toda categoria padrão tem cor de variável do CSS', () => {
-  for (const c of DEFAULT_CATEGORIES) assert.match(corCategoria(c.id), /^var\(--[a-z]+\)$/);
+  for (const c of DEFAULT_CATEGORIES) assert.match(corCategoria(c.id), /^var\(--[a-z-]+\)$/);
   assert.equal(corCategoria('nao-existe'), 'var(--cyan)');
   assert.equal(corFonte('salario'), 'var(--ok)');
   assert.equal(corForma('credito'), 'var(--violet)');
@@ -33,5 +33,14 @@ test('todo banco da lista tem sigla curta e cor', async () => {
     const t = temaBanco(b);
     assert.ok(t.sigla.length >= 1 && t.sigla.length <= 4, b);
     assert.ok(t.fundo && t.letra && t.cor, b);
+  }
+});
+
+test('cada categoria tem cor no escuro e no claro (paleta do Code, 13/11)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const css = readFileSync(new URL('../css/styles.css', import.meta.url), 'utf8');
+  for (const c of DEFAULT_CATEGORIES) {
+    const nome = corCategoria(c.id).slice(6, -1);
+    assert.ok((css.match(new RegExp(`${nome}:\\s*#`, 'g')) || []).length >= 3, `${nome} falta em algum tema`);
   }
 });

@@ -363,7 +363,7 @@ function renderUltimos() {
     const nome = x.kind === 'entrada' ? (x.note || srcById(x.sourceId)?.name || 'Entrada') : (x.note || catById(x.categoryId)?.name || 'Gasto');
     const ico = x.kind === 'entrada' ? icFonte(srcById(x.sourceId)) : icCat(catById(x.categoryId));
     return `<li class="${x.kind === 'entrada' ? 'entrada' : ''}">
-      <span class="exp-emoji" aria-hidden="true">${ico}</span>
+      <span class="exp-emoji${x.kind === 'entrada' ? '' : ' cat'}" style="--cor-cat:${corCategoria(x.categoryId)}" aria-hidden="true">${ico}</span>
       <span class="exp-main"><span>${esc(nome)}</span><small>${d}/${m} · ${x.kind === 'entrada' ? 'entrada' : esc(catById(x.categoryId)?.name || '')}</small></span>
       <span class="num">${x.kind === 'entrada' ? '+' : ''}${formatBRL(x.amountCents)}</span>
       <button class="icon-btn edit" data-edit="${esc(x.id)}" data-kind="${x.kind}" aria-label="Editar">${ic('i-editar')}</button>
@@ -477,7 +477,7 @@ function render() {
     const c = catById(x.categoryId);
     return `
     <li>
-      <span class="exp-emoji" aria-hidden="true">${icCat(c)}</span>
+      <span class="exp-emoji cat" style="--cor-cat:${corCategoria(c?.id)}" aria-hidden="true">${icCat(c)}</span>
       <span class="exp-main"><span>${esc(x.note || c?.name || x.categoryId)}</span>
         <small>${dataTxt}${x.note && c ? ` · ${esc(c.name)}` : ''}${conta ? ` · ${esc(accountLabel(conta))}` : ''}${x.forma && !conta ? ` · ${esc(FORMAS_PAGAMENTO[x.forma].slice(2).trim())}` : ''}${x.parcelas > 1 ? ` · ${x.parcelas}x de ${formatBRL(Math.floor(x.amountCents / x.parcelas))}` : ''}
         ${x.imageId ? `<button class="thumb-btn" data-photo="${esc(x.imageId)}" aria-label="Ver foto">${ic('i-foto')}</button>` : ''}</small></span>

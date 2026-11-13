@@ -107,14 +107,19 @@ export function sentir(estado, tipoEvento, now = Date.now()) {
 }
 
 /** Emoção do momento (nome da Carteira): mistura, a mais alta, ou calmo. */
-export function emocaoAtual(estado, humor = 'suave', now = Date.now()) {
-  const e = decair(estado, now);
-  const v = { ...e.v };
+// Os valores que valem pra decidir o que ele mostra (já com o filtro do humor suave)
+function valoresVisiveis(estado, humor, now) {
+  const v = { ...decair(estado, now).v };
   if (humor === 'suave') {
     // Suave (2ª lei): a raiva aparece como preocupação
     v.ansiedade = Math.max(v.ansiedade, v.raiva);
     v.raiva = 0;
   }
+  return v;
+}
+
+export function emocaoAtual(estado, humor = 'suave', now = Date.now()) {
+  const v = valoresVisiveis(estado, humor, now);
   if (v.alegria >= RADIANTE) return 'radiante';
   for (const [[a, b], nome] of MISTURAS) {
     if (v[a] >= LIMIAR_MISTURA && v[b] >= LIMIAR_MISTURA) return nome;
@@ -133,4 +138,33 @@ export function intensidade(estado, emocao, now = Date.now()) {
   const chaves = BASE_DA[emocao] || [emocao];
   const v = Math.max(...chaves.map(k => e.v[k] || 0));
   return Math.max(0, Math.min(1, (v - 3) / 6));
+}
+
+// ---------- Estabilizador (C.A.O.S. 2.0.7, núcleo: margem 2 · 3 falas · saída 2,2; igual ao Perfil) ----------
+// Sem ele o rosto "pisca": duas emoções quase empatadas trocam a cada fala (achado do Code, 13/11). Com ele:
+//  · a emoção que está no rosto fica pelo menos 3 falas;
+//  · só troca se a nova passar 2 pontos na frente;
+//  · só sai de vez quando cai abaixo de 2,2 (abaixo do limiar de 3,8 ela ainda segura um pouco).
+// A memória dele (estab = { atual, falas }) fica com o resto da memória do C.A.O.S.; aqui é tudo função pura.
+const ESTAB = NUCLEO.emocoes.estabilizador;
+
+function forca(v, nome) {
+  if (!nome || nome === 'calmo') return 0;
+  if (nome === 'radiante') return v.alegria || 0;
+  const mistura = MISTURAS.find(([, n]) => n === nome);
+  if (mistura) return Math.min(v[mistura[0][0]] || 0, v[mistura[0][1]] || 0);
+  const base = Object.keys(MOSTRA).filter(k => MOSTRA[k] === nome);
+  return base.length ? Math.max(...base.map(k => v[k] || 0)) : 0;
+}
+
+/** Emoção do momento com estabilizador. Devolve { emocao, estab } (estab é o novo estado pra guardar na memória). */
+export function emocaoEstavel(estado, humor = 'suave', now = Date.now(), estab = null) {
+  const bruta = emocaoAtual(estado, humor, now);
+  const atual = estab?.atual;
+  const falas = Number(estab?.falas) || 0;
+  const v = valoresVisiveis(estado, humor, now);
+  if (!atual || atual === 'calmo' || forca(v, atual) < ESTAB.saida) return { emocao: bruta, estab: { atual: bruta, falas: 1 } };
+  if (bruta === atual || falas < ESTAB.dwellFalas) return { emocao: atual, estab: { atual, falas: falas + 1 } };
+  if (bruta !== 'calmo' && forca(v, bruta) >= forca(v, atual) + ESTAB.margem) return { emocao: bruta, estab: { atual: bruta, falas: 1 } };
+  return { emocao: atual, estab: { atual, falas: falas + 1 } };
 }

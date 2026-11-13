@@ -44,3 +44,24 @@ test('rosto espantado: 5 jogos de 4 quadros, reação e não emoção', async ()
   assert.equal(r.nome, 'espantado');
   assert.ok(!Object.keys(NUCLEO.emocoes || {}).includes('espantado'));
 });
+
+test('estabilizador: o rosto fica 3 falas, só troca com 2 pontos de vantagem e sai abaixo de 2,2', async () => {
+  const { emocaoEstavel } = await import('../js/caos/emocoes.js');
+  const now = Date.UTC(2026, 10, 13, 12);
+  const est = (v) => ({ v: { alegria: 0, tristeza: 0, raiva: 0, medo: 0, nojo: 0, ansiedade: 0, tedio: 0, vergonha: 0, curiosidade: 0, carinho: 0, ...v }, em: now });
+  let r = emocaoEstavel(est({ alegria: 5 }), 'suave', now, null);
+  assert.equal(r.emocao, 'alegria');
+  // curiosidade passa um pouquinho na frente: ainda é alegria (nem 3 falas, nem 2 pontos)
+  r = emocaoEstavel(est({ alegria: 5, curiosidade: 5.5 }), 'suave', now, r.estab);
+  assert.equal(r.emocao, 'alegria');
+  r = emocaoEstavel(est({ alegria: 5, curiosidade: 5.5 }), 'suave', now, r.estab);
+  r = emocaoEstavel(est({ alegria: 5, curiosidade: 5.5 }), 'suave', now, r.estab);
+  assert.equal(r.emocao, 'alegria', 'depois das 3 falas, meio ponto de vantagem não basta');
+  r = emocaoEstavel(est({ alegria: 5, curiosidade: 7.5 }), 'suave', now, r.estab);
+  assert.equal(r.emocao, 'curiosidade', '2 pontos na frente troca');
+  // caiu abaixo do limiar (3,8) mas acima de 2,2: segura
+  r = emocaoEstavel(est({ curiosidade: 3 }), 'suave', now, { atual: 'curiosidade', falas: 5 });
+  assert.equal(r.emocao, 'curiosidade');
+  r = emocaoEstavel(est({ curiosidade: 2 }), 'suave', now, { atual: 'curiosidade', falas: 5 });
+  assert.equal(r.emocao, 'calmo');
+});

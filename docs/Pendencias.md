@@ -26,7 +26,7 @@ Atualizada pelo Wally a cada rodada.
 - ~~**Fonte de título Baloo 2**~~ (feito em 13/11, 2.0.1) (a mesma do Perfil, "marca JF"): arquivos em `correio/para_o_wally/lidos/anexos/fontes/`
   (com a licença OFL). Embutida pra funcionar offline. Vai nos títulos, nos valores grandes em R$ e no botão principal; o
   texto corrido continua na fonte do sistema.
-- **Cores:** o JF quer variedade, sem carnaval. Cada cor tem um significado fixo e não entra cor só de enfeite. Na
+- **Cores:** (a paleta das categorias entrou em 13/11, 2.0.1) o JF quer variedade, sem carnaval. Cada cor tem um significado fixo e não entra cor só de enfeite. Na
   categoria, o ícone vai na cor dela; a paleta conferida está no recado `lidos/2026-11-13_respostas_da_rodada.md`.
 - **Cabeçalho igual em todas as telas** (ideia do Code). O **"Me ajuda" NÃO vai pro cabeçalho**: vale o que o JF
   definiu (bug 2 acima: um formato só, dá pra arrastar, toque abre o menu de ajuda rápida). Pedido do JF vem antes do Code.
@@ -46,7 +46,7 @@ Atualizada pelo Wally a cada rodada.
   - títulos do mês ("Rei do Delivery");
   - medalhas;
   - "Menos movimento" e "Modo Batata" com o mesmo nome dos dois lados.
-- **Estabilizador das emoções** (margem 2, 3 falas, saída 2,2), pra o rosto não piscar.
+- ~~**Estabilizador das emoções**~~ (feito em 13/11, C.A.O.S. 2.0.7) (margem 2, 3 falas, saída 2,2), pra o rosto não piscar.
 - **Dias da semana:** só sexta e segunda, 1 vez por semana, com 40% de chance.
 - **"Paguei a fatura":** botão de confirmar e depois aviso com "Desfazer".
 
