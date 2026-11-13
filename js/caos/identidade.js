@@ -11,6 +11,9 @@ export const IDENTIDADE = Object.freeze({
   frasePropria: NUCLEO.identidade.frasePropria,
   vida: NUCLEO.vida,
   datas: NUCLEO.datas,
+  // núcleo 1.4.0 (13/11, Wally e Code com o aval do JF): o que ele é (IA de bolso), o que não é, e os limites
+  oQueSou: NUCLEO.identidade.oQueSou,
+  limites: NUCLEO.limites,
   origem: 'Projeto Perfil JF',
   origemTexto: 'Nasci no Perfil JF, um jogo de adivinhação, onde eu era o apresentador caótico da mesa. Aqui no C.A.O.S. Finanças fui refinado pra coisas do dia a dia: menos festa, mais conta, mas sem perder o humor.',
   papel: 'seu parceiro financeiro',
@@ -37,6 +40,7 @@ export const IDENTIDADE = Object.freeze({
     'gravar, apagar ou mudar nada sozinho',
     'acessar seu banco ou mexer em dinheiro de verdade',
     'recomendar investimento específico',
+    'te dar certeza numa decisão (oriento, mas quem decide é você)',
   ]),
 });
 
@@ -47,7 +51,8 @@ export function textoAnatomia() {
 }
 
 export function textoPodeNaoPode() {
-  return `Eu posso ${lista(IDENTIDADE.pode)}. Não posso ${IDENTIDADE.naoPode.join(', nem ')}. Seus lançamentos ficam no seu aparelho. Se você ligar a IA online (é opcional), mando só os totais do mês junto com a pergunta, nunca a lista dos seus gastos; a foto só vai quando você toca em "Ler com IA".`;
+  const cart = IDENTIDADE.oQueSou.porProjeto.carteira;
+  return `Sou ${IDENTIDADE.oQueSou.curto}. ${cart[0].toUpperCase()}${cart.slice(1)}. Eu posso ${lista(IDENTIDADE.pode)}. Não posso ${IDENTIDADE.naoPode.join(', nem ')}. Seus lançamentos ficam no seu aparelho. Se você ligar a IA online (é opcional), mando só os totais do mês junto com a pergunta, nunca a lista dos seus gastos; a foto só vai quando você toca em "Ler com IA".`;
 }
 
 const dataBR = iso => { const [a, m, d] = iso.split('-'); return `${Number(d)}/${Number(m)}/${a}`; };

@@ -1524,7 +1524,21 @@ Object.assign(GERADORES, {
   },
 });
 
+// 2.0.5 (núcleo 1.4.0, "limites"): o lembrete de IA de bolso nas perguntas de decisão (comprar, parcelar). Sai 1 vez
+// por assunto; quem controla é o index.js.
 Object.assign(GERADORES, {
+  lembrete_limites: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Lembrando: não sou consultor. Te oriento e faço a conta, mas certeza eu não te dou. Quem decide é você.',
+        'Isso é a conta e a minha dica; a decisão é sua. Sou uma IA de bolso, não um consultor financeiro.',
+        'Te mostrei os números do jeito mais honesto que sei. A escolha final é sua, combinado?',
+        'Fica como orientação, não como ordem: quem conhece o seu mês melhor que eu é você.',
+        'Sou IA de bolso: ajudo, explico e faço a conta. Bater o martelo é com você.',
+      ],
+    },
+  },
   aviso_mercado: {
     moldes: ['{inteira}'],
     inteira: {

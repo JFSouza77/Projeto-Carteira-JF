@@ -722,7 +722,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       return { fato: textoPorcentagem(intencao.pct), cru: true, sugestoes: [] };
     case 'comparar_ofertas': {
       const a = analisarOfertas(intencao.ofertas);
-      return { fato: textoOfertas(a, intencao.produto), cru: true, sugestoes: ['Mandar print', 'Deixa pra depois'], modoFoto: 'ofertas',
+      return { fato: textoOfertas(a, intencao.produto), cru: true, decisao: 'compra', sugestoes: ['Mandar print', 'Deixa pra depois'], modoFoto: 'ofertas',
         aguardar: { tipo: 'ofertas', ofertas: intencao.ofertas, produto: intencao.produto } };
     }
     case 'vale_parcelar': {
@@ -734,11 +734,11 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
           const dif = total - vista;
           return { fato: dif > 0
             ? `Parcelado dá ${p.n}x de ${formatBRL(p.parcela)} = ${formatBRL(total)}. À vista é ${formatBRL(vista)}. Parcelando você paga ${formatBRL(dif)} a mais: isso é juro, mesmo que digam "sem juros". Se dá pra pagar à vista sem apertar o mês, à vista ganha.`
-            : `Parcelado dá ${formatBRL(total)} e à vista ${formatBRL(vista)}: o parcelado não sai mais caro. Aí vale parcelar se as ${p.n} parcelas de ${formatBRL(p.parcela)} cabem no mês junto com as que você já tem.`, cru: true };
+            : `Parcelado dá ${formatBRL(total)} e à vista ${formatBRL(vista)}: o parcelado não sai mais caro. Aí vale parcelar se as ${p.n} parcelas de ${formatBRL(p.parcela)} cabem no mês junto com as que você já tem.`, cru: true, decisao: 'compra' };
         }
-        return { fato: `${p.n}x de ${formatBRL(p.parcela)} dá ${formatBRL(total)} no total. Pergunta o preço à vista: se for menor, a diferença é o juro escondido. E confere se a parcela cabe no mês com as outras que você já tem.`, cru: true };
+        return { fato: `${p.n}x de ${formatBRL(p.parcela)} dá ${formatBRL(total)} no total. Pergunta o preço à vista: se for menor, a diferença é o juro escondido. E confere se a parcela cabe no mês com as outras que você já tem.`, cru: true, decisao: 'compra' };
       }
-      return { fato: 'Depende de três coisas: 1) o total parcelado é igual ao à vista? Se for maior, tem juro. 2) a parcela cabe no mês junto com as outras? 3) vale pelo que dura? Coxinha de R$ 5 em 3x? Não! Ela acaba hoje e a parcela fica três meses. Um notebook de R$ 3.000 em 10x sem juros, que você vai usar anos? Pode valer, se couber no mês. Me manda os números, tipo "3000 à vista ou 10x de 330", que eu faço a conta.', cru: true, sugestoes: [] };
+      return { fato: 'Depende de três coisas: 1) o total parcelado é igual ao à vista? Se for maior, tem juro. 2) a parcela cabe no mês junto com as outras? 3) vale pelo que dura? Coxinha de R$ 5 em 3x? Não! Ela acaba hoje e a parcela fica três meses. Um notebook de R$ 3.000 em 10x sem juros, que você vai usar anos? Pode valer, se couber no mês. Me manda os números, tipo "3000 à vista ou 10x de 330", que eu faço a conta.', cru: true, decisao: 'compra', sugestoes: [] };
     }
     case 'esqueci_de_lancar':
       return {

@@ -21,6 +21,34 @@ Atualizada pelo Wally a cada rodada.
    - mostrar um erro claro em vez de não fazer nada;
    - plano B: ditado pelo teclado do iPhone (o microfone do próprio teclado).
 
+## Do Code (13/11 à noite, pra rodada grande)
+
+- **Fonte de título Baloo 2** (a mesma do Perfil, "marca JF"): arquivos em `correio/para_o_wally/lidos/anexos/fontes/`
+  (com a licença OFL). Embutida pra funcionar offline. Vai nos títulos, nos valores grandes em R$ e no botão principal; o
+  texto corrido continua na fonte do sistema.
+- **Cores:** o JF quer variedade, sem carnaval. Cada cor tem um significado fixo e não entra cor só de enfeite. Na
+  categoria, o ícone vai na cor dela; a paleta conferida está no recado `lidos/2026-11-13_respostas_da_rodada.md`.
+- **"Me ajuda" no cabeçalho**, e o cabeçalho igual em todas as telas (junta com o bug 2 acima).
+- **Organizar o código como o Perfil:** 6 etapas, uma por PR, sem mudar comportamento:
+  1. `js/estado.js`;
+  2. uma tela por arquivo;
+  3. `js/ui/`;
+  4. motor por assunto;
+  5. `js/dados/`;
+  6. CSS por área.
+
+  Regra nova do JF: código comentado com o **porquê**.
+- **Marca JF:** o Code escreve o `docs/Marca_JF.md` (igual nos dois projetos) e eu completo com o lado da Carteira.
+  Ideias dele:
+  - abertura com a versão;
+  - moldura neon nos momentos especiais;
+  - títulos do mês ("Rei do Delivery");
+  - medalhas;
+  - "Menos movimento" e "Modo Batata" com o mesmo nome dos dois lados.
+- **Estabilizador das emoções** (margem 2, 3 falas, saída 2,2), pra o rosto não piscar.
+- **Dias da semana:** só sexta e segunda, 1 vez por semana, com 40% de chance.
+- **"Paguei a fatura":** botão de confirmar e depois aviso com "Desfazer".
+
 ## Próxima rodada grande (pedidos do JF, 13/11)
 
 - **Avatares animados do C.A.O.S.** no lugar dos rostinhos (os rostinhos ficam só quando precisar, pra não poluir).
@@ -66,16 +94,9 @@ Atualizada pelo Wally a cada rodada.
     (faixa de isenção maior): conferir na fonte oficial antes de codar e guardar a data da tabela.
   - **Pelos dados do app:** pode juntar as entradas do ano ("salário") e os gastos de saúde e educação como lembrete do
     que guardar de comprovante. Nada vai pra fora do aparelho.
-- **Deixar claro o que ele é (JF, 13/11):** o C.A.O.S. é uma **IA de bolso**: ajuda a controlar e analisar as finanças,
-  orienta, faz conta e dá dica, mas **não é consultor financeiro, investidor, banqueiro nem banco**, e ainda não é uma IA
-  autônoma de grande porte. Quem decide é a pessoa.
-  - **Onde:** em `js/caos/identidade.js` (o "pode/não pode" já existe; acrescentar "não sou consultor, investidor nem
-    banco" e "sou uma IA de bolso"). Também na resposta "o que você pode fazer?".
-  - **Pergunta fora do escopo ou de decisão** ("vale comprar?", "qual investimento é melhor?", "quanto vou pagar de
-    IR?"): ele ajuda no que dá e termina com o lembrete curto: "te dou a dica e a conta, mas não a certeza: quem decide
-    é você". Sem repetir isso em toda fala, pra não ficar chato.
-  - **Núcleo:** "IA de bolso" e "não sou consultor" é jeito de ser dele, então vale perguntar ao JF e ao Code se vai pro
-    núcleo (nos dois projetos).
+- ~~**Deixar claro o que ele é (JF, 13/11): IA de bolso.**~~ Feito em 13/11 (C.A.O.S. 2.0.5, núcleo 1.4.0). Ele se
+  apresenta como IA de bolso e, em pergunta de decisão (parcelar, qual comprar, investir), dá o lembrete curto 1 vez por
+  assunto. Falta ligar no IR quando ele existir.
 - **Tela de carregamento** ao abrir o app, com área de login: um respiro curto, não demora. Nada de abrir de forma
   instantânea e seca.
 

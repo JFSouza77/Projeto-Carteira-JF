@@ -198,3 +198,4 @@ Pedido do JF: "a geladeira tá 3.500 no Mercado Livre, 3.400 na Amazon e 2.100 n
   - **print:** "mandar print" ou foto com uma comparação aberta. A IA online lê pela rota `/ia/ofertas`, e o resultado
     vira a frase que a pessoa escreveria.
 - **2.0.4 (13/11):** parcelado sem detalhe → pergunta se é sem juros, em quantas vezes e quanto é a parcela (com juros); um "sim, sem juros" solto vale pra única loja com dúvida; Pix com desconto × sem juros na mesma loja: explica quando cada um ganha.
+- **2.0.5 (13/11):** núcleo 1.4.0 ("IA de bolso", decidido com o Code e o aval do JF). Ele diz o que é e o que não é (`oQueSou`), e em pergunta de decisão (parcelar, qual comprar, investir) termina com um lembrete curto de que quem decide é a pessoa (`lembrete_limites`; o mercado usa o `aviso_mercado`). No máximo 1 vez por assunto a cada 6 h (`memoria.limites`). Teste: `tests/limites.test.js`.
