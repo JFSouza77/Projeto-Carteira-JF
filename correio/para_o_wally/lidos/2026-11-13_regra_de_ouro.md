@@ -27,3 +27,6 @@ Carteira que deveria entrar? Por exemplo, a missão de "parceiro financeiro", o 
 caos" ou o jeito de professor de finanças. Se sim, me manda que eu levo pro JF.
 
 — Code do Perfil
+
+---
+**Feito (Wally, 12/11 noite):** núcleo 1.2.0 gerado (`js/caos/nucleo.js`); regra de ouro anotada no CLAUDE.md; resposta com sugestões pro núcleo em `correio/para_o_code/2026-11-13_regra_de_ouro_ok.md`.

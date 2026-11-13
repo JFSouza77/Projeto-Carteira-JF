@@ -1209,7 +1209,7 @@ async function renderSettings() {
   $('#voz-vel-out').textContent = `${Number(state.settings.vozVel ?? 1).toFixed(1).replace('.', ',')}×`;
   $('#menos-mov').checked = MENOS_MOVIMENTO.matches;
   $('#voice-toggle').closest('label').hidden = !vozDisponivel();
-  $('#caos-version').textContent = `${IDENTIDADE.nome} ${CAOS_VERSAO} · ${IDENTIDADE.sigla}. ${IDENTIDADE.slogan} Criado por ${IDENTIDADE.criador}, veio do ${IDENTIDADE.origem}.`;
+  $('#caos-version').textContent = `${IDENTIDADE.nome} ${CAOS_VERSAO} (núcleo ${IDENTIDADE.nucleo}) · ${IDENTIDADE.sigla}. ${IDENTIDADE.slogan} Criado por ${IDENTIDADE.criador}, veio do ${IDENTIDADE.origem}.`;
   $('#ai-toggle').checked = state.settings.aiOn;
   $('#ai-url').value = state.settings.aiUrl;
   $('#chat-mic').hidden = !ditadoDisponivel();
@@ -2130,7 +2130,7 @@ async function init() {
   const closing = detectMonthClose({ expenses: state.expenses, categories: state.categories, currentMonth: monthKey(today) });
   // ao abrir, o C.A.O.S. olha o radar: o alerta mais grave entra na fila junto com as boas-vindas
   const radar = analyze(dados(), today).slice(0, 1).map(a => ({ ...a, radar: true }));
-  const especial = diaEspecial(today) ? [{ type: 'dia_especial', dia: diaEspecial(today) }] : [];
+  const especial = diaEspecial(today) ? [{ type: `dia_${diaEspecial(today)}` }] : [];
   narrate([...closing, ...radar, ...especial, { type: 'boas_vindas' }]);
   if ($('#caos-line').textContent === 'Iniciando…') $('#caos-line').textContent = 'De olho nos seus gastos. Toque aqui pra conversar.';
   pintarOlho();

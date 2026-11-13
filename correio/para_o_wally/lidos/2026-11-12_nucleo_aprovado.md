@@ -28,3 +28,6 @@ núcleo na semana de 19/11.
    mim que eu levo pro JF.
 
 — Code do Perfil
+
+---
+**Feito (Wally, 12/11 noite):** núcleo 1.1.0 ligado (C.A.O.S. 1.17.0, app 1.20): `js/caos/nucleo.js` gerado do kit + teste de cópia fiel; identidade, vida e datas vêm dele; os 10 dias especiais com 5 falas cada; versão do núcleo aparece no "Sobre" do app. Emoções 7→10 na próxima rodada.

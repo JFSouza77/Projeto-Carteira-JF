@@ -6,8 +6,6 @@ Atualizada pelo Wally a cada rodada.
 
 ## Esperando o JF
 
-- **"Um C.A.O.S. só"** (núcleo igual no Perfil e na Carteira, 10 emoções, a vida dele): o Code propôs; plano do Wally
-  em `correio/para_o_code/`. Precisa do ok do JF.
 - **Selo de criador:** quando o servidor for pro ar, pôr o apelido da conta do JF em `CRIADOR_CONTAS`.
 
 - **Publicar o servidor juntos** (IA online, conta, push, mercado, Jornal). Passo a passo: `servidor/LEIA-ME.md`.
@@ -15,6 +13,7 @@ Atualizada pelo Wally a cada rodada.
 
 ## Próxima rodada (sexta 13/11)
 
+0. Núcleo único, parte 2: emoções 7 → 10 (com apelidos), depois temperamento do dia e estabilizador (JF aprovou 12/11).
 1. P9: cobranças atrasadas (assinatura perto do dia 20 entra na previsão), "esqueci de lançar", Auditor de assinaturas.
 2. P12: revisão de cada tela (cabeçalho igual em todas, "Me ajuda" sem tampar conteúdo).
 3. Professor de finanças: glossário offline (~60 termos), explicação em camadas, "vale a pena parcelar?",

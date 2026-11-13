@@ -4,6 +4,7 @@
 
 import { formatBRL, INCOME_SOURCES, daysInMonth, toISODate, idadeDe, faixaEtaria, ehAniversario } from '../engine.js';
 import { congelar, protegido } from './espinha.js';
+import { NUCLEO } from './nucleo.js';
 import { sentir, emocaoAtual, emocoesIniciais, intensidade, ROSTO } from './emocoes.js';
 import { escolherRosto, memoriaRostoInicial } from './rostos.js';
 import { gerarFala } from './gerador.js';
@@ -11,7 +12,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '1.16.0';
+export const CAOS_VERSAO = '1.17.0';
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -22,8 +23,10 @@ export { IDENTIDADE, resumoIdentidade } from './identidade.js';
 const PRIORIDADE = {
   categoria_estourada: 50, compromisso_atrasado: 49, conta_negativa: 48, cartao_limite: 47, mes_negativo: 46, cartao_vence: 45, compromisso_vence: 44,
   orcamento_80: 40, mes_verde: 35, plano_do_mes: 25, confira_banco: 9,
-  ritmo_alto: 30, ofensiva_marco: 28, racha_cadastrada: 27, a_receber: 22, delivery_repetido: 20, entrada_cadastrada: 15, gasto_cadastrado: 10, sem_registro: 8, dia_especial: 7, boas_vindas: 5,
+  ritmo_alto: 30, ofensiva_marco: 28, racha_cadastrada: 27, a_receber: 22, delivery_repetido: 20, entrada_cadastrada: 15, gasto_cadastrado: 10, sem_registro: 8, boas_vindas: 5,
 };
+// Dias especiais (núcleo): todos com a mesma prioridade (logo acima das boas-vindas) e uma vez por dia
+for (const { id } of NUCLEO.dias.especiais) PRIORIDADE[`dia_${id}`] = 7;
 // Cooldown por tipo (ms). Alertas de orçamento e conta não têm: são úteis.
 const COOLDOWN = {
   gasto_cadastrado: 3 * 60_000,
@@ -33,7 +36,7 @@ const COOLDOWN = {
   sem_registro: 24 * 3_600_000,
   mes_negativo: 12 * 3_600_000,
   boas_vindas: 6 * 3_600_000,
-  dia_especial: 20 * 3_600_000, // uma vez no dia
+  ...Object.fromEntries(NUCLEO.dias.especiais.map(({ id }) => [`dia_${id}`, 20 * 3_600_000])),
   plano_do_mes: 24 * 3_600_000,
   cartao_limite: 12 * 3_600_000,
   cartao_vence: 12 * 3_600_000,
@@ -68,10 +71,27 @@ export function pareceCriador(perfil) {
   return !!perfil && [perfil.apelido, perfil.nome].some(x => NOMES_DO_CRIADOR.has(n(x)));
 }
 
-/** Dia especial (ideia do JF, 12/11, igual ao Perfil): por enquanto, sexta-feira 13. */
+/**
+ * Dia especial (núcleo único, 12/11): o calendário é o mesmo do Perfil (NUCLEO.dias); as falas são as da Carteira.
+ * Prioridade do núcleo: aniversários, depois as datas especiais. Devolve o id (ex.: 'sexta13') ou null.
+ */
 export function diaEspecial(iso) {
   const d = new Date(`${iso}T12:00:00`);
-  return d.getDay() === 5 && d.getDate() === 13 ? 'sexta13' : null;
+  const md = iso.slice(5);
+  const dt = NUCLEO.datas;
+  const regras = [
+    ['aniversarioCaos', md === dt.meuAniversario],
+    ['aniversarioCriador', md === dt.aniversarioDoCriador],
+    ['aniversarioCarteira', md === dt.aniversarioDaCarteira],
+    ['aniversarioPerfil', md === dt.aniversarioDoPerfil],
+    ['sexta13', d.getDay() === 5 && d.getDate() === 13],
+    ['natal', md === '12-24' || md === '12-25'],
+    ['anoNovo', md === '12-31' || md === '01-01'],
+    ['halloween', md === '10-31'],
+    ['criancas', md === '10-12'],
+    ['namorados', md === '06-12'],
+  ];
+  return regras.find(([, sim]) => sim)?.[0] ?? null;
 }
 
 function periodo(h) {
