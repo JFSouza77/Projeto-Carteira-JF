@@ -588,7 +588,8 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .legenda[hidden] { display: none; }
 .ponto { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .ponto.gasto { background: var(--caos); }
-.ponto.entrada { background: var(--ok); margin-left: 8px; }
+.ponto.entrada { background: var(--ok); }
+.ponto.gasto + * , .legenda .ponto.gasto { margin-left: 8px; }
 .calor { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 .calor span { aspect-ratio: 1; border-radius: 6px; display: grid; place-items: center; font-size: .72rem; color: var(--muted); }
 .calor .sem { aspect-ratio: auto; font-weight: 700; }
@@ -697,3 +698,15 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .cat-filtra { cursor: pointer; border-radius: 10px; }
 .cat-filtra:hover, .cat-filtra:focus-visible { background: var(--card-2); }
 .cat-filtra.ativa { outline: 1.5px solid var(--accent); outline-offset: 4px; }
+/* ritmo do mês e barras (13/11, repaginada) */
+#ritmo-fig[hidden] { display: none; }
+.g-barras .b-gasto { fill: var(--caos); }
+.g-barras .b-entrada { fill: var(--ok); }
+.g-ritmo .l-ideal { stroke: var(--muted); stroke-dasharray: 4 4; stroke-width: 1.5; }
+.g-ritmo .l-real { stroke: var(--accent); filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 60%, transparent)); }
+.g-ritmo .a-real { fill: color-mix(in srgb, var(--accent) 14%, transparent); stroke: none; }
+.g-ritmo .p-real { fill: var(--accent); }
+.g-ritmo.acima .l-real { stroke: var(--warn); } .g-ritmo.acima .p-real { fill: var(--warn); }
+.g-ritmo.acima .a-real { fill: color-mix(in srgb, var(--warn) 14%, transparent); }
+.traco { width: 16px; height: 0; border-top: 2.5px solid var(--accent); display: inline-block; }
+.traco.ideal { border-top: 2px dashed var(--muted); margin-left: 8px; }

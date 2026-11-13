@@ -15,6 +15,8 @@ export const NOVIDADES = Object.freeze([
       '🔁 Transferir entre contas: em Contas, mova dinheiro da conta pra poupança ou cofrinho sem virar gasto.',
       '🧾 Filtros no extrato: veja só gastos, só entradas ou só transferências.',
       '👆 Toque na categoria: em "Por categoria", tocar numa delas mostra só os lançamentos dela.',
+      '📈 Ritmo do mês: veja se o gasto acumulado está acima ou abaixo do ritmo ideal do seu orçamento.',
+      '📊 Seis meses em barras: entradas e gastos lado a lado, mês a mês.',
       '📤 Exportar CSV: leve o extrato pra planilha (abre certinho no Excel e no Google Planilhas).',
     ],
     qol: [],

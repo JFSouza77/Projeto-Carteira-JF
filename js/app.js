@@ -562,25 +562,27 @@ function renderGraficos() {
   const temAlgo = state.expenses.length + state.incomes.length > 0;
   card.hidden = !temAlgo;
   if (!temAlgo) return;
-  // Linha: gastos x entradas dos últimos 6 meses (até o mês que está na tela)
+  // Barras: entradas x gastos dos últimos 6 meses (13/11, repaginada do AI Studio)
   const serie = serieMensal(state.expenses, state.incomes, state.viewMonth, 6);
-  const W = 320, H = 140, P = { l: 8, r: 8, t: 14, b: 22 };
+  const W = 320, H = 150, P = { l: 6, r: 6, t: 16, b: 22 };
   const max = Math.max(1, ...serie.flatMap(m => [m.gastosCents, m.entradasCents]));
-  const x = i => P.l + (i * (W - P.l - P.r)) / (serie.length - 1);
-  const y = v => P.t + (1 - v / max) * (H - P.t - P.b);
-  const linha = k => serie.map((m, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(m[k]).toFixed(1)}`).join(' ');
-  const pontos = k => serie.map((m, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(m[k]).toFixed(1)}" r="3"><title>${nomeMesCurto(m.month)}: ${formatBRL(m[k])}</title></circle>`).join('');
   const temEntrada = serie.some(m => m.entradasCents > 0);
-  const ult = serie[serie.length - 1];
-  const desc = `Gastos dos últimos 6 meses: ${serie.map(m => `${nomeMesCurto(m.month)} ${formatBRL(m.gastosCents)}`).join(', ')}.`;
+  const larg = (W - P.l - P.r) / serie.length;
+  const bw = Math.min(16, larg / 3);
+  const alt = v => (v / max) * (H - P.t - P.b);
+  const barra = (x, v, cls, nome, m) => v ? `<rect x="${x.toFixed(1)}" y="${(H - P.b - alt(v)).toFixed(1)}" width="${bw}" height="${Math.max(1, alt(v)).toFixed(1)}" rx="3" class="${cls}"><title>${nomeMesCurto(m)}: ${nome} ${formatBRL(v)}</title></rect>` : '';
+  const desc = `Últimos 6 meses: ${serie.map(m => `${nomeMesCurto(m.month)} gastos ${formatBRL(m.gastosCents)}${temEntrada ? `, entradas ${formatBRL(m.entradasCents)}` : ''}`).join('; ')}.`;
   $('#grafico-meses').innerHTML = `
-    <svg viewBox="0 0 ${W} ${H}" class="g-linha" role="img" aria-label="${esc(desc)}">
+    <svg viewBox="0 0 ${W} ${H}" class="g-linha g-barras" role="img" aria-label="${esc(desc)}">
       <line x1="${P.l}" x2="${W - P.r}" y1="${H - P.b}" y2="${H - P.b}" class="eixo"/>
-      ${temEntrada ? `<path d="${linha('entradasCents')}" class="l-entrada"/><g class="p-entrada">${pontos('entradasCents')}</g>` : ''}
-      <path d="${linha('gastosCents')}" class="l-gasto"/><g class="p-gasto">${pontos('gastosCents')}</g>
-      ${serie.map((m, i) => `<text x="${x(i).toFixed(1)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : i === serie.length - 1 ? 'end' : 'middle'}">${nomeMesCurto(m.month)}</text>`).join('')}
-      <text x="${W - P.r}" y="${Math.max(10, y(ult.gastosCents) - 6).toFixed(1)}" text-anchor="end" class="valor">${brlCurto(ult.gastosCents)}</text>
+      ${serie.map((m, i) => {
+        const cx = P.l + larg * i + larg / 2;
+        return (temEntrada ? barra(cx - bw - 1, m.entradasCents, 'b-entrada', 'entradas', m.month) + barra(cx + 1, m.gastosCents, 'b-gasto', 'gastos', m.month)
+          : barra(cx - bw / 2, m.gastosCents, 'b-gasto', 'gastos', m.month))
+          + `<text x="${cx.toFixed(1)}" y="${H - 6}" text-anchor="middle">${nomeMesCurto(m.month)}</text>`;
+      }).join('')}
     </svg>`;
+  renderRitmo();
   $('#grafico-meses').nextElementSibling.hidden = !temEntrada;
   // Calendário de calor: quanto mais forte a cor, mais gasto no dia
   const dias = gastoPorDia(state.expenses, state.viewMonth);
@@ -593,6 +595,41 @@ function renderGraficos() {
   const maior = dias.indexOf(topo);
   $('#calor-titulo').textContent = `Dias com mais gasto em ${nomeMesCurto(state.viewMonth)}`;
   $('#calor-legenda').textContent = topo ? `O dia mais pesado foi o ${maior + 1}: ${formatBRL(topo)}.` : 'Nenhum gasto neste mês ainda.';
+}
+
+/** Ritmo do mês: gasto acumulado dia a dia x linha ideal (orçamento ou entradas divididos pelos dias). */
+function renderRitmo() {
+  const mes = state.viewMonth;
+  const dias = gastoPorDia(state.expenses, mes);
+  const total = dias.length;
+  const hojeISO = toISODate();
+  const ate = monthKey(hojeISO) === mes ? Number(hojeISO.slice(8, 10)) : mes < monthKey(hojeISO) ? total : 0;
+  const orc = state.categories.reduce((t, c) => t + (c.budgetCents || 0), 0);
+  const base = orc || incomeIn(state.incomes, mes);
+  const fig = $('#ritmo-fig');
+  fig.hidden = !ate || !base;
+  if (fig.hidden) return;
+  const acum = []; dias.reduce((t, v, i) => (acum[i] = t + v), 0);
+  const W = 320, H = 140, P = { l: 6, r: 6, t: 14, b: 20 };
+  const max = Math.max(base, acum[ate - 1] || 0, 1);
+  const x = d => P.l + ((d - 1) / Math.max(1, total - 1)) * (W - P.l - P.r);
+  const y = v => P.t + (1 - v / max) * (H - P.t - P.b);
+  const real = acum.slice(0, ate).map((v, i) => `${i ? 'L' : 'M'}${x(i + 1).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const area = `${real} L${x(ate).toFixed(1)},${y(0).toFixed(1)} L${x(1).toFixed(1)},${y(0).toFixed(1)} Z`;
+  const ideal = Math.round((base * ate) / total);
+  const gasto = acum[ate - 1] || 0;
+  const acima = gasto > ideal;
+  $('#ritmo-titulo').textContent = `Ritmo de gastos no mês: dia ${ate}, ${formatBRL(gasto)} de ${formatBRL(ideal)} ideais`;
+  $('#grafico-ritmo').innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" class="g-linha g-ritmo ${acima ? 'acima' : ''}" role="img"
+      aria-label="${esc(`Até o dia ${ate}, você gastou ${formatBRL(gasto)}. No ritmo ideal (${orc ? 'orçamento' : 'entradas'} de ${formatBRL(base)} no mês), seriam ${formatBRL(ideal)}.`)}">
+      <line x1="${P.l}" x2="${W - P.r}" y1="${y(0)}" y2="${y(0)}" class="eixo"/>
+      <path d="M${x(1)},${y(0)} L${x(total)},${y(base)}" class="l-ideal"/>
+      <path d="${area}" class="a-real"/>
+      <path d="${real}" class="l-real"/>
+      <circle cx="${x(ate).toFixed(1)}" cy="${y(gasto).toFixed(1)}" r="4" class="p-real"/>
+      <text x="${P.l}" y="${H - 4}">dia 1</text><text x="${W - P.r}" y="${H - 4}" text-anchor="end">dia ${total}</text>
+    </svg>`;
 }
 
 function nomeMesCurto(month) {
