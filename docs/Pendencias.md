@@ -57,6 +57,25 @@ Atualizada pelo Wally a cada rodada.
   - **Início:** um cartão pequeno "Patrimônio" (contas + investimentos + cripto), aberto só se a pessoa tiver algo
     disso, pra não poluir.
   - **Jornal:** fica no Início, embaixo, e na conversa ("o que tem de notícia?").
+- **Imposto de Renda (JF, 13/11):** o C.A.O.S. ensina o que é o IR e ajuda a fazer uma conta aproximada. Ele não
+  declara por ninguém e a conta não é 100% precisa.
+  - **Ensinar:** o que é o IR, quem precisa declarar, prazo, restituição, o que dá pra deduzir (saúde, educação,
+    dependentes, previdência) e o que é isento.
+  - **Calculadora aproximada:** renda do ano → base → faixa → imposto estimado. Usa a tabela do ano com a data e
+    "confira na Receita Federal" (regra de governo, como já faz a Selic no glossário). As regras mudaram em 2025/2026
+    (faixa de isenção maior): conferir na fonte oficial antes de codar e guardar a data da tabela.
+  - **Pelos dados do app:** pode juntar as entradas do ano ("salário") e os gastos de saúde e educação como lembrete do
+    que guardar de comprovante. Nada vai pra fora do aparelho.
+- **Deixar claro o que ele é (JF, 13/11):** o C.A.O.S. é uma **IA de bolso**: ajuda a controlar e analisar as finanças,
+  orienta, faz conta e dá dica, mas **não é consultor financeiro, investidor, banqueiro nem banco**, e ainda não é uma IA
+  autônoma de grande porte. Quem decide é a pessoa.
+  - **Onde:** em `js/caos/identidade.js` (o "pode/não pode" já existe; acrescentar "não sou consultor, investidor nem
+    banco" e "sou uma IA de bolso"). Também na resposta "o que você pode fazer?".
+  - **Pergunta fora do escopo ou de decisão** ("vale comprar?", "qual investimento é melhor?", "quanto vou pagar de
+    IR?"): ele ajuda no que dá e termina com o lembrete curto: "te dou a dica e a conta, mas não a certeza: quem decide
+    é você". Sem repetir isso em toda fala, pra não ficar chato.
+  - **Núcleo:** "IA de bolso" e "não sou consultor" é jeito de ser dele, então vale perguntar ao JF e ao Code se vai pro
+    núcleo (nos dois projetos).
 - **Tela de carregamento** ao abrir o app, com área de login: um respiro curto, não demora. Nada de abrir de forma
   instantânea e seca.
 
