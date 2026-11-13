@@ -78,17 +78,52 @@ export function ditadoDisponivel() {
   return typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 }
 
-export function ouvir() {
+// Bug do JF (13/11): o microfone "não fazia nada". No app instalado no iPhone o reconhecimento às vezes termina sem
+// resultado e sem erro, e a promessa ficava parada pra sempre. Agora toda saída vira resposta: o texto, ou um erro com
+// motivo claro (e o app oferece o plano B: o microfone do próprio teclado).
+const MOTIVO = {
+  'not-allowed': 'O microfone está bloqueado pra este app. Libera em Ajustes do celular → Safari (ou o navegador) → Microfone.',
+  'service-not-allowed': 'O ditado está desligado no celular. No iPhone: Ajustes → Geral → Teclado → Ativar Ditado.',
+  'audio-capture': 'Não achei microfone funcionando no aparelho.',
+  'network': 'O ditado do navegador precisa de internet e ela falhou.',
+  'no-speech': 'Não ouvi nada. Fala logo depois de tocar no microfone.',
+  'aborted': 'Parei de ouvir.',
+};
+let atual = null;
+
+/** Para de ouvir (segundo toque no microfone). */
+export function pararDeOuvir() {
+  try { atual?.stop(); } catch {}
+}
+
+export function ouvir({ limiteMs = 12000 } = {}) {
   return new Promise((resolve, reject) => {
     const R = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!R) return reject(new Error('Ditado não disponível neste navegador.'));
-    const r = new R();
-    r.lang = 'pt-BR';
-    r.interimResults = false;
-    r.maxAlternatives = 1;
-    r.onresult = e => resolve(e.results[0][0].transcript);
-    r.onerror = e => reject(new Error(e.error === 'not-allowed' ? 'Permissão do microfone negada.' : 'Não consegui ouvir.'));
-    r.onnomatch = () => reject(new Error('Não entendi o áudio.'));
-    r.start();
+    let r, acabou = false, texto = '';
+    const fim = (erro) => {
+      if (acabou) return;
+      acabou = true;
+      clearTimeout(relogio);
+      atual = null;
+      if (texto) resolve(texto);
+      else reject(Object.assign(new Error(erro || 'Não consegui ouvir.'), { semResultado: true }));
+    };
+    try {
+      r = new R();
+      r.lang = 'pt-BR';
+      r.interimResults = false;
+      r.maxAlternatives = 1;
+      r.continuous = false;
+      r.onresult = e => { texto = (e.results?.[0]?.[0]?.transcript || '').trim(); if (texto) fim(); };
+      r.onerror = e => fim(MOTIVO[e.error] || `Não consegui ouvir (${e.error || 'erro desconhecido'}).`);
+      r.onnomatch = () => fim('Não entendi o áudio. Tenta de novo, mais devagar.');
+      r.onend = () => fim(texto ? null : 'O navegador parou de ouvir sem me passar o que você disse.');
+      atual = r;
+      r.start();
+    } catch (e) {
+      return fim(`Não consegui ligar o microfone (${e.message || e}).`);
+    }
+    const relogio = setTimeout(() => { try { r.stop(); } catch {} fim('Demorou demais e eu parei de ouvir.'); }, limiteMs);
   });
 }

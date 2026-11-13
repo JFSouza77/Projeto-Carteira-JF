@@ -548,10 +548,12 @@
 
       <details class="card">
         <summary><h2>Lembretes</h2></summary>
-        <label class="switch"><input type="checkbox" id="remind-toggle"><span>Lembrar de anotar os gastos</span></label>
-        <label class="field"><span>Horário</span><input type="time" id="remind-time" value="20:30"></label>
-        <p class="muted small" id="remind-status"></p>
-        <button type="button" class="ghost" id="remind-test">Testar notificação</button>
+        <div class="lembretes">
+          <label class="switch"><input type="checkbox" id="remind-toggle"><span>Lembrar de anotar os gastos</span></label>
+          <label class="lembrete-hora"><span>Horário</span><input type="time" id="remind-time" value="20:30"></label>
+          <p class="muted small" id="remind-status"></p>
+          <button type="button" class="ghost" id="remind-test">Testar notificação</button>
+        </div>
       </details>
 
       <details class="card">
@@ -601,7 +603,8 @@
     <a href="#inicio" data-tab="inicio" aria-current="page"><svg class="ico" aria-hidden="true"><use href="#i-inicio"/></svg>Início</a>
       <div class="nav-resumo"><small class="muted">Saldo em contas</small><strong id="nav-saldo">—</strong><span id="nav-fogo"></span></div>
   </nav>
-  <button type="button" class="me-ajuda" id="me-ajuda" aria-label="Me ajuda: o C.A.O.S. te guia"><svg class="ico" aria-hidden="true"><use href="#i-ajuda"/></svg><span class="me-ajuda-txt"> Me ajuda</span></button>
+  <button type="button" class="me-ajuda" id="me-ajuda" aria-label="Me ajuda: o C.A.O.S. te guia (dá pra arrastar)" aria-haspopup="menu" aria-expanded="false"><svg class="ico" aria-hidden="true"><use href="#i-ajuda"/></svg><span class="me-ajuda-txt"> Me ajuda</span></button>
+  <div class="ajuda-menu" id="ajuda-menu" role="menu" aria-label="Ajuda rápida" hidden></div>
 
   <dialog id="photo-dialog" class="photo-dialog">
     <img id="photo-dialog-img" alt="Foto do comprovante">

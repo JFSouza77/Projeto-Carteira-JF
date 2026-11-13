@@ -19,7 +19,7 @@ import { fraseDoPrint, resumoDoPrint } from './caos/ofertas.js';
 import { corCategoria, corFonte, corForma, temaBanco } from './cores.js';
 import { NUCLEO } from './caos/nucleo.js';
 import { NOVIDADES, VERSAO_APP, temNovidade, partesDoItem } from './novidades.js';
-import { falar, vozDisponivel, ditadoDisponivel, ouvir, setVelocidade } from './voz.js';
+import { falar, vozDisponivel, ditadoDisponivel, ouvir, pararDeOuvir, setVelocidade } from './voz.js';
 import * as imagens from './imagens.js';
 import * as ia from './ia.js';
 import * as lembretes from './notificacoes.js';
@@ -176,6 +176,7 @@ function irPara(tela, { lado = null } = {}) {
     else a.removeAttribute('aria-current');
   }
   $('#me-ajuda').hidden = t === 'conversa';
+  fecharAjudaMenu();
   if (t === 'conversa') {
     renderChat();
     setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 0);
@@ -489,7 +490,7 @@ function render() {
 
 // ---------- Arrastar pro lado troca de aba (JF, 07/11) ----------
 let ladoPendente = null;
-const NAO_ARRASTA = 'input, textarea, select, dialog, .chips.scroll, .chat-bar, [data-sem-arrastar]';
+const NAO_ARRASTA = 'input, textarea, select, dialog, .chips.scroll, .chat-bar, .me-ajuda, .ajuda-menu, [data-sem-arrastar]';
 
 function ligarArrastar() {
   let ini = null;
@@ -2312,6 +2313,85 @@ const AJUDAS = [
   'Como instalo o app?', 'Explica um print do banco', 'O que você pode fazer?',
 ];
 
+// ---------- Botão "Me ajuda" (JF, 13/11) ----------
+// Pedido do JF: um formato só (antes encolhia pro "?" ao rolar e voltava, e isso incomodava), dá pra arrastar pra
+// qualquer canto (o app lembra onde ficou) e o toque abre um menuzinho de ajuda rápida. Não vai pro cabeçalho: o pedido
+// do JF vem antes da sugestão do Code. No computador ele mora no menu lateral e não arrasta.
+const AJUDA_RAPIDA = ['Como lanço um gasto?', 'Quanto gastei este mês?', 'Como ponho orçamento?', 'Como registro meu cartão?', 'O que você pode fazer?'];
+const telaGrande = () => window.matchMedia('(min-width: 1024px)').matches;
+
+function posicionarMeAjuda() {
+  const b = $('#me-ajuda');
+  const p = state.settings.meAjudaPos;
+  if (!p || telaGrande()) { b.style.left = b.style.top = b.style.right = b.style.bottom = ''; return; }
+  // guarda em fração da tela, pra continuar no mesmo canto se o celular girar
+  const w = b.offsetWidth || 120, h = b.offsetHeight || 44;
+  const x = Math.min(Math.max(8, p.x * innerWidth), innerWidth - w - 8);
+  const y = Math.min(Math.max(8, p.y * innerHeight), innerHeight - h - 8);
+  Object.assign(b.style, { left: `${x}px`, top: `${y}px`, right: 'auto', bottom: 'auto' });
+}
+
+function fecharAjudaMenu() { $('#ajuda-menu').hidden = true; $('#me-ajuda').setAttribute('aria-expanded', 'false'); }
+
+function abrirAjudaMenu() {
+  const b = $('#me-ajuda'), m = $('#ajuda-menu');
+  m.hidden = false;
+  b.setAttribute('aria-expanded', 'true');
+  // abre pro lado que tem espaço: em cima se o botão está embaixo, e alinhado ao lado mais perto da borda
+  const r = b.getBoundingClientRect(), mw = m.offsetWidth, mh = m.offsetHeight;
+  const top = r.top > innerHeight / 2 ? r.top - mh - 8 : r.bottom + 8;
+  const left = r.left + r.width / 2 > innerWidth / 2 ? r.right - mw : r.left;
+  Object.assign(m.style, { top: `${Math.max(8, top)}px`, left: `${Math.min(Math.max(8, left), innerWidth - mw - 8)}px` });
+  m.querySelector('button')?.focus();
+}
+
+function ligarMeAjuda() {
+  const b = $('#me-ajuda'), m = $('#ajuda-menu');
+  m.innerHTML = AJUDA_RAPIDA.map(q => `<button type="button" role="menuitem" data-q="${esc(q)}">${esc(q)}</button>`).join('')
+    + '<button type="button" role="menuitem" data-q="" class="ajuda-tudo">Ver toda a ajuda</button>';
+  let ini = null, arrastou = false;
+  b.addEventListener('pointerdown', e => {
+    if (telaGrande() || e.button > 0) return;
+    const r = b.getBoundingClientRect();
+    ini = { x: e.clientX, y: e.clientY, dx: e.clientX - r.left, dy: e.clientY - r.top };
+    arrastou = false;
+    b.setPointerCapture(e.pointerId);
+  });
+  b.addEventListener('pointermove', e => {
+    if (!ini) return;
+    if (!arrastou && Math.hypot(e.clientX - ini.x, e.clientY - ini.y) < 8) return; // tremidinha do dedo é toque, não arrasto
+    arrastou = true;
+    fecharAjudaMenu();
+    b.classList.add('arrastando');
+    state.settings.meAjudaPos = { x: (e.clientX - ini.dx) / innerWidth, y: (e.clientY - ini.dy) / innerHeight };
+    posicionarMeAjuda();
+  });
+  const soltar = () => {
+    if (!ini) return;
+    ini = null;
+    b.classList.remove('arrastando');
+    if (arrastou) saveSettings();
+  };
+  b.addEventListener('pointerup', soltar);
+  b.addEventListener('pointercancel', soltar);
+  b.addEventListener('click', e => {
+    if (arrastou) { arrastou = false; e.preventDefault(); return; }
+    if (m.hidden) abrirAjudaMenu(); else fecharAjudaMenu();
+  });
+  m.addEventListener('click', e => {
+    const q = e.target.closest('button[data-q]');
+    if (!q) return;
+    fecharAjudaMenu();
+    if (!q.dataset.q) return meAjuda();
+    location.hash = 'conversa';
+    enviarPergunta(q.dataset.q);
+  });
+  document.addEventListener('pointerdown', e => { if (!m.hidden && !e.target.closest('.ajuda-menu, .me-ajuda')) fecharAjudaMenu(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !m.hidden) { fecharAjudaMenu(); b.focus(); } });
+  window.addEventListener('resize', posicionarMeAjuda);
+  posicionarMeAjuda();
+}
+
 function meAjuda() {
   location.hash = 'conversa';
   const nome = state.perfil?.apelido;
@@ -2664,13 +2744,7 @@ function toast(msg) {
 
 function bind() {
   window.addEventListener('hashchange', () => irPara(location.hash.slice(1), { lado: ladoPendente }));
-  // "Me ajuda" encolhe pra "?" enquanto a pessoa rola a tela (pra não tampar o que ela está lendo)
-  let rolando = null;
-  window.addEventListener('scroll', () => {
-    $('#me-ajuda').classList.add('mini');
-    clearTimeout(rolando);
-    rolando = setTimeout(() => $('#me-ajuda').classList.remove('mini'), 1400);
-  }, { passive: true });
+  ligarMeAjuda();
   ligarArrastar();
   $('#caos').addEventListener('click', () => { location.hash = 'conversa'; });
 
@@ -2829,15 +2903,21 @@ function bind() {
     db.setMeta('chat', []).catch(() => {});
     renderChat();
   });
+  // Microfone (bug do JF, 13/11): segundo toque para; falhou, explica o motivo e oferece o microfone do teclado
   $('#chat-mic').addEventListener('click', async () => {
     const b = $('#chat-mic');
+    if (b.classList.contains('ouvindo')) return pararDeOuvir();
     b.classList.add('ouvindo');
+    b.setAttribute('aria-label', 'Ouvindo… toque pra parar');
+    toast('Pode falar, tô ouvindo…');
     try {
       enviarPergunta(await ouvir());
     } catch (e) {
-      toast(e.message);
+      addMsg({ de: 'caos', texto: `${e.message} Plano B: toca no campo de mensagem e usa o microfone do próprio teclado (o 🎤 perto da barra de espaço). Ele escreve o que você falar e aí é só enviar.` });
+      $('#chat-input')?.focus();
     } finally {
       b.classList.remove('ouvindo');
+      b.setAttribute('aria-label', 'Falar');
     }
   });
 
@@ -2929,7 +3009,6 @@ function bind() {
   });
   $('#perfil-refazer').addEventListener('click', () => iniciarOnboarding());
   $('#novidade-aviso').addEventListener('click', abrirNovidades);
-  $('#me-ajuda').addEventListener('click', meAjuda);
   $('#conta-entrar').addEventListener('click', () => entrarNaConta(false));
   $('#conta-criar').addEventListener('click', () => entrarNaConta(true));
   $('#conta-sync').addEventListener('click', () => sincronizarAgora({ avisar: true }));
@@ -3028,6 +3107,7 @@ async function init() {
     // escuro por padrão (JF + Code, 12/11): quem nunca escolheu tema ("do aparelho" de fábrica) passa pro escuro, uma vez só
     if (settings && !settings.temaV) state.settings = { ...state.settings, tema: ['claro', 'contraste'].includes(settings.tema) ? settings.tema : 'escuro', temaV: 2 };
     aplicarAcessibilidade();
+    posicionarMeAjuda(); // o lugar onde a pessoa deixou o "Me ajuda" vem das configurações
     if (memory) state.caosMemory = memory;
     // fotos da conversa antiga não voltam (o link da imagem é da sessão); o texto volta
     state.chat = Array.isArray(chat) ? chat.map(m => ({ ...m, texto: m.texto || (m.imagemId ? '📷 (foto)' : '') })) : [];
