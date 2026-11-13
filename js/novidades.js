@@ -13,8 +13,8 @@ export const NOVIDADES = Object.freeze([
     t: 'Funções novas da repaginada, começando pela transferência entre contas.',
     itens: [
       '🔁 Transferir entre contas: em Contas, mova dinheiro da conta pra poupança ou cofrinho sem virar gasto.',
-      '🧾 Filtros no extrato: veja só gastos, só entradas ou só transferências.',
-      '👆 Toque na categoria: em "Por categoria", tocar numa delas mostra só os lançamentos dela.',
+      '🧾 Filtros no extrato: só gastos, entradas ou transferências; tocar numa categoria mostra só ela.',
+      '🛒 E se eu comprar: no Mês, simule uma compra (à vista ou parcelada) e veja se cabe na sobra.',
       '💬 Cobrar no WhatsApp: na rachadinha, um toque manda o lembrete pronto pro amigo.',
       '📈 Ritmo do mês: veja se o gasto acumulado está acima ou abaixo do ritmo ideal do seu orçamento.',
       '📊 Seis meses em barras: entradas e gastos lado a lado, mês a mês.',

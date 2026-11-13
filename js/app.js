@@ -10,7 +10,7 @@ import {
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
   TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
-  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, ofensiva, MARCOS_OFENSIVA,
+  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, simularCompra, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta } from './caos/conversa.js';
@@ -1646,6 +1646,26 @@ function renderMes() {
     </li>`).join('') : '<li class="muted">Nada planejado ainda. O que você quer comprar ou gastar este mês?</li>';
 }
 
+/** Simulador "E se eu comprar?" (13/11): só leitura, não grava nada. */
+function onSimular(ev) {
+  ev.preventDefault();
+  const out = $('#sim-resultado');
+  const valor = parseAmount($('#sim-valor').value);
+  if (!valor) { out.hidden = false; out.className = 'sim-resultado'; out.textContent = 'Digite o valor da compra.'; return; }
+  const a = analisarPlanejamento(dados(), toISODate());
+  const r = simularCompra({ valorCents: valor, parcelas: Number($('#sim-parcelas').value) }, a);
+  const resto = r.parcelas > 1 ? ` Depois ainda vêm ${r.parcelas - 1} parcelas de ${formatBRL(r.parcelaCents)} nos próximos meses.` : '';
+  const textos = {
+    sem_base: 'Lance sua entrada do mês (ou um orçamento) pra eu comparar com a sobra.',
+    folga: `Cabe com folga. A sobra prevista vai de ${formatBRL(a.sobraCents)} pra ${formatBRL(r.sobraDepoisCents)}.${resto}`,
+    aperta: `Cabe, mas aperta: a sobra prevista fica em ${formatBRL(r.sobraDepoisCents)}. Qualquer imprevisto passa do limite.${resto}`,
+    nao_cabe: `Não cabe este mês: falta ${formatBRL(r.faltaCents)}.${r.parcelasQueCabem ? ` Em ${r.parcelasQueCabem} vezes a parcela caberia, mas pense se vale prender os próximos meses.` : ' Que tal esperar o mês que vem?'}`,
+  };
+  out.hidden = false;
+  out.className = `sim-resultado ${r.situacao}`;
+  out.textContent = textos[r.situacao];
+}
+
 async function onAddCompromisso(ev) {
   ev.preventDefault();
   const err = $('#comp-error');
@@ -2139,6 +2159,8 @@ function bind() {
   });
 
   $('#sem-gasto').addEventListener('click', hojeNaoGastei);
+  $('#sim-parcelas').innerHTML = Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}">${i + 1 === 1 ? 'À vista' : `${i + 1}x`}</option>`).join('');
+  $('#sim-form').addEventListener('submit', onSimular);
   $('#receber-list').addEventListener('click', e => {
     const b = e.target.closest('[data-recebi]');
     if (b) recebi(b.dataset.recebi, b.dataset.pessoa).catch(er => toast(er.message || 'Não deu.'));

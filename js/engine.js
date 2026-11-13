@@ -1203,3 +1203,27 @@ export function resumoInvestimentos(lista = []) {
       .sort((a, b) => b.cents - a.cents),
   };
 }
+
+// ---------- Simulador "E se eu comprar?" (fase 2 da repaginada, 13/11) ----------
+/**
+ * Mostra o efeito de uma compra na sobra prevista do mês. Só leitura: não grava nada.
+ * `sobraCents` vem de `analisarPlanejamento` (null = sem entrada nem orçamento pra comparar).
+ * Parcelado: só a 1ª parcela pesa neste mês; as outras pesam nos próximos.
+ * Devolve { situacao: 'sem_base' | 'folga' | 'aperta' | 'nao_cabe', parcelaCents, sobraDepoisCents, faltaCents, parcelasQueCabem }.
+ */
+export function simularCompra({ valorCents, parcelas = 1 }, { sobraCents, baseCents = 0 }) {
+  const n = Math.min(Math.max(Math.trunc(parcelas) || 1, 1), 24);
+  const parcelaCents = Math.ceil(valorCents / n);
+  if (sobraCents == null) return { situacao: 'sem_base', parcelaCents, parcelas: n };
+  const sobraDepoisCents = sobraCents - parcelaCents;
+  let situacao = 'folga';
+  if (sobraDepoisCents < 0) situacao = 'nao_cabe';
+  else if (sobraDepoisCents < Math.round(baseCents * 0.1)) situacao = 'aperta'; // menos de 10% da base de reserva
+  // não coube: em quantas vezes (até 12) a parcela caberia na sobra?
+  let parcelasQueCabem = null;
+  if (situacao === 'nao_cabe' && sobraCents > 0) {
+    const k = Math.ceil(valorCents / sobraCents);
+    if (k <= 12 && k > n) parcelasQueCabem = k;
+  }
+  return { situacao, parcelaCents, parcelas: n, sobraDepoisCents, faltaCents: Math.max(0, -sobraDepoisCents), parcelasQueCabem };
+}

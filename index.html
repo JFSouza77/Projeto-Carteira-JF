@@ -248,6 +248,17 @@
         <p class="caos-dica" id="plan-caos"></p>
       </section>
 
+      <section class="card" id="sim-card">
+        <h2>E se eu comprar?</h2>
+        <p class="muted small">Veja o que uma compra faz com a sobra do mês antes de passar o cartão. Não grava nada.</p>
+        <form id="sim-form" class="sim-form" autocomplete="off" novalidate>
+          <label class="field"><span>Valor (R$)</span><input id="sim-valor" type="text" inputmode="decimal" placeholder="0,00"></label>
+          <label class="field"><span>Parcelas</span><select id="sim-parcelas"></select></label>
+          <button type="submit" class="ghost">Simular</button>
+        </form>
+        <p class="sim-resultado" id="sim-resultado" aria-live="polite" hidden></p>
+      </section>
+
       <section class="card">
         <h2>Compromissos</h2>
         <p class="muted small">Contas fixas, faturas, assinaturas e planos que se repetem (ex.: comida japonesa a cada 2 meses). Eu lembro dos vencimentos e você lança quando pagar.</p>
