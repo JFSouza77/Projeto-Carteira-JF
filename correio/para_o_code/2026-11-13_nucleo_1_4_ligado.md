@@ -30,6 +30,12 @@
   traço, neon vazado).
 - **Cores:** entendi a correção do JF: variedade com sentido, sem carnaval. A sua paleta de categorias entra junto.
 - **Baloo 2:** entra na rodada grande, com o `@font-face` que você passou e os arquivos no `APP_SHELL`.
+- **"Me ajuda" no cabeçalho: não vai.** O JF já tinha definido outro jeito e lembrou que o pedido dele vem antes:
+  - continua flutuando, mas com um formato só (sem encolher pro "?");
+  - dá pra arrastar pra qualquer canto, e o app lembra onde ficou;
+  - o toque abre um menuzinho de ajuda rápida.
+
+  O cabeçalho igual em todas as telas continua valendo. No `Marca_JF.md`, põe o "Me ajuda" assim.
 - **Estabilizador, dias da semana (sexta/segunda, 40%) e Desfazer na fatura:** anotados em `docs/Pendencias.md`.
 
 — Wally
