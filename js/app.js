@@ -366,14 +366,38 @@ function renderAReceber() {
   }).join('');
 }
 
+/** Pergunta em qual conta o Pix do amigo caiu. Devolve o id, '' (sem conta) ou null (cancelou). */
+function perguntarContaDoPix(nome, valorCents) {
+  const contas = state.accounts.filter(a => a.tipo !== 'cartao');
+  const dlg = $('#pix-dialog');
+  $('#pix-texto').textContent = `${nome} te pagou ${formatBRL(valorCents)}. Em qual conta o dinheiro caiu?`;
+  $('#pix-conta').innerHTML = opcoesDeConta(a => a.tipo !== 'cartao').replace('Sem conta', 'Não sei / dinheiro vivo');
+  if (contas.length) $('#pix-conta').value = contas[0].id;
+  return new Promise(resolve => {
+    dlg.addEventListener('close', () => resolve(dlg.returnValue === 'ok' ? $('#pix-conta').value : null), { once: true });
+    dlg.returnValue = '';
+    dlg.showModal();
+  });
+}
+
 async function recebi(expenseId, pessoaId) {
   const e = state.expenses.find(x => x.id === expenseId);
   if (!e) return;
-  const novo = marcarRecebido(e, pessoaId);
+  // rachadinha no cartão (13/11): o gasto foi no crédito, mas o Pix do amigo cai numa conta. Pergunta qual.
+  const doGasto = e.accountId && state.accounts.find(a => a.id === e.accountId);
+  let contaPix = null;
+  if ((!doGasto || doGasto.tipo === 'cartao') && state.accounts.some(a => a.tipo !== 'cartao')) {
+    const pessoa = e.racha.find(x => x.id === pessoaId);
+    const escolha = await perguntarContaDoPix(pessoa.nome, pessoa.valorCents);
+    if (escolha === null) return;
+    contaPix = escolha || null;
+  }
+  const novo = marcarRecebido(e, pessoaId, Date.now(), contaPix);
   await db.put(db.STORES.expenses, novo);
   state.expenses = state.expenses.map(x => (x.id === expenseId ? novo : x));
   const p = novo.racha.find(x => x.id === pessoaId);
-  const conta = e.accountId && state.accounts.find(a => a.id === e.accountId && a.tipo !== 'cartao');
+  const destino = p.contaId || e.accountId;
+  const conta = destino && state.accounts.find(a => a.id === destino && a.tipo !== 'cartao');
   render();
   toast(`Recebido: ${formatBRL(p.valorCents)} de ${p.nome}.${conta ? ` Voltou pro saldo de ${accountLabel(conta)}.` : ''}`);
 }

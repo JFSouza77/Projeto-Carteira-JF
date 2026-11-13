@@ -174,9 +174,13 @@ export function aReceber(expenses) {
 }
 
 /** Marca a parte de um amigo como recebida. Devolve uma cópia nova do gasto. */
-export function marcarRecebido(expense, pessoaId, now = Date.now()) {
+/**
+ * O amigo pagou a parte dele. `contaId`: em qual conta o dinheiro caiu (rachadinha no cartão, 13/11, achado do Gemini):
+ * o gasto foi no crédito, mas o Pix do amigo cai numa conta corrente. Sem `contaId`, volta pra conta do próprio gasto.
+ */
+export function marcarRecebido(expense, pessoaId, now = Date.now(), contaId = null) {
   if (!Array.isArray(expense.racha) || !expense.racha.some(p => p.id === pessoaId)) throw new Error('Não achei essa parte.');
-  return { ...expense, racha: expense.racha.map(p => (p.id === pessoaId ? { ...p, recebidoEm: now } : p)) };
+  return { ...expense, racha: expense.racha.map(p => (p.id === pessoaId ? { ...p, recebidoEm: now, ...(contaId ? { contaId } : {}) } : p)) };
 }
 
 // ---------- Ofensiva (07/11): dias seguidos anotando ----------
@@ -437,10 +441,13 @@ export function accountBalance(account, expenses, incomes) {
   let v = account.balanceCents;
   for (const i of incomes) if (i.accountId === account.id && i.createdAt > account.balanceAt) v += i.amountCents;
   for (const e of expenses) {
-    if (e.accountId !== account.id) continue;
-    if (e.createdAt > account.balanceAt) v -= e.amountCents;
-    // parte da rachadinha recebida depois do saldo informado: o dinheiro voltou pra essa conta
-    if (Array.isArray(e.racha)) for (const p of e.racha) if (p.recebidoEm && p.recebidoEm > account.balanceAt) v += p.valorCents;
+    if (e.accountId === account.id && e.createdAt > account.balanceAt) v -= e.amountCents;
+    // parte da rachadinha recebida depois do saldo informado: o dinheiro caiu na conta escolhida (ou na do gasto)
+    if (Array.isArray(e.racha)) {
+      for (const p of e.racha) {
+        if (p.recebidoEm && p.recebidoEm > account.balanceAt && (p.contaId || e.accountId) === account.id) v += p.valorCents;
+      }
+    }
   }
   return v;
 }
@@ -816,7 +823,8 @@ function rachaOk(e) {
   if (e.racha == null) return true;
   if (!Array.isArray(e.racha) || !e.racha.length || e.racha.length > RACHA_MAX_PESSOAS) return false;
   const ok = e.racha.every(p => p && typeof p === 'object' && ID_RE.test(p.id ?? '') && texto(p.nome, 40, 1)
-    && centavos(p.valorCents, 1) && (p.recebidoEm == null || (Number.isFinite(p.recebidoEm) && p.recebidoEm > 0)));
+    && centavos(p.valorCents, 1) && (p.recebidoEm == null || (Number.isFinite(p.recebidoEm) && p.recebidoEm > 0))
+    && (p.contaId == null || ID_RE.test(p.contaId)));
   return ok && e.racha.reduce((t, p) => t + p.valorCents, 0) <= e.amountCents;
 }
 

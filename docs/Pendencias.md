@@ -22,7 +22,6 @@ Atualizada pelo Wally a cada rodada.
 
 ## Depois do servidor
 
-- **Rachadinha no cartão (Gemini):** quando o amigo paga a parte dele por Pix, perguntar em qual conta caiu, pra somar no saldo.
 
 - **Sincronização ao mesmo tempo (achado do GPT):** o `/sync` lê, junta e grava o estado inteiro no KV; dois aparelhos
   sincronizando no mesmo segundo podem perder uma mudança. Plano: passar o estado da conta pra um Durable Object

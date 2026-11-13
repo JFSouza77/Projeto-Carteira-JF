@@ -70,3 +70,16 @@ test('fatura não paga não some quando passa mais um fechamento (desde o últim
   const pago = faturaDoCartao({ ...cartao, faturaPagaAte: f.ultimoFechamento }, [compra, nov], '2026-12-08');
   assert.equal(pago.fechadaCents, 0);
 });
+
+test('rachadinha no cartão: o Pix do amigo soma na conta escolhida, não no cartão', async () => {
+  const { marcarRecebido, accountBalance, createAccount: ca, dividirIgual } = await import('../js/engine.js');
+  const nu = ca({ bank: 'Nubank', balanceCents: 10000 }, { id: 'nu-9', now: new Date(2026, 10, 1) });
+  let pizza = createExpense({ amountCents: 20000, categoryId: 'delivery', date: '2026-11-10', accountId: 'cart-1', forma: 'credito' }, { categories: cats, now: new Date(2026, 10, 10) });
+  pizza = { ...pizza, racha: dividirIgual(20000, ['Ana', 'Bia', 'Caio']) };
+  const ana = pizza.racha[0];
+  const recebido = marcarRecebido(pizza, ana.id, new Date(2026, 10, 11).getTime(), 'nu-9');
+  assert.equal(accountBalance(nu, [recebido], []), 10000 + ana.valorCents);
+  // sem conta escolhida (gasto em conta corrente): volta pra conta do gasto, como antes
+  const debito = { ...pizza, accountId: 'nu-9', createdAt: new Date(2026, 9, 1).getTime() };
+  assert.equal(accountBalance(nu, [marcarRecebido(debito, ana.id, new Date(2026, 10, 11).getTime())], []), 10000 + ana.valorCents);
+});

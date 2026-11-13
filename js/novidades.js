@@ -24,6 +24,7 @@ export const NOVIDADES = Object.freeze([
       '📆 Dia 31: em mês de 30 dias, vira o último dia do mês.',
       '☁️ Sincronização: um registro que falhou ao abrir é pedido de novo, em vez de ficar perdido.',
       '💳 Fatura esquecida: se passar mais de um fechamento sem marcar, tudo continua no limite.',
+      '🍕 Rachadinha no cartão: ao marcar "Recebi", você escolhe em qual conta o Pix do amigo caiu.',
       '🗣️ Voz: lê valores grandes direito e fala com o jeito das emoções novas.',
     ],
   },
