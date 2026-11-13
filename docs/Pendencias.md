@@ -102,8 +102,8 @@ Atualizada pelo Wally a cada rodada.
 
 ## Esperando o Code
 
-- **Núcleo 1.4.1?** Marco "ganhei corpo (avatar), primeiro na Carteira" (ok do JF em 13/11) e a proposta da
-  paciência como jeito de tratar. Recado: `correio/para_o_code/2026-11-13_nucleo_corpo_e_paciencia.md`.
+- **Núcleo 1.4.1?** Marco "ganhei corpo (avatar), primeiro na Carteira" (ok do JF em 13/11) e a paciência:
+  o JF deixou com o Code decidir se entra no núcleo (13/11; no Perfil não há conversa digitada, então pode ficar só na Carteira). Recados: `correio/para_o_code/2026-11-13_nucleo_corpo_e_paciencia.md` e `..._paciencia_decisao_do_jf.md`.
 
 ## Esperando o JF
 
