@@ -10,7 +10,7 @@ import {
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
   TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
-  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, simularCompra, ofensiva, MARCOS_OFENSIVA,
+  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, progressoOrcamentoDiario, simularCompra, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
@@ -293,7 +293,58 @@ function renderPainel() {
   $('#nav-fogo').textContent = o.dias ? `🔥 ${o.dias}d` : '';
 }
 
+// ---------- Orçamento diário ideal (V2 do AI Studio, 13/11): o limite mora no perfil, que sincroniza ----------
+function renderHoje() {
+  const o = progressoOrcamentoDiario(state.expenses, state.perfil?.orcamentoDiarioCents, toISODate());
+  const lanc = `${o.countHoje} ${o.countHoje === 1 ? 'gasto' : 'gastos'} hoje`;
+  $('#hoje-gasto').textContent = formatBRL(o.gastoHojeCents);
+  $('#hoje-card').dataset.status = o.status;
+  $('#hoje-ajustar').textContent = o.limiteCents ? 'Ajustar' : 'Definir limite';
+  $('#hoje-remover').hidden = !o.limiteCents;
+  $('#hoje-bar-wrap').hidden = !o.limiteCents;
+  if (!o.limiteCents) {
+    $('#hoje-de').textContent = '';
+    $('#hoje-sub').textContent = `${lanc}. Defina um limite por dia pra eu te mostrar quanto ainda dá.`;
+    return;
+  }
+  $('#hoje-de').textContent = `de ${formatBRL(o.limiteCents)}`;
+  $('#hoje-bar').setAttribute('style', barStyle(o.gastoHojeCents / o.limiteCents));
+  $('#hoje-sub').textContent = o.status === 'estourado'
+    ? `${lanc} · passou ${formatBRL(o.excedidoCents)} do limite (${o.pct}%).`
+    : `${lanc} · restam ${formatBRL(o.restanteCents)} (${o.pct}% usado).`;
+}
+
+function abrirLimiteDiario(abrir = $('#hoje-form').hidden) {
+  $('#hoje-form').hidden = !abrir;
+  $('#hoje-ajustar').setAttribute('aria-expanded', String(abrir));
+  $('#hoje-erro').hidden = true;
+  if (abrir) { $('#hoje-limite').value = centsToInput(state.perfil?.orcamentoDiarioCents || 0); $('#hoje-limite').focus(); }
+}
+
+async function salvarLimiteDiario(cents) {
+  state.perfil = { ...(state.perfil || {}), orcamentoDiarioCents: cents || null };
+  await db.setMeta('perfil', state.perfil);
+  abrirLimiteDiario(false);
+  renderHoje();
+  toast(cents ? `Limite de hoje em diante: ${formatBRL(cents)} por dia.` : 'Limite diário removido.');
+}
+
+/** Atalhos do Início: abre o Lançar já no modo certo (transferência mora em Contas). */
+function atalho(tipo) {
+  if (tipo === 'transf') {
+    location.hash = 'contas';
+    setTimeout(() => { const t = $('#transf-card'); t.open = true; t.scrollIntoView({ block: 'start' }); }, 50);
+    return;
+  }
+  const r = document.querySelector(`input[name="kind"][value="${tipo}"]`);
+  r.checked = true; state.kind = tipo;
+  location.hash = 'lancar';
+  renderLancar();
+  setTimeout(() => $('#amount').focus(), 50);
+}
+
 function render() {
+  renderHoje();
   const s = summarizeMonth(state.expenses, state.categories, state.viewMonth);
   const isCurrent = state.viewMonth === monthKey(toISODate());
 
@@ -2283,6 +2334,16 @@ function bind() {
   });
 
   $('#sem-gasto').addEventListener('click', hojeNaoGastei);
+  for (const b of document.querySelectorAll('[data-atalho]')) b.addEventListener('click', () => atalho(b.dataset.atalho));
+  $('#hoje-ajustar').addEventListener('click', () => abrirLimiteDiario());
+  $('#hoje-chips').addEventListener('click', e => { const c = e.target.closest('[data-limite]'); if (c) $('#hoje-limite').value = centsToInput(Number(c.dataset.limite)); });
+  $('#hoje-remover').addEventListener('click', () => salvarLimiteDiario(null));
+  $('#hoje-form').addEventListener('submit', ev => {
+    ev.preventDefault();
+    const v = parseAmount($('#hoje-limite').value);
+    if (!v) { $('#hoje-erro').textContent = 'Digite um valor, tipo 80,00.'; $('#hoje-erro').hidden = false; return; }
+    salvarLimiteDiario(v).catch(er => toast(er.message || 'Não deu.'));
+  });
   $('#editar-form').addEventListener('submit', salvarEdicao);
   $('#estudio-btn').addEventListener('click', () => alternarEstudio());
   $('#glos-busca').addEventListener('input', renderGlossario);

@@ -7,6 +7,17 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.28',
+    data: '13/11/2026',
+    nome: 'Início Mais Vivo',
+    t: 'O Início ganhou atalhos e um limite pra cada dia.',
+    itens: [
+      '🎯 Orçamento de hoje: defina quanto quer gastar por dia e veja na barra quanto ainda dá.',
+      '⚡ Atalhos no Início: Gasto, Entrada e Transferir a um toque, já no modo certo.',
+    ],
+    qol: [],
+  },
+  {
     v: '1.27',
     data: '13/11/2026',
     nome: 'Estúdio do C.A.O.S.',

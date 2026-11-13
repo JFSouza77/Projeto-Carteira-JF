@@ -1276,3 +1276,21 @@ export function editarLancamento(x, { amountCents, note, date, categoryId, sourc
   novo.editadoEm = now;
   return novo;
 }
+
+// ---------- Orçamento diário ideal (repaginada V2 do AI Studio, 13/11) ----------
+/**
+ * Quanto do limite do dia já foi (só a minha parte nas contas rachadas). Só leitura.
+ * Devolve { gastoHojeCents, countHoje, limiteCents, pct, barPct, restanteCents, excedidoCents,
+ *   status: 'sem_limite' | 'ok' | 'atencao' (≥ 80%) | 'estourado' (> 100%) }.
+ */
+export function progressoOrcamentoDiario(expenses, limite, today = toISODate()) {
+  const { totalCents, count } = sumInRange(expenses, { from: today, to: today });
+  const limiteCents = Number.isInteger(limite) && limite > 0 ? limite : null;
+  if (!limiteCents) return { gastoHojeCents: totalCents, countHoje: count, limiteCents: null, pct: 0, barPct: 0, restanteCents: null, excedidoCents: 0, status: 'sem_limite' };
+  const pct = Math.round((totalCents / limiteCents) * 100);
+  return {
+    gastoHojeCents: totalCents, countHoje: count, limiteCents, pct, barPct: Math.min(100, pct),
+    restanteCents: Math.max(0, limiteCents - totalCents), excedidoCents: Math.max(0, totalCents - limiteCents),
+    status: totalCents > limiteCents ? 'estourado' : pct >= 80 ? 'atencao' : 'ok',
+  };
+}
