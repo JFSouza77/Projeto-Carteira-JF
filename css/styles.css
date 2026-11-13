@@ -312,6 +312,7 @@ select { appearance: none; -webkit-appearance: none; }
 .calc-res b { font-size: 1.15rem; }
 .calc-res .dif { grid-column: 1 / -1; color: var(--muted); font-size: .92rem; background: none; padding: 0 2px; }
 .leis { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 8px; }
+.leis small { display: block; color: var(--muted); margin-top: 2px; }
 .linha-tempo { list-style: none; margin: 8px 0 0; padding: 0 0 0 14px; border-left: 2px solid var(--line); display: grid; gap: 10px; }
 .linha-tempo li { position: relative; }
 .linha-tempo li::before { content: ''; position: absolute; left: -20px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--caos); }

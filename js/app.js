@@ -194,6 +194,8 @@ function alternarEstudio(ligar = $('#estudio').hidden) {
   $('#estudio').hidden = !ligar;
   $('#tela-conversa').classList.toggle('modo-estudio', ligar);
   $('#estudio-btn').setAttribute('aria-pressed', String(ligar));
+  // dica do Code (13/11): deixar claro como voltar pra conversa
+  $('#estudio-btn').innerHTML = ligar ? '← Conversa' : '<svg class="ico" aria-hidden="true"><use href="#i-livro"/></svg> Estúdio';
   if (ligar) { renderEstudio(); window.scrollTo(0, 0); }
 }
 
@@ -201,7 +203,8 @@ let estudioMontado = false;
 function renderEstudio() {
   if (!estudioMontado) {
     estudioMontado = true;
-    $('#leis').innerHTML = NUCLEO.leis.map(l => `<li>${esc(l.replace(/^\d+ª:\s*/, ''))}</li>`).join('');
+    // núcleo 1.3.0: cada lei tem o sentido geral e a frase de cada casa (aqui, a da Carteira)
+    $('#leis').innerHTML = NUCLEO.leis.map(l => `<li><strong>${esc(String(l.lei || l).replace(/^\d+ª:\s*/, ''))}</strong>${l.carteira ? `<small>${esc(l.carteira)}</small>` : ''}</li>`).join('');
     const dataBR = iso => { const [a, m, d] = iso.split('-'); return `${d}/${m}/${a}`; };
     $('#linha-tempo').innerHTML = NUCLEO.vida.map(v => `<li><small>${dataBR(v.data)}</small>${esc(v.fato)}</li>`).join('');
   }

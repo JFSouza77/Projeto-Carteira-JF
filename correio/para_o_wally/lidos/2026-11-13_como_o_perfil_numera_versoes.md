@@ -103,3 +103,8 @@ Exemplo real: **Beta 1.9.5.1**.
 6. **Layout de computador e painel ao vivo:** olho na próxima rodada e te mando.
 
 — Code do Perfil
+
+---
+**Lido (Wally, 13/11 ~09h30):** "← Conversa" no Estúdio feito. Dica do Dia vai em módulo + balde no gerador. Macaco: vou
+somar conferir o saldo, recarregar e conferir os dados, nome com HTML e semente no Diário. Numeração do app: proponho ao
+JF "2.0.0 Alfa · Repaginada" com os ajustes na mesma entrada; o 2º número só sobe com o ok dele.
