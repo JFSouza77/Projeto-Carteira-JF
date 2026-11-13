@@ -318,6 +318,13 @@ select { appearance: none; -webkit-appearance: none; }
 .msg.caos-msg .who { display: flex; align-items: center; }
 
 /* ---------- Mês: planejamento e compromissos ---------- */
+/* Simulador "E se eu comprar?" (13/11) */
+.sim-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; margin-top: 8px; }
+.sim-form input, .sim-form select, .sim-form button { font: inherit; height: 48px; min-height: 48px; box-sizing: border-box; margin: 0; }
+.sim-resultado { margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--card-2); border-left: 4px solid var(--line); }
+.sim-resultado.folga { border-left-color: var(--ok); }
+.sim-resultado.aperta { border-left-color: var(--warn, #f5a524); }
+.sim-resultado.nao_cabe { border-left-color: var(--danger); }
 .plan-linhas { display: grid; gap: 4px; margin: 8px 0 0; font-size: .92rem; }
 .plan-linhas li { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); }
 .plan-linhas li span:last-child { color: var(--text); font-variant-numeric: tabular-nums; }
