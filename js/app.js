@@ -10,7 +10,7 @@ import {
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
   TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
-  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, progressoOrcamentoDiario, mascaraCentavos, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
+  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, progressoOrcamentoDiario, mascaraCentavos, valorForaDoComum, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
@@ -348,8 +348,32 @@ function atalho(tipo) {
   setTimeout(() => $('#amount').focus(), 50);
 }
 
+/** Últimos lançamentos (JF, 13/11): no Lançar, pra conferir, corrigir ou apagar o que acabou de anotar. */
+function renderUltimos() {
+  const el = $('#ultimos-list');
+  if (!el) return;
+  const lista = [
+    ...state.expenses.map(x => ({ ...x, kind: 'gasto' })),
+    ...state.incomes.map(x => ({ ...x, kind: 'entrada' })),
+  ].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 5);
+  $('#ultimos-card').hidden = !lista.length;
+  el.innerHTML = lista.map(x => {
+    const [, m, d] = x.date.split('-');
+    const nome = x.kind === 'entrada' ? (x.note || srcById(x.sourceId)?.name || 'Entrada') : (x.note || catById(x.categoryId)?.name || 'Gasto');
+    const ico = x.kind === 'entrada' ? icFonte(srcById(x.sourceId)) : icCat(catById(x.categoryId));
+    return `<li class="${x.kind === 'entrada' ? 'entrada' : ''}">
+      <span class="exp-emoji" aria-hidden="true">${ico}</span>
+      <span class="exp-main"><span>${esc(nome)}</span><small>${d}/${m} · ${x.kind === 'entrada' ? 'entrada' : esc(catById(x.categoryId)?.name || '')}</small></span>
+      <span class="num">${x.kind === 'entrada' ? '+' : ''}${formatBRL(x.amountCents)}</span>
+      <button class="icon-btn edit" data-edit="${esc(x.id)}" data-kind="${x.kind}" aria-label="Editar">${ic('i-editar')}</button>
+      <button class="icon-btn del" data-del="${esc(x.id)}" data-kind="${x.kind}" aria-label="Apagar">×</button>
+    </li>`;
+  }).join('');
+}
+
 function render() {
   renderHoje();
+  renderUltimos();
   const s = summarizeMonth(state.expenses, state.categories, state.viewMonth);
   const isCurrent = state.viewMonth === monthKey(toISODate());
 
@@ -1004,6 +1028,10 @@ async function onSubmit(ev) {
   try {
     const amountCents = parseAmount($('#amount').value);
     if (!amountCents) throw new Error('Digite um valor, tipo 25,90.');
+    // valor muito acima do normal (13/11): pergunta antes, pra um 124,50 não virar 12.450,00
+    const ehGasto = state.kind === 'gasto';
+    if (valorForaDoComum(amountCents, ehGasto ? state.expenses : state.incomes, { tipo: ehGasto ? 'gasto' : 'entrada' })
+      && !confirm(`${formatBRL(amountCents)} ${ehGasto ? 'de gasto' : 'de entrada'}? É bem mais que o seu normal. Se for isso mesmo, toque em OK.`)) return;
     const base = { amountCents, note: $('#note').value, date: $('#date').value, accountId: $('#account-select').value || null };
     let events;
     if (state.kind === 'gasto') {
@@ -2649,6 +2677,12 @@ function bind() {
   // Início
   $('#prev-month').addEventListener('click', () => { state.viewMonth = shiftMonth(state.viewMonth, -1); render(); });
   $('#next-month').addEventListener('click', () => { state.viewMonth = shiftMonth(state.viewMonth, 1); render(); });
+  $('#ultimos-list').addEventListener('click', e => {
+    const ed = e.target.closest('[data-edit]');
+    if (ed) return editar(ed.dataset.edit, ed.dataset.kind).catch(er => toast(er.message || 'Não deu.'));
+    const b = e.target.closest('[data-del]');
+    if (b) onDelete(b.dataset.del, b.dataset.kind);
+  });
   $('#exp-list').addEventListener('click', e => {
     const f = e.target.closest('[data-photo]');
     if (f) return verFoto(f.dataset.photo);
@@ -3011,7 +3045,10 @@ async function init() {
   if (!state.perfil && !state.novidadesVistas) { state.novidadesVistas = VERSAO_APP; db.setMeta('novidadesVistas', VERSAO_APP).catch(() => {}); }
   renderAvisoNovidade();
   render();
-  irPara(location.hash.slice(1));
+  // ao abrir (JF, 13/11): começa no Início; só fica no Lançar se a pessoa estava lá. Não volta direto pra conversa.
+  const abrirEm = location.hash.slice(1) === 'lancar' ? 'lancar' : 'inicio';
+  if (location.hash.slice(1) !== abrirEm) history.replaceState(null, '', `#${abrirEm}`);
+  irPara(abrirEm);
   // Primeiro acesso: o C.A.O.S. se apresenta e conhece a pessoa
   if (!state.perfil) iniciarOnboarding();
   else { await parabensSeForODia(); await perguntarAniversarioUmaVez(); }
@@ -3043,7 +3080,21 @@ async function init() {
   atualizarMercado().then(processarFila);
   window.addEventListener('online', () => atualizarMercado().then(processarFila));
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW não registrado', err));
+    // atualização mais rápida (JF, 13/11: "tá demorando muito a att o app"): procura versão nova ao abrir e sempre
+    // que o app volta pra frente; quando a nova assume, recarrega sozinho (se a pessoa não estiver digitando)
+    const tinhaControle = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(reg => {
+      reg.update().catch(() => {});
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+    }).catch(err => console.warn('SW não registrado', err));
+    let recarregou = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!tinhaControle || recarregou) return;
+      const digitando = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) && document.activeElement.value;
+      if (digitando) { toast('Tem versão nova do app: feche e abra de novo pra atualizar.'); return; }
+      recarregou = true;
+      location.reload();
+    });
   }
 }
 

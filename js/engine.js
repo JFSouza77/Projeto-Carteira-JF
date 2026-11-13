@@ -1380,3 +1380,17 @@ export function mascaraCentavos(texto, { sinal = false } = {}) {
   const reais = Math.floor(c / 100).toLocaleString('pt-BR');
   return `${neg ? '-' : ''}${reais},${String(c % 100).padStart(2, '0')}`;
 }
+
+// ---------- Valor fora do comum (JF, 13/11: "Lazer recebeu R$ 12.450,00", era 124,50) ----------
+/**
+ * Diz se um valor está muito acima do normal da pessoa, pra perguntar "tem certeza?" antes de gravar.
+ * Normal = mediana dos últimos 60 lançamentos do mesmo tipo. Acima de 5× a mediana (e de um piso) é fora do comum.
+ * Sem histórico (menos de 5), o piso é R$ 2.000 pra gasto e R$ 10.000 pra entrada.
+ */
+export function valorForaDoComum(amountCents, lista = [], { tipo = 'gasto' } = {}) {
+  const piso = tipo === 'entrada' ? 1_000_000 : 200_000;
+  const ultimos = [...lista].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 60).map(x => x.amountCents).filter(v => v > 0).sort((a, b) => a - b);
+  if (ultimos.length < 5) return amountCents >= piso;
+  const mediana = ultimos[Math.floor(ultimos.length / 2)];
+  return amountCents >= Math.max(tipo === 'entrada' ? 500_000 : 100_000, mediana * 5);
+}

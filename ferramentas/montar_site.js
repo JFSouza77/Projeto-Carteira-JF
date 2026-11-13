@@ -3,7 +3,7 @@
 // Uso: npm run build
 import { rmSync, mkdirSync, cpSync, existsSync } from 'node:fs';
 
-const ITENS = ['index.html', 'manifest.webmanifest', 'sw.js', 'css', 'js', 'icons'];
+const ITENS = ['index.html', 'manifest.webmanifest', 'sw.js', 'css', 'js', 'icons', '_headers']; // _headers: o Cloudflare não guarda o app velho (13/11)
 rmSync('dist', { recursive: true, force: true });
 mkdirSync('dist');
 for (const i of ITENS) {
