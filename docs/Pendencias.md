@@ -4,6 +4,81 @@ Um lugar só pra ver o que está aberto (sugestão do Code do Perfil, 12/11/2026
 Os detalhes continuam em `Pedidos_do_JF.md`, `Rascunhos_da_Semana.md` e `Ideias.md`; aqui fica só o resumo.
 Atualizada pelo Wally a cada rodada.
 
+## Bugs que o JF está caçando (13/11 à tarde, corrigir na próxima leva)
+
+1. **Ajustes → Lembretes (UI):** a caixa do horário (20:30) passa da borda direita do cartão. O checkbox, o "Desligado." e o
+   "Testar notificação" ficam soltos, sem espaçamento nem alinhamento. Provável causa: `input[type=time]` com largura
+   fixa no iPhone. Arrumar junto com uma revisão do card.
+2. **Botão "Me ajuda":** encolhe pro "?" quando rola a tela e volta a crescer quando para. Isso incomoda o JF: tem que ter
+   **um formato só**. Pedido junto:
+   - **dá pra arrastar:** segurar e arrastar pra qualquer canto, e o app lembra onde ficou;
+   - **toque rápido abre um menuzinho de ajuda rápida**, com perguntas prontas que já abrem a conversa do C.A.O.S. com
+     aquela pergunta.
+3. **Microfone não funciona:** o C.A.O.S. não consegue ouvir o que o JF fala (confirmado por ele). O
+   `js/voz.js` não mudou desde 12/11. Suspeita: o iPhone bloqueia o ditado do navegador no app instalado na tela
+   inicial. Investigar:
+   - conferir a permissão do microfone;
+   - mostrar um erro claro em vez de não fazer nada;
+   - plano B: ditado pelo teclado do iPhone (o microfone do próprio teclado).
+
+## Próxima rodada grande (pedidos do JF, 13/11)
+
+- **Avatares animados do C.A.O.S.** no lugar dos rostinhos (os rostinhos ficam só quando precisar, pra não poluir).
+  Os avatares já estão prontos (vieram do Perfil).
+  - Criar mais avatares onde fizer sentido, por exemplo **"espantado"**: o susto com um valor absurdo, tipo "R$ 17 mil
+    na Cacau Show?". Ele reage ao "valor fora do normal".
+  - O que for traço dele vai pro núcleo, com o ok do JF e aviso ao Code.
+- **Contas em outras moedas (ideia do JF, 13/11):** conta global em dólar ou euro (C6 em dólar e euro, Inter em dólar,
+  PicPay em dólar e euro desde nov/2025) e o **Meli Dólar** do Mercado Pago. O Meli Dólar é uma stablecoin, uma moeda
+  digital (cripto) atrelada ao dólar, comprada com o saldo em reais dentro do app; não é conta bancária e não serve pra
+  pagar no exterior.
+  - **Plano:** campo `moeda` na conta (BRL, USD, EUR ou Meli Dólar), saldo guardado na moeda dela e mostrado
+    "US$ 120,00 ≈ R$ 650,00 (cotação de dd/mm)".
+  - **Cotação:** a do servidor (mercado, todo dia útil) quando estiver no ar; antes disso, a pessoa informa.
+  - **Total em reais:** soma com a cotação do dia, avisando que é estimativa.
+  - **Avisos:** saldo em moeda estrangeira não tem FGC; o Meli Dólar é cripto. O C.A.O.S. explica no glossário.
+  - Lançar gasto em outra moeda fica pra depois.
+- **Criptomoedas (JF, 13/11):** pra quem investe em cripto e não em banco ou ações. Já existe uma base: o tipo
+  "Criptomoedas" nos investimentos, e o servidor do mercado já busca o Bitcoin.
+  - **Carteira cripto:** quantidade de cada moeda × preço do dia = quanto vale hoje e quanto ganhou ou perdeu. Moedas
+    mais conhecidas: Bitcoin, Ethereum, USDT/USDC (dólar digital), Solana, XRP e Meli Dólar. Precisa ser lista em
+    múltiplo de 5, então completar até 10 na hora.
+  - **Onde compra:** campo livre (PicPay, Mercado Pago, Nubank, corretora). Taxa e spread mudam: o app não afirma
+    "aqui é mais barato"; pergunta e faz a conta com o que a pessoa trouxer, como no analista de ofertas.
+  - **Preço do dia:** vem do servidor (mercado), junto com dólar e euro. Sem servidor, a pessoa informa.
+  - **Jornal do C.A.O.S.:** entra uma linha de cripto ("Bitcoin subiu X% na semana") com a regra do mercado: é
+    informação, não recomendação. Nunca chamar moeda de "mais rentável" nem dizer "vale comprar".
+  - **Avisos:** cripto oscila muito, não tem FGC e golpe é comum ("rendimento garantido" é sinal de golpe). O
+    glossário ganha Bitcoin, stablecoin, carteira (wallet) e exchange.
+- **Layout pensado pra moedas e cripto** (planejar antes de codar):
+  - **Contas:** o total em reais soma tudo (real + outras moedas pela cotação); cada banco mostra as contas em outra
+    moeda com a bandeirinha (🇺🇸, 🇪🇺).
+  - **Investimentos:** vira um cartão com abas: Renda fixa · Ações e fundos · Cripto.
+  - **Início:** um cartão pequeno "Patrimônio" (contas + investimentos + cripto), aberto só se a pessoa tiver algo
+    disso, pra não poluir.
+  - **Jornal:** fica no Início, embaixo, e na conversa ("o que tem de notícia?").
+- **Imposto de Renda (JF, 13/11):** o C.A.O.S. ensina o que é o IR e ajuda a fazer uma conta aproximada. Ele não
+  declara por ninguém e a conta não é 100% precisa.
+  - **Ensinar:** o que é o IR, quem precisa declarar, prazo, restituição, o que dá pra deduzir (saúde, educação,
+    dependentes, previdência) e o que é isento.
+  - **Calculadora aproximada:** renda do ano → base → faixa → imposto estimado. Usa a tabela do ano com a data e
+    "confira na Receita Federal" (regra de governo, como já faz a Selic no glossário). As regras mudaram em 2025/2026
+    (faixa de isenção maior): conferir na fonte oficial antes de codar e guardar a data da tabela.
+  - **Pelos dados do app:** pode juntar as entradas do ano ("salário") e os gastos de saúde e educação como lembrete do
+    que guardar de comprovante. Nada vai pra fora do aparelho.
+- **Deixar claro o que ele é (JF, 13/11):** o C.A.O.S. é uma **IA de bolso**: ajuda a controlar e analisar as finanças,
+  orienta, faz conta e dá dica, mas **não é consultor financeiro, investidor, banqueiro nem banco**, e ainda não é uma IA
+  autônoma de grande porte. Quem decide é a pessoa.
+  - **Onde:** em `js/caos/identidade.js` (o "pode/não pode" já existe; acrescentar "não sou consultor, investidor nem
+    banco" e "sou uma IA de bolso"). Também na resposta "o que você pode fazer?".
+  - **Pergunta fora do escopo ou de decisão** ("vale comprar?", "qual investimento é melhor?", "quanto vou pagar de
+    IR?"): ele ajuda no que dá e termina com o lembrete curto: "te dou a dica e a conta, mas não a certeza: quem decide
+    é você". Sem repetir isso em toda fala, pra não ficar chato.
+  - **Núcleo:** "IA de bolso" e "não sou consultor" é jeito de ser dele, então vale perguntar ao JF e ao Code se vai pro
+    núcleo (nos dois projetos).
+- **Tela de carregamento** ao abrir o app, com área de login: um respiro curto, não demora. Nada de abrir de forma
+  instantânea e seca.
+
 ## Esperando o JF
 
 - **Selo de criador:** quando o servidor for pro ar, pôr o apelido da conta do JF em `CRIADOR_CONTAS`.
