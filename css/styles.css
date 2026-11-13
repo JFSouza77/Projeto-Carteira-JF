@@ -15,6 +15,7 @@
   --ok: #3ddc97;
   --warn: #ffb020;
   --danger: #ff4d4d;
+  --cyan: #3ad4ff; --violet: #b07cff; --indigo: #7c8cff; --coral: #ff7a59;
   --radius: 16px;
   --eye: var(--caos); /* cor do olho do C.A.O.S.: muda com a emoção */
   --caos-bg1: #1b1020; --caos-bg2: #14161f; --caos-line: #3a1d2c; --face-bg: #00000061;
@@ -24,6 +25,7 @@
 :root[data-theme="claro"] {
   --bg: #f4f6fa; --card: #ffffff; --card-2: #eef1f6; --line: #d5dbe5; --text: #121722; --muted: #566175;
   --accent: #5a7d00; --accent-ink: #ffffff; --caos: #c8155a; --ok: #12814f; --warn: #a86400; --danger: #c22727;
+  --cyan: #0a7ea4; --violet: #7a3fd1; --indigo: #3f4fc9; --coral: #c2410c;
   --fill: var(--accent); --fill-ink: var(--accent-ink); --fill-glow: none;
   --caos-bg1: #fff1f6; --caos-bg2: #ffffff; --caos-line: #f0c6d6; --face-bg: #ffffffcc;
   color-scheme: light;
@@ -32,6 +34,7 @@
   :root:not([data-theme="escuro"]):not([data-theme="claro"]):not([data-theme="contraste"]) {
     --bg: #f4f6fa; --card: #ffffff; --card-2: #eef1f6; --line: #d5dbe5; --text: #121722; --muted: #566175;
     --accent: #5a7d00; --accent-ink: #ffffff; --caos: #c8155a; --ok: #12814f; --warn: #a86400; --danger: #c22727;
+    --cyan: #0a7ea4; --violet: #7a3fd1; --indigo: #3f4fc9; --coral: #c2410c;
     --fill: var(--accent); --fill-ink: var(--accent-ink); --fill-glow: none;
     --caos-bg1: #fff1f6; --caos-bg2: #ffffff; --caos-line: #f0c6d6; --face-bg: #ffffffcc;
     color-scheme: light;
@@ -96,6 +99,24 @@ details.card[open] > summary h2::after { content: "－"; }
 
 .summary .label { margin: 0; color: var(--muted); }
 .summary .big { margin: 2px 0 10px; font-size: 2.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Atalhos e orçamento de hoje (V2 do AI Studio, 13/11) */
+.atalhos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.atalho { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 46px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--card); font: inherit; font-weight: 600; font-size: .9rem; cursor: pointer; }
+.atalho.gasto { background: var(--fill); color: var(--fill-ink); box-shadow: var(--fill-glow); border-color: transparent; }
+.atalho.entrada { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 55%, transparent); }
+.atalho.transf { color: var(--cyan, #3ad4ff); border-color: color-mix(in srgb, var(--cyan, #3ad4ff) 55%, transparent); }
+.hoje-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hoje-top h2 { margin: 0; }
+.hoje-valor { margin: 6px 0 8px; }
+.hoje-valor strong { font-size: 1.3rem; }
+.hoje-card[data-status="estourado"] #hoje-gasto { color: var(--danger); }
+.hoje-card[data-status="atencao"] #hoje-gasto { color: var(--warn); }
+.hoje-form { display: grid; gap: 10px; margin-top: 10px; }
+.hoje-form[hidden] { display: none; }
+.hoje-form .erro { color: var(--danger); margin: 0; }
+.hoje-botoes { display: flex; justify-content: flex-end; gap: 8px; }
+.hoje-botoes button[hidden] { display: none; }
 .bar { height: 8px; background: var(--card-2); border-radius: 99px; overflow: hidden; }
 .bar-fill { height: 100%; border-radius: 99px; transition: width .4s ease; }
 

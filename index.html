@@ -80,6 +80,11 @@
     </header>
     <main>
       <button type="button" class="novidade-aviso" id="novidade-aviso" hidden>🆕 <span>Tem novidade no app! Toque pra ver.</span></button>
+      <nav class="atalhos" aria-label="Lançar rápido">
+        <button type="button" class="atalho gasto" data-atalho="gasto"><svg class="ico" aria-hidden="true"><use href="#i-gasto"/></svg> Gasto</button>
+        <button type="button" class="atalho entrada" data-atalho="entrada"><svg class="ico" aria-hidden="true"><use href="#i-entrada"/></svg> Entrada</button>
+        <button type="button" class="atalho transf" data-atalho="transf"><svg class="ico" aria-hidden="true"><use href="#i-transf"/></svg> Transferir</button>
+      </nav>
       <section class="card summary" aria-live="polite">
         <p class="label">Gasto no mês</p>
         <p class="big" id="total">R$ 0,00</p>
@@ -90,6 +95,27 @@
           <div><small>Saldo do mês</small><strong class="num" id="stat-net">R$ 0,00</strong></div>
           <div><small>Nas contas</small><strong class="num" id="stat-bank">—</strong></div>
         </div>
+      </section>
+
+      <section class="card hoje-card" id="hoje-card" aria-live="polite">
+        <div class="hoje-top">
+          <h2>Orçamento de hoje</h2>
+          <button type="button" class="ghost small" id="hoje-ajustar" aria-expanded="false" aria-controls="hoje-form">Definir limite</button>
+        </div>
+        <p class="hoje-valor"><strong class="num" id="hoje-gasto">R$ 0,00</strong> <span class="muted" id="hoje-de"></span></p>
+        <div class="bar" id="hoje-bar-wrap" hidden><div class="bar-fill" id="hoje-bar"></div></div>
+        <p class="muted small" id="hoje-sub"></p>
+        <form id="hoje-form" class="hoje-form" autocomplete="off" novalidate hidden>
+          <label class="field"><span>Limite por dia (R$)</span><input id="hoje-limite" type="text" inputmode="decimal" placeholder="0,00"></label>
+          <div class="chips" id="hoje-chips">
+            <button type="button" class="chip" data-limite="5000">R$ 50</button>
+            <button type="button" class="chip" data-limite="10000">R$ 100</button>
+            <button type="button" class="chip" data-limite="15000">R$ 150</button>
+            <button type="button" class="chip" data-limite="25000">R$ 250</button>
+          </div>
+          <p class="erro" id="hoje-erro" role="alert" hidden></p>
+          <div class="hoje-botoes"><button type="button" class="ghost" id="hoje-remover">Remover limite</button><button type="submit" class="primary">Salvar</button></div>
+        </form>
       </section>
 
       <section class="card ofensiva" id="ofensiva-card" aria-live="polite">
