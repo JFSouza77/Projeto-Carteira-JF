@@ -43,3 +43,32 @@ test('aniversário do JF: com o selo ele fala direto com o criador', () => {
   }
   assert.ok(algum);
 });
+
+// ---- emoções (núcleo, 13/11) ----
+import { EMOCOES, sentir, emocaoAtual, emocoesIniciais, decair } from '../js/caos/emocoes.js';
+
+test('as 10 emoções são as do núcleo', () => {
+  assert.deepEqual([...EMOCOES], kit.emocoes.lista);
+});
+
+test('memória antiga (preocupacao, irritacao, orgulho) vira o nome oficial', () => {
+  const velha = { v: { preocupacao: 6, irritacao: 2, orgulho: 5, alegria: 1, tedio: 0, curiosidade: 0, carinho: 0 }, at: 0 };
+  const e = decair(velha, 0);
+  assert.equal(e.v.ansiedade, 6);
+  assert.equal(e.v.raiva, 2);
+  assert.equal(e.v.alegria, 5);
+  assert.equal(e.v.preocupacao, undefined);
+  assert.equal(emocaoAtual(velha, 'normal', 0), 'preocupacao'); // o nome que aparece não mudou
+});
+
+test('emoções novas aparecem e o filtro de apoio segura a tristeza', () => {
+  let sem = emocoesIniciais(0);
+  for (let i = 0; i < 3; i++) sem = sentir(sem, 'nao_entendi', 0); // três "não entendi" seguidos: fica sem graça
+  assert.equal(emocaoAtual(sem, 'normal', 0), 'vergonha');
+  const medo = sentir(sentir(emocoesIniciais(0), 'cartao_limite', 0), 'conta_negativa', 0);
+  assert.ok(['preocupacao', 'medo', 'protetor'].includes(emocaoAtual(medo, 'normal', 0)));
+  let triste = emocoesIniciais(0);
+  for (let i = 0; i < 3; i++) triste = sentir(triste, 'xingamento', 0);
+  assert.notEqual(emocaoAtual(triste, 'suave', 0), 'tristeza'); // tristeza nunca aparece crua
+  assert.notEqual(emocaoAtual(triste, 'suave', 0), 'irritacao'); // Suave: sem raiva
+});

@@ -12,6 +12,8 @@ import { EMOS, VIZINHOS, MISTURAS } from './rostos-dados.js';
 const DA_EMOCAO = {
   calmo: 'calmo', alegria: 'festa', orgulho: 'orgulho', preocupacao: 'preocupado', irritacao: 'raiva',
   tedio: 'tedio', curiosidade: 'espiando', carinho: 'carinho', radiante: 'festa', protetor: 'carinho', tenso: 'raiva',
+  // emoções novas do núcleo (13/11): sem rosto próprio ainda, usam o mais parecido do Perfil
+  medo: 'preocupado', nojo: 'julgando', vergonha: 'recompondo',
 };
 // Mistura da Carteira → rosto de mistura do Perfil
 const MISTURA_DA = { tenso: 'acuado' };
