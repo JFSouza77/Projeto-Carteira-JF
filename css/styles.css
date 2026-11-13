@@ -496,7 +496,19 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .ganho { color: var(--ok); } .perda { color: var(--danger); }
 
 /* ---------- Ofensiva e A receber (07/11) ---------- */
-.ofensiva { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.ofensiva { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 14px; }
+/* Calendário da ofensiva (13/11): 4 semanas, 7 por linha */
+.ofensiva-cal { flex-basis: 100%; list-style: none; margin: 2px 0 0; padding: 0; display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; }
+.ofensiva-cal li { aspect-ratio: 1; border-radius: 6px; background: var(--card-2); border: 1px solid var(--line); display: grid; place-items: center; font-size: .68rem; color: var(--muted); }
+.ofensiva-cal li.feito { background: color-mix(in srgb, #ff8a3d 30%, var(--card-2)); border-color: #ff8a3d; color: var(--text, inherit); }
+.ofensiva-cal li.sem { background: color-mix(in srgb, var(--ok) 25%, var(--card-2)); border-color: var(--ok); color: var(--text, inherit); }
+.ofensiva-cal li.hoje { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ofensiva-legenda { flex-basis: 100%; margin: 0; font-size: .75rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ofensiva-legenda .q { width: 10px; height: 10px; border-radius: 3px; background: var(--card-2); border: 1px solid var(--line); display: inline-block; margin-left: 6px; }
+.ofensiva-legenda .q:first-child { margin-left: 0; }
+.ofensiva-legenda .q.feito { background: #ff8a3d; border-color: #ff8a3d; }
+.ofensiva-legenda .q.sem { background: var(--ok); border-color: var(--ok); }
+@media (max-width: 420px) { .ofensiva-cal { grid-template-columns: repeat(7, 1fr); } }
 .ofensiva-fogo { font-size: 1.9rem; line-height: 1; filter: drop-shadow(0 0 8px #ff8a3d); }
 .ofensiva.apagada .ofensiva-fogo { filter: grayscale(1); opacity: .5; }
 .ofensiva-txt { flex: 1; display: grid; gap: 2px; min-width: 0; }

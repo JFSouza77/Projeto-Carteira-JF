@@ -10,7 +10,7 @@ import {
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
   TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
-  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, simularCompra, ofensiva, MARCOS_OFENSIVA,
+  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, simularCompra, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
@@ -445,6 +445,15 @@ function renderOfensiva() {
     ? (o.hojeFeito ? `Hoje já está garantido. Recorde: ${o.recorde}.` : 'Anote hoje pra não perder o foguinho!')
     : (o.recorde ? `Seu recorde é ${o.recorde}. Anote hoje pra recomeçar.` : 'Anote um gasto hoje pra acender o foguinho.');
   $('#sem-gasto').hidden = o.hojeFeito;
+  // calendário dos últimos 28 dias (13/11)
+  const cal = calendarioOfensiva({ expenses: state.expenses, incomes: state.incomes, diasSemGasto: state.perfil?.diasSemGasto || [] }, toISODate());
+  const feitos = cal.filter(c => c.anotado).length;
+  $('#ofensiva-cal').setAttribute('aria-label', `Últimos 28 dias: anotou em ${feitos}.`);
+  $('#ofensiva-cal').innerHTML = cal.map(c => {
+    const [, m, d] = c.data.split('-');
+    const tipo = c.semGasto ? 'sem' : c.anotado ? 'feito' : '';
+    return `<li class="${tipo}${c.hoje ? ' hoje' : ''}" title="${d}/${m}${c.semGasto ? ': sem gastos' : c.anotado ? ': anotou' : ''}"><span>${Number(d)}</span></li>`;
+  }).join('');
 }
 
 /** Se o lançamento de agora acendeu o dia e bateu um marco (3, 7, 14, 30…), o C.A.O.S. comemora. */

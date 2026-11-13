@@ -31,3 +31,18 @@ test('sobra já negativa: não cabe e não sugere parcelas', () => {
   assert.equal(r.situacao, 'nao_cabe');
   assert.equal(r.parcelasQueCabem, null);
 });
+
+test('calendário da ofensiva: 28 dias, hoje por último, marca anotado e sem gasto', async () => {
+  const { calendarioOfensiva } = await import('../js/engine.js');
+  const hoje = '2026-11-13';
+  const criado = new Date(2026, 10, 12, 10).getTime();
+  const cal = calendarioOfensiva({ expenses: [{ createdAt: criado }], incomes: [], diasSemGasto: ['2026-11-10'] }, hoje);
+  assert.equal(cal.length, 28);
+  assert.equal(cal[27].data, hoje);
+  assert.equal(cal[27].hoje, true);
+  assert.equal(cal[0].data, '2026-10-17');
+  assert.equal(cal.find(c => c.data === '2026-11-12').anotado, true);
+  const s = cal.find(c => c.data === '2026-11-10');
+  assert.equal(s.anotado && s.semGasto, true);
+  assert.equal(cal.find(c => c.data === '2026-11-11').anotado, false);
+});
