@@ -10,7 +10,7 @@ import {
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
   TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
-  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, ofensiva, MARCOS_OFENSIVA,
+  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta } from './caos/conversa.js';
@@ -417,6 +417,7 @@ function renderAReceber() {
     const [, m, d] = x.date.split('-');
     return `<li><span class="exp-main"><span>${esc(x.nome)}</span><small>${d}/${m}${x.note ? ` · ${esc(x.note)}` : ''}</small></span>
       <span class="num">${formatBRL(x.valorCents)}</span>
+      <a class="ghost small btn-link" href="https://wa.me/?text=${encodeURIComponent(mensagemCobranca(x))}" target="_blank" rel="noopener" aria-label="Cobrar ${esc(x.nome)} no WhatsApp">Cobrar</a>
       <button type="button" class="ghost small" data-recebi="${esc(x.expenseId)}" data-pessoa="${esc(x.pessoaId)}" aria-label="Recebi de ${esc(x.nome)}">✓ Recebi</button></li>`;
   }).join('');
 }
