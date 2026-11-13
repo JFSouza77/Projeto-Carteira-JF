@@ -141,3 +141,20 @@ anterior e o atual. Veredito: ✅ **entra, depois do servidor no ar** (é o serv
 | 08/11 | JF | **🛵 C.A.O.S. entregador:** muito delivery no mês → muda pra forma de entregador ("delivery de novo? Já é a quinta vez esse mês…") | ✅ | O alerta `delivery_repetido` já existe; falta a forma (capacete, mochila térmica) e falas por quantidade (3ª, 5ª, 10ª vez). |
 | 08/11 | JF | **Lote de GIFs dos avatares** pra mostrar no WhatsApp | ✅ feito | 43 GIFs (um por forma) + uma imagem com todas, enviados ao JF em 08/11. Fora do repositório. |
 | 08/11 | JF | Roteiro da vistoria ainda **não foi enviado** pro GPT/Gemini (JF cansado, sem notebook) | — | Sem pressa. Quando o JF mandar, as respostas entram aqui. O servidor fica pra semana, quando der. |
+
+## Ideias do Google AI Studio (JF, 13/11) e veredito do Wally
+
+| Ideia | Veredito | Por quê |
+| --- | --- | --- |
+| Busca nos lançamentos (nome, categoria, valor) | ✅ feito (1.23) | Útil e leve; procura em todos os meses. |
+| Service Worker com notificações agendadas | ✅ já existia | Lembrete diário pelo push do servidor + sincronização periódica. Notificação agendada sem servidor não funciona no iPhone. |
+| Relatório mensal em PDF | 🕒 sexta | Faço com a impressão do próprio navegador ("salvar como PDF"), sem biblioteca e sem internet. |
+| Tela de boas-vindas guiando conversa e 1ª conta | ✅ já existe em parte | O primeiro acesso já é uma conversa com o C.A.O.S.; falta só um passo final sugerindo cadastrar a 1ª conta (entra junto da repaginada). |
+| Card com scale(1.02) no hover + sombra + transição | 🕒 com a repaginada | Celular não tem "hover"; faço como efeito de toque, respeitando "menos movimento", quando a cara nova chegar. |
+| Barra de progresso do orçamento no card | ✅ já existe | Aparece quando há orçamento definido em Ajustes. |
+| C.A.O.S. falando em "Ecossistema JF" | ❌ não entra | O nome do app é C.A.O.S. Finanças e quem ele é vem do núcleo (só muda com o ok do JF). Ele já usa contas, metas e planejamento nas respostas. |
+| Atalhos na conversa (Lançar, Contas, Mês) | ✅ feito (1.23) | Só levam até a aba; nunca fazem nada sozinhos (1ª lei). |
+| Dicas proativas com metas e saldo | ✅ feito (1.23) | No Início: quanto guardar por mês pra chegar no prazo da meta. |
+| caos-line alternando dicas | ✅ feito (1.23) | Junto da dica de meta, com intervalo pra não virar spam. |
+| Análise de Metas detalhada | ✅ já existe | "Como estão minhas metas?" mostra quanto falta e quanto por mês. |
+| Notificação proativa de vencimento | ✅ feito (1.23) | O aviso do celular cita as contas fixas que vencem hoje ou amanhã, montado no aparelho (o servidor continua sem ver nada). Chega quando o servidor estiver no ar. |

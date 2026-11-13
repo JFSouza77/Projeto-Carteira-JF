@@ -1,6 +1,6 @@
 // Service worker: app shell em cache para funcionar offline + lembretes.
 // Mudou algum arquivo abaixo? Suba CACHE_VERSION.
-const CACHE_VERSION = 'v42';
+const CACHE_VERSION = 'v43';
 const CACHE = `carteira-jf-${CACHE_VERSION}`;
 const APP_SHELL = [
   './',
@@ -106,12 +106,35 @@ const hojeISO = () => {
 };
 const brl = c => (c / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+// Contas fixas que vencem hoje ou amanhã e ainda não foram pagas este mês (13/11, ideia do AI Studio).
+// Tudo lido do aparelho: o servidor continua sem saber nada.
+async function vencendo(db, gastos) {
+  const d = new Date();
+  const mes = hojeISO().slice(0, 7);
+  const ultimoDia = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  const meses = (a, b) => (Number(b.slice(0, 4)) - Number(a.slice(0, 4))) * 12 + Number(b.slice(5, 7)) - Number(a.slice(5, 7));
+  const comps = (await lerTudo(db, 'compromissos')).filter(c => c.ativo !== false && c.dia && c.tipo !== 'plano'
+    && (!c.inicioMes || (meses(c.inicioMes, mes) >= 0 && meses(c.inicioMes, mes) % (c.cadaMeses || 1) === 0)));
+  const out = [];
+  for (const c of comps) {
+    const dia = Math.min(c.dia, ultimoDia);
+    const falta = dia - d.getDate();
+    if (falta !== 0 && falta !== 1) continue;
+    const pago = gastos.filter(e => e.compromissoId === c.id && e.month === mes).reduce((s, e) => s + e.amountCents, 0);
+    if (pago < c.valorCents) out.push(`${c.nome} vence ${falta === 0 ? 'hoje' : 'amanhã'} (${brl(c.valorCents - pago)})`);
+  }
+  return out;
+}
+
 async function textoDoLembrete(db) {
   const hoje = hojeISO();
-  const gastos = (await lerTudo(db, 'expenses')).filter(e => e.date === hoje);
-  if (!gastos.length) return 'Nenhum gasto anotado hoje. Teve alguma despesa? Leva 10 segundos.';
+  const todos = await lerTudo(db, 'expenses');
+  const venc = await vencendo(db, todos).catch(() => []);
+  const aviso = venc.length ? ` E não esquece: ${venc.slice(0, 2).join('; ')}.` : '';
+  const gastos = todos.filter(e => e.date === hoje);
+  if (!gastos.length) return `Nenhum gasto anotado hoje. Teve alguma despesa? Leva 10 segundos.${aviso}`;
   const total = gastos.reduce((s, e) => s + e.amountCents, 0);
-  return `Hoje você anotou ${gastos.length} ${gastos.length === 1 ? 'gasto' : 'gastos'} (${brl(total)}). Faltou algum?`;
+  return `Hoje você anotou ${gastos.length} ${gastos.length === 1 ? 'gasto' : 'gastos'} (${brl(total)}). Faltou algum?${aviso}`;
 }
 
 async function lembrar({ conferirHora }) {

@@ -7,6 +7,19 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.23',
+    data: '13/11/2026',
+    nome: 'Achou, Achou',
+    t: 'Busca nos lançamentos, atalhos na conversa e o C.A.O.S. de olho nas suas metas.',
+    itens: [
+      '🔎 Busca: em Início, procure qualquer lançamento por nome, categoria ou valor, de todos os meses.',
+      '🎯 Dica de meta: o C.A.O.S. lembra no Início quanto guardar por mês pra chegar no prazo.',
+      '🧭 Atalhos na conversa: botões pra ir direto pro Lançar, Contas ou Mês.',
+      '🔔 Lembrete esperto: o aviso do celular conta quais contas fixas vencem hoje ou amanhã.',
+    ],
+    qol: [],
+  },
+  {
     v: '1.22',
     data: '13/11/2026',
     nome: 'Professor de Finanças',

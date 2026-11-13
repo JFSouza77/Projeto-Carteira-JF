@@ -1288,6 +1288,23 @@ Object.assign(GERADORES, {
       ],
     },
   },
+  // Dica de meta no Início (13/11, ideia do AI Studio): quanto guardar por mês pra chegar no prazo
+  meta_ritmo: {
+    moldes: ['{abre} {fato}'],
+    abre: {
+      geral: ['Sobre sua meta:', 'Lembrete de meta:', 'De olho no sonho:', 'Meta na mira:', 'Pensando no futuro:'],
+      temNome: ['{nome}, sobre sua meta:', '{nome}, lembrete de meta:', '{nome}, de olho no sonho:', '{nome}, meta na mira:', '{nome}, pensando no futuro:'],
+    },
+    fato: {
+      geral: [
+        'pra {meta} chegar no prazo, guarda {valor} por mês. Faltam {total}.',
+        'faltam {total} pra {meta}. Dá {valor} por mês até lá.',
+        '{meta} está em {pct}%. Guardando {valor} por mês, chega no prazo.',
+        '{valor} por mês e {meta} sai do papel. Faltam {total}.',
+        'já foi {pct}% de {meta}. O ritmo pra chegar: {valor} por mês.',
+      ],
+    },
+  },
   // Auditor de assinaturas (P9, 12/11): só pergunta, com o número do ano; quem decide é a pessoa
   auditor_assinatura: {
     moldes: ['{abre} {fato} {fecho}'],

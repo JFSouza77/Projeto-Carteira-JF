@@ -12,7 +12,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '1.20.0';
+export const CAOS_VERSAO = '1.21.0';
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -22,7 +22,7 @@ export { IDENTIDADE, resumoIdentidade } from './identidade.js';
 // Prioridade: só uma fala por reação, a mais importante (para não virar spam).
 const PRIORIDADE = {
   categoria_estourada: 50, compromisso_atrasado: 49, conta_negativa: 48, cartao_limite: 47, mes_negativo: 46, cartao_vence: 45, compromisso_vence: 44,
-  orcamento_80: 40, mes_verde: 35, plano_do_mes: 25, confira_banco: 9, auditor_assinatura: 9,
+  orcamento_80: 40, mes_verde: 35, plano_do_mes: 25, confira_banco: 9, auditor_assinatura: 9, meta_ritmo: 6,
   ritmo_alto: 30, ofensiva_marco: 28, racha_cadastrada: 27, a_receber: 22, delivery_repetido: 20, entrada_cadastrada: 15, gasto_cadastrado: 10, sem_registro: 8, boas_vindas: 5,
 };
 // Dias especiais (núcleo): todos com a mesma prioridade (logo acima das boas-vindas) e uma vez por dia
@@ -41,6 +41,7 @@ const COOLDOWN = {
   cartao_limite: 12 * 3_600_000,
   cartao_vence: 12 * 3_600_000,
   confira_banco: 3 * 24 * 3_600_000,
+  meta_ritmo: 2 * 24 * 3_600_000, // a cada 2 dias, no máximo
   auditor_assinatura: 7 * 24 * 3_600_000, // uma vez na semana do começo do mês
   a_receber: 24 * 3_600_000,
 };

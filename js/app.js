@@ -247,13 +247,20 @@ function render() {
       ${r.budgetCents ? `<div class="bar"><div class="bar-fill" style="${barStyle(r.ratio)}"></div></div>` : ''}
     </li>`).join('') : '<li class="muted">Sem gastos ainda.</li>';
 
+  // Busca (ideia do AI Studio, 13/11): com algo digitado, procura em todos os meses por nome, categoria ou valor
+  const busca = ($('#busca')?.value || '').trim();
+  const filtro = busca ? filtroDeBusca(busca) : null;
+  const doMes = x => filtro ? filtro(x) : x.month === state.viewMonth;
   const lanc = [
-    ...state.expenses.filter(e => e.month === state.viewMonth).map(e => ({ ...e, kind: 'gasto' })),
-    ...state.incomes.filter(i => i.month === state.viewMonth).map(i => ({ ...i, kind: 'entrada' })),
-  ].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
+    ...state.expenses.filter(doMes).map(e => ({ ...e, kind: 'gasto' })),
+    ...state.incomes.filter(doMes).map(i => ({ ...i, kind: 'entrada' })),
+  ].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt).slice(0, busca ? 100 : Infinity);
+  $('#exp-titulo').textContent = busca ? `Busca: ${lanc.length} ${lanc.length === 1 ? 'lançamento' : 'lançamentos'}` : 'Lançamentos do mês';
+  $('#exp-empty').textContent = busca ? 'Nada encontrado. Tente outra palavra ou um valor, tipo 49,90.' : 'Nenhum lançamento neste mês.';
   $('#exp-empty').hidden = lanc.length > 0;
   $('#exp-list').innerHTML = lanc.map(x => {
-    const [, m, d] = x.date.split('-');
+    const [a, m, d] = x.date.split('-');
+    const dataTxt = busca && x.month !== monthKey(toISODate()) ? `${d}/${m}/${a.slice(2)}` : `${d}/${m}`;
     const conta = x.accountId && state.accounts.find(a => a.id === x.accountId);
     if (x.kind === 'entrada') {
       const s2 = srcById(x.sourceId);
@@ -261,7 +268,7 @@ function render() {
       <li class="entrada">
         <span class="exp-emoji" aria-hidden="true">${icFonte(s2)}</span>
         <span class="exp-main"><span>${esc(x.note || s2?.name || 'Entrada')}</span>
-          <small>${d}/${m} · entrada${conta ? ` · ${esc(accountLabel(conta))}` : ''}</small></span>
+          <small>${dataTxt} · entrada${conta ? ` · ${esc(accountLabel(conta))}` : ''}</small></span>
         <span class="num">+${formatBRL(x.amountCents)}</span>
         <button class="icon-btn del" data-del="${esc(x.id)}" data-kind="entrada" aria-label="Apagar entrada">×</button>
       </li>`;
@@ -271,7 +278,7 @@ function render() {
     <li>
       <span class="exp-emoji" aria-hidden="true">${icCat(c)}</span>
       <span class="exp-main"><span>${esc(x.note || c?.name || x.categoryId)}</span>
-        <small>${d}/${m}${x.note && c ? ` · ${esc(c.name)}` : ''}${conta ? ` · ${esc(accountLabel(conta))}` : ''}${x.forma && !conta ? ` · ${esc(FORMAS_PAGAMENTO[x.forma].slice(2).trim())}` : ''}${x.parcelas > 1 ? ` · ${x.parcelas}x de ${formatBRL(Math.floor(x.amountCents / x.parcelas))}` : ''}
+        <small>${dataTxt}${x.note && c ? ` · ${esc(c.name)}` : ''}${conta ? ` · ${esc(accountLabel(conta))}` : ''}${x.forma && !conta ? ` · ${esc(FORMAS_PAGAMENTO[x.forma].slice(2).trim())}` : ''}${x.parcelas > 1 ? ` · ${x.parcelas}x de ${formatBRL(Math.floor(x.amountCents / x.parcelas))}` : ''}
         ${x.imageId ? `<button class="thumb-btn" data-photo="${esc(x.imageId)}" aria-label="Ver foto">${ic('i-foto')}</button>` : ''}</small></span>
       <span class="num">${x.racha ? `<span title="Sua parte">${formatBRL(valorProprio(x))}</span><small class="racha-tag">${ic('i-dividir')} de ${formatBRL(x.amountCents)}</small>` : formatBRL(x.amountCents)}</span>
       <button class="icon-btn del" data-del="${esc(x.id)}" data-kind="gasto" aria-label="Apagar gasto">×</button>
@@ -433,6 +440,20 @@ function previaParcelas() {
   $('#parcelas-previa').textContent = `${n}x de ${formatBRL(parcela)}. ` + (total
     ? `Agora o limite fica ${formatBRL(v)} menor e volta ${formatBRL(parcela)} a cada fatura paga.`
     : `Só ${formatBRL(parcela)} por mês ocupa o limite.`);
+}
+
+/** Filtro da busca: palavra no nome/categoria/fonte/conta, ou valor ("49,90", "50" acha 50,00 e 50,xx). */
+function filtroDeBusca(busca) {
+  const n = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const q = n(busca);
+  const valor = /^r?\$?\s*\d+([.,]\d{1,2})?$/.test(q) ? parseAmount(q.replace(/^r?\$?\s*/, '')) : null;
+  const inteiro = valor != null && !/[.,]/.test(q);
+  return x => {
+    if (valor != null) return inteiro ? Math.floor(x.amountCents / 100) === valor / 100 : x.amountCents === valor;
+    const conta = x.accountId && state.accounts.find(a => a.id === x.accountId);
+    const nome = x.categoryId ? catById(x.categoryId)?.name : srcById(x.sourceId)?.name;
+    return [x.note, nome, conta ? accountLabel(conta) : ''].some(t => n(t).includes(q));
+  };
 }
 
 function mostrarFoto() {
@@ -637,7 +658,10 @@ function renderChat() {
   }
   const ult = [...state.chat].reverse().find(m => m.de === 'caos');
   const sug = ult?.sugestoes?.length ? ult.sugestoes : SUGESTOES.slice(0, 6);
-  $('#chat-suggestions').innerHTML = sug.map(s => `<button type="button" class="chip" data-sug="${esc(s)}">${esc(s)}</button>`).join('');
+  // atalhos pras outras abas (ideia do AI Studio, 13/11): só levam até lá, nunca fazem nada sozinhos
+  const ATALHOS = [['#lancar', 'i-lancar', 'Lançar'], ['#contas', 'i-contas', 'Contas'], ['#mes', 'i-mes', 'Mês']];
+  $('#chat-suggestions').innerHTML = sug.map(s => `<button type="button" class="chip" data-sug="${esc(s)}">${esc(s)}</button>`).join('')
+    + (state.onboarding || state.fluxoMeta ? [] : ATALHOS).map(([h, i, t]) => `<button type="button" class="chip atalho" data-ir="${h}" aria-label="Ir para ${t}">${ic(i)} ${t}</button>`).join('');
   if (!$('#tela-conversa').hidden) window.scrollTo(0, document.body.scrollHeight);
 }
 
@@ -1900,9 +1924,12 @@ function bind() {
     enviarPergunta(v);
   });
   $('#chat-suggestions').addEventListener('click', e => {
+    const ir = e.target.closest('[data-ir]');
+    if (ir) { location.hash = ir.dataset.ir; return; } // atalho: só navega, não mexe em nada
     const b = e.target.closest('[data-sug]');
     if (b) enviarPergunta(b.dataset.sug);
   });
+  $('#busca').addEventListener('input', () => { clearTimeout(state.buscaTimer); state.buscaTimer = setTimeout(render, 150); });
   $('#chat-log').addEventListener('click', e => {
     const b = e.target.closest('[data-acao]');
     if (b) confirmarAcao(Number(b.dataset.acao), b.dataset.ok === '1');
@@ -2131,7 +2158,10 @@ async function init() {
   // ao abrir, o C.A.O.S. olha o radar: o alerta mais grave entra na fila junto com as boas-vindas
   const radar = analyze(dados(), today).slice(0, 1).map(a => ({ ...a, radar: true }));
   const especial = diaEspecial(today) ? [{ type: `dia_${diaEspecial(today)}` }] : [];
-  narrate([...closing, ...radar, ...especial, { type: 'boas_vindas' }]);
+  // dica de meta (13/11): a meta com prazo mais perto, com quanto guardar por mês
+  const meta = state.metas.map(m => progressoMeta(m, today)).filter(m => !m.batida && m.porMesCents).sort((a, b) => a.mesesRestantes - b.mesesRestantes)[0];
+  const dicaMeta = meta ? [{ type: 'meta_ritmo', metaNome: meta.nome, amountCents: meta.porMesCents, totalCents: meta.faltaCents, pct: meta.pct }] : [];
+  narrate([...closing, ...radar, ...especial, ...dicaMeta, { type: 'boas_vindas' }]);
   if ($('#caos-line').textContent === 'Iniciando…') $('#caos-line').textContent = 'De olho nos seus gastos. Toque aqui pra conversar.';
   pintarOlho();
 
