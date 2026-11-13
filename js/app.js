@@ -12,7 +12,7 @@ import {
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
   valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, progressoOrcamentoDiario, mascaraCentavos, valorForaDoComum, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
-import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta, diaEspecial } from './caos/index.js';
+import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, rostoEspantado, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
 import { GLOSSARIO, ATUALIZADO_EM } from './caos/glossario.js';
 import { fraseDoPrint, resumoDoPrint } from './caos/ofertas.js';
@@ -576,6 +576,21 @@ function renderAReceber() {
 }
 
 /** Pergunta em qual conta o Pix do amigo caiu. Devolve o id, '' (sem conta) ou null (cancelou). */
+// Valor fora do comum (13/11): o C.A.O.S. leva um susto (rosto espantado) e pergunta antes de gravar.
+// Era um confirm() do navegador; o JF pediu o C.A.O.S. reagindo ("R$ 17 mil na Cacau Show?!").
+function confirmarEspanto(valorCents, ehGasto) {
+  const dlg = $('#espanto-dialog');
+  const nota = $('#note').value.trim();
+  $('#espanto-titulo').textContent = `${formatBRL(valorCents)}?!`;
+  $('#espanto-texto').textContent = `${ehGasto ? 'De gasto' : 'De entrada'}${nota ? ` em "${nota}"` : ''}? É bem mais que o seu normal. Confere se não faltou a vírgula dos centavos.`;
+  setRosto($('#espanto-face'), rostoEspantado());
+  return new Promise(resolve => {
+    dlg.addEventListener('close', () => resolve(dlg.returnValue === 'ok'), { once: true });
+    dlg.returnValue = '';
+    dlg.showModal();
+  });
+}
+
 function perguntarContaDoPix(nome, valorCents) {
   const contas = state.accounts.filter(a => a.tipo !== 'cartao');
   const dlg = $('#pix-dialog');
@@ -1032,7 +1047,7 @@ async function onSubmit(ev) {
     // valor muito acima do normal (13/11): pergunta antes, pra um 124,50 não virar 12.450,00
     const ehGasto = state.kind === 'gasto';
     if (valorForaDoComum(amountCents, ehGasto ? state.expenses : state.incomes, { tipo: ehGasto ? 'gasto' : 'entrada' })
-      && !confirm(`${formatBRL(amountCents)} ${ehGasto ? 'de gasto' : 'de entrada'}? É bem mais que o seu normal. Se for isso mesmo, toque em OK.`)) return;
+      && !(await confirmarEspanto(amountCents, ehGasto))) { $('#amount').focus(); return; }
     const base = { amountCents, note: $('#note').value, date: $('#date').value, accountId: $('#account-select').value || null };
     let events;
     if (state.kind === 'gasto') {

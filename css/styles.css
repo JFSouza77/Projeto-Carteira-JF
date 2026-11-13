@@ -975,3 +975,6 @@ button.banco-head:hover { background: color-mix(in srgb, var(--banco-cor) 8%, tr
 h1, h2, .big, .primary, .pc-nome, .novidade-titulo { font-family: var(--font-display); }
 h1, h2 { font-weight: 700; letter-spacing: .005em; }
 .big { font-variant-numeric: tabular-nums; font-weight: 700; }
+/* Susto com valor fora do comum (13/11): rosto espantado no topo da pergunta */
+.espanto-dialog header { display: flex; align-items: center; gap: 12px; }
+.espanto-dialog h2 { margin: 0; }

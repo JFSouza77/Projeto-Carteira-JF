@@ -146,6 +146,21 @@ export const ROSTO_ANALISTA = Object.freeze([
   Object.freeze(['(⌐■‿■)', '(⌐■‿■)✔', '(⌐■_■)', '(⌐■_■)🔍']),
 ]);
 
+// 2.0.6 (pedido do JF, 13/11): o susto com valor absurdo ("R$ 17 mil na Cacau Show?!"). É reação, não emoção nova
+// (o núcleo 1.4.0 diz que rosto de momento não vira emoção). Aparece quando o valor digitado foge muito do normal.
+export const ROSTO_ESPANTADO = Object.freeze([
+  Object.freeze(['(⊙_⊙)', '(⊙_⊙)!', '(◎_◎)', '(⊙_⊙)!!']),
+  Object.freeze(['(°ロ°)', '(°ロ°)!', '(°ロ°)‼', '(°ロ°)']),
+  Object.freeze(['Σ(°△°)', 'Σ(°△°)!', 'Σ(°△°)', 'Σ(⊙△⊙)']),
+  Object.freeze(['(O_O)', '(O_O)💸', '(o_O)', '(O_O)!']),
+  Object.freeze(['(゜o゜)', '(゜o゜)?!', '(゜O゜)', '(゜o゜)']),
+]);
+
+export function rostoEspantado(rng = Math.random) {
+  const quadros = ROSTO_ESPANTADO[Math.floor(rng() * ROSTO_ESPANTADO.length)] || ROSTO_ESPANTADO[0];
+  return { emo: 'espantado', nome: 'espantado', cor: '#ffb020', bg: 'rgba(46,32,6,0.96)', fr: 420, per: 900, amp: 1.2, quadros, mistura: false };
+}
+
 export function rostoAnalista(rng = Math.random) {
   const quadros = ROSTO_ANALISTA[Math.floor(rng() * ROSTO_ANALISTA.length)] || ROSTO_ANALISTA[0];
   return { emo: 'analista', nome: 'analista', cor: '#3ad4ff', bg: 'rgba(8,34,46,0.96)', fr: 900, per: 2600, amp: 0.3, quadros, mistura: false };
