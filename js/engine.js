@@ -485,7 +485,7 @@ export function sumInRange(list, { from, to }, filter = () => true) {
 }
 
 /** Previsão do mês no ritmo atual (só faz sentido para o mês corrente). */
-export function forecastMonth(expenses, month, today = toISODate()) {
+export function forecastMonth(expenses, month, today = toISODate(), compromissos = []) {
   const spent = spentIn(expenses, month);
   const total = daysInMonth(month);
   const day = monthKey(today) === month ? Number(today.slice(8, 10)) : total;
@@ -494,7 +494,13 @@ export function forecastMonth(expenses, month, today = toISODate()) {
   const fixos = expenses.filter(e => e.month === month && e.compromissoId).reduce((s, e) => s + valorProprio(e), 0);
   const variaveis = spent - fixos;
   const perDay = day > 0 ? variaveis / day : 0;
-  return { spentCents: spent, fixosCents: fixos, perDayCents: Math.round(perDay), projectedCents: Math.round(fixos + perDay * total), day, daysTotal: total };
+  // P9 (vistoria do JF, 12/11): conta fixa e assinatura do mês que ainda não caíram (ex.: cobrança no cartão lá pelo
+  // dia 20) já entram na previsão, em vez de aparecerem de surpresa no fim do mês. Só no mês atual.
+  const pendentesCents = monthKey(today) === month
+    ? situacaoCompromissos(compromissos, expenses, today).filter(c => c.noMes && c.status !== 'pago').reduce((t, c) => t + c.faltaCents, 0)
+    : 0;
+  return { spentCents: spent, fixosCents: fixos, pendentesCents, perDayCents: Math.round(perDay),
+    projectedCents: Math.round(fixos + perDay * total) + pendentesCents, day, daysTotal: total };
 }
 
 const SEVERITY = { alta: 3, media: 2, baixa: 1 };
@@ -586,6 +592,15 @@ export function analyze({ expenses, incomes = [], categories, accounts = [], com
   if (velha.length) {
     const dias = Math.floor(Math.max(...velha.map(a => (Date.parse(`${today}T12:00:00`) - a.balanceAt) / 86_400_000)));
     out.push({ type: 'confira_banco', severity: 'baixa', accountName: velha.map(accountLabel).join(', '), days: dias });
+  }
+
+  // Auditor de assinaturas (P9, 12/11): na primeira semana do mês, pergunta se UMA assinatura ainda vale a pena
+  // (vai revezando mês a mês). Só pergunta: quem decide cancelar é a pessoa.
+  const assinaturas = compromissos.filter(c => c.ativo && c.tipo === 'assinatura').sort((a, b) => b.valorCents - a.valorCents);
+  if (assinaturas.length && Number(today.slice(8, 10)) <= 7) {
+    const c = assinaturas[Number(month.slice(5, 7)) % assinaturas.length];
+    out.push({ type: 'auditor_assinatura', severity: 'baixa', compromissoId: c.id, nome: c.nome, valorCents: c.valorCents,
+      anoCents: Math.round((c.valorCents * 12) / (c.cadaMeses || 1)) });
   }
 
   return out.sort((a, b) => SEVERITY[b.severity] - SEVERITY[a.severity]);

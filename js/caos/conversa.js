@@ -67,6 +67,26 @@ function acharPeriodo(t) {
   return 'mes';
 }
 
+/** Data de um lançamento atrasado: "ontem", "anteontem", "dia 10" (do mês atual, ou do anterior se ainda não chegou). */
+export function dataDoTexto(t, today) {
+  const menos = n => { const d = new Date(`${today}T12:00:00`); d.setDate(d.getDate() - n); return toISODate(d); };
+  if (/\banteontem\b/.test(t)) return menos(2);
+  if (/\bontem\b/.test(t)) return menos(1);
+  const m = t.match(/\bdia (\d{1,2})\b/);
+  if (m) {
+    const dia = Number(m[1]);
+    const mes = Number(today.slice(8, 10)) >= dia ? today.slice(0, 7) : shiftMonth(today.slice(0, 7), -1);
+    const ultimo = new Date(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0).getDate();
+    if (dia >= 1 && dia <= ultimo) return `${mes}-${String(dia).padStart(2, '0')}`;
+  }
+  return today;
+}
+
+function avisoDaData(data, today) {
+  if (data === today) return null;
+  return `Vou anotar com a data de ${Number(data.slice(8, 10))}/${Number(data.slice(5, 7))}.`;
+}
+
 function acharValor(t) {
   const m = t.match(/(?:r\$\s?)?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(reais|real|conto|pila|r\$)?/);
   return m ? parseAmount(m[1]) : null;
@@ -195,7 +215,8 @@ export function entender(texto, { categories = [], anterior = null } = {}) {
 }
 
 function entenderSimples(t, { categories = [] } = {}) {
-  const r = { t, categoria: acharCategoria(t, categories), periodo: acharPeriodo(t), valor: acharValor(t), fonte: acharFonte(t) };
+  // "dia 10" é data, não valor (P9, "esqueci de lançar": "gastei 50 no mercado dia 10")
+  const r = { t, categoria: acharCategoria(t, categories), periodo: acharPeriodo(t), valor: acharValor(t.replace(/\bdia \d{1,2}\b/g, ' ')), fonte: acharFonte(t) };
   const pergunta = /\b(quanto|qual|quais|onde|como|tive|teve|tenho|vai|posso|consigo|algum|alguma)\b|\?/.test(t);
 
   if (!t) return { ...r, intent: 'nao_entendi' };
@@ -206,6 +227,10 @@ function entenderSimples(t, { categories = [] } = {}) {
     // Anotação curta, sem verbo, do jeito de quem anota num papel: "uber 30", "50 no posto" (achado do Gemini, 06/11)
     const curtinha = t.split(' ').length <= 5 && !pergunta && !/\b(meta|guardei|juntei|poupei|investi)\b/.test(t);
     if (curtinha && (r.categoria || descricaoDe(t) || /^[a-z]+ \d/.test(t) || /^\d+([.,]\d+)? [a-z]/.test(t))) return { ...r, intent: 'registrar_gasto' };
+  }
+  // "Esqueci de lançar" (P9, vistoria do JF): um sustinho de brincadeira e as perguntas pra anotar
+  if (/\b(esqueci|esqueceu|esquecemos) de (lancar|anotar|colocar|registrar|botar|por)\b|\b(nao|n) (lancei|anotei|registrei)\b/.test(t)) {
+    return { ...r, intent: 'esqueci_de_lancar' };
   }
   // Gasto sem valor (12/11, vistoria do JF): "gastei não sei quanto de internet" → ele pergunta quanto foi
   const tSemNaoSei = t.replace(/\bnao sei (quanto|o valor|direito)\b/g, '');
@@ -379,6 +404,8 @@ const CONTA_DE = { credito: a => a.tipo === 'cartao', pix: a => a.tipo !== 'cart
 /** Tira da descrição as palavras do pagamento (pix, crédito, 3x, nome do banco). */
 function limparPagamento(desc, accounts = []) {
   if (!desc) return desc;
+  desc = desc.replace(/\b(dia \d{1,2}|anteontem|ontem|hoje)\b/gi, ' ').replace(/\bdia\s*$/i, ' ').replace(/\s+/g, ' ').trim();
+  if (!desc) return null;
   const bancos = new Set(accounts.flatMap(a => [a.bank, a.nickname]).filter(Boolean).map(norm));
   const LIGA = /^(no|na|de|do|da|em|a|com|pelo|pela|e)$/;
   const palavras = desc.split(/\s+/);
@@ -514,8 +541,9 @@ export function explicarMelhor(anterior, dados, today = toISODate()) {
     return `Vou por partes. ${base} 2) Já saiu: ${formatBRL(a.gastosCents)}. 3) Ainda falta pagar de contas fixas: ${formatBRL(a.compPendentesCents)}. 4) Planos que você anotou: ${formatBRL(a.planosPendentesCents)}. A conta é: ${formatBRL(a.baseCents)} − ${formatBRL(a.gastosCents)} − ${formatBRL(a.compPendentesCents)} − ${formatBRL(a.planosPendentesCents)}. ${resultado} Qual parte ficou confusa?`;
   }
   if (intent === 'previsao') {
-    const f = forecastMonth(expenses, mes, today);
-    return `Vou por partes. Até hoje (dia ${f.day} de ${f.daysTotal}) você gastou ${formatBRL(f.spentCents)}. Tirando as contas fixas (${formatBRL(f.fixosCents)}), dá uma média de ${formatBRL(f.perDayCents)} por dia. Se continuar nesse ritmo até o dia ${f.daysTotal}, o mês fecha perto de ${formatBRL(f.projectedCents)}. É uma estimativa: se você gastar menos nos próximos dias, ela cai.`;
+    const f = forecastMonth(expenses, mes, today, dados.compromissos || []);
+    const pend = f.pendentesCents ? ` Somei também ${formatBRL(f.pendentesCents)} de contas fixas e assinaturas que ainda não caíram (tipo a que cobra lá pelo dia 20).` : '';
+    return `Vou por partes. Até hoje (dia ${f.day} de ${f.daysTotal}) você gastou ${formatBRL(f.spentCents)}. Tirando as contas fixas (${formatBRL(f.fixosCents)}), dá uma média de ${formatBRL(f.perDayCents)} por dia.${pend} Se continuar nesse ritmo até o dia ${f.daysTotal}, o mês fecha perto de ${formatBRL(f.projectedCents)}. É uma estimativa: se você gastar menos nos próximos dias, ela cai.`;
   }
   if (['gasto_total', 'gasto_categoria', 'maior_gasto', 'onde_gastei'].includes(intent)) {
     const s = summarizeMonth(expenses, categories, mes);
@@ -575,9 +603,9 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         || ['contas', 'moradia', 'streaming'].includes(cat?.id);
       return {
         gatilho: 'proposta_registro',
-        dica: recorrente ? 'Isso parece conta de todo mês. Se for, cadastra em 📅 Mês → Contas fixas que eu passo a lembrar do vencimento e já entra no planejamento.' : null,
+        dica: [avisoDaData(dataDoTexto(intencao.t, today), today), recorrente ? 'Isso parece conta de todo mês. Se for, cadastra em 📅 Mês → Contas fixas que eu passo a lembrar do vencimento e já entra no planejamento.' : null].filter(Boolean).join(' ') || null,
         vars: { valor: formatBRL(intencao.valor), categoria: cat?.name ?? 'Outros' },
-        acao: { tipo: 'registrar_gasto', amountCents: intencao.valor, categoryId: cat?.id ?? 'outros', date: today,
+        acao: { tipo: 'registrar_gasto', amountCents: intencao.valor, categoryId: cat?.id ?? 'outros', date: dataDoTexto(intencao.t, today),
           note: desc ? desc[0].toUpperCase() + desc.slice(1) : '', ...lerPagamento(intencao.t, dados.accounts) },
         aprendeu: !!aprendida,
         pagamento: true,
@@ -585,6 +613,12 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
     }
     case 'pagamento_resposta':
       return intencao.resposta;
+    case 'esqueci_de_lancar':
+      return {
+        fato: 'Esqueceu?! Quase caí da cadeira aqui. Brincadeira: acontece com todo mundo, e eu não conto pra ninguém. Me fala três coisas: quanto foi, em quê e quando. Tipo "gastei 50 no mercado ontem" ou "paguei 120 de luz dia 10".',
+        cru: true,
+        sugestoes: ['Gastei ontem', 'Foi no dia 10', 'Foi semana passada'],
+      };
     case 'gasto_sem_valor': {
       const desc = descricaoDe(intencao.t);
       const doQue = desc ? ` de ${desc}` : intencao.categoria ? ` em ${intencao.categoria.name}` : '';
@@ -716,10 +750,11 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       };
     }
     case 'previsao': {
-      const f = forecastMonth(expenses, mes, today);
+      const f = forecastMonth(expenses, mes, today, compromissos);
       const s = summarizeMonth(expenses, categories, mes);
       const inc = incomeIn(incomes, mes);
       let fato = `No ritmo atual (${formatBRL(f.perDayCents)} por dia), o mês deve fechar em ${formatBRL(f.projectedCents)}.`;
+      if (f.pendentesCents) fato += ` Já contei ${formatBRL(f.pendentesCents)} de contas fixas e assinaturas que ainda vão cair este mês.`;
       if (s.budgetTotalCents) {
         // compara só o que tem limite com o orçamento
         const projBud = Math.round((s.budgetedSpentCents / Math.max(1, f.day)) * f.daysTotal);

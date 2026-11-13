@@ -1288,6 +1288,32 @@ Object.assign(GERADORES, {
       ],
     },
   },
+  // Auditor de assinaturas (P9, 12/11): só pergunta, com o número do ano; quem decide é a pessoa
+  auditor_assinatura: {
+    moldes: ['{abre} {fato} {fecho}'],
+    abre: {
+      geral: ['Auditoria rápida:', 'Pergunta sincera:', 'Hora da faxina:', 'Começo de mês, pergunta de sempre:', 'Sem julgamento:'],
+      temNome: ['{nome}, auditoria rápida:', '{nome}, pergunta sincera:', 'Ei, {nome}:', '{nome}, sem julgamento:', '{nome}, hora da faxina:'],
+    },
+    fato: {
+      geral: [
+        'você ainda usa {conta}? São {valor} por mês, {ano} por ano.',
+        '{conta} custa {valor} por mês. No ano, dá {ano}.',
+        'em um ano, {conta} leva {ano}. Ainda faz sentido?',
+        '{conta} ({valor}) ainda está valendo a pena?',
+        'quanto você usou {conta} no último mês? Ela custa {ano} por ano.',
+      ],
+    },
+    fecho: {
+      geral: [
+        'Se não usa, cancelar é dinheiro que volta.',
+        'Se usa bastante, ótimo: segue o jogo.',
+        'Quem decide é você; eu só faço a conta.',
+        'Às vezes dá pra pausar e voltar depois.',
+        'Assinatura esquecida é o vazamento mais silencioso.',
+      ],
+    },
+  },
   confira_banco: {
     moldes: ['{abre} {fato} {fecho}'],
     abre: {

@@ -34,7 +34,7 @@ async function chamar(base, rota, corpo) {
 export function resumoAgregado(dados, today = toISODate()) {
   const mes = monthKey(today);
   const s = summarizeMonth(dados.expenses, dados.categories, mes);
-  const f = forecastMonth(dados.expenses, mes, today);
+  const f = forecastMonth(dados.expenses, mes, today, dados.compromissos || []);
   return {
     mes,
     dia: Number(today.slice(8, 10)),

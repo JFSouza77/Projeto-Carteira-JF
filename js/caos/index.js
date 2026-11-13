@@ -12,7 +12,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '1.18.0';
+export const CAOS_VERSAO = '1.19.0';
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -22,7 +22,7 @@ export { IDENTIDADE, resumoIdentidade } from './identidade.js';
 // Prioridade: só uma fala por reação, a mais importante (para não virar spam).
 const PRIORIDADE = {
   categoria_estourada: 50, compromisso_atrasado: 49, conta_negativa: 48, cartao_limite: 47, mes_negativo: 46, cartao_vence: 45, compromisso_vence: 44,
-  orcamento_80: 40, mes_verde: 35, plano_do_mes: 25, confira_banco: 9,
+  orcamento_80: 40, mes_verde: 35, plano_do_mes: 25, confira_banco: 9, auditor_assinatura: 9,
   ritmo_alto: 30, ofensiva_marco: 28, racha_cadastrada: 27, a_receber: 22, delivery_repetido: 20, entrada_cadastrada: 15, gasto_cadastrado: 10, sem_registro: 8, boas_vindas: 5,
 };
 // Dias especiais (núcleo): todos com a mesma prioridade (logo acima das boas-vindas) e uma vez por dia
@@ -41,6 +41,7 @@ const COOLDOWN = {
   cartao_limite: 12 * 3_600_000,
   cartao_vence: 12 * 3_600_000,
   confira_banco: 3 * 24 * 3_600_000,
+  auditor_assinatura: 7 * 24 * 3_600_000, // uma vez na semana do começo do mês
   a_receber: 24 * 3_600_000,
 };
 const RADAR_COOLDOWN = 6 * 3_600_000;
@@ -142,7 +143,7 @@ function varsDoEvento(ev) {
     mes: ev.monthName ? ev.monthName[0].toUpperCase() + ev.monthName.slice(1) : null,
     economia: r(ev.savedCents), previsto: r(ev.projectedCents), porDia: r(ev.perDayCents),
     orcamento: r(ev.budgetCents), entradas: r(ev.incomeCents), gastos: r(ev.totalCents),
-    quem: ev.quem, conta: ev.accountName ?? ev.nome, saldo: r(ev.balanceCents), dia: ev.dia, meta: ev.metaNome,
+    ano: r(ev.anoCents), quem: ev.quem, conta: ev.accountName ?? ev.nome, saldo: r(ev.balanceCents), dia: ev.dia, meta: ev.metaNome,
     quando: ev.type === 'compromisso_vence' || ev.type === 'cartao_vence'
       ? (ev.days === 0 ? 'hoje' : ev.days === 1 ? 'amanhã' : `em ${ev.days} dias (dia ${ev.dia})`) : null,
   };
@@ -339,6 +340,7 @@ function nomeAlerta(a) {
     case 'confira_banco': return `conferir o saldo de ${a.accountName}`;
     case 'a_receber': return `${formatBRL(a.totalCents)} a receber`;
     case 'cartao_limite': return `${a.accountName} com ${a.pct}% do limite`;
+    case 'auditor_assinatura': return `${a.nome} ainda vale a pena?`;
     case 'cartao_vence': return `fatura do ${a.accountName} vence ${a.days === 0 ? 'hoje' : a.days === 1 ? 'amanhã' : `em ${a.days} dias`}`;
     default: return a.type;
   }

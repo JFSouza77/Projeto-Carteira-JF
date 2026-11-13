@@ -47,3 +47,34 @@ test('"não entendi" sem conversa antes pede o assunto', () => {
   const [e] = papo(['não entendi'], dados());
   assert.match(e.texto, /me diz o quê|Qual parte/);
 });
+
+// ---- P9 (C.A.O.S. 1.19.0): esqueci de lançar, data no registro, previsão com o que ainda vai cair, auditor ----
+import { dataDoTexto } from '../js/caos/conversa.js';
+import { createCompromisso, analyze, forecastMonth } from '../js/engine.js';
+
+test('data do lançamento atrasado: ontem, anteontem, dia N (mês anterior se ainda não chegou)', () => {
+  assert.equal(dataDoTexto('gastei 50 ontem', '2026-11-13'), '2026-11-12');
+  assert.equal(dataDoTexto('gastei 50 anteontem', '2026-11-01'), '2026-10-30');
+  assert.equal(dataDoTexto('paguei 120 de luz dia 10', '2026-11-13'), '2026-11-10');
+  assert.equal(dataDoTexto('dia 20 gastei 35', '2026-11-13'), '2026-10-20');
+  assert.equal(dataDoTexto('gastei 35', '2026-11-13'), '2026-11-13');
+});
+
+test('"esqueci de lançar" pergunta quanto, em quê e quando; o registro sai com a data e sem "dia" na descrição', () => {
+  const [p, r] = papo(['esqueci de lançar uma coisa', 'paguei 120 de luz dia 10'], dados());
+  assert.match(p.texto, /quanto foi, em quê e quando/);
+  assert.equal(r.acao.date, '2026-11-10');
+  assert.equal(r.acao.amountCents, 12000);
+  assert.doesNotMatch(r.acao.note, /dia/i);
+  assert.match(r.texto, /data de 10\/11/);
+});
+
+test('previsão já conta a assinatura que ainda vai cair; auditor pergunta no começo do mês', () => {
+  const comp = createCompromisso({ nome: 'Streaming Teste', valorCents: 3990, tipo: 'assinatura', dia: 20, categoryId: 'streaming' }, { categories: cats, now: new Date(2026, 10, 1) });
+  const f = forecastMonth([], '2026-11', '2026-11-13', [comp]);
+  assert.equal(f.pendentesCents, 3990);
+  assert.equal(f.projectedCents, 3990);
+  const al = analyze({ expenses: [], categories: cats, compromissos: [comp] }, '2026-11-03').find(a => a.type === 'auditor_assinatura');
+  assert.equal(al?.anoCents, 47880);
+  assert.ok(!analyze({ expenses: [], categories: cats, compromissos: [comp] }, '2026-11-15').some(a => a.type === 'auditor_assinatura'));
+});
