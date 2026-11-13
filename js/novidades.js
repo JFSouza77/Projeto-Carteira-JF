@@ -12,7 +12,8 @@ export const NOVIDADES = Object.freeze([
     nome: 'Alfa 2.0',
     t: 'O app entra na fase 2.0: cara nova, gráficos vivos e neon. Esta é a Alfa, a primeira etapa.',
     itens: [
-      '🏦 Contas mais organizadas: cada conta com a cor do banco e botões coloridos pelo que fazem.',
+      '🏦 Cores dos bancos de verdade: C6 preto, Nubank roxo, BB amarelo, Itaú laranja e muitos outros.',
+      '🗂️ Contas mais organizadas: cada conta com a cor do banco e botões coloridos pelo que fazem.',
       '🍩 Rosca em neon: as categorias acendem como o resto do app, e a escolhida brilha mais.',
       '👆 Botões mais vivos: respondem ao toque e acendem quando você passa o cursor.',
     ],

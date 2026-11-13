@@ -11,11 +11,27 @@ test('toda categoria padrão tem cor de variável do CSS', () => {
   assert.equal(corForma('credito'), 'var(--violet)');
 });
 
-test('banco: cor, apoio e sigla', () => {
-  assert.deepEqual(temaBanco('Nubank'), { cor: 'var(--violet)', apoio: 'var(--caos)', sigla: 'NU' });
-  assert.equal(temaBanco('Banco do Brasil').sigla, 'BD');
-  assert.equal(temaBanco('Banco do Brasil').cor, 'var(--accent)');
-  assert.equal(temaBanco('Carteira').sigla, 'R$');
-  assert.equal(temaBanco('Banestes').cor, 'var(--indigo)');
+test('banco: cores e siglas perto das do próprio banco', () => {
+  assert.deepEqual(temaBanco('C6 Bank'), { fundo: '#1E1E1E', letra: '#FFFFFF', cor: '#8A8F98', apoio: '#C9CDD3', sigla: 'C6' });
+  assert.equal(temaBanco('Nubank').fundo, '#820AD1');
+  assert.equal(temaBanco('Nubank').sigla, 'nu');
+  assert.equal(temaBanco('Itaú Cartões').fundo, '#EC7000');
+  assert.equal(temaBanco('Banco do Brasil').sigla, 'BB');
+  assert.equal(temaBanco('Inter').fundo, '#FF7A00');
+  assert.equal(temaBanco('Carteira (dinheiro vivo)').sigla, 'R$');
+  assert.equal(temaBanco('Banestes').fundo, '#00539F');
+  // não confunde: "Banco Pan" não vira Santander nem Inter; "Interessante" não vira Inter
+  assert.equal(temaBanco('Banco Pan').sigla, 'pan');
+  assert.equal(temaBanco('Banco Genial').fundo, 'var(--indigo)');
+  assert.equal(temaBanco('Banco Genial').sigla, 'BG');
   assert.equal(temaBanco('').sigla, 'CO');
+});
+
+test('todo banco da lista tem sigla curta e cor', async () => {
+  const { BANKS } = await import('../js/engine.js');
+  for (const b of BANKS) {
+    const t = temaBanco(b);
+    assert.ok(t.sigla.length >= 1 && t.sigla.length <= 4, b);
+    assert.ok(t.fundo && t.letra && t.cor, b);
+  }
 });

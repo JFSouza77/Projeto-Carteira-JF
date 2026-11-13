@@ -1548,7 +1548,7 @@ function renderContas() {
     const temDinheiro = g.contas.some(a => a.tipo !== 'cartao');
     const tema = temaBanco(g.bank === 'Outro' ? (g.contas[0]?.nickname || 'Outro') : g.bank);
     return `
-    <li class="banco-grupo" style="--banco-cor:${tema.cor};--banco-apoio:${tema.apoio}">
+    <li class="banco-grupo" style="--banco-cor:${tema.cor};--banco-apoio:${tema.apoio};--banco-fundo:${tema.fundo};--banco-letra:${tema.letra}">
       <div class="banco-head"><strong><span class="banco-sigla" aria-hidden="true">${esc(tema.sigla)}</span>${esc(g.bank === 'Outro' ? 'Outros' : g.bank)}</strong>${temDinheiro && g.contas.length > 1 ? `<span class="num muted">${formatBRL(dinheiro)} no total</span>` : ''}</div>
       <ul class="banco-partes">${g.contas.map(a => (a.tipo === 'cartao' ? itemCartao(a) : itemConta(a))).join('')}</ul>
     </li>`;
