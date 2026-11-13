@@ -29,10 +29,16 @@ test('fatura aberta, fechada, limite usado e datas', () => {
   assert.equal(f.pct, 75);
   assert.equal(f.disponivelCents, 2500);
   assert.equal(f.diasParaVencer, 3);
-  // depois do vencimento, a fechada sai do limite usado
+  // vencer não é pagar (achado do GPT, 12/11): depois do vencimento a fechada continua no limite e fica atrasada
   const depois = faturaDoCartao(cartao, gastos, '2026-11-06');
-  assert.equal(depois.fechadaCents, 0);
-  assert.equal(depois.usadoCents, 4500);
+  assert.equal(depois.fechadaCents, 3000);
+  assert.equal(depois.usadoCents, 7500);
+  assert.equal(depois.atrasada, true);
+  // só sai quando a pessoa marca "Paguei a fatura"
+  const paga = faturaDoCartao({ ...cartao, faturaPagaAte: depois.ultimoFechamento }, gastos, '2026-11-06');
+  assert.equal(paga.fechadaCents, 0);
+  assert.equal(paga.usadoCents, 4500);
+  assert.equal(paga.atrasada, false);
 });
 
 test('fechamento dia 31 em fevereiro vira o último dia', () => {

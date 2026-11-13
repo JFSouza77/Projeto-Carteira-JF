@@ -55,8 +55,15 @@ export async function entrar(base, { apelido, senha, criar = false }) {
   const { acesso, chave } = await derivarChaves(apelido, senha);
   const r = await chamar(base, criar ? '/conta/criar' : '/conta/entrar', { apelido, senha: acesso });
   await guardar({ apelido: r.apelido, token: r.token, versao: 0, ultimaSync: null, cripto: 1 }, chave);
+  // os dados deste aparelho passam a ser desta conta (quem confere troca de conta é o app, antes de chamar aqui)
+  await db.setMeta('contaDona', r.apelido);
   await db.marcarTudo();
   return { apelido: r.apelido, criador: r.criador === true };
+}
+
+/** De qual conta são os dados deste aparelho (null = nunca entrou em conta). */
+export async function contaDona() {
+  return db.getMeta('contaDona', null);
 }
 
 export async function sair(base) {
@@ -99,7 +106,9 @@ export async function sincronizar(base) {
     await db.aplicarRemotas(aberto.ok);
     recebidas += aberto.ok.length;
     ruins += aberto.ruins;
-    c = { ...c, versao: r.versao, ultimaSync: Date.now() };
+    // registro que não abriu (achado do GPT, 12/11): não avança o cursor, pra ele ser pedido de novo na próxima vez
+    // (o que abriu é reaplicado sem problema: aplicar a mesma mudança duas vezes dá o mesmo resultado)
+    c = { ...c, versao: aberto.ruins ? (c.versao || 0) : r.versao, ultimaSync: Date.now() };
     await guardar(c);
   }
   return { recebidas, enviadas: pendentes.length, ruins };

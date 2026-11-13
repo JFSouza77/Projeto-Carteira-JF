@@ -7,6 +7,25 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '1.24',
+    data: '13/11/2026',
+    nome: 'Gráficos e Faxina',
+    t: 'Gráficos no Início e uma faxina de bugs que o ChatGPT e o Gemini acharam.',
+    itens: [
+      '📈 Últimos 6 meses: linha de gastos e entradas no Início, pra ver a tendência de cara.',
+      '🔥 Calendário de calor: os dias do mês em que você mais gastou ficam mais acesos.',
+      '💳 Paguei a fatura: a fatura vencida só sai do limite quando você marca que pagou.',
+      '🧾 O que tenho pra pagar: a fatura do cartão entra na conta sozinha.',
+      '🔐 Troca de conta segura: entrar em outra conta pergunta antes de levar os dados do aparelho.',
+    ],
+    qol: [
+      '🏦 Entrada com banco: "recebi 1500 de salário no Nubank" já soma no saldo do Nubank.',
+      '🔢 Números na descrição: "gastei 30 no 99" guarda o 99.',
+      '📆 Dia 31: em mês de 30 dias, vira o último dia do mês.',
+      '☁️ Sincronização: um registro que falhou ao abrir é pedido de novo, em vez de ficar perdido.',
+    ],
+  },
+  {
     v: '1.23',
     data: '13/11/2026',
     nome: 'Achou, Achou',
