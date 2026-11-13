@@ -13,8 +13,10 @@ Atualizada pelo Wally a cada rodada.
 
 ## Próxima rodada (sexta 13/11)
 
-**Repaginada do AI Studio** (plano em `docs/Repaginada_AI_Studio.md`): fase 1 (layout de computador e cara nova) e fase 2
-(transferência, ritmo do mês, extrato com filtros e CSV, simulador, Cobrar, Estúdio & Professor).
+**Repaginada do AI Studio** (plano em `docs/Repaginada_AI_Studio.md`): fase 1 no computador feita (1.25); fase 2 feita na
+madrugada de 13/11 (1.26 e 1.27: transferência, ritmo, barras, filtros, CSV, Cobrar, simulador, Estúdio, calendário da
+ofensiva, editar lançamento). Falta: C.A.O.S. reagindo enquanto preenche, fase 1 no celular (cabeçalho com rostinho e 4
+cartões), melhorias do simulador (planos a adiar, limite do cartão), filtro por forma no extrato e a fase 3.
 
 0. Núcleo único, parte 3: temperamento do dia, estabilizador e paciência (emoções 7 → 10 já foram, 1.20).
 1. P12: revisão de cada tela, **depois** da repaginada que o JF vai trazer do Google AI Studio (12/11).
