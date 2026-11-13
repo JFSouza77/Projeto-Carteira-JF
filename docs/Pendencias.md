@@ -28,7 +28,8 @@ Atualizada pelo Wally a cada rodada.
   texto corrido continua na fonte do sistema.
 - **Cores:** o JF quer variedade, sem carnaval. Cada cor tem um significado fixo e não entra cor só de enfeite. Na
   categoria, o ícone vai na cor dela; a paleta conferida está no recado `lidos/2026-11-13_respostas_da_rodada.md`.
-- **"Me ajuda" no cabeçalho**, e o cabeçalho igual em todas as telas (junta com o bug 2 acima).
+- **Cabeçalho igual em todas as telas** (ideia do Code). O **"Me ajuda" NÃO vai pro cabeçalho**: vale o que o JF
+  definiu (bug 2 acima: um formato só, dá pra arrastar, toque abre o menu de ajuda rápida). Pedido do JF vem antes do Code.
 - **Organizar o código como o Perfil:** 6 etapas, uma por PR, sem mudar comportamento:
   1. `js/estado.js`;
   2. uma tela por arquivo;
