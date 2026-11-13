@@ -2,6 +2,7 @@
 // REGRA: o narrador NUNCA altera dados. Não importa db.js, não toca em DOM nem em storage.
 // Recebe cópias congeladas e devolve { fala, memoria } novos; quem grava a memória é o app.
 
+import { completarOfertas } from './ofertas.js';
 import { formatBRL, INCOME_SOURCES, daysInMonth, toISODate, idadeDe, faixaEtaria, ehAniversario } from '../engine.js';
 import { congelar, protegido } from './espinha.js';
 import { NUCLEO } from './nucleo.js';
@@ -12,7 +13,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '2.0.1'; // núcleo 1.3.0 (13/11): regra do 9, número próprio do C.A.O.S.
+export const CAOS_VERSAO = '2.0.2'; // núcleo 1.3.0 (13/11): regra do 9, número próprio do C.A.O.S.
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -235,7 +236,7 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   // Pergunta ou pedido diferente não completa nada (o rascunho só cai fora).
   const tx = String(texto).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   const cancela = /^(cancela|cancelar|deixa|deixa pra (la|depois)|esquece|nao quero|depois)\b/.test(tx);
-  if (espera && ['esqueci', 'valor_gasto', 'desc_gasto'].includes(espera.tipo) && cancela) {
+  if (espera && ['esqueci', 'valor_gasto', 'desc_gasto', 'ofertas'].includes(espera.tipo) && cancela) {
     intencao = { ...intencao, intent: 'pagamento_resposta', resposta: { fato: 'Tranquilo, não anotei nada. Quando lembrar, é só me falar.', cru: true, sugestoes: [] }, palpite: false };
   } else if (espera?.tipo === 'esqueci' && ['nao_entendi', 'registrar_gasto', 'gasto_sem_valor'].includes(intencao.intent) && !/\?/.test(tx)) {
     const t2 = /^(gastei|paguei|comprei)\b/.test(intencao.t) ? intencao.t : `gastei ${intencao.t}`;
@@ -252,6 +253,11 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
     const reais = (espera.valor / 100).toFixed(2).replace('.', ',');
     const junto = entender(`gastei ${reais} ${texto}`, { ...d, anterior: null });
     if (junto.valor) intencao = { ...junto, intent: 'registrar_gasto', palpite: false };
+  }
+  // ofertas (13/11): "amazon 10x sem juros, shopee frete 80" completa a comparação que está aberta
+  if (espera?.tipo === 'ofertas' && !cancela && intencao.intent !== 'comparar_ofertas') {
+    const novas = completarOfertas(espera.ofertas, tx.replace(/%/g, ' porcento '));
+    if (novas) intencao = { ...intencao, intent: 'comparar_ofertas', ofertas: novas, produto: espera.produto, palpite: false };
   }
   if (espera?.tipo === 'pagamento') {
     const resposta = continuarPagamento(espera.acao, texto, d);
