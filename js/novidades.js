@@ -12,7 +12,7 @@ export const NOVIDADES = Object.freeze([
     nome: 'Repaginada',
     t: 'O app entra na fase 2.0: cara nova, gráficos vivos e neon. Esta é a Alfa, a primeira etapa.',
     itens: [
-      '🏷️ C.A.O.S. compara ofertas: diga os preços de cada loja e ele acha a melhor compra pra você.',
+      '🏷️ C.A.O.S. compara ofertas: escreva os preços ou mande o print; ele põe os óculos de analista e acha a melhor compra.',
       '🔍 Banco por dentro: toque no nome do banco e veja cada conta e de onde vem o limite do cartão.',
       '🐷 Cofrinhos completos: quanto rende (% do CDI) e se o dinheiro é seu ou de outra pessoa.',
       '🏦 Cores dos bancos de verdade: C6 preto, Nubank roxo, BB amarelo, Itaú laranja e muitos outros.',
@@ -26,7 +26,8 @@ export const NOVIDADES = Object.freeze([
       '📅 CDI com data: o raio-X mostra quando o CDI foi informado e avisa se ficou velho.',
       '⚖️ Leis do C.A.O.S.: no Estúdio, cada lei agora tem a frase da Carteira.',
       '➕ Abrir e fechar: os cartões que abrem ganharam um botão + neon que vira ×.',
-      '📏 Tela firme: a página não escorrega mais pro lado ao trocar de aba.',
+      '📏 Tela firme: a página não escorrega pro lado e o Estúdio não aparece mais por baixo da conversa.',
+      '💳 Cartões de loja: Cartão Amazon, Magalu, Carrefour, Renner e Riachuelo na lista de bancos.',
     ],
   },
   {

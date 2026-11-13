@@ -190,3 +190,10 @@ Pedido do JF: "a geladeira tá 3.500 no Mercado Livre, 3.400 na Amazon e 2.100 n
 - **O que ele não faz:** buscar preço na internet nem recomendar loja por conta própria. Ele só faz a conta com os números
   que a pessoa trouxe.
 - Testes: `tests/ofertas.test.js`.
+- **2.0.3 (13/11):**
+  - rosto de "modo analista" (óculos, cor ciano). Não é emoção: é o rosto do modo de trabalho;
+  - cartão da própria loja (o cartão Mercado Pago vale pro Mercado Livre), cupom e cashback entram na conta;
+  - loja nova no meio da conversa entra na comparação;
+  - oferta de uma loja só: ele guarda e pergunta (já olhou em outra loja? tem cupom? desconto no cartão da loja?);
+  - **print:** "mandar print" ou foto com uma comparação aberta. A IA online lê pela rota `/ia/ofertas`, e o resultado
+    vira a frase que a pessoa escreveria.

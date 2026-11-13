@@ -18,6 +18,12 @@ const FORMA = Object.freeze({ pix: 'var(--cyan)', credito: 'var(--violet)', debi
 // Só cor e letras: nada de logotipo. Ordem importa: a primeira regra que bate vence.
 const B = (re, sigla, fundo, letra, linha = fundo, apoio = letra) => ({ re, sigla, fundo, letra, linha, apoio });
 const BANCOS = Object.freeze([
+  // cartões de loja (13/11): antes das regras dos bancos, pra "Cartão Magalu" não virar outra coisa
+  B(/cart[aã]o amazon|^amazon/i, 'a', '#232F3E', '#FF9900', '#FF9900', '#FFC266'),
+  B(/cart[aã]o magalu|magalu|magazine luiza/i, 'M', '#0086FF', '#FFFFFF', '#2E9BFF', '#8CC8FF'),
+  B(/cart[aã]o carrefour/i, 'C', '#004E9F', '#FFFFFF', '#2B74C7', '#E1000F'),
+  B(/renner|realize/i, 'R', '#CC0000', '#FFFFFF', '#E02626', '#FF8A8A'),
+  B(/riachuelo|midway/i, 'R', '#000000', '#FFFFFF', '#8A8F98', '#C9CDD3'),
   B(/nubank|roxinho/i, 'nu', '#820AD1', '#FFFFFF', '#9B3FE0', '#C77DFF'),
   B(/ita[úu]/i, 'itaú', '#EC7000', '#0A1E5E', '#EC7000', '#FFB25B'),
   B(/bradesco/i, 'B', '#CC092F', '#FFFFFF', '#E0263F', '#FF6B81'),

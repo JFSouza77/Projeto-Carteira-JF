@@ -86,9 +86,25 @@ export function textoPorcentagem(c) {
 
 // ---------- Ofertas ----------
 /** Detalhes de pagamento de um pedaço da frase: frete, desconto no Pix/à vista, parcelas. */
+// Cartão da própria loja (JF, 13/11): às vezes a loja dá desconto pagando com o cartão dela.
+// Promoção muda toda hora: ele só pergunta e faz a conta com o número que a pessoa trouxer.
+const CARTOES_LOJA = [['mercado pago', 'Mercado Livre'], ['amazon', 'Amazon'], ['magalu', 'Magalu'], ['magazine luiza', 'Magalu'],
+  ['casas bahia', 'Casas Bahia'], ['americanas', 'Americanas'], ['carrefour', 'Carrefour'], ['shopee', 'Shopee']];
+export const lojaDoCartao = seg => {
+  const m = seg.match(/cartao (?:da |do )?([a-z ]{3,20}?)(?= \d| com| de| tem| da| dá| porcento|$|,)/);
+  if (!m) return null;
+  const achado = CARTOES_LOJA.find(([k]) => m[1].includes(k));
+  return achado ? achado[1] : (/\bda loja\b|\bdela\b/.test(seg) ? 'loja' : null);
+};
+
 function lerDetalhes(seg) {
   const d = {};
   let m;
+  // "cartão amazon 10%", "10% no cartão do mercado pago", "cartão da loja dá 5%"
+  if (/\bcartao\b/.test(seg) && (m = seg.match(new RegExp(`cartao[a-z ]{0,30}?${PCT}|${PCT}[a-z ]{0,20}?(?:no|com o) cartao`)))) d.cartaoPct = pct(m[1] || m[2]);
+  if ((m = seg.match(new RegExp(`cupom[a-z ]{0,12}?${PCT}`)))) d.cupomPct = pct(m[1]);
+  else if ((m = seg.match(new RegExp(`cupom (?:de |da |do )?(?:r\$ ?)?${NUM}`)))) d.cupomCents = valor(m[1]);
+  if (/cashback/.test(seg) && (m = seg.match(new RegExp(`cashback[a-z ]{0,12}?${PCT}|${PCT}[a-z ]{0,12}?cashback`)))) d.cashbackPct = pct(m[1] || m[2]);
   if (/frete (e )?(gratis|gratuito|zero|de graca)|sem frete/.test(seg)) d.freteCents = 0;
   else if ((m = seg.match(new RegExp(`frete (?:de |e |fica |custa |sai )?(?:r\\$ ?)?${NUM}`)))) d.freteCents = valor(m[1]);
   if ((m = seg.match(new RegExp(`(?:pix|a vista|boleto)[a-z ]{0,20}?${PCT}|${PCT}[a-z ]{0,20}?(?:no pix|a vista|no boleto)`)))) d.pixPct = pct(m[1] || m[2]);
@@ -106,6 +122,7 @@ function precoDe(seg) {
   const limpo = seg
     .replace(new RegExp(`frete (?:de |e |fica |custa |sai )?(?:r\\$ ?)?${NUM}`, 'g'), ' ')
     .replace(new RegExp(`(\\d{1,2}) ?(?:x|vezes)(?: de (?:r\\$ ?)?${NUM})?`, 'g'), ' ')
+    .replace(new RegExp(`cupom (?:de |da |do )?(?:r\\$ ?)?${NUM}`, 'g'), ' ')
     .replace(new RegExp(PCT, 'g'), ' ')
     .replace(new RegExp(`(?:no pix|a vista|no boleto)(?: sai| fica| por| custa)? (?:r\\$ ?)?${NUM}`, 'g'), ' ');
   const m = limpo.match(new RegExp(NUM));
@@ -123,7 +140,7 @@ function produtoDe(t) {
  * Precisa de pelo menos 2 lojas com preço. Devolve { produto, ofertas: [{ loja, precoCents, ...detalhes }] } ou null.
  */
 export function lerOfertas(t) {
-  const segs = t.split(/\s*[,;]\s*|\s+(?:e|ou|mas|ja)\s+(?=(?:na |no |em |pela |pelo )?[a-z0-9])/).filter(Boolean);
+  const segs = t.split(/\s*;\s*|,(?!\d)\s*|\s+(?:e|ou|mas|ja)\s+(?=(?:na |no |em |pela |pelo )?[a-z0-9])/).filter(Boolean);
   const ofertas = [];
   let ultima = null;
   for (const seg of segs) {
@@ -140,8 +157,15 @@ export function completarOfertas(ofertas, t) {
   const novas = ofertas.map(o => ({ ...o }));
   let mexeu = false;
   let anterior = null; // "amazon 10x de 380 e frete 50": o frete vale pra loja de antes
-  for (const seg of t.split(/\s*[,;]\s*|\s+e\s+(?=(?:na |no |a |o )?[a-z0-9])/)) {
-    const loja = achaLoja(seg);
+  for (const seg of t.split(/\s*;\s*|,(?!\d)\s*|\s+e\s+(?=(?:na |no |a |o )?[a-z0-9])/)) {
+    // "cartão do mercado pago 10%" vale pro Mercado Livre, mesmo sem falar o nome da loja
+    const doCartao = /\bcartao\b/.test(seg) ? lojaDoCartao(seg) : null;
+    const loja = achaLoja(seg.replace(/cartao (?:da |do )?[a-z ]{3,20}?(?= \d| com| de| tem| porcento|$)/, ' ')) || (doCartao && doCartao !== 'loja' ? doCartao : null);
+    // loja nova com preço ("e na magalu tá 3.300") entra na comparação
+    if (loja && !novas.some(o => o.loja === loja)) {
+      const preco = precoDe(seg);
+      if (preco) { novas.push({ loja, precoCents: preco, ...lerDetalhes(seg) }); anterior = novas[novas.length - 1]; mexeu = true; continue; }
+    }
     const alvo = loja ? novas.find(o => o.loja === loja)
       : (/\b(todas?|todos|nas duas|nas tres|em todas)\b/.test(seg) ? 'todas' : anterior);
     if (loja) anterior = novas.find(o => o.loja === loja) || null;
@@ -162,12 +186,20 @@ export function completarOfertas(ofertas, t) {
 export function analisarOfertas(ofertas) {
   const linhas = ofertas.map(o => {
     const frete = o.freteCents || 0;
-    const vista = (o.vistaCents ?? (o.pixPct ? o.precoCents * (1 - o.pixPct / 100) : o.precoCents)) + frete;
+    // cupom vale em cima do preço; depois vem o jeito de pagar
+    const cupom = o.cupomPct ? o.precoCents * o.cupomPct / 100 : (o.cupomCents || 0);
+    const base = Math.max(0, o.precoCents - cupom);
+    const vista = (o.vistaCents != null ? o.vistaCents - cupom : (o.pixPct ? base * (1 - o.pixPct / 100) : base)) + frete;
+    const noCartaoLoja = o.cartaoPct ? base * (1 - o.cartaoPct / 100) + frete : null;
     let parcelado = null;
-    if (o.parcelas > 1) parcelado = (o.parcelaCents ? o.parcelaCents * o.parcelas : o.precoCents) + frete;
-    const jurosCents = parcelado != null ? Math.max(0, parcelado - (o.precoCents + frete)) : 0;
-    return { ...o, vistaCents: Math.round(vista), parceladoCents: parcelado != null ? Math.round(parcelado) : null, jurosCents: Math.round(jurosCents),
-      custoCents: Math.round(vista) };
+    if (o.parcelas > 1) parcelado = (o.parcelaCents ? o.parcelaCents * o.parcelas : base) + frete;
+    const jurosCents = parcelado != null ? Math.max(0, parcelado - (base + frete)) : 0;
+    const opcoes = [['a_vista', vista], ['cartao_loja', noCartaoLoja]].filter(([, v]) => v != null);
+    const [jeito, custo] = opcoes.sort((a, b) => a[1] - b[1])[0];
+    const cashback = o.cashbackPct ? base * o.cashbackPct / 100 : 0;
+    return { ...o, vistaCents: Math.round(vista), cartaoLojaCents: noCartaoLoja != null ? Math.round(noCartaoLoja) : null,
+      parceladoCents: parcelado != null ? Math.round(parcelado) : null, jurosCents: Math.round(jurosCents), cupomOffCents: Math.round(cupom),
+      cashbackCents: Math.round(cashback), jeito, custoCents: Math.round(custo) };
   }).sort((a, b) => a.custoCents - b.custoCents);
   // "bom demais pra ser verdade": bem abaixo das outras (30% ou mais abaixo da mediana das demais)
   for (const l of linhas) {
@@ -178,7 +210,7 @@ export function analisarOfertas(ofertas) {
   }
   const confiaveis = linhas.filter(l => !l.suspeita);
   return { linhas, melhor: linhas[0], melhorConfiavel: confiaveis[0] || null, pior: linhas[linhas.length - 1],
-    temPagamento: ofertas.some(o => o.freteCents != null || o.pixPct || o.vistaCents || o.parcelas) };
+    temPagamento: ofertas.some(o => o.freteCents != null || o.pixPct || o.vistaCents || o.parcelas || o.cartaoPct || o.cupomPct || o.cupomCents) };
 }
 
 /** O texto da análise, pronto pra fala do C.A.O.S. */
@@ -189,7 +221,10 @@ export function textoOfertas(a, produto) {
     const extras = [];
     if (l.freteCents) extras.push(`com frete de ${BRL(l.freteCents)}`);
     if (l.freteCents === 0) extras.push('frete grátis');
+    if (l.cupomOffCents) extras.push(`cupom de ${BRL(l.cupomOffCents)}`);
     if (l.pixPct) extras.push(`${fmtPct(l.pixPct)} de desconto à vista`);
+    if (l.cartaoPct) extras.push(`${fmtPct(l.cartaoPct)} no cartão da loja${l.jeito === 'cartao_loja' ? ' (o melhor jeito aqui)' : ''}`);
+    if (l.cashbackCents) extras.push(`${BRL(l.cashbackCents)} de cashback`);
     if (l.parcelas > 1) extras.push(l.jurosCents ? `${l.parcelas}x de ${BRL(l.parceladoCents / l.parcelas)} = ${BRL(l.parceladoCents)}, sendo ${BRL(l.jurosCents)} de juros` : `${l.parcelas}x sem juros`);
     const dif = l.custoCents - a.melhor.custoCents;
     partes.push(`${i + 1}º ${l.loja}: ${BRL(l.custoCents)}${extras.length ? ` (${extras.join('; ')})` : ''}${dif > 0 ? `, ${BRL(dif)} a mais que ${art(a.melhor.loja)}` : ''}.`);
@@ -210,7 +245,68 @@ export function textoOfertas(a, produto) {
   }
   const juros = a.linhas.find(l => l.jurosCents > 0);
   if (juros) partes.push(`No parcelado ${art(juros.loja, 'do')} você paga ${BRL(juros.jurosCents)} só de juros: se der pra pagar à vista sem apertar o mês, compensa.`);
-  if (!a.temPagamento) partes.push('Como você vai pagar? Me conta por loja que eu refaço a conta. Tipo: "amazon 10x sem juros", "mercado livre 5% no pix", "shopee frete 80".');
+  if (!a.temPagamento) partes.push(perguntasDeCompra(a.linhas.map(l => l.loja)));
   else partes.push('Quer ver se cabe no mês? No Mês tem o "E se eu comprar?".');
   return partes.join(' ');
+}
+
+/**
+ * As perguntas de quem entende de compra (JF, 13/11): já olhou em outra loja? Tem cupom? Desconto no cartão da loja?
+ * No cartão você paga quanto? Promoção muda toda hora: ele pergunta, não afirma.
+ */
+export function perguntasDeCompra(lojas = []) {
+  const outras = ['Magalu', 'Casas Bahia', 'Mercado Livre', 'Amazon', 'KaBuM!'].filter(l => !lojas.includes(l)).slice(0, 2);
+  const cartoes = [];
+  if (lojas.includes('Amazon')) cartoes.push('a Amazon com o cartão Amazon');
+  if (lojas.includes('Mercado Livre')) cartoes.push('o Mercado Livre com o cartão Mercado Pago');
+  if (lojas.includes('Magalu')) cartoes.push('a Magalu com o cartão Magalu');
+  const q = ['Antes de fechar, me conta: como você vai pagar (Pix, à vista no cartão ou parcelado)?'];
+  if (lojas.length < 3 && outras.length) q.push(`Já olhou ${outras.length > 1 ? `na ${outras[0]} ou na ${outras[1]}` : `na ${outras[0]}`}?`);
+  q.push('Tem cupom ou cashback?');
+  q.push(cartoes.length
+    ? `Às vezes a loja dá desconto no cartão dela, tipo ${cartoes.join(' e ')}: você tem algum?`
+    : 'Às vezes a loja dá desconto no cartão dela: você tem o cartão de alguma?');
+  q.push('Me responde do jeito que for, tipo "amazon 10x sem juros", "mercado livre 5% no pix", "cartão amazon 10%", "cupom 50" ou "shopee frete 80". Ou manda o print da oferta.');
+  return q.join(' ');
+}
+
+/** "Achei essa geladeira por 3.500 no mercado livre, tá bom?": uma loja só. Guarda e pergunta o resto. */
+export function lerOfertaUnica(t) {
+  if (!/\b(oferta|promocao|preco|ta bom|esta bom|vale a pena|compensa|achei|encontrei|vi|ta por|esta por|custa|custando|caro|barato)\b/.test(t)) return null;
+  const loja = achaLoja(t);
+  const preco = loja ? precoDe(t) : null;
+  return loja && preco ? { produto: produtoDe(t), ofertas: [{ loja, precoCents: preco, ...lerDetalhes(t) }] } : null;
+}
+
+export function textoOfertaUnica(o, produto) {
+  const doQue = produto ? ` ${/a$/.test(produto) ? 'da' : 'do'} ${produto}` : '';
+  return `Anotei: ${art(o.loja)}${doQue} por ${BRL(o.precoCents)}. Pra saber se tá bom mesmo, eu preciso comparar. ${perguntasDeCompra([o.loja])}`;
+}
+
+/** O que a IA leu de um print vira a mesma frase que a pessoa escreveria (o cérebro é um só). */
+export function fraseDoPrint(lido) {
+  const reais = c => (c / 100).toFixed(2).replace('.', ',');
+  const partes = (lido?.ofertas || []).filter(o => o && o.loja && o.preco_centavos > 0).slice(0, 6).map(o => {
+    let f = `${reais(o.preco_centavos)} na ${String(o.loja).toLowerCase().slice(0, 30)}`;
+    if (o.parcelas > 1) f += ` ${o.parcelas}x${o.parcela_centavos > 0 ? ` de ${reais(o.parcela_centavos)}` : ''}${o.sem_juros ? ' sem juros' : ''}`;
+    if (o.frete_centavos === 0 && o.frete_gratis) f += ' frete gratis';
+    else if (o.frete_centavos > 0) f += ` frete ${reais(o.frete_centavos)}`;
+    if (o.desconto_pix_pct > 0) f += ` ${o.desconto_pix_pct}% no pix`;
+    return f;
+  });
+  if (!partes.length) return null;
+  const produto = lido.produto ? `oferta de ${String(lido.produto).toLowerCase().slice(0, 40)}: ` : 'oferta: ';
+  return produto + partes.join(', ');
+}
+
+/** "Li no print: Amazon, R$ 3.400,00, 10x de R$ 340,00 sem juros, frete grátis." (o que a pessoa vê) */
+export function resumoDoPrint(lido) {
+  const lista = (lido?.ofertas || []).filter(o => o && o.loja && o.preco_centavos > 0).slice(0, 6).map(o => {
+    const p = [`${o.loja}, ${BRL(o.preco_centavos)}`];
+    if (o.parcelas > 1) p.push(`${o.parcelas}x${o.parcela_centavos > 0 ? ` de ${BRL(o.parcela_centavos)}` : ''}${o.sem_juros ? ' sem juros' : ''}`);
+    if (o.frete_gratis) p.push('frete grátis'); else if (o.frete_centavos > 0) p.push(`frete ${BRL(o.frete_centavos)}`);
+    if (o.desconto_pix_pct > 0) p.push(`${fmtPct(o.desconto_pix_pct)} no Pix`);
+    return p.join(', ');
+  });
+  return lista.length ? `Li no print${lido.produto ? ` (${lido.produto})` : ''}: ${lista.join('; ')}.` : null;
 }

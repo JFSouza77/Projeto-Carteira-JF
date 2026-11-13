@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import worker, { jwtVapid, deveLembrar, agoraNoFuso, endpointValido, mandarLembretes, esquemaImagem } from '../worker.js';
+import worker, { jwtVapid, deveLembrar, agoraNoFuso, endpointValido, mandarLembretes, esquemaImagem, esquemaOfertas } from '../worker.js';
 
 // Tudo de mentira: chave falsa, API simulada (fetch trocado), nada sai pra internet.
 const ORIGEM = 'https://carteira.exemplo.dev';
@@ -237,4 +237,25 @@ test('explicar print: vai a imagem e a dúvida, volta só texto; sem KV não cha
   } finally {
     api.restaurar();
   }
+});
+
+test('ofertas: lê o print no esquema e devolve só campos limpos (13/11)', async () => {
+  const api = simularAPI({ texto: JSON.stringify({ produto: 'Geladeira 400 L', ofertas: [
+    { loja: 'Amazon', preco_centavos: 340000, parcelas: 10, parcela_centavos: 34000, sem_juros: true, frete_centavos: 0, frete_gratis: true, desconto_pix_pct: 0 },
+    { loja: '<b>Loja</b>', preco_centavos: -5, parcelas: 999, parcela_centavos: 0, sem_juros: false, frete_centavos: 0, frete_gratis: false, desconto_pix_pct: 500 },
+  ] }) });
+  try {
+    const r = await worker.fetch(req('/ia/ofertas', { imagem: 'aGVsbG8=', tipo: 'image/png' }), envBase());
+    const j = await r.json();
+    assert.equal(j.produto, 'Geladeira 400 L');
+    assert.equal(j.ofertas.length, 1, 'oferta sem preço válido cai fora');
+    assert.deepEqual(j.ofertas[0], { loja: 'Amazon', preco_centavos: 340000, parcelas: 10, parcela_centavos: 34000, sem_juros: true, frete_centavos: 0, frete_gratis: true, desconto_pix_pct: 0 });
+    assert.equal(api.chamadas[0].body.output_config.format.type, 'json_schema');
+    assert.equal(api.chamadas[0].body.messages[0].content[0].source.media_type, 'image/png');
+  } finally {
+    api.restaurar();
+  }
+  assert.equal(esquemaOfertas().additionalProperties, false);
+  const ruim = await worker.fetch(req('/ia/ofertas', { imagem: 'não é base64!', tipo: 'image/png' }), envBase());
+  assert.equal(ruim.status, 400);
 });

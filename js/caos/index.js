@@ -7,13 +7,13 @@ import { formatBRL, INCOME_SOURCES, daysInMonth, toISODate, idadeDe, faixaEtaria
 import { congelar, protegido } from './espinha.js';
 import { NUCLEO } from './nucleo.js';
 import { sentir, emocaoAtual, emocoesIniciais, intensidade, ROSTO } from './emocoes.js';
-import { escolherRosto, memoriaRostoInicial } from './rostos.js';
+import { escolherRosto, memoriaRostoInicial, rostoAnalista } from './rostos.js';
 import { gerarFala } from './gerador.js';
 import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '2.0.2'; // núcleo 1.3.0 (13/11): regra do 9, número próprio do C.A.O.S.
+export const CAOS_VERSAO = '2.0.3'; // núcleo 1.3.0 (13/11): regra do 9, número próprio do C.A.O.S.
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -280,6 +280,8 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
     else resp = { ...resp, acao: seguirPagamento(resp.acao, d).acao };
   }
   if (resp.aguardar) mem = { ...mem, aguardando: { ...resp.aguardar, em: now } };
+  // "manda o print" no meio de uma comparação: a comparação continua aberta pro print entrar nela
+  if (intencao.intent === 'ofertas_print' && espera?.tipo === 'ofertas') mem = { ...mem, aguardando: { ...espera, em: now } };
 
   let fato = resp.fato;
   if (retomada && fato) fato = `Sobre aquela sua pergunta ("${retomada}"): ${fato}`;
@@ -331,6 +333,11 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   // ("o que você pode fazer?" saía preocupado por causa da palavra "aperta")
   const r = rostoPara(mem, { emocao, evento: EVENTO_ROSTO[intencao.intent], humor, now, rng, direto: !!EVENTO_ROSTO[intencao.intent], texto: EVENTO_ROSTO[intencao.intent] ? null : saida, alerta: temAlerta });
   mem = r.mem;
+  // modo analista (13/11): ofertas e porcentagem ganham o rosto de óculos de analista
+  if (['comparar_ofertas', 'oferta_unica', 'porcentagem', 'ofertas_print'].includes(intencao.intent)) {
+    r.rosto = rostoAnalista(rng);
+    mem = { ...mem, rostoUltimo: r.rosto };
+  }
   // guarda a pergunta que ficou sem resposta (pra "e agora?"); some quando ela é respondida
   if (intencao.intent === 'nao_entendi') mem = { ...mem, semResposta: String(texto).trim().slice(0, 160) };
   else if (retomada) mem = { ...mem, semResposta: null };

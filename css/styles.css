@@ -1,3 +1,4 @@
+[hidden] { display: none !important; } /* hidden sempre esconde, mesmo com display no CSS (o Estúdio aparecia por baixo da conversa, 13/11) */
 :root {
   --bg: #0d0f14;
   --card: #161a22;

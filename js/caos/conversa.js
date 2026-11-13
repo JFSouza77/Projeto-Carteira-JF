@@ -9,7 +9,7 @@ import {
 } from '../engine.js';
 import { IDENTIDADE, textoAnatomia, textoPodeNaoPode, textoVida } from './identidade.js';
 import { acharTermo, ATUALIZADO_EM, GLOSSARIO } from './glossario.js';
-import { lerPorcentagem, textoPorcentagem, lerOfertas, analisarOfertas, textoOfertas } from './ofertas.js';
+import { lerPorcentagem, textoPorcentagem, lerOfertas, analisarOfertas, textoOfertas, lerOfertaUnica, textoOfertaUnica } from './ofertas.js';
 
 const GLOSSARIO_POR_TERMO = new Map(GLOSSARIO.map(g => [g.termo, g]));
 import { textoTendencia, quandoFoi, mercadoVelho } from '../mercado.js';
@@ -270,6 +270,10 @@ function entenderSimples(t, { categories = [] } = {}) {
   if (!/\b(gastei|paguei|comprei|torrei|recebi|ganhei)\b/.test(t)) {
     const ofertas = lerOfertas(t);
     if (ofertas) return { ...r, intent: 'comparar_ofertas', ofertas: ofertas.ofertas, produto: ofertas.produto };
+    // "vou mandar o print da oferta", "compara esse print": a próxima foto é pra ler ofertas
+    if (/(print|foto|imagem|tela)[a-z ]{0,20}(oferta|preco|produto|loja|anuncio)|(oferta|preco|anuncio)[a-z ]{0,15}(print|foto)|compar[a-z]* (esse|esses|o|os) (print|prints|foto|fotos)|^(mandar|vou mandar|mando) (o |um )?print$/.test(t)) return { ...r, intent: 'ofertas_print' };
+    const unica = lerOfertaUnica(t);
+    if (unica) return { ...r, intent: 'oferta_unica', ofertas: unica.ofertas, produto: unica.produto };
     const pct = lerPorcentagem(t);
     if (pct) return { ...r, intent: 'porcentagem', pct };
   }
@@ -708,11 +712,17 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       const comparar = c.tipo === 'compostos' ? ` Com juros simples daria ${formatBRL(calcularJuros({ ...c, tipo: 'simples', taxa: c.taxaSimples }).finalCents)}: a diferença é o juro sobre juro.` : '';
       return { fato: `Com juros ${c.tipo}, ${formatBRL(c.valor)} a ${c.taxaTexto} por ${tempo} vira ${formatBRL(r.finalCents)} (${formatBRL(r.jurosCents)} de juros).${comparar} Se for dívida, a mesma conta joga contra você. É só uma conta: rendimento real depende de imposto e taxa.`, cru: true, sugestoes: ['O que é juros compostos?', 'Vale a pena parcelar?'] };
     }
+    case 'ofertas_print':
+      return { fato: 'Manda o print da oferta pelo 📎 (pode ser um de cada loja) que eu leio preço, parcelas e frete e comparo pra você. A imagem só vai pro servidor do C.A.O.S. Finanças pra essa leitura.',
+        modoFoto: 'ofertas', cru: true, sugestoes: [] };
+    case 'oferta_unica':
+      return { fato: textoOfertaUnica(intencao.ofertas[0], intencao.produto), cru: true, sugestoes: ['Mandar print', 'Deixa pra depois'], modoFoto: 'ofertas',
+        aguardar: { tipo: 'ofertas', ofertas: intencao.ofertas, produto: intencao.produto } };
     case 'porcentagem':
       return { fato: textoPorcentagem(intencao.pct), cru: true, sugestoes: [] };
     case 'comparar_ofertas': {
       const a = analisarOfertas(intencao.ofertas);
-      return { fato: textoOfertas(a, intencao.produto), cru: true, sugestoes: ['Deixa pra depois'],
+      return { fato: textoOfertas(a, intencao.produto), cru: true, sugestoes: ['Mandar print', 'Deixa pra depois'], modoFoto: 'ofertas',
         aguardar: { tipo: 'ofertas', ofertas: intencao.ofertas, produto: intencao.produto } };
     }
     case 'vale_parcelar': {

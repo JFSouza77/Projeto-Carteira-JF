@@ -15,6 +15,7 @@ import {
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
 import { GLOSSARIO, ATUALIZADO_EM } from './caos/glossario.js';
+import { fraseDoPrint, resumoDoPrint } from './caos/ofertas.js';
 import { corCategoria, corFonte, corForma, temaBanco } from './cores.js';
 import { NUCLEO } from './caos/nucleo.js';
 import { NOVIDADES, VERSAO_APP, temNovidade, partesDoItem } from './novidades.js';
@@ -1206,12 +1207,12 @@ function renderChat() {
   if (!$('#tela-conversa').hidden) window.scrollTo(0, document.body.scrollHeight);
 }
 
-async function enviarPergunta(texto) {
+async function enviarPergunta(texto, { doPrint = false } = {}) {
   const t = String(texto || '').trim();
   if (!t) return;
   if (state.onboarding) return onboardingResposta(t);
   if (state.metaFlow) return metaResposta(t);
-  addMsg({ de: 'eu', texto: t });
+  if (!doPrint) addMsg({ de: 'eu', texto: t });
   const { fala, memoria } = conversar(t, dados(), { mood: state.settings.mood, memory: state.caosMemory, now: Date.now(), perfil: state.perfil });
   guardarMemoria(memoria);
   pintarRosto(fala.rosto);
@@ -1513,8 +1514,11 @@ async function fotoNoChat(arquivo) {
     const img = await imagens.guardar(arquivo, 'chat');
     addMsg({ de: 'eu', texto: '', url: URL.createObjectURL(img.blob), imagemId: img.id });
     const explicar = state.modoFoto?.tipo === 'explicar' && state.modoFoto.ate > Date.now() ? state.modoFoto : null;
+    // print de oferta (13/11): quando o C.A.O.S. pediu o print ou tem uma comparação aberta
+    const ofertas = (state.modoFoto?.tipo === 'ofertas' && state.modoFoto.ate > Date.now()) || state.caosMemory?.aguardando?.tipo === 'ofertas';
     state.modoFoto = null;
     if (explicar) return explicarPrint(img, explicar.duvida);
+    if (ofertas) return lerPrintDeOferta(img);
     if (!(state.settings.aiOn && state.settings.aiUrl)) {
       addMsg({ de: 'caos', texto: 'Guardei a foto. Pra eu ler o valor sozinho, ative a IA online em Ajustes. Ou me diz: "gastei 30 no mercado".' });
       return;
@@ -1535,6 +1539,26 @@ async function fotoNoChat(arquivo) {
   } catch (e) {
     state.chat = state.chat.filter(m => !m.temp);
     addMsg({ de: 'caos', texto: e.message || 'Não consegui ler a foto.' });
+  }
+}
+
+/** Print de oferta (13/11): a IA lê loja, preço, parcelas e frete; vira a mesma frase que a pessoa escreveria. */
+async function lerPrintDeOferta(img) {
+  if (!(state.settings.aiOn && state.settings.aiUrl)) {
+    addMsg({ de: 'caos', texto: 'Pra eu ler o print sozinho, preciso da IA online (Ajustes → IA online). Enquanto isso, me escreve: "geladeira 3500 no mercado livre e 3400 na amazon".' });
+    return;
+  }
+  addMsg({ de: 'caos', texto: 'Lendo a oferta do print…', temp: true, rosto: rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory }) });
+  try {
+    const lido = await ia.lerOfertas(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob) });
+    state.chat = state.chat.filter(m => !m.temp);
+    const frase = fraseDoPrint(lido);
+    if (!frase) return addMsg({ de: 'caos', ia: true, texto: 'Não achei preço de loja nesse print. Manda um print que mostre o preço e o nome da loja, ou me escreve os valores.' });
+    addMsg({ de: 'caos', ia: true, texto: resumoDoPrint(lido) });
+    await enviarPergunta(frase, { doPrint: true });
+  } catch (e) {
+    state.chat = state.chat.filter(m => !m.temp);
+    addMsg({ de: 'caos', texto: e.message || 'Não consegui ler o print.' });
   }
 }
 
