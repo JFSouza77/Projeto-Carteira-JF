@@ -90,7 +90,9 @@ Mapa do cérebro: `docs/CAOS_Carteira.md`.
 - **Um C.A.O.S. só (JF, 12/11):** o núcleo (identidade, vida, datas, criador, leis, emoções, dias) é igual ao do Perfil.
   Fonte: `docs/Do_Perfil/CAOS_Anatomia/caos_nucleo.json` (o Code atualiza); `node ferramentas/gerar_nucleo.js` gera
   `js/caos/nucleo.js` e o `tests/nucleo.test.js` falha se a cópia divergir. **O núcleo só muda com o ok do JF**, nos dois
-  projetos no mesmo dia. Coisa nova que devia ser do núcleo vai pro Code levar ao JF.
+  projetos no mesmo dia. **Regra de ouro (JF, 13/11):** mexeu no C.A.O.S. e é característica única dele (jeito de falar ou
+  de tratar, emoção, marco da vida, data que comemora)? Vai pro núcleo com o ok do JF e avisa o Code no mesmo dia. Fala do
+  trabalho (fatura, gasto) não vai. O JF quer um dia transformar o C.A.O.S. num agente de verdade: o núcleo é a bagagem.
 - **Criador:** só com o selo da conta (`seloCriador`, vem do login; lista `CRIADOR_CONTAS` no servidor). Nome digitado não basta.
 - Humores: `suave` (**padrão**), `normal`, `acido`. Zoeira só no balde `humor_acido` (2ª lei).
 - Alerta sempre traz o número e, quando der, um empurrão útil.

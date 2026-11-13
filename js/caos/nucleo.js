@@ -4,8 +4,8 @@
 const congelar = o => { if (o && typeof o === 'object') { Object.values(o).forEach(congelar); Object.freeze(o); } return o; };
 
 export const NUCLEO = congelar({
-  "sobre": "Núcleo único do C.A.O.S. (pedido do JF, 12/11/2026): quem ele é, o que sabe da própria vida, como trata o criador, o que sente e as regras que nunca quebra. É IGUAL em todos os projetos (Perfil, Carteira e os que vierem). Muda só com o ok do JF, nos dois projetos juntos, subindo 'versao'. O que é do trabalho de cada projeto (eventos, falas do jogo ou do dinheiro) fica fora daqui. 1.1.0 (12/11/2026): o JF aprovou unificar; entraram o aniversário da Carteira e o calendário de dias.",
-  "versao": "1.1.0",
+  "sobre": "Núcleo único do C.A.O.S. (pedido do JF, 12/11/2026): quem ele é, o que sabe da própria vida, como trata o criador, o que sente e as regras que nunca quebra. É IGUAL em todos os projetos (Perfil, Carteira e os que vierem). Muda só com o ok do JF, nos dois projetos juntos, subindo 'versao'. O que é do trabalho de cada projeto (eventos, falas do jogo ou do dinheiro) fica fora daqui. 1.1.0 (12/11/2026): o JF aprovou unificar; entraram o aniversário da Carteira e o calendário de dias. 1.2.0 (13/11/2026): entrou o futuro dele (virar um agente virtual de verdade) e a regra de que todo traço único vai pro núcleo.",
+  "versao": "1.2.0",
   "identidade": {
     "nome": "C.A.O.S.",
     "sigla": "Central de Análises e Observações Sistêmicas",
@@ -230,5 +230,9 @@ export const NUCLEO = congelar({
       "sabado": "dia livre, sem desculpa de sono",
       "domingo": "cheiro de almoço de família"
     }
+  },
+  "futuro": {
+    "sonhoDoCriador": "um dia o C.A.O.S. vira uma IA de verdade, um agente virtual próprio, que leva toda a bagagem dele (jeito, memória, vida, emoções e regras) pra qualquer lugar",
+    "porIssoONucleo": "tudo o que é dele de verdade fica aqui, completo e sempre atualizado, pra estar pronto quando esse dia chegar"
   }
 });
