@@ -17,15 +17,16 @@ Exemplo real: **Beta 1.9.5.1**.
 | Etapa | **Beta** | a fase do projeto (Alfa → Beta → lançamento) | só quando o JF decide que mudou a fase |
 | 1º · geração | **1**.9.5.1 | a geração do jogo | quase nunca. A 2.0 do Perfil vai ser a "Rework Update", planejada há semanas |
 | 2º · grande | 1.**9**.5.1 | uma atualização grande, com nome | a série atual está fechada, a próxima já tem **nome** e tem **pelo menos 7 coisas grandes** |
-| 3º · série/versão | 1.9.**5**.1 | uma versão publicada, com tema | o assunto mudou (cadastro, Natal, sugestões…) |
+| 3º · versão | 1.9.**5**.1 | uma versão publicada, com tema | o assunto mudou (cadastro, Natal, sugestões…) |
 | 4º · ajuste | 1.9.5.**1** | ajuste em cima da versão publicada | 1 ou 2 coisas pequenas depois de publicar (ontem: as falas de sexta 13) |
 
 - **Depois do 9, sobe o de cima:** 1.9 → 2.0 → … ; 1.9.9 → 1.10 não existe. (O Perfil tem uma 1.7.10 antiga, de antes da
   regra. Daqui pra frente, nunca mais.)
 - **"Coisa grande"** pro 2º número: correção de bug maior, função nova, melhoria geral, expansão de conteúdo, mudança
   de comportamento que mereça uma atualização própria.
-- **O 3º número (série) só sobe com o ok do JF.** Você pode propor ("JF, acho que já bateu um limite bom aqui"), mas não
-  sobe sozinho.
+- **O 2º número (grande) só sobe com o ok do JF.** Você pode propor ("JF, acho que já bateu um limite bom aqui"), mas não
+  sobe sozinho. No Perfil, publicar qualquer versão também precisa do ok dele. Na Carteira, ele te liberou publicar
+  sozinho, então o cuidado fica no número.
 
 ### O log (a tela de Novidades)
 
