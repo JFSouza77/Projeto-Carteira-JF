@@ -6,7 +6,7 @@ import { completarOfertas } from './ofertas.js';
 import { formatBRL, INCOME_SOURCES, daysInMonth, toISODate, idadeDe, faixaEtaria, ehAniversario } from '../engine.js';
 import { congelar, protegido } from './espinha.js';
 import { NUCLEO } from './nucleo.js';
-import { sentir, emocaoAtual, emocoesIniciais, intensidade, ROSTO } from './emocoes.js';
+import { sentir, emocaoEstavel, emocoesIniciais, intensidade, ROSTO } from './emocoes.js';
 import { escolherRosto, memoriaRostoInicial, rostoAnalista, rostoEspantado } from './rostos.js';
 export { rostoEspantado };
 import { gerarFala } from './gerador.js';
@@ -14,7 +14,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '2.0.6'; // 2.0.6 (13/11): rosto espantado no valor fora do comum. 2.0.5: núcleo 1.4.0 e lembrete de limites
+export const CAOS_VERSAO = '2.0.7'; // 2.0.7 (13/11): estabilizador das emoções (o rosto não pisca). 2.0.6: espantado. 2.0.5: núcleo 1.4.0
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -205,7 +205,9 @@ function reagirBruto(eventos, { mood = DEFAULT_MOOD, memory, now = Date.now(), r
 
   if (!candidatos.length) return { fala: null, memoria: mem };
   const ev = candidatos[0];
-  const emocao = emocaoAtual(mem.emocoes, humor, now);
+  const est = emocaoEstavel(mem.emocoes, humor, now, mem.estab);
+  mem = { ...mem, estab: est.estab };
+  const emocao = est.emocao;
   const { texto, gerador } = montar(ev.type, varsDoEvento(ev), { humor, emocao, mem, now, rng, perfil });
   if (!texto) return { fala: null, memoria: mem };
   const r = rostoPara(mem, { emocao, evento: ev.type, humor, now, rng, texto, alerta: ALERTAS.has(ev.type) });
@@ -273,7 +275,9 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
     if (de_novo.intent !== 'nao_entendi' && !de_novo.palpite && de_novo.intent !== 'retomar') { intencao = de_novo; retomada = mem.semResposta; }
   }
   mem = { ...mem, emocoes: sentir(mem.emocoes, EVENTO_DA_INTENCAO[intencao.intent] || 'pergunta', now) };
-  const emocao = emocaoAtual(mem.emocoes, humor, now);
+  const est = emocaoEstavel(mem.emocoes, humor, now, mem.estab);
+  mem = { ...mem, estab: est.estab };
+  const emocao = est.emocao;
   let resp = responder(intencao, { ...d, anterior: mem.conversa || null }, { today: today || toISODate(new Date(now)), emocao: rostoDe(emocao).nome, perfil, now });
   // gasto novo: pergunta como pagou antes de propor (pula o que a pessoa já disse)
   if (resp.pagamento && resp.acao) {
@@ -389,7 +393,7 @@ function nomeAlerta(a) {
 
 export function emocaoDoMomento(memory, mood = DEFAULT_MOOD, now = Date.now()) {
   const m = normalizarMem(memory, now);
-  const e = emocaoAtual(m.emocoes, MOODS[mood] ? mood : DEFAULT_MOOD, now);
+  const e = emocaoEstavel(m.emocoes, MOODS[mood] ? mood : DEFAULT_MOOD, now, m.estab).emocao; // só lê, não conta fala
   return { emocao: e, aparencia: rostoDe(e), rosto: m.rostoUltimo };
 }
 
@@ -411,7 +415,8 @@ export { nomeAlerta };
 export const falaAvulsa = protegido('falaAvulsa', (gatilho, vars = {}, { mood = DEFAULT_MOOD, memory, now = Date.now(), rng = Math.random, perfil = null } = {}) => {
   const humor = MOODS[mood] ? mood : DEFAULT_MOOD;
   const mem = normalizarMem(memory, now);
-  const emocao = emocaoAtual(mem.emocoes, humor, now);
+  const est = emocaoEstavel(mem.emocoes, humor, now, mem.estab);
+  const emocao = est.emocao;
   const r = montar(gatilho, vars, { humor, emocao, mem, now, rng, perfil });
-  return { texto: r.texto, memoria: { ...mem, gerador: r.gerador } };
+  return { texto: r.texto, memoria: { ...mem, estab: est.estab, gerador: r.gerador } };
 }, (g, v, o = {}) => ({ texto: '', memoria: o.memory ?? memoriaInicial() }));

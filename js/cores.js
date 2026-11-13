@@ -1,11 +1,12 @@
 // Cores por categoria, fonte de entrada, forma de pagamento e banco (V2 do AI Studio, 13/11).
 // Só dados e funções puras: devolvem variáveis do CSS (--cyan, --violet…), que mudam sozinhas no claro e no escuro.
 
-const CATEGORIA = Object.freeze({
-  mercado: 'var(--ok)', delivery: 'var(--caos)', restaurante: 'var(--warn)', transporte: 'var(--cyan)',
-  moradia: 'var(--indigo)', contas: 'var(--accent)', saude: 'var(--coral)', lazer: 'var(--violet)',
-  streaming: 'var(--violet)', compras: 'var(--caos)', outros: 'var(--cyan)',
-});
+// 13/11 (Code + JF): paleta própria por categoria, conferida no claro e no escuro (tokens --cat-* no CSS).
+// Regra da marca: cada cor quer dizer uma coisa, sempre a mesma; nada de cor só por enfeite.
+const CATEGORIA = Object.freeze(Object.fromEntries(
+  ['mercado', 'delivery', 'restaurante', 'transporte', 'moradia', 'contas', 'saude', 'lazer', 'streaming', 'compras', 'outros']
+    .map(id => [id, `var(--cat-${id})`]),
+));
 
 const FONTE = Object.freeze({
   salario: 'var(--ok)', freela: 'var(--cyan)', rendimento: 'var(--accent)', presente: 'var(--violet)', outros: 'var(--indigo)',

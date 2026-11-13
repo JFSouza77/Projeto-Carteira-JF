@@ -5,7 +5,7 @@ Um app de controle de gastos com uma IA para te auxiliar.
 PWA offline-first (HTML + JavaScript puro) para Android e iPhone, com o **C.A.O.S.**, um narrador que comenta
 os gastos e avisa quando um orçamento aperta, sem nunca alterar os dados.
 
-## O que já faz (versão 2.0.1 Alfa · Cara de Marca · C.A.O.S. 2.0.6)
+## O que já faz (versão 2.0.1 Alfa · Cara de Marca · C.A.O.S. 2.0.7)
 
 - **Lançar gastos e entradas** (salário, freela, rendimentos…), com conta, forma de pagamento, parcelas, foto do
   comprovante e **conta rachada** com os amigos (com botão "Cobrar" no WhatsApp); editar e apagar lançamentos

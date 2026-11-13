@@ -22,6 +22,8 @@ export const NOVIDADES = Object.freeze([
       '🎤 Microfone que explica: se não ouvir, diz o motivo e ensina a usar o ditado do teclado.',
       '⏰ Lembretes arrumados: o horário cabe no cartão e tudo ficou alinhado.',
       '🔁 Lembrete sem repetir: o aviso de que ele não é consultor aparece só uma vez por assunto.',
+      '🎨 Cor de cada categoria: o ícone de cada gasto ganhou a cor da categoria, no claro e no escuro.',
+      '🙂 Rosto mais firme: o C.A.O.S. não fica trocando de cara a cada mensagem.',
     ],
   },
   {
