@@ -99,6 +99,19 @@ details.card[open] > summary h2::after { content: "－"; }
 
 .summary .label { margin: 0; color: var(--muted); }
 .summary .big { margin: 2px 0 10px; font-size: 2.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Anel das metas (13/11) */
+.meta-item { display: grid; grid-template-columns: 72px 1fr; gap: 12px; align-items: center; }
+.meta-corpo { display: grid; gap: 2px; min-width: 0; }
+.anel { width: 72px; height: 72px; transform: rotate(-90deg); overflow: visible; }
+.anel circle { fill: none; stroke-width: 7; }
+.anel-fundo { stroke: var(--card-2); }
+.anel-valor { stroke: var(--cyan); stroke-linecap: round; transition: stroke-dashoffset .9s cubic-bezier(.2,.8,.2,1);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--cyan) 60%, transparent)); }
+.anel.batida .anel-valor { stroke: var(--ok); filter: drop-shadow(0 0 5px color-mix(in srgb, var(--ok) 70%, transparent)); }
+.anel-txt { transform: rotate(90deg); transform-origin: 32px 32px; fill: currentColor; font-size: 14px; font-weight: 700;
+  text-anchor: middle; dominant-baseline: central; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .anel-valor { transition: none; } }
+.menos-mov .anel-valor { transition: none; }
 /* Atalhos e orçamento de hoje (V2 do AI Studio, 13/11) */
 .atalhos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .atalho { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 46px; border-radius: 12px;

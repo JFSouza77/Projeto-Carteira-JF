@@ -1168,22 +1168,40 @@ async function salvarMetas(lista) {
   renderMetas();
 }
 
+// Anel de progresso das metas (V2 do AI Studio, 13/11): SVG simples, sem D3. Enche do valor anterior pro novo.
+const ANEL_R = 26, ANEL_C = 2 * Math.PI * ANEL_R;
+const pctAnteriorMeta = new Map();
+const anelMeta = (pct, batida, pctInicio) => `
+  <svg class="anel${batida ? ' batida' : ''}" viewBox="0 0 64 64" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="${pct}% da meta">
+    <circle class="anel-fundo" cx="32" cy="32" r="${ANEL_R}"/>
+    <circle class="anel-valor" cx="32" cy="32" r="${ANEL_R}" stroke-dasharray="${ANEL_C.toFixed(2)}" stroke-dashoffset="${(ANEL_C * (1 - pctInicio / 100)).toFixed(2)}" data-alvo="${(ANEL_C * (1 - pct / 100)).toFixed(2)}"/>
+    <text x="32" y="32" class="anel-txt">${pct}%</text>
+  </svg>`;
+
 function renderMetas() {
   const el = $('#meta-list');
   if (!el) return;
   const hoje = toISODate();
   el.innerHTML = state.metas.map(m => {
     const p = progressoMeta(m, hoje);
-    return `<li>
-      <div class="account-head"><strong>${ic(p.batida ? 'i-trofeu' : 'i-meta')} ${esc(m.nome)}</strong><span class="num">${p.pct}%</span></div>
-      <div class="limite-bar" role="img" aria-label="${p.pct}% da meta"><i style="width:${p.pct}%"></i></div>
-      <small class="muted">${esc(p.batida ? `Meta batida! ${formatBRL(m.alvoCents)} guardados.` : textoMeta(p))}</small>
-      <div class="account-actions">
-        ${p.batida ? '' : `<button class="ghost" data-meta-guardar="${esc(m.id)}">＋ Guardar</button>`}
-        <button class="ghost" data-meta-del="${esc(m.id)}">Remover</button>
+    const antes = pctAnteriorMeta.has(m.id) ? pctAnteriorMeta.get(m.id) : p.pct;
+    pctAnteriorMeta.set(m.id, p.pct);
+    return `<li class="meta-item">
+      ${anelMeta(p.pct, p.batida, antes)}
+      <div class="meta-corpo">
+        <strong>${ic(p.batida ? 'i-trofeu' : 'i-meta')} ${esc(m.nome)}</strong>
+        <small class="muted">${esc(p.batida ? `Meta batida! ${formatBRL(m.alvoCents)} guardados. 🎉` : textoMeta(p))}</small>
+        <div class="account-actions">
+          ${p.batida ? '' : `<button class="ghost" data-meta-guardar="${esc(m.id)}">＋ Guardar</button>`}
+          <button class="ghost" data-meta-del="${esc(m.id)}">Remover</button>
+        </div>
       </div>
     </li>`;
   }).join('') || '<li class="muted small">Nenhuma meta ainda. Monta uma com o C.A.O.S.!</li>';
+  // dois quadros depois, o anel anda do valor anterior pro novo (a transição do CSS faz o resto)
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    for (const c of el.querySelectorAll('.anel-valor')) c.setAttribute('stroke-dashoffset', c.dataset.alvo);
+  }));
 }
 
 async function guardarEmMeta(id, valorCents) {
