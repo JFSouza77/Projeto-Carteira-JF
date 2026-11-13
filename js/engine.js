@@ -1364,3 +1364,19 @@ export function progressoOrcamentoDiario(expenses, limite, today = toISODate()) 
     status: totalCents > limiteCents ? 'estourado' : pct >= 80 ? 'atencao' : 'ok',
   };
 }
+
+// ---------- Máscara de dinheiro (JF, 13/11: "digitei 178,35 e saiu 17.835") ----------
+/**
+ * Como nos apps de banco: os dois últimos números são os centavos e o resto vai enchendo da direita pra esquerda.
+ * 1 → "0,01", 17 → "0,17", 178 → "1,78", 17835 → "178,35", 123456 → "1.234,56". Vírgula e ponto digitados são
+ * ignorados (só contam os números), então "178,35" colado também vira "178,35". `sinal`: aceita "-" na frente (saldo).
+ */
+export function mascaraCentavos(texto, { sinal = false } = {}) {
+  const s = String(texto ?? '');
+  const neg = sinal && /^\s*-/.test(s);
+  const dig = s.replace(/\D/g, '').replace(/^0+/, '').slice(0, 13);
+  if (!dig) return neg ? '-' : '';
+  const c = Number(dig);
+  const reais = Math.floor(c / 100).toLocaleString('pt-BR');
+  return `${neg ? '-' : ''}${reais},${String(c % 100).padStart(2, '0')}`;
+}

@@ -10,7 +10,7 @@ import {
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
   TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
-  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, progressoOrcamentoDiario, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
+  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, progressoOrcamentoDiario, mascaraCentavos, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
@@ -2659,6 +2659,17 @@ function bind() {
   });
 
   $('#sem-gasto').addEventListener('click', hojeNaoGastei);
+  // Máscara de dinheiro (JF, 13/11): os dois últimos números são centavos ("17835" vira 178,35), como nos apps de banco
+  for (const id of ['#amount', '#hoje-limite', '#sim-valor', '#comp-valor', '#plan-valor', '#transf-valor', '#card-limite', '#card-usado', '#inv-aplicado', '#ed-valor', '#calc-valor']) {
+    const el = $(id);
+    if (!el) continue;
+    el.setAttribute('inputmode', 'numeric');
+    el.addEventListener('input', () => { el.value = mascaraCentavos(el.value); });
+  }
+  for (const id of ['#bank-balance', '#inv-atual']) { // saldo pode ser negativo: aceita o "-" na frente
+    const el = $(id);
+    if (el) el.addEventListener('input', () => { el.value = mascaraCentavos(el.value, { sinal: true }); });
+  }
   for (const b of document.querySelectorAll('[data-atalho]')) b.addEventListener('click', () => atalho(b.dataset.atalho));
   $('#hoje-ajustar').addEventListener('click', () => abrirLimiteDiario());
   $('#hoje-chips').addEventListener('click', e => { const c = e.target.closest('[data-limite]'); if (c) $('#hoje-limite').value = centsToInput(Number(c.dataset.limite)); });
