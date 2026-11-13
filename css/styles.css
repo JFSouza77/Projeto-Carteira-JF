@@ -861,3 +861,20 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .sit-limite.saudavel { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
 .sit-limite.atencao { color: var(--warn); background: color-mix(in srgb, var(--warn) 16%, transparent); }
 .sit-limite.critico { color: var(--danger); background: color-mix(in srgb, var(--danger) 16%, transparent); }
+
+/* Exportar o mês (13/11) */
+.exportar-botoes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.exportar-botoes button { min-height: 46px; }
+#relatorio-print { display: none; }
+@media print {
+  body.imprimindo > *:not(#relatorio-print) { display: none !important; }
+  body.imprimindo { background: #fff !important; color: #111 !important; }
+  body.imprimindo #relatorio-print { display: block; font: 12pt/1.4 system-ui, sans-serif; color: #111; }
+  #relatorio-print h1 { font-size: 18pt; margin: 0 0 4pt; }
+  #relatorio-print h2 { font-size: 13pt; margin: 14pt 0 6pt; }
+  #relatorio-print .r-sub { color: #555; font-size: 10pt; }
+  #relatorio-print table { width: 100%; border-collapse: collapse; }
+  #relatorio-print th, #relatorio-print td { text-align: left; padding: 4pt 6pt; border-bottom: 1px solid #ddd; }
+  #relatorio-print td:last-child, #relatorio-print th:last-child { text-align: right; }
+  #relatorio-print .r-tot td { font-size: 14pt; font-weight: 700; }
+}

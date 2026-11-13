@@ -847,8 +847,16 @@ function nomeMesCurto(month) {
 }
 
 /** Exportar CSV (13/11, repaginada): o que está na lista agora, com ; e BOM (abre certinho no Excel e nas planilhas). */
-function exportarCSV() {
-  const linhas = state.extratoVisivel || [];
+/** Todos os lançamentos do mês que está na tela (gastos, entradas e transferências), do mais antigo pro mais novo. */
+function lancamentosDoMes(mes = state.viewMonth) {
+  return [
+    ...state.expenses.filter(e => e.month === mes).map(e => ({ ...e, kind: 'gasto' })),
+    ...state.incomes.filter(i => i.month === mes).map(i => ({ ...i, kind: 'entrada' })),
+    ...(state.transferencias || []).filter(t => String(t.date).slice(0, 7) === mes).map(t => ({ ...t, kind: 'transf' })),
+  ].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function exportarCSV(linhas = state.extratoVisivel || [], nomeArquivo = `caos-financas-${state.viewMonth}.csv`) {
   if (!linhas.length) return toast('Nada pra exportar com esse filtro.');
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const reais = c => (c / 100).toFixed(2).replace('.', ',');
@@ -860,14 +868,48 @@ function exportarCSV() {
       ? `${accountLabel(state.accounts.find(a => a.id === x.deId) || { bank: '?' })} → ${accountLabel(state.accounts.find(a => a.id === x.paraId) || { bank: '?' })}`
       : conta ? accountLabel(conta) : '';
     const valor = x.kind === 'gasto' ? -x.amountCents : x.amountCents;
-    return [x.date, tipo, x.note || '', cat || '', contaTxt, x.forma || '', x.parcelas > 1 ? x.parcelas : '', reais(valor)].map(q).join(';');
+    const parte = x.kind === 'gasto' ? -valorProprio(x) : valor;
+    return [x.date, tipo, x.note || '', cat || '', contaTxt, x.forma || '', x.parcelas > 1 ? x.parcelas : '', reais(valor), reais(parte)].map(q).join(';');
   });
-  const csv = '\ufeff' + ['Data;Tipo;Descrição;Categoria;Conta;Forma;Parcelas;Valor (R$)', ...corpo].join('\r\n');
+  const csv = '\ufeff' + ['Data;Tipo;Descrição;Categoria;Conta;Forma;Parcelas;Valor (R$);Sua parte (R$)', ...corpo].join('\r\n');
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  const a = Object.assign(document.createElement('a'), { href: url, download: `caos-financas-${state.viewMonth}.csv` });
+  const a = Object.assign(document.createElement('a'), { href: url, download: nomeArquivo });
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
   toast(`Exportei ${linhas.length} ${linhas.length === 1 ? 'lançamento' : 'lançamentos'}.`);
+}
+
+/** PDF do mês (V2 do AI Studio, 13/11): monta um resumo limpo e abre a impressão do navegador ("Salvar como PDF"). */
+function exportarPDF() {
+  const mes = state.viewMonth;
+  const linhas = lancamentosDoMes(mes);
+  if (!linhas.length) return toast('Nada lançado neste mês ainda.');
+  const s = summarizeMonth(state.expenses, state.categories, mes);
+  const entradas = incomeIn(state.incomes, mes);
+  const cats = s.rows.filter(r => r.spentCents > 0).sort((a, b) => b.spentCents - a.spentCents);
+  const nomeLinha = x => x.kind === 'gasto' ? (x.note || catById(x.categoryId)?.name || 'Gasto')
+    : x.kind === 'entrada' ? (x.note || srcById(x.sourceId)?.name || 'Entrada') : (x.note || 'Transferência');
+  const valor = x => x.kind === 'gasto' ? `−${formatBRL(valorProprio(x))}` : x.kind === 'entrada' ? `+${formatBRL(x.amountCents)}` : formatBRL(x.amountCents);
+  const el = document.createElement('div');
+  el.id = 'relatorio-print';
+  el.innerHTML = `
+    <h1>C.A.O.S. Finanças · ${esc(cap(monthLabel(mes)))}</h1>
+    <p class="r-sub">Resumo gerado em ${new Date().toLocaleDateString('pt-BR')}${state.perfil?.apelido ? ` para ${esc(state.perfil.apelido)}` : ''}.</p>
+    <table class="r-tot"><tr><th>Entradas</th><th>Gastos</th><th>Saldo do mês</th></tr>
+      <tr><td>${formatBRL(entradas)}</td><td>${formatBRL(s.totalCents)}</td><td>${formatBRL(entradas - s.totalCents)}</td></tr></table>
+    <h2>Gastos por categoria</h2>
+    <table><tr><th>Categoria</th><th>Gasto</th><th>Limite</th></tr>
+      ${cats.map(r => `<tr><td>${esc(r.name)}</td><td>${formatBRL(r.spentCents)}</td><td>${r.budgetCents ? formatBRL(r.budgetCents) : '—'}</td></tr>`).join('')}</table>
+    <h2>Lançamentos (${linhas.length})</h2>
+    <table><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Valor</th></tr>
+      ${linhas.map(x => `<tr><td>${x.date.slice(8)}/${x.date.slice(5, 7)}</td><td>${esc(nomeLinha(x))}</td><td>${x.kind === 'gasto' ? 'Gasto' : x.kind === 'entrada' ? 'Entrada' : 'Transf.'}</td><td>${valor(x)}</td></tr>`).join('')}</table>
+    <p class="r-sub">Gasto em conta rachada aparece só com a sua parte.</p>`;
+  document.body.append(el);
+  document.body.classList.add('imprimindo');
+  const limpar = () => { document.body.classList.remove('imprimindo'); el.remove(); };
+  window.addEventListener('afterprint', limpar, { once: true });
+  window.print();
+  setTimeout(() => { if (document.body.contains(el) && !matchMedia('print').matches) limpar(); }, 60000);
 }
 
 /** Filtro da busca: palavra no nome/categoria/fonte/conta, ou valor ("49,90", "50" acha 50,00 e 50,xx). */
@@ -2564,7 +2606,9 @@ function bind() {
   $('#grafico-ritmo').addEventListener('click', escolherDia);
   $('#grafico-meses').addEventListener('pointerover', escolherMes);
   $('#grafico-meses').addEventListener('click', escolherMes);
-  $('#exportar-csv').addEventListener('click', exportarCSV);
+  $('#exportar-csv').addEventListener('click', () => exportarCSV());
+  $('#mes-csv').addEventListener('click', () => exportarCSV(lancamentosDoMes(), `caos-financas-${state.viewMonth}-completo.csv`));
+  $('#mes-pdf').addEventListener('click', exportarPDF);
   $('#busca').addEventListener('input', () => { clearTimeout(state.buscaTimer); state.buscaTimer = setTimeout(render, 150); });
   $('#chat-log').addEventListener('click', e => {
     const b = e.target.closest('[data-acao]');
