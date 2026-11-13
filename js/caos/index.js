@@ -14,7 +14,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '2.1.1'; // 2.1.1 (13/11): limite garantido (bancos que dão limite por investimento). 2.1.0: paciência. 2.0.9: palavrão
+export const CAOS_VERSAO = '2.1.2'; // 2.1.2 (13/11): benefícios, bolsas, matemática básica, onde rende mais. 2.1.1: limite garantido
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';

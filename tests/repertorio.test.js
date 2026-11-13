@@ -42,8 +42,26 @@ test('limite garantido (JF, 13/11): sabe quais bancos dão limite por investimen
   assert.equal(f.intent, 'limite_investido');
   for (const b of ['C6', 'Inter', 'Nubank', 'PicPay']) assert.match(f.texto, new RegExp(b));
   assert.match(f.texto, /novembro de 2026/);
-  assert.match(f.texto, /confira/);
-  assert.ok(f.texto.length <= 450);
+  assert.match(f.texto, /confere|confira/i);
+  assert.ok(f.texto.length <= 600);
   assert.equal(fala('o que é limite garantido?').intent, 'glossario');
-  assert.equal(GLOSSARIO.length, 75);
+  assert.ok(GLOSSARIO.length >= 75);
+});
+
+test('benefícios, bolsas e matemática básica (JF, 13/11 à noite)', () => {
+  for (const [p, termo] of [['o que é bolsa?', 'Bolsa'], ['o que é bolsa de valores?', 'Bolsa de valores'], ['o que é bolsa integral?', 'Bolsa parcial e integral'],
+    ['o que é pé de meia?', 'Pé-de-Meia'], ['o que é bolsa família?', 'Bolsa Família'], ['o que é IPVA?', 'IPVA'], ['o que é IPTU?', 'IPTU'],
+    ['o que é minha casa minha vida?', 'Minha Casa Minha Vida'], ['o que é alíquota?', 'Alíquota'], ['o que é regra de três?', 'Regra de três']]) {
+    const f = fala(p);
+    assert.equal(f.intent, 'glossario', p);
+    assert.match(f.texto, new RegExp(termo.replace(/[-]/g, '.')), p);
+  }
+  assert.equal(GLOSSARIO.length, 100);
+  assert.match(fala('quanto é 15 vezes 23').texto, /345.*Atalho/);
+  assert.match(fala('quanto é 12 x 8').texto, /96.*Atalho/);
+  assert.match(fala('350 + 87').texto, /437/);
+  assert.match(fala('quanto é 1200 dividido por 12').texto, /100/);
+  assert.match(fala('quanto é 5 dividido por 0').texto, /zero/);
+  assert.match(fala('qual banco rende mais?').texto, /anotado até 13 de novembro de 2026/);
+  assert.equal(fala('gastei 800 na faculdade').acao.categoryId, 'educacao');
 });

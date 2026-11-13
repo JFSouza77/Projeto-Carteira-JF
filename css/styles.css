@@ -26,7 +26,7 @@
   --cyan: #3ad4ff; --violet: #b07cff; --indigo: #7c8cff; --coral: #ff7a59;
   /* cor de cada categoria (Code, 13/11: contraste conferido, 4,5:1 ou mais; compras em verde-água pra não confundir com contas) */
   --cat-mercado: #4ade80; --cat-delivery: #fb923c; --cat-restaurante: #f87171; --cat-transporte: #60a5fa; --cat-moradia: #a78bfa; --cat-contas: #facc15;
-  --cat-saude: #f472b6; --cat-lazer: #22d3ee; --cat-streaming: #e879f9; --cat-compras: #2dd4bf; --cat-outros: #94a3b8;
+  --cat-saude: #f472b6; --cat-lazer: #22d3ee; --cat-streaming: #e879f9; --cat-compras: #2dd4bf; --cat-educacao: #818cf8; --cat-outros: #94a3b8;
   --radius: 16px;
   --eye: var(--caos); /* cor do olho do C.A.O.S.: muda com a emoção */
   --caos-bg1: #1b1020; --caos-bg2: #14161f; --caos-line: #3a1d2c; --face-bg: #00000061;
@@ -38,7 +38,7 @@
   --accent: #5a7d00; --accent-ink: #ffffff; --caos: #c8155a; --ok: #12814f; --warn: #a86400; --danger: #c22727;
   --cyan: #0a7ea4; --violet: #7a3fd1; --indigo: #3f4fc9; --coral: #c2410c;
   --cat-mercado: #15803d; --cat-delivery: #c2410c; --cat-restaurante: #b91c1c; --cat-transporte: #1d4ed8; --cat-moradia: #6d28d9; --cat-contas: #a16207;
-  --cat-saude: #be185d; --cat-lazer: #0e7490; --cat-streaming: #a21caf; --cat-compras: #0f766e; --cat-outros: #475569;
+  --cat-saude: #be185d; --cat-lazer: #0e7490; --cat-streaming: #a21caf; --cat-compras: #0f766e; --cat-educacao: #4338ca; --cat-outros: #475569;
   --fill: var(--accent); --fill-ink: var(--accent-ink); --fill-glow: none;
   --caos-bg1: #fff1f6; --caos-bg2: #ffffff; --caos-line: #f0c6d6; --face-bg: #ffffffcc;
   color-scheme: light;
@@ -49,9 +49,9 @@
     --accent: #5a7d00; --accent-ink: #ffffff; --caos: #c8155a; --ok: #12814f; --warn: #a86400; --danger: #c22727;
     --cyan: #0a7ea4; --violet: #7a3fd1; --indigo: #3f4fc9; --coral: #c2410c;
     --cat-mercado: #15803d; --cat-delivery: #c2410c; --cat-restaurante: #b91c1c; --cat-transporte: #1d4ed8; --cat-moradia: #6d28d9; --cat-contas: #a16207;
-    --cat-saude: #be185d; --cat-lazer: #0e7490; --cat-streaming: #a21caf; --cat-compras: #0f766e; --cat-outros: #475569;
+    --cat-saude: #be185d; --cat-lazer: #0e7490; --cat-streaming: #a21caf; --cat-compras: #0f766e; --cat-educacao: #4338ca; --cat-outros: #475569;
   --cat-mercado: #15803d; --cat-delivery: #c2410c; --cat-restaurante: #b91c1c; --cat-transporte: #1d4ed8; --cat-moradia: #6d28d9; --cat-contas: #a16207;
-  --cat-saude: #be185d; --cat-lazer: #0e7490; --cat-streaming: #a21caf; --cat-compras: #0f766e; --cat-outros: #475569;
+  --cat-saude: #be185d; --cat-lazer: #0e7490; --cat-streaming: #a21caf; --cat-compras: #0f766e; --cat-educacao: #4338ca; --cat-outros: #475569;
     --fill: var(--accent); --fill-ink: var(--accent-ink); --fill-glow: none;
     --caos-bg1: #fff1f6; --caos-bg2: #ffffff; --caos-line: #f0c6d6; --face-bg: #ffffffcc;
     color-scheme: light;
