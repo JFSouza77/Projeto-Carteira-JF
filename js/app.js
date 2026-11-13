@@ -1498,9 +1498,10 @@ function renderContas() {
   $('#account-list').innerHTML = agruparPorBanco(state.accounts).map(g => {
     const dinheiro = g.contas.filter(a => a.tipo !== 'cartao').reduce((t, a) => t + accountBalance(a, state.expenses, state.incomes, state.transferencias), 0);
     const temDinheiro = g.contas.some(a => a.tipo !== 'cartao');
+    const tema = temaBanco(g.bank === 'Outro' ? (g.contas[0]?.nickname || 'Outro') : g.bank);
     return `
-    <li class="banco-grupo">
-      <div class="banco-head"><strong>${esc(g.bank === 'Outro' ? 'Outros' : g.bank)}</strong>${temDinheiro && g.contas.length > 1 ? `<span class="num muted">${formatBRL(dinheiro)} no total</span>` : ''}</div>
+    <li class="banco-grupo" style="--banco-cor:${tema.cor};--banco-apoio:${tema.apoio}">
+      <div class="banco-head"><strong><span class="banco-sigla" aria-hidden="true">${esc(tema.sigla)}</span>${esc(g.bank === 'Outro' ? 'Outros' : g.bank)}</strong>${temDinheiro && g.contas.length > 1 ? `<span class="num muted">${formatBRL(dinheiro)} no total</span>` : ''}</div>
       <ul class="banco-partes">${g.contas.map(a => (a.tipo === 'cartao' ? itemCartao(a) : itemConta(a))).join('')}</ul>
     </li>`;
   }).join('');
@@ -1612,17 +1613,31 @@ function itemCartao(a) {
   const f = faturaDoCartao(comReforco(a, state.accounts, state.expenses, state.incomes, state.transferencias), state.expenses, toISODate());
   const cls = f.pct >= 100 ? 'cheio' : f.pct >= 80 ? 'alto' : '';
   const dia = iso => `${iso.slice(8)}/${iso.slice(5, 7)}`;
+  const sit = f.pct >= 100 ? ['critico', 'Limite crítico'] : f.pct >= 80 ? ['atencao', 'Atenção'] : ['saudavel', 'Saudável'];
   return `
-    <li>
-      <div class="account-head"><strong>${ic('a-cartao')} ${esc(accountLabel(a))}</strong><span class="num ${f.pct >= 100 ? 'bad' : ''}">${formatBRL(f.disponivelCents)} livre</span></div>${f.reforcoCents ? `<small class="muted">Limite ${formatBRL(a.limiteCents)} + ${formatBRL(f.reforcoCents)} do cofrinho.</small>` : ''}
+    <li class="cartao-item">
+      <div class="account-head"><strong>${ic('a-cartao')} ${esc(accountLabel(a))} <span class="sit-limite ${sit[0]}">${sit[1]}</span></strong><span class="num ${f.pct >= 100 ? 'bad' : ''}">${formatBRL(f.disponivelCents)} livre</span></div>${f.reforcoCents ? `<small class="muted">Limite ${formatBRL(a.limiteCents)} + ${formatBRL(f.reforcoCents)} do cofrinho.</small>` : ''}
       <div class="limite-bar ${cls}" role="img" aria-label="${f.pct}% do limite usado"><i style="width:${Math.min(100, Math.max(0, f.pct))}%"></i></div>
       <small class="muted">Usado ${formatBRL(f.usadoCents)} de ${formatBRL(f.limiteCents)} (${f.pct}%). Fatura aberta ${formatBRL(f.abertaCents)}, fecha ${dia(f.fechamento)}.${f.fechadaCents ? ` Fatura fechada ${formatBRL(f.fechadaCents)} vence ${dia(f.vencimento)}.` : ''}${f.futurasCents ? ` Parcelas das próximas faturas: ${formatBRL(f.futurasCents)}${f.presoFuturoCents ? ` (${formatBRL(f.presoFuturoCents)} preso no limite)` : ''}.` : ''}</small>
       ${f.atrasada ? `<small class="bad">A fatura de ${formatBRL(f.fechadaCents)} venceu dia ${dia(f.vencimento)}. Já pagou? Marca aqui que ela sai do limite.</small>` : ''}
       <div class="account-actions">
+        <button class="ghost" data-compra-cartao="${esc(a.id)}">＋ Lançar compra neste cartão</button>
         ${f.fechadaCents > 0 ? `<button class="ghost" data-fatura-paga="${esc(a.id)}">Paguei a fatura</button>` : ''}
         <button class="ghost" data-acc-del="${esc(a.id)}">Remover</button>
       </div>
     </li>`;
+}
+
+/** "Lançar compra neste cartão" (V2 do AI Studio, 13/11): abre o Lançar já no crédito e com o cartão escolhido. */
+function compraNoCartao(id) {
+  document.querySelector('input[name="kind"][value="gasto"]').checked = true;
+  state.kind = 'gasto';
+  state.forma = 'credito';
+  location.hash = 'lancar';
+  renderLancar();
+  const sel = $('#account-select');
+  if ([...sel.options].some(o => o.value === id)) sel.value = id;
+  setTimeout(() => $('#amount').focus(), 50);
 }
 
 /** "Paguei a fatura" (12/11): a fatura fechada sai do limite usado. Só a pessoa marca; vencer não é pagar. */
@@ -2587,6 +2602,8 @@ function bind() {
     if (u) return onUpdateAccount(u.dataset.accUpdate);
     const fp = e.target.closest('[data-fatura-paga]');
     if (fp) return marcarFaturaPaga(fp.dataset.faturaPaga);
+    const cc = e.target.closest('[data-compra-cartao]');
+    if (cc) return compraNoCartao(cc.dataset.compraCartao);
     const d = e.target.closest('[data-acc-del]');
     if (d) onRemoveAccount(d.dataset.accDel);
   });
