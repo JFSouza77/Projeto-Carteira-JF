@@ -26,3 +26,15 @@ test('saldo com sinal de menos', () => {
   assert.equal(parseSignedAmount(mascaraCentavos('-5000', { sinal: true })), -5000);
   assert.equal(mascaraCentavos('-5000'), '50,00', 'sem sinal liberado, o menos cai');
 });
+
+import { valorForaDoComum } from '../js/engine.js';
+
+test('valor fora do comum: pergunta antes de gravar um 12.450 que era 124,50 (JF, 13/11)', () => {
+  const hist = [3000, 4590, 12000, 8000, 2500, 6000].map((v, i) => ({ amountCents: v, createdAt: i }));
+  assert.equal(valorForaDoComum(1245000, hist), true);
+  assert.equal(valorForaDoComum(12450, hist), false);
+  assert.equal(valorForaDoComum(150000, []), false, 'sem histórico: só acima de R$ 2.000');
+  assert.equal(valorForaDoComum(250000, []), true);
+  assert.equal(valorForaDoComum(14648600, [], { tipo: 'entrada' }), true);
+  assert.equal(valorForaDoComum(520000, [], { tipo: 'entrada' }), false, 'salário normal não assusta');
+});
