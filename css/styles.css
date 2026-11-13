@@ -615,8 +615,6 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 /* "Me ajuda" não tampa nada (12/11): a tela ganha espaço no fim pra rolar o conteúdo pra cima dele,
    e enquanto rola ele vira só um "?" redondo */
 .tela main { padding-bottom: calc(env(safe-area-inset-bottom) + 150px); }
-.me-ajuda.mini { padding: 10px; }
-.me-ajuda.mini .me-ajuda-txt { display: none; }
 
 /* Pagou como? e parcelas (P8, 12/11) */
 .parcelas-box { display: grid; gap: 6px; }
@@ -784,7 +782,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   #tela-inicio main > #alerts-card { order: 4; } #tela-inicio main > #receber-card { order: 5; } #tela-inicio main > * { order: 6; }
   #tela-inicio main > .novidade-aviso { order: 0; }
   /* "Me ajuda" mora no menu lateral, sem cobrir conteúdo (revisão do GPT) */
-  .me-ajuda, .me-ajuda.mini { left: 12px; right: auto; bottom: 128px; width: 208px; justify-content: center; }
+  .me-ajuda { left: 12px; right: auto; bottom: 128px; width: 208px; justify-content: center; }
   body:not(.sem-painel) .me-ajuda { right: auto; }
 }
 #transf-card[hidden] { display: none; }
@@ -942,3 +940,25 @@ button.banco-head:hover { background: color-mix(in srgb, var(--banco-cor) 8%, tr
 #conta-dialog .erro { color: var(--danger); margin: 0; }
 #cd-reforca-campo[hidden], #cd-quem-campo[hidden] { display: none; }
 .rx-cdi.velho { color: var(--warn); }
+
+/* Me ajuda (JF, 13/11): formato único, arrastável, menu de ajuda rápida */
+.me-ajuda { touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
+.me-ajuda.arrastando { cursor: grabbing; opacity: .85; transition: none; }
+.ajuda-menu {
+  position: fixed; z-index: 12; display: grid; gap: 4px; width: min(280px, calc(100vw - 16px)); padding: 8px;
+  border: 1px solid var(--caos); border-radius: 14px; background: var(--card); box-shadow: 0 0 18px -6px var(--caos), 0 10px 26px #0007;
+}
+.ajuda-menu button { text-align: left; padding: 10px 12px; border: 0; border-radius: 10px; background: transparent; color: var(--text); font: inherit; }
+.ajuda-menu button:hover, .ajuda-menu button:focus-visible { background: var(--card-2); outline: none; }
+.ajuda-menu .ajuda-tudo { color: var(--caos); font-weight: 700; border-top: 1px solid var(--line); border-radius: 0 0 10px 10px; }
+
+/* Lembretes (bug do JF, 13/11): no iPhone o campo de hora tem largura própria e passava da borda do cartão; o resto
+   ficava solto. Agora é uma coluna com espaço igual e a hora numa linha só, presa à largura do cartão. */
+.lembretes { display: grid; gap: 12px; margin-top: 10px; }
+.lembretes .switch { margin: 0; }
+.lembrete-hora { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.lembrete-hora > span { color: var(--muted); font-size: .9rem; }
+.lembrete-hora input[type="time"] { -webkit-appearance: none; appearance: none; width: 8.5em; max-width: 60%; min-width: 0; box-sizing: border-box; text-align: center; }
+.lembretes #remind-status:empty { display: none; }
+.lembretes #remind-status { margin: 0; }
+.lembretes #remind-test { justify-self: stretch; }
