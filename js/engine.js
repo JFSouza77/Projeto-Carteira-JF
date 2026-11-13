@@ -173,6 +173,16 @@ export function aReceber(expenses) {
   return { itens, totalCents: itens.reduce((s, x) => s + x.valorCents, 0) };
 }
 
+/**
+ * Texto pronto pra cobrar um amigo no WhatsApp (fase 2 da repaginada, 13/11). Educado, com valor e data.
+ * `item` é um item de `aReceber`.
+ */
+export function mensagemCobranca(item) {
+  const [, m, d] = item.date.split('-');
+  const doQue = item.note ? `da sua parte em "${item.note}"` : 'da sua parte da nossa conta';
+  return `Oi, ${item.nome}! Passando pra lembrar ${doQue} (${d}/${m}): ${formatBRL(item.valorCents)}. Pode mandar no Pix quando der. Valeu!`;
+}
+
 /** Marca a parte de um amigo como recebida. Devolve uma cópia nova do gasto. */
 /**
  * O amigo pagou a parte dele. `contaId`: em qual conta o dinheiro caiu (rachadinha no cartão, 13/11, achado do Gemini):

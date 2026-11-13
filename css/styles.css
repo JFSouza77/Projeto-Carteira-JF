@@ -477,6 +477,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .receber-list .exp-main { flex: 1; display: grid; min-width: 0; }
 .receber-list small { color: var(--muted); }
 .ghost.small { min-height: 44px; padding: 6px 12px; font-size: .85rem; }
+.btn-link { display: inline-flex; align-items: center; color: inherit; text-decoration: none; }
 .racha { border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; }
 .racha[hidden] { display: none; }
 .racha > summary { cursor: pointer; font-weight: 700; min-height: 32px; display: flex; align-items: center; }

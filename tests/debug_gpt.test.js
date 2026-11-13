@@ -114,3 +114,13 @@ test('5) sem dado, não presume: pergunta o valor em vez de chutar', () => {
   assert.equal(f.acao, null);
   assert.match(f.texto, /Quanto foi/);
 });
+
+test('mensagemCobranca: texto educado com nome, valor e data', async () => {
+  const { mensagemCobranca } = await import('../js/engine.js');
+  const t = mensagemCobranca({ nome: 'Ana', valorCents: 2550, date: '2026-11-10', note: 'pizza' });
+  assert.match(t, /Oi, Ana!/);
+  assert.match(t, /"pizza"/);
+  assert.match(t, /10\/11/);
+  assert.match(t, /25,50/);
+  assert.match(mensagemCobranca({ nome: 'Bia', valorCents: 1000, date: '2026-11-01', note: '' }), /nossa conta/);
+});
