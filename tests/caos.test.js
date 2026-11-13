@@ -225,15 +225,15 @@ test('C.A.O.S. sabe quem é: identidade, sigla, criador, origem, limites, piada 
   assert.match(conversar('quem te criou?', d, { now: NOW, today: hoje }).fala.texto, /JF/);
   assert.match(conversar('de onde você veio?', d, { now: NOW, today: hoje }).fala.texto, /Perfil/);
   const func = conversar('como você funciona?', d, { now: NOW, today: hoje }).fala.texto;
-  for (const parte of ['Cérebro', 'Sistema nervoso', 'Braços', 'Espinha']) assert.match(func, new RegExp(parte));
-  assert.match(conversar('o que você pode fazer?', d, { now: NOW, today: hoje }).fala.texto, /Não posso/);
+  for (const parte of ['cérebro', 'sistema nervoso', 'braços', 'espinha']) assert.match(func, new RegExp(parte, 'i'));
+  assert.match(conversar('o que você pode fazer?', d, { now: NOW, today: hoje }).fala.texto, /Não mexo em nada sozinho/);
   assert.match(conversar('como adiciono uma conta?', d, { now: NOW, today: hoje }).fala.texto, /Contas/);
 });
 
 test('entende "C.A.O.S." com pontinhos e o "não posso" fica com o sentido certo', () => {
   assert.equal(entender('O que significa C.A.O.S.?', { categories: cats }).intent, 'significado');
   const t = conversar('o que você pode fazer?', dados(), { now: NOW, today: hoje }).fala.texto;
-  assert.match(t, /Não posso gravar, apagar ou mudar nada sozinho, nem acessar seu banco/);
+  assert.match(t, /Não mexo em nada sozinho, não acesso seu banco/); // 13/11 à noite: fala resumida (JF)
   // privacidade (achado do GPT, 13/11): sem promessa absoluta; diz o que vai quando a IA online opcional está ligada
   assert.match(t, /lançamentos ficam no seu aparelho/);
   assert.match(t, /IA online \(é opcional\)/);

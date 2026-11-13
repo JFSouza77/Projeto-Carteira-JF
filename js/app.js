@@ -24,6 +24,7 @@ import * as imagens from './imagens.js';
 import * as ia from './ia.js';
 import * as lembretes from './notificacoes.js';
 import * as conta from './conta.js';
+import { criarAvatar, formaPara, configurarAvatar } from './avatar.js';
 
 const $ = sel => document.querySelector(sel);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -85,9 +86,35 @@ function setRosto(el, r) {
 }
 
 /** Pinta o rosto do momento no balão da tela inicial e no topo da conversa. */
-function pintarRosto(rosto) {
+// ---------- Avatares (JF, 13/11: "cadê os avatares?") ----------
+// Um avatar por lugar (Início, topo da conversa, painel do computador, susto do valor). Se der erro, os rostinhos de
+// texto continuam (3ª lei: problema no C.A.O.S. nunca trava o app).
+const avatares = {};
+function ligarAvatares() {
+  try {
+    configurarAvatar({ menosMovimento: () => MENOS_MOVIMENTO.matches });
+    for (const [nome, sel, tamanho] of [['caos', '#caos-avatar', 'pequeno'], ['chat', '#chat-avatar', 'pequeno'], ['painel', '#painel-avatar', 'medio'], ['espanto', '#espanto-avatar', 'pequeno']]) {
+      const el = $(sel);
+      if (el) avatares[nome] = criarAvatar(el, { tamanho });
+    }
+    document.body.classList.add('tem-avatar');
+  } catch (e) {
+    console.warn('avatar', e);
+  }
+}
+/** Mexe a boca dos avatares por um tempinho (enquanto ele "fala"). */
+let falaTimer = null;
+function avatarFala(ms) {
+  clearTimeout(falaTimer);
+  for (const k of ['caos', 'chat', 'painel']) avatares[k]?.falando(true);
+  falaTimer = setTimeout(() => { for (const k of ['caos', 'chat', 'painel']) avatares[k]?.falando(false); }, ms);
+}
+
+function pintarRosto(rosto, assunto = null) {
   const r = rosto || emocaoDoMomento(state.caosMemory, state.settings.mood).rosto
     || rostoAvulso(undefined, { mood: state.settings.mood, memory: state.caosMemory });
+  const forma = formaPara({ rosto: r, assunto });
+  for (const k of ['caos', 'chat', 'painel']) avatares[k]?.mostrar(forma);
   setRosto($('#caos-face'), r);
   setRosto($('#chat-face'), r);
   setRosto($('#painel-face'), r);
@@ -139,7 +166,8 @@ function narrate(events, { ignoreCooldown = false } = {}) {
   // ignorar cooldown nesta fala não pode apagar os cooldowns dos outros eventos
   guardarMemoria({ ...memoria, lastAt: { ...state.caosMemory.lastAt, ...memoria.lastAt } });
   if (!fala) { pintarOlho(); return null; }
-  pintarRosto(fala.rosto);
+  pintarRosto(fala.rosto, fala.evento);
+  avatarFala(Math.min(2600, 400 + fala.texto.length * 22));
   const box = $('#caos');
   $('#caos-line').textContent = fala.texto;
   if ($('#painel-obs')) $('#painel-obs').textContent = fala.texto;
@@ -584,6 +612,7 @@ function confirmarEspanto(valorCents, ehGasto) {
   $('#espanto-titulo').textContent = `${formatBRL(valorCents)}?!`;
   $('#espanto-texto').textContent = `${ehGasto ? 'De gasto' : 'De entrada'}${nota ? ` em "${nota}"` : ''}? É bem mais que o seu normal. Confere se não faltou a vírgula dos centavos.`;
   setRosto($('#espanto-face'), rostoEspantado());
+  avatares.espanto?.mostrar('surpreso', { imediato: true });
   return new Promise(resolve => {
     dlg.addEventListener('close', () => resolve(dlg.returnValue === 'ok'), { once: true });
     dlg.returnValue = '';
@@ -1225,7 +1254,7 @@ function addMsg(msg) {
 function renderChat() {
   const log = $('#chat-log');
   if (!state.chat.length) {
-    log.innerHTML = `<li class="msg caos-msg"><span class="who">C.A.O.S.</span>Oi! Sou o C.A.O.S., a ${esc(IDENTIDADE.sigla)}: ${esc(IDENTIDADE.slogan.charAt(0).toLowerCase() + IDENTIDADE.slogan.slice(1))} Pergunta sobre gastos, entradas, saldo, orçamento ou alertas, manda "gastei 30 no mercado" ou uma foto de comprovante. Se quiser saber mais de mim, pergunta "quem é você?".</li>`;
+    log.innerHTML = `<li class="msg caos-msg"><span class="who">C.A.O.S.</span>Oi! Sou o C.A.O.S. ${esc(IDENTIDADE.slogan)} Me pergunta dos seus gastos, manda "gastei 30 no mercado" ou a foto de um comprovante.</li>`;
   } else {
     log.innerHTML = state.chat.map((m, i) => {
       if (m.de === 'eu') {
@@ -1235,7 +1264,7 @@ function renderChat() {
         ? `<div class="acao"><button class="sim" data-acao="${i}" data-ok="1">${ic('i-ok')} Confirmar</button><button class="nao" data-acao="${i}" data-ok="0">Cancelar</button></div>`
         : '';
       if (m.digitando) return `<li class="msg caos-msg pensando digitando" aria-label="C.A.O.S. está digitando"><span class="who" aria-label="C.A.O.S."><span class="caos-face mini" data-msg="${i}" aria-hidden="true"></span></span><span class="pontos" aria-hidden="true"><i></i><i></i><i></i></span> digitando</li>`;
-      return `<li class="msg caos-msg ${m.temp ? 'pensando' : ''}"><span class="who" aria-label="C.A.O.S.${m.ia ? ' com IA' : ''}"><span class="caos-face mini" data-msg="${i}" aria-hidden="true"></span>${m.ia ? '<span class="tag-ia">IA</span>' : ''}</span>${esc(m.texto)}${acao}</li>`;
+      return `<li class="msg caos-msg ${m.temp ? 'pensando' : ''}" style="--msg-cor:${esc(m.rosto?.cor || 'var(--caos)')}"><span class="who" aria-label="C.A.O.S.${m.ia ? ' com IA' : ''}"><span class="caos-face mini" data-msg="${i}" aria-hidden="true"></span>${m.ia ? '<span class="tag-ia">IA</span>' : ''}</span>${esc(m.texto)}${acao}</li>`;
     }).join('');
     for (const el of log.querySelectorAll('[data-msg]')) {
       const r = state.chat[Number(el.dataset.msg)]?.rosto;
@@ -1259,7 +1288,7 @@ async function enviarPergunta(texto, { doPrint = false } = {}) {
   if (!doPrint) addMsg({ de: 'eu', texto: t });
   const { fala, memoria } = conversar(t, dados(), { mood: state.settings.mood, memory: state.caosMemory, now: Date.now(), perfil: state.perfil });
   guardarMemoria(memoria);
-  pintarRosto(fala.rosto);
+  pintarRosto(fala.rosto, fala.intent);
 
   if (!fala.entendeu && state.settings.aiOn && state.settings.aiUrl) {
     const pensando = rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory });
@@ -1286,7 +1315,8 @@ async function enviarPergunta(texto, { doPrint = false } = {}) {
   }
   await respiro(fala.texto);
   addMsg({ de: 'caos', texto: fala.texto, sugestoes: fala.sugestoes, acao: fala.acao, rosto: fala.rosto });
-  pintarRosto(fala.rosto);
+  pintarRosto(fala.rosto, fala.intent);
+  avatarFala(Math.min(2600, 400 + fala.texto.length * 22));
   if (state.settings.voice) falar(fala.texto, fala.emocao);
   if (fala.filaIA) await perguntaPraDepois(fala.filaIA);
   if (fala.fluxoMeta) iniciarMeta(fala.fluxoMeta.nome, { jaFalou: true });
@@ -1414,7 +1444,9 @@ async function respiro(texto) {
   const pensando = rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory });
   pintarRosto(pensando);
   addMsg({ de: 'caos', texto: 'digitando…', temp: id, digitando: true, rosto: pensando });
-  await new Promise(r => setTimeout(r, tempoDePensar(texto, MENOS_MOVIMENTO.matches)));
+  const espera = tempoDePensar(texto, MENOS_MOVIMENTO.matches);
+  avatarFala(espera);
+  await new Promise(r => setTimeout(r, espera));
   state.chat = state.chat.filter(m => m.temp !== id);
 }
 
@@ -2332,7 +2364,14 @@ const AJUDAS = [
 // Pedido do JF: um formato só (antes encolhia pro "?" ao rolar e voltava, e isso incomodava), dá pra arrastar pra
 // qualquer canto (o app lembra onde ficou) e o toque abre um menuzinho de ajuda rápida. Não vai pro cabeçalho: o pedido
 // do JF vem antes da sugestão do Code. No computador ele mora no menu lateral e não arrasta.
-const AJUDA_RAPIDA = ['Como lanço um gasto?', 'Quanto gastei este mês?', 'Como ponho orçamento?', 'Como registro meu cartão?', 'O que você pode fazer?'];
+// cada item com uma cor e um ícone (JF, 13/11 à noite: "cada um de uma cor, mais intuitivo, sem exagero")
+const AJUDA_RAPIDA = [
+  { q: 'Como lanço um gasto?', ic: 'i-gasto', cor: 'var(--accent)' },
+  { q: 'Quanto gastei este mês?', ic: 'i-lupa', cor: 'var(--cyan)' },
+  { q: 'Como ponho orçamento?', ic: 'i-meta', cor: 'var(--warn)' },
+  { q: 'Como registro meu cartão?', ic: 'a-cartao', cor: 'var(--violet)' },
+  { q: 'O que você pode fazer?', ic: 'i-conversa', cor: 'var(--caos)' },
+];
 const telaGrande = () => window.matchMedia('(min-width: 1024px)').matches;
 
 function posicionarMeAjuda() {
@@ -2362,8 +2401,8 @@ function abrirAjudaMenu() {
 
 function ligarMeAjuda() {
   const b = $('#me-ajuda'), m = $('#ajuda-menu');
-  m.innerHTML = AJUDA_RAPIDA.map(q => `<button type="button" role="menuitem" data-q="${esc(q)}">${esc(q)}</button>`).join('')
-    + '<button type="button" role="menuitem" data-q="" class="ajuda-tudo">Ver toda a ajuda</button>';
+  m.innerHTML = AJUDA_RAPIDA.map(a => `<button type="button" role="menuitem" data-q="${esc(a.q)}" style="--cor-item:${a.cor}">${ic(a.ic)}<span>${esc(a.q)}</span></button>`).join('')
+    + `<button type="button" role="menuitem" data-q="" class="ajuda-tudo">${ic('i-livro')}<span>Ver toda a ajuda</span></button>`;
   let ini = null, arrastou = false;
   b.addEventListener('pointerdown', e => {
     if (telaGrande() || e.button > 0) return;
@@ -3091,6 +3130,8 @@ async function limparFotosOrfas() {
 }
 
 async function init() {
+  comecarAbertura();
+  ligarAvatares();
   bind();
   $('#date').value = toISODate();
   try {
@@ -3196,31 +3237,62 @@ async function init() {
 }
 
 // ---------- Abertura (JF, 13/11) ----------
-// "Um respiro curto, não demora; nada de abrir seco." Mostra a versão por um instante (no mínimo ~0,9 s desde que a
-// página começou) e some. Com servidor ligado e sem conta, oferece "Entrar" uma vez; "Continuar sem conta" é lembrado.
+// "Um respiro curto; nada de abrir seco." Primeiro era ~1 s; o JF pediu uns 5 s pra dar tempo de ler (13/11 à noite).
+// O avatar passeia por algumas formas, cada uma com uma frase do que ele faz. Tocar em qualquer lugar pula.
+// Com servidor ligado e sem conta, oferece "Entrar" (e "Continuar sem conta" é lembrado).
+const ABERTURA_MS = 5000;
+const ABERTURA_PASSOS = [
+  ['anjinho', 'Oi! Eu sou o C.A.O.S., seu parceiro financeiro.'],
+  ['contador', 'Anoto seus gastos e faço as contas.'],
+  ['professor', 'Te dou dicas quando o mês aperta.'],
+  ['feliz', 'E comemoro junto quando você manda bem!'],
+];
+let aberturaFechada = false;
+function fecharAbertura() {
+  const ab = $('#abertura');
+  if (!ab || aberturaFechada) return;
+  aberturaFechada = true;
+  ab.classList.add('saindo');
+  setTimeout(() => { ab.remove(); avatares.abertura?.destruir(); }, 400);
+}
+function comecarAbertura() {
+  const ab = $('#abertura');
+  if (!ab) return;
+  try {
+    configurarAvatar({ menosMovimento: () => MENOS_MOVIMENTO.matches });
+    avatares.abertura = criarAvatar($('#abertura-avatar'), { tamanho: 'grande', forma: ABERTURA_PASSOS[0][0] });
+  } catch (e) { console.warn('avatar', e); }
+  const dica = $('#abertura-dica');
+  ABERTURA_PASSOS.forEach(([forma, frase], i) => setTimeout(() => {
+    if (aberturaFechada) return;
+    avatares.abertura?.mostrar(forma);
+    if (dica) dica.textContent = frase;
+  }, i * (ABERTURA_MS / ABERTURA_PASSOS.length)));
+  ab.addEventListener('click', e => { if (!e.target.closest('button')) fecharAbertura(); });
+}
+
 async function mostrarAbertura() {
   const ab = $('#abertura');
   if (!ab) return;
   const n = NOVIDADES[0];
   $('#abertura-versao').textContent = `Versão ${VERSAO_APP}${n.nome ? ` · ${n.nome}` : ''} · atualizada em ${n.data}`;
-  const fechar = () => { ab.classList.add('saindo'); setTimeout(() => ab.remove(), 400); };
   const temConta = await conta.contaAtual().catch(() => null);
   const oferecerLogin = !temConta && servidor() && state.perfil && !state.onboarding && !state.settings.aberturaSemConta;
   if (!oferecerLogin) {
-    setTimeout(fechar, Math.max(0, 900 - performance.now()));
+    setTimeout(fecharAbertura, Math.max(0, ABERTURA_MS - performance.now()));
     return;
   }
   ab.classList.add('esperando');
   $('#abertura-login').hidden = false;
   $('#abertura-entrar').addEventListener('click', () => {
-    fechar();
+    fecharAbertura();
     location.hash = 'ajustes';
     setTimeout(() => { const c = $('#conta-card'); if (c) { c.open = true; c.scrollIntoView({ block: 'start' }); $('#conta-apelido')?.focus(); } }, 350);
   }, { once: true });
   $('#abertura-pular').addEventListener('click', () => {
     state.settings.aberturaSemConta = true;
     saveSettings();
-    fechar();
+    fecharAbertura();
   }, { once: true });
 }
 

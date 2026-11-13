@@ -50,9 +50,25 @@ export function textoAnatomia() {
   return IDENTIDADE.anatomia.map(a => `${a.parte}: ${a.faz}.`).join(' ');
 }
 
+// Falas curtas (JF, 13/11 à noite: "a mensagem é importante, mas é enorme; resumindo fica melhor explicado").
+// A versão completa continua indo pra IA online (resumoIdentidade), que precisa de tudo.
 export function textoPodeNaoPode() {
+  return `Sou ${IDENTIDADE.oQueSou.curto}. Analiso seus gastos, prevejo como o mês fecha, aviso quando um orçamento aperta e preparo lançamentos pra você confirmar. Não mexo em nada sozinho, não acesso seu banco e não sou consultor financeiro. Seus lançamentos ficam no seu aparelho; a IA online (é opcional) só recebe os totais do mês.`;
+}
+
+export function textoPodeNaoPodeCompleto() {
   const cart = IDENTIDADE.oQueSou.porProjeto.carteira;
-  return `Sou ${IDENTIDADE.oQueSou.curto}. ${cart[0].toUpperCase()}${cart.slice(1)}. Eu posso ${lista(IDENTIDADE.pode)}. Não posso ${IDENTIDADE.naoPode.join(', nem ')}. Seus lançamentos ficam no seu aparelho. Se você ligar a IA online (é opcional), mando só os totais do mês junto com a pergunta, nunca a lista dos seus gastos; a foto só vai quando você toca em "Ler com IA".`;
+  return `Sou ${IDENTIDADE.oQueSou.curto}. ${cart[0].toUpperCase()}${cart.slice(1)}. Eu posso ${lista(IDENTIDADE.pode)}. Não posso ${IDENTIDADE.naoPode.join(', nem ')}. ${textoPrivacidade()}`;
+}
+
+/** Pra onde vão os dados (achado do GPT de 13/11: dizer o que vai quando a IA online está ligada). */
+export function textoPrivacidade() {
+  return 'Seus lançamentos ficam no seu aparelho. Com conta, a cópia na nuvem vai embaralhada (nem o servidor lê). Se você ligar a IA online, mando só os totais do mês, nunca a lista dos gastos; a foto só vai quando você toca em "Ler com IA".';
+}
+
+/** Como ele funciona, em uma frase por parte do corpo. */
+export function textoComoFunciona() {
+  return 'Sou uma IA de bolso montada como um corpo: o cérebro cuida das falas e das emoções, o sistema nervoso é o radar dos seus gastos, os braços fazem as contas e a espinha guarda minhas 3 leis. Funciono até sem internet.';
 }
 
 const dataBR = iso => { const [a, m, d] = iso.split('-'); return `${Number(d)}/${Number(m)}/${a}`; };
@@ -60,12 +76,11 @@ const dataBR = iso => { const [a, m, d] = iso.split('-'); return `${Number(d)}/$
 /** A história dele, contada por ele (a vida do núcleo). */
 export function textoVida() {
   const v = IDENTIDADE.vida;
-  const marcos = v.slice(0, 3).map(x => `em ${dataBR(x.data)} ${x.fato}`).join('; ');
   const ultimo = v[v.length - 1];
-  return `Eu nasci em ${dataBR(v[0].data)}. Resumindo: ${marcos}. O mais recente: em ${dataBR(ultimo.data)} ${ultimo.fato}. ${IDENTIDADE.frasePropria}`;
+  return `Em ${dataBR(v[0].data)} ${v[0].fato}. Depois ganhei memória, voz e emoções. O mais recente: em ${dataBR(ultimo.data)} ${ultimo.fato}. No Perfil eu apresento o jogo; aqui eu cuido do dinheiro com você.`;
 }
 
 /** Resumo pra IA online saber quem ela é (vai no pedido ao servidor). */
 export function resumoIdentidade() {
-  return `${IDENTIDADE.nome} (${IDENTIDADE.sigla}), criado por ${IDENTIDADE.criador}, veio do ${IDENTIDADE.origem}. ${IDENTIDADE.frasePropria} ${IDENTIDADE.missao} Lema: "${IDENTIDADE.slogan}" ${textoPodeNaoPode()}`;
+  return `${IDENTIDADE.nome} (${IDENTIDADE.sigla}), criado por ${IDENTIDADE.criador}, veio do ${IDENTIDADE.origem}. ${IDENTIDADE.frasePropria} ${IDENTIDADE.missao} Lema: "${IDENTIDADE.slogan}" ${textoPodeNaoPodeCompleto()}`;
 }

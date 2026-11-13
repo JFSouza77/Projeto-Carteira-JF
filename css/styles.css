@@ -991,7 +991,7 @@ h1, h2 { font-weight: 700; letter-spacing: .005em; }
 /* Abertura (JF, 13/11): respiro curto ao abrir, com a versão e, se tiver servidor e nenhuma conta, o "Entrar" */
 .abertura { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 24px;
   background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) 10%, var(--bg)), var(--bg) 70%);
-  transition: opacity .35s ease, visibility .35s; animation: abertura-socorro .3s 8s forwards; }
+  transition: opacity .35s ease, visibility .35s; animation: abertura-socorro .3s 12s forwards; cursor: pointer; }
 .abertura.saindo { opacity: 0; visibility: hidden; pointer-events: none; }
 .abertura.esperando { animation: none; }
 @keyframes abertura-socorro { to { opacity: 0; visibility: hidden; pointer-events: none; } }
@@ -1011,3 +1011,42 @@ h1, h2 { font-weight: 700; letter-spacing: .005em; }
 
 /* Cor da categoria no ícone (Code + JF, 13/11): cada cor quer dizer uma coisa; o texto fica neutro, sem bolinha */
 .exp-emoji.cat .ico { color: var(--cor-cat, var(--muted)); }
+
+/* Avatares no lugar dos rostinhos (JF, 13/11). O rostinho de texto continua no balão de cada mensagem. Se o avatar não
+   carregar, o rostinho volta (o JS só esconde quando o avatar existe). */
+.tem-avatar #caos-face, .tem-avatar #chat-face, .tem-avatar #painel-face, .tem-avatar #espanto-face { display: none; }
+.caos-avatar, .chat-avatar, .painel-avatar, .espanto-avatar, .abertura-avatar { display: none; flex: none; }
+.tem-avatar .caos-avatar, .tem-avatar .chat-avatar, .tem-avatar .painel-avatar, .tem-avatar .espanto-avatar, .abertura-avatar { display: inline-block; }
+.caos-avatar { width: 78px; margin: -8px -4px -8px -6px; }
+.chat-avatar { width: 50px; margin: -6px 0; }
+.painel-avatar { width: 150px; }
+.espanto-avatar { width: 66px; }
+.abertura-avatar { width: min(210px, 56vw); min-height: 60px; display: grid; place-items: center; }
+.abertura-avatar.avatar .abertura-rosto { display: none; }
+
+.abertura-dica { margin: 0; min-height: 2.6em; color: var(--caos); font-weight: 600; transition: opacity .3s; }
+.abertura-pula { margin: 4px 0 0; color: var(--muted); font-size: .72rem; opacity: .7; }
+
+/* Me ajuda (JF, 13/11 à noite): só o "?", redondo; no computador (menu lateral) continua com o texto */
+@media (max-width: 1023.98px) {
+  .me-ajuda { width: 52px; height: 52px; padding: 0; justify-content: center; border-radius: 50%; }
+  .me-ajuda .ico { width: 26px; height: 26px; }
+  .me-ajuda .me-ajuda-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+.ajuda-menu button { display: flex; align-items: center; gap: 10px; border-left: 3px solid var(--cor-item, var(--line)); }
+.ajuda-menu button .ico { flex: none; color: var(--cor-item, var(--caos)); }
+.ajuda-menu button:hover, .ajuda-menu button:focus-visible { background: color-mix(in srgb, var(--cor-item, var(--caos)) 12%, var(--card)); }
+.ajuda-menu .ajuda-tudo { --cor-item: var(--caos); border-left-color: transparent; }
+
+/* Balão do C.A.O.S. um pouco mais vivo (JF, 13/11 à noite: "mais chamativo, sem carnaval"): a cor é a da emoção da
+   mensagem, numa faixa fina à esquerda e num brilho bem leve. Só uma cor por balão. */
+.msg.caos-msg {
+  --msg-cor: var(--caos);
+  border-color: color-mix(in srgb, var(--msg-cor) 40%, var(--line));
+  border-left: 3px solid var(--msg-cor);
+  background: linear-gradient(100deg, color-mix(in srgb, var(--msg-cor) 10%, var(--card-2)), var(--card-2) 60%);
+  box-shadow: 0 0 16px -8px var(--msg-cor);
+  font-size: 1.02rem;
+}
+.msg.caos-msg .who .nome-caos, .msg.caos-msg .who .tag-ia { color: var(--msg-cor); }
+:root[data-theme="claro"] .msg.caos-msg { box-shadow: none; background: color-mix(in srgb, var(--msg-cor) 6%, var(--card)); }

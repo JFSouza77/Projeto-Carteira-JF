@@ -7,7 +7,7 @@ import {
   incomeIn, monthKey, shiftMonth, monthLabel, accountBalance, accountLabel, totalBalance, analyze,
   spentIn, toISODate, INCOME_SOURCES, idadeDe, faixaEtaria, situacaoCompromissos, analisarPlanejamento, cabeNoMes, sugerirCategoria, palavrasDe, faturaDoCartao, progressoMeta, resumoInvestimentos,
 } from '../engine.js';
-import { IDENTIDADE, textoAnatomia, textoPodeNaoPode, textoVida } from './identidade.js';
+import { IDENTIDADE, textoPodeNaoPode, textoVida, textoComoFunciona, textoPrivacidade } from './identidade.js';
 import { acharTermo, ATUALIZADO_EM, GLOSSARIO } from './glossario.js';
 import { lerPorcentagem, textoPorcentagem, lerOfertas, analisarOfertas, textoOfertas, lerOfertaUnica, textoOfertaUnica } from './ofertas.js';
 
@@ -318,7 +318,9 @@ function entenderSimples(t, { categories = [] } = {}) {
   // "Explica o print do banco" (06/11): a pessoa manda o print e ele explica pelo servidor
   if (/(explica|explicar|nao entendi|o que (significa|quer dizer)|me ajuda a entender).*(print|tela|banco|fatura|extrato|app do banco|imagem|foto)|(print|tela) do banco/.test(t)) return { ...r, intent: 'explicar_print' };
   // Cartão de crédito (06/11): "como está meu cartão?", "quanto vem na fatura?", "quanto tenho de limite?"
-  if (/(cartao|fatura|limite (do|no) cartao)/.test(t) && !/\b(como|onde|quero|preciso|queria)\b.*\b(cadastr|adicion|registr|coloc|ponho|crio|criar)/.test(t)) return { ...r, intent: 'cartao' };
+  // "o que é limite do cartão?" é pergunta de glossário, não do seu cartão (revisão de 13/11 à noite)
+  const perguntaDeSignificado = /^(o que (e|sao|significa|quer dizer)|me explica|explica|me ensina)\b/.test(t) && acharTermo(t);
+  if (!perguntaDeSignificado && /(cartao|fatura|limite (do|no) cartao)/.test(t) && !/\b(como|onde|quero|preciso|queria)\b.*\b(cadastr|adicion|registr|coloc|ponho|crio|criar)/.test(t)) return { ...r, intent: 'cartao' };
   if (/((o que|quanto) (eu )?(ainda )?tenho (pra|para|de) pagar|falta pagar|contas? (do|deste|desse) mes|vencimento|quando vence|o que vence|tenho conta|compromissos?|minhas contas fixas|assinaturas)/.test(t)) return { ...r, intent: 'pagar' };
   const querFazer = /\b(quero|preciso|queria|gostaria de) (anotar|lancar|registrar|adicionar|cadastrar|colocar|planejar|fazer|ligar|instalar|mandar)\b/.test(t);
   if (!/^como\b/.test(t) && !querFazer && /(o que (eu )?planejei|meus planos|planejamento|planos? (do|deste|desse|pro|para o) mes|o que (eu )?vou comprar|planejad|programad|o que (mais )?(eu )?tenho (pra|para) (esse|este|o) mes|o que mais (eu )?(tenho|vou))/.test(t)) return { ...r, intent: 'planos' };
@@ -331,7 +333,7 @@ function entenderSimples(t, { categories = [] } = {}) {
   if (!/(pra|para) (pagar|gastar)/.test(t) && /(\bsaldo\b|quanto (eu )?(tenho|tem|ainda tenho|sobrou)\b(?! (pra|para|de) )|tenho guardado|guardad[oa]s?\b|poupad[oa]s?\b|quanto (eu )?(guardei|poupei|juntei)|dinheiro (no|na|nos|nas) (banco|conta)|tenho no banco|nas contas|no total)/.test(t)
     && !/(gast|entrada|recebi|rendimento|planej)/.test(t)) return { ...r, intent: 'saldo' };
   // Mercado (1.3.0): moedas, bolsa, juros e "vale investir?"
-  // Professor de finanças (13/11): calculadoras e glossário offline (60 termos), antes de "entradas" (que pega "juros")
+  // Professor de finanças (13/11): calculadoras e glossário offline (70 termos), antes de "entradas" (que pega "juros")
   const calc = lerCalculoJuros(t);
   // "o que é juros compostos?" é pergunta de glossário; conta só com números ou pedido de cálculo
   if (calc && (!calc.faltando || /(calcul|faz a conta|faca a conta|simul|quanto (rende|renderia|fica|vira))/.test(t))) return { ...r, intent: 'calc_juros', calc };
@@ -390,12 +392,13 @@ function entenderSimples(t, { categories = [] } = {}) {
   if (/\b(obrigad|valeu|vlw|brigad|agradeco)/.test(t)) return { ...r, intent: 'agradecimento' };
   if (/\b(burro|idiota|inutil|lixo|chato|odeio voce|merda|porcaria)\b/.test(t)) return { ...r, intent: 'xingamento' };
   if (/\b(te amo|voce e (o )?(muito )?(melhor|demais|incrivel|genial|otimo|legal|top|brabo|foda)|gosto de voce|lindo|parabens caos)\b/.test(t)) return { ...r, intent: 'elogio' };
-  if (/(como voce (esta|ta)|tudo bem com voce|como (vai|ta) voce|seu humor|voce esta bem)/.test(t)) return { ...r, intent: 'como_esta' };
+  if (/(como voce (esta|ta)|tudo bem com voce|como (vai|ta) voce|seu humor|voce esta bem|^(e ai|eai|oi|ola|opa)?[ ,!]*(tudo|td) (bem|bom|certo|joia|tranquilo)\??$|^beleza\??$)/.test(t)) return { ...r, intent: 'como_esta' };
+  if (/(meus dados|minha privacidade|privacidade|quem ve (meus|os meus)|e seguro|meus dados (estao|ficam)|pra onde vao)/.test(t)) return { ...r, intent: 'privacidade' };
   if (/\b(alerta|alertas|problema|como estou|como to|como esta (minha|a) (situacao|carteira)|situacao|resumo|radar)\b/.test(t)) return { ...r, intent: 'alertas' };
   if (/(rendimento|recebi|entrada|entradas|salario|ganhei|renda|entrou|receita|dividendo|juros)/.test(t)) return { ...r, intent: 'entradas' };
   if (/\b(saldo|quanto tenho|dinheiro na conta|na conta|nas contas|tenho no banco)\b/.test(t)) return { ...r, intent: 'saldo' };
   if (/(maior gasto|mais gastei|gastei mais|com o que (mais )?gast|onde (mais )?gast|categoria que mais|top|ranking|principal gasto)/.test(t)) return { ...r, intent: 'maior_gasto' };
-  if (/(previsao|vai dar|fim do mes|ritmo|vou conseguir|chegar ao fim|projecao|aguenta)/.test(t)) return { ...r, intent: 'previsao' };
+  if (/(previsao|vai dar|fim do mes|ritmo|vou conseguir|chegar ao fim|projecao|aguenta|(vai|vou) fechar|fechar o mes|como (o mes|vou) (fechar|terminar))/.test(t)) return { ...r, intent: 'previsao' };
   if (/(compar|mes passado.*(gast|mais|menos)|melhor que|pior que|em relacao)/.test(t) && !/quanto gastei/.test(t)) return { ...r, intent: 'comparar' };
   if (/(orcamento|limite|quanto (ainda )?posso|quanto falta|quanto sobra|posso gastar|sobrou)/.test(t)) return { ...r, intent: 'orcamento' };
   if (/(media|por dia|diario|diaria)/.test(t)) return { ...r, intent: 'media' };
@@ -738,7 +741,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         }
         return { fato: `${p.n}x de ${formatBRL(p.parcela)} dá ${formatBRL(total)} no total. Pergunta o preço à vista: se for menor, a diferença é o juro escondido. E confere se a parcela cabe no mês com as outras que você já tem.`, cru: true, decisao: 'compra' };
       }
-      return { fato: 'Depende de três coisas: 1) o total parcelado é igual ao à vista? Se for maior, tem juro. 2) a parcela cabe no mês junto com as outras? 3) vale pelo que dura? Coxinha de R$ 5 em 3x? Não! Ela acaba hoje e a parcela fica três meses. Um notebook de R$ 3.000 em 10x sem juros, que você vai usar anos? Pode valer, se couber no mês. Me manda os números, tipo "3000 à vista ou 10x de 330", que eu faço a conta.', cru: true, decisao: 'compra', sugestoes: [] };
+      return { fato: 'Depende: o parcelado sai mais caro que o à vista? (aí tem juro). A parcela cabe no mês? E vale pelo que dura? Coxinha em 3x, não; notebook em 10x sem juros, pode ser. Me manda os números, tipo "3000 à vista ou 10x de 330".', cru: true, decisao: 'compra', sugestoes: [] };
     }
     case 'esqueci_de_lancar':
       return {
@@ -1069,14 +1072,16 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
     case 'significado': case 'criador': case 'origem': case 'identidade': case 'piada':
       return { gatilho: intencao.intent, vars: { sigla: IDENTIDADE.sigla, criador: IDENTIDADE.criador, origem: IDENTIDADE.origem, slogan: IDENTIDADE.slogan }, sugestoes: SUG_IDENTIDADE };
     case 'como_funciona':
-      return { fato: `Sou uma IA de bolso, montada em camadas. ${textoAnatomia()} Funciono offline; com a IA online ligada, ganho um reforço pra perguntas livres e fotos.`, sugestoes: SUG_IDENTIDADE };
+      return { fato: textoComoFunciona(), sugestoes: ['Quais são suas leis?', 'O que você pode fazer?', 'E os meus dados?'] };
     case 'limites':
-      return { fato: textoPodeNaoPode(), sugestoes: SUG_IDENTIDADE };
+      return { fato: textoPodeNaoPode(), sugestoes: ['E os meus dados?', 'Como funciona seu cérebro?', 'Conta uma piada'] };
+    case 'privacidade':
+      return { fato: textoPrivacidade(), sugestoes: ['O que você pode fazer?', 'Como faço backup?'] };
     case 'tutorial':
       return { fato: TUTORIAL[intencao.tema] || TUTORIAL.geral, sugestoes: ['Como adiciono uma conta?', 'Como ponho orçamento?', 'Como mando foto?'] };
     case 'ajuda':
       return {
-        fato: 'Eu analiso e observo sua carteira. Pode me perguntar sobre gastos ("quanto gastei em delivery?"), entradas ("tive rendimentos?"), saldo, orçamento, alertas, previsão do mês, pedir uma dica ou uma piada. Pode mandar "gastei 30 no mercado" que eu preparo o registro pra você confirmar, mandar foto de comprovante e perguntar "como faço…" que eu ensino a usar o app.',
+        fato: 'Pode me perguntar dos seus gastos ("quanto gastei em delivery?"), do saldo, do orçamento ou de como o mês vai fechar. Também anoto: manda "gastei 30 no mercado" ou a foto do comprovante. Travou no app? Pergunta "como faço…".',
         sugestoes: SUG_IDENTIDADE,
       };
     default:

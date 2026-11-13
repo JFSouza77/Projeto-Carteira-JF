@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 2.0.2 Alfa | 13/11/2026 | Avatares: 44 formas animadas (rascunho de 06/11) no Início, conversa, painel, susto e abertura (5 s, toque pula); Me ajuda só "?" com menu colorido; falas curtas; +20 piadas e +5 em 6 respostas; glossário 70; balão na cor da emoção. C.A.O.S. 2.0.8 |
 | 2.0.1 Alfa | 13/11/2026 | Cara de Marca: abertura com a versão, Baloo 2 nos títulos, rosto espantado, "Me ajuda" arrastável com menu, microfone e Lembretes corrigidos, núcleo 1.4.0 (IA de bolso), cor por categoria, estabilizador das emoções. C.A.O.S. 2.0.7 |
 | 2.0.0 Alfa | 13/11/2026 | Repaginada (JF: o app já tem carga pra fase 2.0). Números: etapa · geração.grande.versão; regra do 9; o 2º número só sobe com o ok do JF; ajuste pequeno entra na versão aberta (decisão do Wally, 13/11: cofrinhos e banco por dentro ficaram como ajuste da 2.0.0) |
 | 1.28 | 13/11/2026 | Início Mais Vivo |

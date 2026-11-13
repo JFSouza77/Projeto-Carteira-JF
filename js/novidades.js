@@ -7,6 +7,26 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.0.2 Alfa',
+    data: '13/11/2026',
+    nome: 'Avatares',
+    t: 'O C.A.O.S. ganhou corpo: um avatar animado que muda de forma com o momento.',
+    itens: [
+      '🤖 C.A.O.S. com corpo: um avatar que muda de forma conforme o humor e o assunto.',
+      '🎭 Mais de 40 formas: professor na dica, humorista na piada, despertador na conta vencendo.',
+      '✨ Abertura com o avatar: uns segundos pra ler o que ele faz (toque pra pular).',
+      '❓ Me ajuda em um toque: só o "?", e o menu tem uma cor pra cada assunto.',
+      '💬 Falas mais curtas: respostas resumidas e um jeito mais natural de conversar.',
+      '😂 Mais piadas: o repertório de piadas e de respostas do dia a dia cresceu.',
+      '📚 Glossário maior: cheque especial, LCI e LCA, cripto, financiamento e mais.',
+    ],
+    qol: [
+      '🗨️ Balão com a cor da emoção: cada mensagem do C.A.O.S. tem a cor do humor dele.',
+      '👋 Tudo bem?: agora ele responde do jeito certo, e entende "como vai fechar o mês?".',
+      '🔒 E os meus dados?: pergunta que ele explica pra onde vai cada coisa.',
+    ],
+  },
+  {
     v: '2.0.1 Alfa',
     data: '13/11/2026',
     nome: 'Cara de Marca',
