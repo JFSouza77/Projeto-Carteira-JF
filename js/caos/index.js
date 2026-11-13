@@ -12,7 +12,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '1.17.0';
+export const CAOS_VERSAO = '1.18.0';
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -212,7 +212,7 @@ function reagirBruto(eventos, { mood = DEFAULT_MOOD, memory, now = Date.now(), r
   return { fala: { texto, evento: ev.type, alerta: ALERTAS.has(ev.type), emocao, rosto: r.rosto }, memoria };
 }
 
-const EVENTO_DA_INTENCAO = { elogio: 'elogio', xingamento: 'xingamento', agradecimento: 'agradecimento', piada: 'piada', identidade: 'carinho_conversa' };
+const EVENTO_DA_INTENCAO = { elogio: 'elogio', xingamento: 'xingamento', agradecimento: 'agradecimento', piada: 'piada', identidade: 'carinho_conversa', nao_entendi: 'nao_entendi' };
 
 /**
  * Conversa: responde a uma mensagem da pessoa com os números do motor.

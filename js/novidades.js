@@ -17,6 +17,7 @@ export const NOVIDADES = Object.freeze([
       '🤝 Um C.A.O.S. só: o mesmo parceiro do jogo Perfil JF, aqui cuidando do seu dinheiro.',
     ],
     qol: [
+      '😳 Mais sentimentos: o C.A.O.S. agora também fica assustado, enjoado e sem graça.',
       '🔒 Criador protegido: digitar o nome do criador não dá mais tratamento especial.',
     ],
   },
