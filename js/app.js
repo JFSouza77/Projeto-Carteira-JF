@@ -1655,6 +1655,14 @@ async function confirmarAcao(i, ok) {
       addMsg({ de: 'caos', texto: `Fechado! A partir de agora te chamo de ${a.apelido}.` });
       return;
     }
+    if (a.tipo === 'registrar_varios') {
+      let eventos = [];
+      for (const x of a.itens) eventos = await registrarGasto({ ...x, imageId: a.imageId });
+      const total = a.itens.reduce((t, x) => t + x.amountCents, 0);
+      const fala = narrate(eventos, { ignoreCooldown: true });
+      addMsg({ de: 'caos', texto: `Anotei os ${a.itens.length} pagamentos (${formatBRL(total)}).${fala ? ` ${fala.texto}` : ''}`, rosto: fala?.rosto });
+      return;
+    }
     const events = a.tipo === 'registrar_entrada'
       ? await registrarEntrada({ amountCents: a.amountCents, sourceId: a.sourceId, note: a.note, date: a.date, accountId: a.accountId || null })
       : await registrarGasto({ amountCents: a.amountCents, categoryId: a.categoryId, note: a.note, date: a.date, imageId: a.imageId, compromissoId: a.compromissoId, accountId: a.accountId,
@@ -1691,13 +1699,24 @@ async function explicarPrint(img, duvida) {
   addMsg({ de: 'caos', texto: 'Agora eu não consigo falar com o servidor do C.A.O.S. Finanças, mas guardei o print aqui no aparelho. Assim que tiver conexão, eu explico e te aviso.' });
 }
 
-async function fotoNoChat(arquivo) {
+function tirarAnexo() {
+  state.fotoPendente = null;
+  $('#chat-anexo').hidden = true;
+  const img = $('#chat-anexo-img');
+  if (img.src) { URL.revokeObjectURL(img.src); img.removeAttribute('src'); }
+  $('#chat-input').placeholder = 'Pergunte ao C.A.O.S.…';
+}
+
+async function fotoNoChat(arquivo, legenda = '') {
   try {
     const img = await imagens.guardar(arquivo, 'chat');
-    addMsg({ de: 'eu', texto: '', url: URL.createObjectURL(img.blob), imagemId: img.id });
-    const explicar = state.modoFoto?.tipo === 'explicar' && state.modoFoto.ate > Date.now() ? state.modoFoto : null;
+    addMsg({ de: 'eu', texto: legenda, url: URL.createObjectURL(img.blob), imagemId: img.id });
+    // a legenda também diz o que fazer (14/11): "explica esse print", "qual oferta é melhor?"
+    const pedeExplicar = /\b(explica|explique|o que (e|é|significa)|nao entendi|não entendi|que cobranca|que cobrança)\b/i.test(legenda);
+    const pedeOferta = /\b(oferta|ofertas|compar|qual (e |é )?(melhor|mais barat)|vale a pena)\b/i.test(legenda);
+    const explicar = pedeExplicar ? { duvida: legenda } : state.modoFoto?.tipo === 'explicar' && state.modoFoto.ate > Date.now() ? state.modoFoto : null;
     // print de oferta (13/11): quando o C.A.O.S. pediu o print ou tem uma comparação aberta
-    const ofertas = (state.modoFoto?.tipo === 'ofertas' && state.modoFoto.ate > Date.now()) || state.caosMemory?.aguardando?.tipo === 'ofertas';
+    const ofertas = pedeOferta || (state.modoFoto?.tipo === 'ofertas' && state.modoFoto.ate > Date.now()) || state.caosMemory?.aguardando?.tipo === 'ofertas';
     state.modoFoto = null;
     if (explicar) return explicarPrint(img, explicar.duvida);
     if (ofertas) return lerPrintDeOferta(img);
@@ -1706,9 +1725,26 @@ async function fotoNoChat(arquivo) {
       return;
     }
     addMsg({ de: 'caos', texto: 'Lendo a foto com a IA…', temp: true });
-    const r = await ia.lerImagem(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob), categorias: state.categories });
+    const r = await ia.lerImagem(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob), categorias: state.categories, legenda });
     state.chat = state.chat.filter(m => !m.temp);
     const cat = catById(r.categoria) || catById('outros');
+    // vários pagamentos no mesmo print (14/11, JF: "leu os 5 e só lançou 1"): um Confirmar lança todos
+    const itens = Array.isArray(r.itens) ? r.itens.filter(x => x.valor_centavos > 0) : [];
+    if (itens.length > 1) {
+      const hoje = toISODate();
+      const lista = itens.map(x => {
+        const c = catById(x.categoria) || catById(sugerirCategoria(x.estabelecimento, state.expenses)?.categoryId) || catById('outros');
+        return { amountCents: x.valor_centavos, categoryId: c.id, date: /^\d{4}-\d{2}-\d{2}$/.test(x.data || '') ? x.data : hoje, note: (x.estabelecimento || '').slice(0, 120) };
+      });
+      const total = lista.reduce((t, x) => t + x.amountCents, 0);
+      const linhas = lista.map((x, i) => `${i + 1}. ${x.note || 'Sem nome'}: ${formatBRL(x.amountCents)} em ${catById(x.categoryId).name} (${x.date.slice(8)}/${x.date.slice(5, 7)})`).join('\n');
+      addMsg({
+        de: 'caos', ia: true,
+        texto: `Achei ${lista.length} pagamentos, total ${formatBRL(total)}:\n${linhas}\nAnoto todos?${r.confianca === 'baixa' ? ' Li com pouca certeza, confere os valores.' : ''} Se algum sair errado, dá pra corrigir no lápis depois.`,
+        acao: { tipo: 'registrar_varios', itens: lista, imageId: img.id },
+      });
+      return;
+    }
     if (r.valor_centavos > 0) {
       addMsg({
         de: 'caos', ia: true,
@@ -3140,8 +3176,10 @@ function bind() {
     e.preventDefault();
     const v = $('#chat-input').value;
     $('#chat-input').value = '';
+    if (state.fotoPendente) { const f = state.fotoPendente; tirarAnexo(); fotoNoChat(f, v.trim().slice(0, 300)); return; }
     enviarPergunta(v);
   });
+  $('#chat-anexo-tirar').addEventListener('click', tirarAnexo);
   $('#chat-suggestions').addEventListener('click', e => {
     const ir = e.target.closest('[data-ir]');
     if (ir) { location.hash = ir.dataset.ir; return; } // atalho: só navega, não mexe em nada
@@ -3194,7 +3232,19 @@ function bind() {
     const b = e.target.closest('[data-acao]');
     if (b) confirmarAcao(Number(b.dataset.acao), b.dataset.ok === '1');
   });
-  $('#chat-photo').addEventListener('change', e => { const f = e.target.files?.[0]; if (f) fotoNoChat(f); e.target.value = ''; });
+  // 14/11 (JF: "a print vai sozinha, não dá pra pôr texto"): a foto fica anexada e vai junto com a legenda
+  $('#chat-photo').addEventListener('change', e => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    state.fotoPendente = f;
+    const img = $('#chat-anexo-img');
+    if (img.src) URL.revokeObjectURL(img.src);
+    img.src = URL.createObjectURL(f);
+    $('#chat-anexo').hidden = false;
+    $('#chat-input').placeholder = 'Legenda (opcional), ex.: "foi no cartão"';
+    $('#chat-input').focus();
+  });
   $('#chat-clear').addEventListener('click', async () => {
     for (const m of state.chat) if (m.imagemId && !state.expenses.some(x => x.imageId === m.imagemId)) await imagens.apagar(m.imagemId).catch(() => {});
     state.chat = [];

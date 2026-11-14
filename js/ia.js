@@ -57,9 +57,9 @@ export async function perguntar(base, { pergunta, humor, dados }) {
   return j.texto;
 }
 
-export async function lerImagem(base, { base64, categorias }) {
+export async function lerImagem(base, { base64, categorias, legenda = '' }) {
   return chamar(base, '/ia/imagem', {
-    imagem: base64, tipo: 'image/jpeg',
+    imagem: base64, tipo: 'image/jpeg', legenda: String(legenda || '').slice(0, 200),
     categorias: categorias.map(c => ({ id: c.id, nome: c.name })),
   });
 }

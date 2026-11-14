@@ -261,8 +261,24 @@ export function esquemaImagem(ids) {
       categoria: { type: 'string', enum: [...ids, ''] },
       resumo: { type: 'string', description: 'Uma frase curta, em português, dizendo o que é a imagem.' },
       confianca: { type: 'string', enum: ['alta', 'media', 'baixa'] },
+      // 14/11 (JF: "mandei print com 5 pagamentos e ele só lançou um"): cada pagamento visível, um por item
+      pagamentos: {
+        type: 'array',
+        description: 'Cada pagamento/gasto que aparece na imagem (extrato, lista de Pix, fatura). Um comprovante só = 1 item.',
+        items: {
+          type: 'object',
+          properties: {
+            valor_centavos: { type: 'integer' },
+            data: { type: 'string', description: 'AAAA-MM-DD ou vazio' },
+            estabelecimento: { type: 'string' },
+            categoria: { type: 'string', enum: [...ids, ''] },
+          },
+          required: ['valor_centavos', 'data', 'estabelecimento', 'categoria'],
+          additionalProperties: false,
+        },
+      },
     },
-    required: ['tipo', 'valor_centavos', 'data', 'estabelecimento', 'categoria', 'resumo', 'confianca'],
+    required: ['tipo', 'valor_centavos', 'data', 'estabelecimento', 'categoria', 'resumo', 'confianca', 'pagamentos'],
     additionalProperties: false,
   };
 }
@@ -337,6 +353,7 @@ async function iaImagem(req, env) {
   const tipo = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(corpo.tipo) ? corpo.tipo : null;
   if (!imagem || !tipo) throw new ErroHttp(400, 'Mande a imagem (base64) e o tipo.');
   if (imagem.length > MAX_IMAGEM_B64 || !/^[A-Za-z0-9+/=]+$/.test(imagem)) throw new ErroHttp(400, 'Imagem inválida ou grande demais.');
+  const legenda = String(corpo.legenda || '').replace(/["\n\r]/g, ' ').trim().slice(0, 200);
   const cats = (Array.isArray(corpo.categorias) ? corpo.categorias : [])
     .filter(c => c && /^[a-z_]{1,20}$/.test(c.id)).slice(0, 30)
     .map(c => ({ id: c.id, nome: String(c.nome || c.id).slice(0, 30) }));
@@ -346,12 +363,12 @@ async function iaImagem(req, env) {
     model: modelo(env),
     max_tokens: 16000,
     output_config: { effort: 'medium', format: { type: 'json_schema', schema: esquemaImagem(cats.map(c => c.id)) } },
-    system: 'Você lê fotos de comprovantes, notas fiscais, faturas e extratos para um app pessoal de controle de gastos no Brasil. Extraia só o que estiver visível. Não invente: se não tiver certeza, use 0, vazio e confiança baixa.',
+    system: 'Você lê fotos de comprovantes, notas fiscais, faturas e extratos para um app pessoal de controle de gastos no Brasil. Extraia só o que estiver visível. Não invente: se não tiver certeza, use 0, vazio e confiança baixa. Se a imagem tiver VÁRIOS pagamentos (extrato, lista de Pix, fatura), coloque CADA um em "pagamentos" (só saídas de dinheiro, não entradas nem saldo); valor_centavos fica com a soma. A legenda da pessoa, se vier, é uma pista (ex.: qual categoria ou forma de pagamento).',
     messages: [{
       role: 'user',
       content: [
         { type: 'image', source: { type: 'base64', media_type: tipo, data: imagem } },
-        { type: 'text', text: `Categorias do app (use o id): ${cats.map(c => `${c.id} = ${c.nome}`).join('; ')}. Hoje é ${hojeUTC()}.` },
+        { type: 'text', text: `Categorias do app (use o id): ${cats.map(c => `${c.id} = ${c.nome}`).join('; ')}. Hoje é ${hojeUTC()}.${legenda ? ` Legenda da pessoa: "${legenda}"` : ''}` },
       ],
     }],
     ...extras(env),
@@ -372,7 +389,18 @@ async function iaImagem(req, env) {
     categoria: cats.some(c => c.id === dados.categoria) ? dados.categoria : '',
     resumo: String(dados.resumo || '').slice(0, 200),
     confianca: ['alta', 'media', 'baixa'].includes(dados.confianca) ? dados.confianca : 'baixa',
+    itens: limparPagamentos(dados.pagamentos, cats),
   };
+}
+
+/** Limpa a lista de pagamentos que a IA leu (no máximo 30, só valor positivo). Pura. */
+export function limparPagamentos(lista, cats = []) {
+  return (Array.isArray(lista) ? lista : []).filter(p => p && Number.isInteger(p.valor_centavos) && p.valor_centavos > 0).slice(0, 30).map(p => ({
+    valor_centavos: p.valor_centavos,
+    data: /^\d{4}-\d{2}-\d{2}$/.test(p.data) ? p.data : '',
+    estabelecimento: String(p.estabelecimento || '').slice(0, 80),
+    categoria: cats.some(c => c.id === p.categoria) ? p.categoria : '',
+  }));
 }
 
 // ---------------------------------------------------------------- Push (lembretes)
