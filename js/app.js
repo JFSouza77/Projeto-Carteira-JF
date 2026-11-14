@@ -2980,6 +2980,34 @@ function sugerirPelaDescricao() {
   aviso.hidden = false;
 }
 
+/** Notícias do dia (14/11): baixa no máximo a cada 2 horas e guarda pra mostrar offline. */
+async function atualizarNoticias() {
+  if (!state.settings.aiUrl || !navigator.onLine) return renderNoticias();
+  const ultima = state.noticias?.baixadoEm || 0;
+  if (Date.now() - ultima > 2 * 3_600_000) {
+    try {
+      const n = await ia.baixarNoticias(state.settings.aiUrl);
+      if (Array.isArray(n?.itens) && n.itens.length) {
+        state.noticias = { ...n, baixadoEm: Date.now() };
+        await db.setMeta('noticias', state.noticias);
+      }
+    } catch { /* sem notícias ainda: fica o que já tinha */ }
+  }
+  renderNoticias();
+}
+function renderNoticias() {
+  const n = state.noticias;
+  const card = $('#noticias-card');
+  if (!card) return;
+  card.hidden = !n?.itens?.length;
+  if (card.hidden) return;
+  const quando = new Date(n.atualizadoEm);
+  $('#res-noticias').textContent = `${n.itens.length} · ${quando.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} ${quando.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  $('#noticias-lista').innerHTML = n.itens.map(x => `
+    <li><b>${esc(x.titulo)}</b><p>${esc(x.resumo)}</p>${x.porque ? `<p class="noticia-porque">💡 ${esc(x.porque)}</p>` : ''}
+      ${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.fonte || 'Fonte')} ↗</a>` : x.fonte ? `<small class="muted">${esc(x.fonte)}</small>` : ''}</li>`).join('');
+}
+
 /** Mercado: o servidor atualiza todo dia útil às 10h; o app baixa quando tem internet e guarda pra usar offline. */
 async function atualizarMercado() {
   if (!state.settings.aiUrl || !navigator.onLine) return;
@@ -3447,6 +3475,8 @@ async function init() {
   db.requestPersistence();
   limparFotosOrfas();
   atualizarMercado().then(processarFila);
+  state.noticias = await db.getMeta('noticias').catch(() => null);
+  atualizarNoticias();
   window.addEventListener('online', () => atualizarMercado().then(processarFila));
   if ('serviceWorker' in navigator) {
     // atualização mais rápida (JF, 13/11: "tá demorando muito a att o app"): procura versão nova ao abrir e sempre

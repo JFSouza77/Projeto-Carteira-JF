@@ -1209,3 +1209,10 @@ details.conta-det > :not(summary) { margin-top: 8px; }
 /* Mês: a previsão legível (JF: "tá apagado, ruim de ler") */
 .plan-linhas li span:first-child { color: var(--text); }
 .plan-linhas { font-size: 1rem; }
+
+/* Notícias do dia (14/11) */
+.noticias-lista { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 10px; }
+.noticias-lista li { background: var(--card-2); border-radius: 12px; padding: 12px; }
+.noticias-lista li p { margin: 6px 0 0; }
+.noticias-lista .noticia-porque { color: var(--text); background: color-mix(in srgb, var(--accent) 8%, transparent); border-radius: 8px; padding: 6px 8px; }
+.noticias-lista a { display: inline-block; margin-top: 8px; color: var(--accent); }

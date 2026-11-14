@@ -82,6 +82,11 @@ export function baixarMercado(base) {
   return chamar(base, '/mercado');
 }
 
+/** Notícias do dia (14/11): o servidor busca 2x por dia; aqui só baixa o que já está pronto (não gasta IA). */
+export function baixarNoticias(base) {
+  return chamar(base, '/noticias');
+}
+
 /** Comparação de rendimento entre bancos: só os NOMES dos bancos e o CDI vão pro servidor (nada de saldo). */
 export async function perguntarBancos(base, { bancos, cdi }) {
   const j = await chamar(base, '/ia/bancos', { bancos, cdi });

@@ -23,6 +23,11 @@ IA_MODELO = "claude-opus-5-5"
 # Limites de uso da IA (protegem a conta de custo surpresa)
 IA_LIMITE_DIA = "40"
 IA_TETO_DIA = "300"
+# Notícias do dia (14/11): a IA busca 2x por dia (7h e 17h de Brasília). "1" liga, "0" desliga.
+# Modelo barato pra caber no crédito; no máximo 2 buscas por vez (US$ 0,01 cada) e um teto de rodadas por mês.
+NOTICIAS_LIGADAS = "1"
+NOTICIAS_MODELO = "claude-haiku-5-5"
+NOTICIAS_TETO_MES = "62"
 # Chave PÚBLICA dos lembretes (gerada por: node ferramentas/gerar_vapid.js). A privada vai em segredo.
 VAPID_PUBLIC_KEY = ""
 # Selo de criador (12/11): apelido(s) da conta do criador, separados por vírgula. Só com a senha certa vale.

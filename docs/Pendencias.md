@@ -10,10 +10,9 @@ Entrou na 2.0.5 Mais Simples: blocos que abrem e fecham (Início, Mês, Contas),
 o olhinho, banco → contas → conta por dentro, Estilo do app (Atual, Limpo, Direto), letra maior e menos cor.
 
 Falta:
-1. **Notícias do dia (ideia da Anne):** um bloco "Notícias de dinheiro" com 3 a 5 notícias curtas do dia (ex.:
-   bilionário perdeu milhões em cripto), explicadas simples pelo C.A.O.S., e um botão "o que isso tem a ver comigo?".
-   Plano: o servidor busca as notícias a cada 3 horas (a IA com busca na internet) e guarda; o app só lê. Custo: umas 8
-   buscas por dia pra todo mundo junto (não por pessoa), coisa de centavos. Precisa do ok do JF pro custo.
+1. **Notícias do dia:** prontas no app e no servidor (2.0.6). Falta o JF publicar o servidor de novo
+   (`git pull` e `npx.cmd wrangler deploy` dentro de `servidor`). Custo estimado: modelo barato, 2 buscas por vez,
+   2 vezes por dia, teto de 62 rodadas por mês: uns US$ 1,30 a 2 por mês. Desligar: `NOTICIAS_LIGADAS = "0"`.
 2. **Estilo "Atual" repaginado:** o JF e a Anne veem a 2.0.5 e dizem o que ainda acham fliperama.
 3. **Lançar e Ajustes em blocos:** mesmo jeito do Início, se a Anne aprovar.
 

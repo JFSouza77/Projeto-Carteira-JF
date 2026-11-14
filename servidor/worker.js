@@ -17,6 +17,7 @@
  *   POST /push/sair       → { endpoint }
  *   POST /ia/bancos       → { bancos:[nomes], cdi } → { texto } (comparação de rendimento; só nomes, nada de saldo)
  *   GET  /mercado         → resumo do mercado (moedas, Ibovespa, Selic, CDI, IPCA) guardado no KV
+ *   GET  /noticias        → notícias de dinheiro do dia (a IA busca às 7h e às 17h; ler não gasta nada)
  *   POST /conta/criar     → { apelido, senha } → { apelido, token }      (06/11: login e sincronização)
  *   POST /conta/entrar    → { apelido, senha } → { apelido, token, criador? }  (criador: apelido na lista CRIADOR_CONTAS)
  *   POST /conta/sair      → (Authorization: Bearer token) → { ok }
@@ -546,6 +547,76 @@ async function mercadoRota(env, f = fetch) {
   return resumo;
 }
 
+// ---------------------------------------------------------------- notícias do dia (14/11, ideia da Anne)
+// 2 vezes por dia (7h e 17h de Brasília) a IA procura na internet 3 a 5 notícias de dinheiro e explica simples.
+// O app só LÊ o que ficou guardado (GET /noticias): abrir o app não gasta nada. Custo controlado (JF: "botei 5 dólares"):
+// modelo barato (NOTICIAS_MODELO, padrão Haiku 5.5), no máximo 2 buscas por vez e um teto de rodadas por mês.
+const NOTICIAS_MODELO_PADRAO = 'claude-haiku-5-5';
+const SISTEMA_NOTICIAS = `Você é o C.A.O.S., parceiro financeiro de um app brasileiro de controle de gastos.
+Procure na internet as notícias de dinheiro mais relevantes das últimas 24 horas pra uma pessoa comum no Brasil
+(juros, Selic, inflação, dólar, golpes, benefícios, impostos, bancos, mercado, cripto, grandes fortunas que ganharam ou perderam).
+Responda SÓ com um JSON (sem texto antes ou depois): uma lista de 3 a 5 itens, cada um
+{"titulo": "até 90 letras", "resumo": "1 ou 2 frases simples", "porque": "1 frase: o que isso muda pra pessoa comum", "fonte": "nome do site", "url": "https://..."}.
+Regras: só fatos das fontes, sem opinião política, sem recomendar investimento ou banco, linguagem simples, português do Brasil.`;
+
+/** Quando rodar: 7h e 17h de Brasília (10h e 20h UTC). Devolve o turno ou null. Pura. */
+export function turnoDasNoticias(agora = new Date()) {
+  const h = agora.getUTCHours();
+  if (h < 10) return null;
+  return { dia: agora.toISOString().slice(0, 10), turno: h < 20 ? 'manha' : 'tarde' };
+}
+
+/** Tira a lista de notícias do texto da IA e limpa cada item. Pura. */
+export function lerNoticias(texto) {
+  const t = String(texto || '');
+  const a = t.indexOf('['), b = t.lastIndexOf(']');
+  if (a < 0 || b <= a) return [];
+  let lista;
+  try { lista = JSON.parse(t.slice(a, b + 1)); } catch { return []; }
+  if (!Array.isArray(lista)) return [];
+  const corta = (v, n) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, n);
+  return lista.map(n => ({
+    titulo: corta(n?.titulo, 120), resumo: corta(n?.resumo, 400), porque: corta(n?.porque, 300),
+    fonte: corta(n?.fonte, 60), url: /^https:\/\/[^\s"<>]+$/.test(String(n?.url || '')) ? String(n.url).slice(0, 500) : '',
+  })).filter(n => n.titulo && n.resumo).slice(0, 5);
+}
+
+async function atualizarNoticiasSeHora(env, agora = new Date(), criarCliente = clienteIA) {
+  if (!env.CARTEIRA_KV || env.NOTICIAS_LIGADAS !== '1' || !env.ANTHROPIC_API_KEY) return null;
+  const quando = turnoDasNoticias(agora);
+  if (!quando) return null;
+  const chave = `noticias:feito:${quando.dia}:${quando.turno}`;
+  if (await env.CARTEIRA_KV.get(chave)) return null;
+  // teto do mês: protege o crédito mesmo se algo der errado com o horário
+  const kMes = `noticias:mes:${quando.dia.slice(0, 7)}`;
+  const feitas = Number((await env.CARTEIRA_KV.get(kMes)) || 0);
+  if (feitas >= Number(env.NOTICIAS_TETO_MES || 62)) return null;
+  // marca antes de chamar: se a IA falhar, não tenta de novo a cada 15 minutos
+  await env.CARTEIRA_KV.put(chave, '1', { expirationTtl: 172800 });
+  await env.CARTEIRA_KV.put(kMes, String(feitas + 1), { expirationTtl: 40 * 86400 });
+  const client = criarCliente(env);
+  const r = await client.messages.create({
+    model: env.NOTICIAS_MODELO || NOTICIAS_MODELO_PADRAO,
+    max_tokens: 4000,
+    output_config: { effort: 'low' },
+    system: SISTEMA_NOTICIAS,
+    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 2, user_location: { type: 'approximate', country: 'BR', timezone: 'America/Sao_Paulo' } }],
+    messages: [{ role: 'user', content: `Hoje é ${quando.dia}. Quais são as notícias de dinheiro do dia?` }],
+  });
+  const itens = r.stop_reason === 'refusal' ? [] : lerNoticias(textoDa(r));
+  if (!itens.length) return null;
+  const pacote = { itens, atualizadoEm: agora.toISOString() };
+  await env.CARTEIRA_KV.put('noticias:atual', JSON.stringify(pacote));
+  return pacote;
+}
+
+async function noticiasRota(env) {
+  if (!env.CARTEIRA_KV) throw new ErroHttp(503, 'Notícias não configuradas no servidor.');
+  const p = JSON.parse((await env.CARTEIRA_KV.get('noticias:atual')) || 'null');
+  if (!p) throw new ErroHttp(503, 'Ainda sem notícias. Elas chegam às 7h e às 17h.');
+  return p;
+}
+
 // ---------------------------------------------------------------- conta e sincronização (06/11)
 // A conta é apelido + senha. A senha nunca é guardada: só um hash PBKDF2 (SHA-256, 100 mil voltas) com sal aleatório.
 // A sessão é um token aleatório; o servidor guarda só o hash dele. Os dados da carteira ficam em dados:{apelido}.
@@ -676,6 +747,7 @@ export default {
           origensPermitidas(env).length ? 'Origem não autorizada.' : 'Configure ORIGENS no wrangler.toml com o endereço do app.');
       }
       if (req.method === 'GET' && url.pathname === '/mercado') return json(await mercadoRota(env), 200, h);
+      if (req.method === 'GET' && url.pathname === '/noticias') return json(await noticiasRota(env), 200, h);
       if (req.method === 'GET' && url.pathname === '/push/chave') {
         if (!env.VAPID_PUBLIC_KEY) throw new ErroHttp(503, 'Lembretes não configurados no servidor.');
         return json({ chave: env.VAPID_PUBLIC_KEY }, 200, h);
@@ -698,8 +770,8 @@ export default {
   },
 
   async scheduled(_evento, env, ctx) {
-    ctx.waitUntil(Promise.allSettled([mandarLembretes(env), atualizarMercadoSeHora(env)]));
+    ctx.waitUntil(Promise.allSettled([mandarLembretes(env), atualizarMercadoSeHora(env), atualizarNoticiasSeHora(env)]));
   },
 };
 
-export { mandarLembretes, endpointValido, atualizarMercadoSeHora, mercadoRota };
+export { mandarLembretes, endpointValido, atualizarMercadoSeHora, mercadoRota, atualizarNoticiasSeHora, noticiasRota };
