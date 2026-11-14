@@ -3368,12 +3368,14 @@ function comecarAbertura() {
 }
 
 // JF, 14/11: "a tela inicial tem que ter entrar na conta ou cadastrar. Depois que a conta está pronta, é só clicar
-// e entrar". Então a abertura espera um botão: com conta, "Entrar como JF"; sem conta, o login ali mesmo.
+// e entrar". E, no mesmo dia, "mais slim, como a entrada dos bancos" (C6, Banestes, Inter): o C.A.O.S. em cima e um
+// cartão embaixo. Com conta: "Olá, JF", 3 atalhos e Entrar. Sem conta: Entrar / Criar conta (os campos só aparecem
+// depois do toque) e Continuar sem conta.
 async function mostrarAbertura() {
   const ab = $('#abertura');
   if (!ab) return;
   const n = NOVIDADES[0];
-  $('#abertura-versao').textContent = `Versão ${VERSAO_APP}${n.nome ? ` · ${n.nome}` : ''} · atualizada em ${n.data}`;
+  $('#abertura-versao').textContent = `Versão ${VERSAO_APP}${n.nome ? ` · ${n.nome}` : ''}`;
   const temConta = await conta.contaAtual().catch(() => null);
   if (state.onboarding || (!temConta && !servidor())) {
     setTimeout(fecharAbertura, Math.max(0, ABERTURA_MS - performance.now()));
@@ -3383,15 +3385,40 @@ async function mostrarAbertura() {
   $('.abertura-pula')?.remove();
   $('#abertura-login').hidden = false;
   if (temConta) {
-    $('#abertura-form').hidden = true;
-    $('#abertura-pular').hidden = true;
+    const nome = temConta.exibicao || temConta.apelido;
+    $('#abertura-ola').textContent = `Olá, ${nome}`;
+    $('#abertura-atalhos').hidden = false;
     $('#abertura-criar').hidden = true;
-    $('#abertura-entrar').textContent = `Entrar como ${temConta.exibicao || temConta.apelido}`;
+    $('#abertura-entrar').textContent = 'Entrar';
+    $('#abertura-pular').textContent = 'Trocar de conta';
     $('#abertura-entrar').addEventListener('click', fecharAbertura, { once: true });
+    $('#abertura-atalhos').addEventListener('click', e => {
+      const b = e.target.closest('[data-ir]');
+      if (!b) return;
+      location.hash = b.dataset.ir;
+      fecharAbertura();
+    });
+    $('#abertura-pular').addEventListener('click', () => {
+      fecharAbertura();
+      location.hash = 'ajustes';
+      setTimeout(() => { const c = $('#conta-card'); if (c) { c.open = true; c.scrollIntoView({ block: 'start' }); } }, 350);
+    }, { once: true });
     return;
   }
+  $('#abertura-ola').textContent = 'Olá! Entre ou crie sua conta.';
   const campos = { apelido: '#ab-apelido', senha: '#ab-senha', erro: '#ab-erro', entrar: '#abertura-entrar', criar: '#abertura-criar' };
-  const ir = async criar => { if (await entrarNaConta(criar, campos)) fecharAbertura(); };
+  // 1º toque só abre os campos (tela limpa); com os campos abertos, o botão faz a ação
+  const ir = async criar => {
+    const form = $('#abertura-form');
+    if (form.hidden) {
+      form.hidden = false;
+      ab.classList.add('com-campos');
+      $('#ab-senha').autocomplete = criar ? 'new-password' : 'current-password';
+      $('#ab-apelido').focus();
+      return;
+    }
+    if (await entrarNaConta(criar, campos)) fecharAbertura();
+  };
   $('#abertura-entrar').addEventListener('click', () => ir(false));
   $('#abertura-criar').addEventListener('click', () => ir(true));
   $('#ab-senha').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); ir(false); } });

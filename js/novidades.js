@@ -15,8 +15,8 @@ export const NOVIDADES = Object.freeze([
       '🤝 Apelido de amigo: "corno, quem te criou?" é carinho, e ele responde a pergunta.',
       '🗯️ Xingou e perguntou: ele ouve os dois e responde o que você quis saber.',
       '🔍 C.A.O.S. grande: toque no avatar da conversa pra abrir ele na tela e cutucar.',
-      '🚪 Entrar logo na abertura: apelido e senha na primeira tela, ou criar conta ali mesmo.',
-      '👋 Entrar como você: com a conta pronta, é só tocar no botão com o seu nome.',
+      '🚪 Abertura mais limpa: o C.A.O.S. em cima e um cartão pra entrar ou criar conta.',
+      '👋 Olá, você: com conta pronta, um toque em Entrar ou num atalho (Lançar, Conversar, Meu mês).',
       '🎨 Glossário colorido: termos separados por tema, com cor e animação.',
     ],
     qol: [
