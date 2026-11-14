@@ -28,3 +28,16 @@ test('toda forma do POR_ASSUNTO existe (o balão e o topo usam a mesma forma do 
   for (const [, f] of bloco.matchAll(/:\s*'([a-zA-Z]+)'/g)) assert.ok(FORMAS[f], f);
   assert.equal(formaPara({ assunto: 'limite_investido' }), 'banqueiro');
 });
+
+test('todo avatar tem rostinho de texto que combina (13/11 à noite: rostinho no balão, sem emoji)', async () => {
+  const { EMO_DA_FORMA } = await import('../js/avatar.js');
+  const { EMOS, rostoDaEmo } = await import('../js/caos/rostos.js');
+  for (const f of Object.keys(FORMAS)) {
+    const emo = EMO_DA_FORMA[f];
+    assert.ok(emo, `forma ${f} sem rostinho`);
+    assert.ok(EMOS[emo] || ['espantado', 'analista'].includes(emo), `${f} → ${emo} não existe`);
+    const r = rostoDaEmo(emo, 3);
+    assert.ok(r.quadros.length > 0, f);
+  }
+  assert.deepEqual(rostoDaEmo('festa', 7).quadros, rostoDaEmo('festa', 7).quadros); // mesma mensagem, mesmo rostinho
+});

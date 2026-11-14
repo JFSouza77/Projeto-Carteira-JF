@@ -7,14 +7,14 @@ import { formatBRL, INCOME_SOURCES, daysInMonth, toISODate, idadeDe, faixaEtaria
 import { congelar, protegido } from './espinha.js';
 import { NUCLEO } from './nucleo.js';
 import { sentir, emocaoEstavel, emocoesIniciais, intensidade, ROSTO } from './emocoes.js';
-import { escolherRosto, memoriaRostoInicial, rostoAnalista, rostoEspantado } from './rostos.js';
-export { rostoEspantado };
+import { escolherRosto, memoriaRostoInicial, rostoAnalista, rostoEspantado, rostoDaEmo } from './rostos.js';
+export { rostoEspantado, rostoDaEmo };
 import { gerarFala } from './gerador.js';
 import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '2.1.2'; // 2.1.2 (13/11): benefícios, bolsas, matemática básica, onde rende mais. 2.1.1: limite garantido
+export const CAOS_VERSAO = '2.1.3'; // 2.1.3 (13/11): rostinho de volta no balão, combinando com o avatar. 2.1.2: benefícios, bolsas, matemática
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';

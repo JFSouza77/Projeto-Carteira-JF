@@ -12,7 +12,7 @@ import {
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
   valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, progressoOrcamentoDiario, mascaraCentavos, valorForaDoComum, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
-import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, rostoEspantado, nomeAlerta, diaEspecial } from './caos/index.js';
+import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, rostoEspantado, rostoDaEmo, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
 import { GLOSSARIO, ATUALIZADO_EM } from './caos/glossario.js';
 import { fraseDoPrint, resumoDoPrint } from './caos/ofertas.js';
@@ -24,7 +24,7 @@ import * as imagens from './imagens.js';
 import * as ia from './ia.js';
 import * as lembretes from './notificacoes.js';
 import * as conta from './conta.js';
-import { criarAvatar, formaPara, configurarAvatar, FORMAS } from './avatar.js';
+import { criarAvatar, formaPara, configurarAvatar, FORMAS, EMO_DA_FORMA } from './avatar.js';
 
 const $ = sel => document.querySelector(sel);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -1273,9 +1273,19 @@ function renderChat() {
         ? `<div class="acao"><button class="sim" data-acao="${i}" data-ok="1">${ic('i-ok')} Confirmar</button><button class="nao" data-acao="${i}" data-ok="0">Cancelar</button></div>`
         : '';
       const f = formaDaMsg(m), fcor = FORMAS[f]?.cor || 'var(--caos)';
-      if (m.digitando) return `<li class="msg caos-msg pensando digitando" style="--msg-cor:${fcor}" aria-label="C.A.O.S. está digitando"><span class="who" aria-hidden="true"><span class="msg-forma">${esc(FORMAS[f].nome)}</span></span><span class="pontos" aria-hidden="true"><i></i><i></i><i></i></span> digitando</li>`;
-      return `<li class="msg caos-msg ${m.temp ? 'pensando' : ''}" style="--msg-cor:${fcor}"><span class="who" aria-label="C.A.O.S.${m.ia ? ' com IA' : ''}"><span class="msg-forma" aria-hidden="true">${esc(FORMAS[f]?.nome || 'C.A.O.S.')}</span>${m.ia ? '<span class="tag-ia">IA</span>' : ''}</span>${esc(m.texto)}${acao}</li>`;
+      if (m.digitando) return `<li class="msg caos-msg pensando digitando" style="--msg-cor:${fcor}" aria-label="C.A.O.S. está digitando"><span class="who" aria-hidden="true"><span class="caos-face mini" data-msg="${i}"></span></span><span class="pontos" aria-hidden="true"><i></i><i></i><i></i></span> digitando</li>`;
+      return `<li class="msg caos-msg ${m.temp ? 'pensando' : ''}" style="--msg-cor:${fcor}"><span class="who" aria-label="C.A.O.S.${m.ia ? ' com IA' : ''}"><span class="caos-face mini" data-msg="${i}" aria-hidden="true"></span>${m.ia ? '<span class="tag-ia">IA</span>' : ''}</span>${esc(m.texto)}${acao}</li>`;
     }).join('');
+    // rostinho no balão (JF, 13/11 à noite: "emoji quebra a lógica; os rostinhos é que dão a característica dele").
+    // Combina com o avatar: o rosto da própria fala, se já bate com a forma; senão, o rostinho da forma. Mesma cor.
+    for (const el of log.querySelectorAll('[data-msg]')) {
+      const i = Number(el.dataset.msg), m = state.chat[i];
+      if (!m) continue;
+      const f = formaDaMsg(m);
+      const r = m.rosto?.quadros && formaPara({ rosto: m.rosto }) === f ? m.rosto : rostoDaEmo(EMO_DA_FORMA[f] || 'calmo', i);
+      setRosto(el, r);
+      if (FORMAS[f]) el.style.setProperty('--emo-cor', FORMAS[f].cor);
+    }
   }
   const ult = [...state.chat].reverse().find(m => m.de === 'caos');
   const sug = ult?.sugestoes?.length ? ult.sugestoes : SUGESTOES.slice(0, 6);
