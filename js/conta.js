@@ -54,11 +54,29 @@ async function guardar(conta, chave) {
 export async function entrar(base, { apelido, senha, criar = false }) {
   const { acesso, chave } = await derivarChaves(apelido, senha);
   const r = await chamar(base, criar ? '/conta/criar' : '/conta/entrar', { apelido, senha: acesso });
-  await guardar({ apelido: r.apelido, token: r.token, versao: 0, ultimaSync: null, cripto: 1 }, chave);
+  // 14/11 (JF): o login não liga pra maiúscula ("JF" = "jf"), mas o nome aparece do jeito que a pessoa digitou
+  const exibicao = nomeDeExibicao(apelido) || r.apelido;
+  await guardar({ apelido: r.apelido, exibicao, token: r.token, versao: 0, ultimaSync: null, cripto: 1 }, chave);
   // os dados deste aparelho passam a ser desta conta (quem confere troca de conta é o app, antes de chamar aqui)
   await db.setMeta('contaDona', r.apelido);
   await db.marcarTudo();
-  return { apelido: r.apelido, criador: r.criador === true };
+  return { apelido: r.apelido, exibicao, criador: r.criador === true };
+}
+
+/** Nome que aparece na tela (2 a 30 letras, números, espaço, ponto, traço ou sublinhado). Não muda o login. */
+export function nomeDeExibicao(nome) {
+  const n = String(nome || '').trim().replace(/\s+/g, ' ');
+  return /^[\p{L}\p{N} ._-]{2,30}$/u.test(n) ? n : null;
+}
+
+/** Troca só o nome que aparece (o "nick"); pra entrar continua valendo o apelido da conta, sem ligar pra maiúscula. */
+export async function trocarExibicao(nome) {
+  const c = await contaAtual();
+  const n = nomeDeExibicao(nome);
+  if (!c) throw new Error('Entre na conta primeiro.');
+  if (!n) throw new Error('Use de 2 a 30 letras ou números (pode espaço, ponto, traço e sublinhado).');
+  await db.setMeta('conta', { ...c, exibicao: n });
+  return n;
 }
 
 /** De qual conta são os dados deste aparelho (null = nunca entrou em conta). */
