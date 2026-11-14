@@ -28,6 +28,7 @@ test('não muda o estado recebido (função pura) e recusa lixo', () => {
 test('apelido da conta', () => {
   assert.equal(normalizarApelido('  Maria.Silva '), 'maria.silva');
   assert.equal(normalizarApelido('João'), 'joao');
-  assert.equal(normalizarApelido('ab'), null);
+  assert.equal(normalizarApelido('a'), null);
+  assert.equal(normalizarApelido('JF'), 'jf'); // 14/11: 2 letras valem
   assert.equal(normalizarApelido('<b>oi</b>'), null);
 });

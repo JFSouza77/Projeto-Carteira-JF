@@ -46,7 +46,7 @@ test('criar conta, entrar e sair; a senha nunca fica guardada em texto', async (
 
 test('apelido e senha inválidos, sem token e sem KV', async () => {
   const env = envBase();
-  assert.equal((await chamar(env, '/conta/criar', { apelido: 'ab', senha: A('senha123') })).status, 400);
+  assert.equal((await chamar(env, '/conta/criar', { apelido: 'a', senha: A('senha123') })).status, 400);
   assert.equal((await chamar(env, '/conta/criar', { apelido: '<script>', senha: A('senha123') })).status, 400);
   assert.equal((await chamar(env, '/conta/criar', { apelido: 'fulano', senha: '123' })).status, 400);
   // senha de verdade (sem passar pelo app novo) é recusada: o servidor nunca deve recebê-la

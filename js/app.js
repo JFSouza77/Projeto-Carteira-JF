@@ -2532,7 +2532,7 @@ async function entrarNaConta(criar) {
   const apelido = $('#conta-apelido').value.trim();
   const senha = $('#conta-senha').value;
   if (!servidor()) { err.textContent = 'Primeiro coloque o endereço do servidor do C.A.O.S. Finanças em "IA online e servidor".'; err.hidden = false; return; }
-  if (apelido.length < 3) { err.textContent = 'Escolha um apelido com pelo menos 3 letras.'; err.hidden = false; return; }
+  if (apelido.length < 2) { err.textContent = 'Escolha um apelido com pelo menos 2 letras.'; err.hidden = false; return; }
   if (senha.length < 6) { err.textContent = 'A senha precisa ter pelo menos 6 letras ou números.'; err.hidden = false; return; }
   // Troca de conta (achado do GPT, 12/11): os dados deste aparelho são de outra conta? Não manda sem perguntar.
   const dona = await conta.contaDona().catch(() => null);
