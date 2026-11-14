@@ -108,7 +108,14 @@ function ligarAvatares() {
 }
 // Palco (JF, 14/11: "quando clicar no avatar, ele expandir pra aparecer na tela, pra gente poder interagir").
 // Tocar no avatar grande = cutucão: ele troca de forma e reage. Os botões mandam a pergunta pra conversa.
-const FORMAS_CUTUCAO = ['surpreso', 'feliz', 'envergonhado', 'humorista', 'amigao', 'confiante', 'desconfiado', 'zen', 'anjinho', 'sonolento'];
+// JF, 14/11: pulava de forma sem lógica (zen → sonolento → anjinho…). Agora é uma escada: brinca, cansa, se estressa.
+// Parou de cutucar uns 20 s, ele volta ao normal.
+const CUTUCAO_ESCADA = [
+  { ate: 3, balde: 'cutucar', formas: ['surpreso', 'feliz', 'envergonhado'] },
+  { ate: 6, balde: 'cutucar_cansado', formas: ['desconfiado', 'decepcionado', 'desconfiado'] },
+  { ate: Infinity, balde: 'cutucar_bravo', formas: ['bronca', 'perturbado'] },
+];
+const cutucoes = { n: 0, em: 0 };
 let palcoTimer = null;
 function ligarPalco() {
   const dlg = $('#palco-dialog');
@@ -125,10 +132,14 @@ function ligarPalco() {
     dlg.showModal();
   });
   $('#palco-avatar-btn').addEventListener('click', () => {
-    const forma = FORMAS_CUTUCAO[Math.floor(Math.random() * FORMAS_CUTUCAO.length)];
+    const agora = Date.now();
+    if (agora - cutucoes.em > 20_000) cutucoes.n = 0;
+    cutucoes.n += 1; cutucoes.em = agora;
+    const degrau = CUTUCAO_ESCADA.find(d => cutucoes.n <= d.ate);
+    const forma = degrau.formas[(cutucoes.n - 1) % degrau.formas.length];
     avatares.palco?.mostrar(forma);
     $('#palco-forma').textContent = nomeForma(forma);
-    const r = falaAvulsa('cutucar', {}, { mood: state.settings.mood, memory: state.caosMemory, perfil: state.perfil });
+    const r = falaAvulsa(degrau.balde, {}, { mood: state.settings.mood, memory: state.caosMemory, perfil: state.perfil });
     if (r.texto) {
       guardarMemoria(r.memoria);
       $('#palco-fala').textContent = r.texto;
@@ -234,7 +245,7 @@ function narrate(events, { ignoreCooldown = false } = {}) {
 // Navegação
 // ======================================================================
 
-const TELAS = ['inicio', 'lancar', 'mes', 'conversa', 'contas', 'ajustes'];
+const TELAS = ['inicio', 'lancar', 'mes', 'conversa', 'contas', 'ajustes', 'analise'];
 // Ordem da barra de baixo (12/11: o Lançar, ação mais usada, fica no meio, grande). Arrastar pro lado anda nessa ordem; Ajustes fica fora (é a engrenagem).
 // barra de baixo (JF, 12/11): C.A.O.S., Contas, Lançar (meio), Mês, Início por último
 const ORDEM_ABAS = ['conversa', 'contas', 'lancar', 'mes', 'inicio'];
@@ -251,7 +262,7 @@ function irPara(tela, { lado = null } = {}) {
     if (!el.hidden && lado) { void el.offsetWidth; el.classList.add(lado === 'dir' ? 'entra-dir' : 'entra-esq'); }
   }
   for (const a of document.querySelectorAll('.tabbar a')) {
-    if (a.dataset.tab === t) a.setAttribute('aria-current', 'page');
+    if (a.dataset.tab === (t === 'analise' ? 'inicio' : t)) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   }
   $('#me-ajuda').hidden = t === 'conversa';
@@ -462,6 +473,7 @@ function renderUltimos() {
     ...state.incomes.map(x => ({ ...x, kind: 'entrada' })),
   ].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 5);
   $('#ultimos-card').hidden = !lista.length;
+  $('#res-ultimos').textContent = lista.length ? `${lista.length} mais recentes` : '';
   el.innerHTML = lista.map(x => {
     const [, m, d] = x.date.split('-');
     const nome = x.kind === 'entrada' ? (x.note || srcById(x.sourceId)?.name || 'Entrada') : (x.note || catById(x.categoryId)?.name || 'Gasto');
@@ -483,6 +495,7 @@ function render() {
   const isCurrent = state.viewMonth === monthKey(toISODate());
 
   $('#month-label').textContent = cap(monthLabel(state.viewMonth));
+  $('#analise-mes').textContent = monthLabel(state.viewMonth);
   $('#next-month').disabled = isCurrent;
   $('#total').textContent = formatBRL(s.totalCents);
 
@@ -792,6 +805,9 @@ function renderLancar() {
   $('#racha-box').hidden = !gasto;
   $('#category-chips').innerHTML = opcoes.map(c => `
     <button type="button" class="chip colorido" style="--cor-chip:${gasto ? corCategoria(c.id) : corFonte(c.id)}" role="radio" aria-checked="${c.id === sel}" data-cat="${esc(c.id)}">${gasto ? icCat(c) : icFonte(c)} ${esc(c.name)}</button>`).join('');
+  $('#cat-label').textContent = gasto ? 'Categoria' : 'De onde veio';
+  $('#category-select').innerHTML = `<option value="">${gasto ? 'Escolha a categoria' : 'Escolha de onde veio'}</option>`
+    + opcoes.map(c => `<option value="${esc(c.id)}"${c.id === sel ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
   $('#entry-form').dataset.kind = gasto ? 'gasto' : 'entrada';
   $('#submit-btn').textContent = gasto ? 'Adicionar gasto' : 'Adicionar entrada';
   // Pagou como? (P8): a forma escolhe que contas aparecem e o que mais perguntar
@@ -799,6 +815,8 @@ function renderLancar() {
   $('#forma-field').hidden = !gasto;
   $('#forma-chips').innerHTML = Object.entries(FORMAS_PAGAMENTO).map(([id, nome]) =>
     `<button type="button" class="chip colorido" style="--cor-chip:${corForma(id)}" role="radio" aria-checked="${id === forma}" data-forma="${id}">${ic(ICONE_FORMA[id])} ${esc(nome.replace(/^\S+\s/, ''))}</button>`).join('');
+  $('#forma-select').innerHTML = '<option value="">Escolha (opcional)</option>' + Object.entries(FORMAS_PAGAMENTO).map(([id, nome]) =>
+    `<option value="${id}"${id === forma ? ' selected' : ''}>${esc(nome.replace(/^\S+\s/, ''))}</option>`).join('');
   const filtro = !gasto ? a => a.tipo !== 'cartao' // entrada não cai no cartão de crédito
     : forma === 'credito' ? a => a.tipo === 'cartao'
     : forma ? a => a.tipo !== 'cartao' : () => true;
@@ -1485,8 +1503,7 @@ function renderMetas() {
   if (!el) return;
   const hoje = toISODate();
   const nM = state.metas.length;
-  if ($('#res-metas')) $('#res-metas').textContent = nM ? `${nM} ${nM === 1 ? 'meta' : 'metas'}` : 'nenhuma';
-  if ($('#tile-metas')) $('#tile-metas').textContent = nM ? `${nM} ${nM === 1 ? 'meta' : 'metas'}` : 'juntar dinheiro';
+  if ($('#res-metas')) $('#res-metas').textContent = nM ? `${nM} ${nM === 1 ? 'meta' : 'metas'}` : 'juntar dinheiro';
   el.innerHTML = state.metas.map(m => {
     const p = progressoMeta(m, hoje);
     const antes = pctAnteriorMeta.has(m.id) ? pctAnteriorMeta.get(m.id) : p.pct;
@@ -2197,7 +2214,16 @@ function pintarOlhos() {
   }
 }
 function ligarBlocos() {
-  for (const d of document.querySelectorAll('details[data-bloco]')) {
+  // Blocos de foco (JF, 14/11, Mês e Contas): abriu um, os outros do mesmo painel somem até ele fechar
+  for (const d of document.querySelectorAll('.painel-blocos > details')) {
+    d.addEventListener('toggle', () => {
+      const painel = d.parentElement;
+      if (d.open) for (const o of painel.querySelectorAll(':scope > details[open]')) if (o !== d) o.open = false;
+      painel.classList.toggle('focado', !!painel.querySelector(':scope > details[open]'));
+      if (d.open) d.scrollIntoView({ behavior: MENOS_MOVIMENTO.matches ? 'auto' : 'smooth', block: 'nearest' });
+    });
+  }
+  for (const d of document.querySelectorAll('details[data-bloco]:not(.tile-bloco)')) {
     const id = d.dataset.bloco;
     const guardado = state.settings.blocos?.[id];
     if (typeof guardado === 'boolean') d.open = guardado;
@@ -2386,11 +2412,9 @@ function renderMes() {
   }).join('') : '<li class="muted">Nenhum compromisso ainda. Adicione contas fixas, faturas e assinaturas.</li>';
 
   const aPagar = sit.filter(c => c.noMes && c.status !== 'pago');
-  $('#res-comp').textContent = sit.length ? (aPagar.length ? `${aPagar.length} a pagar` : 'tudo pago') : 'nenhum';
-  $('#tile-comp').textContent = sit.length ? (aPagar.length ? `${aPagar.length} a pagar · ${formatBRL(aPagar.reduce((t, c) => t + c.valorCents, 0))}` : 'tudo pago') : 'contas fixas';
+  $('#res-comp').textContent = sit.length ? (aPagar.length ? `${aPagar.length} a pagar · ${formatBRL(aPagar.reduce((t, c) => t + c.valorCents, 0))}` : 'tudo pago') : 'contas fixas';
   const pend = a.planos.filter(p => !p.feito);
-  $('#res-planos').textContent = a.planos.length ? `${pend.length} de ${a.planos.length} a fazer` : 'nenhum';
-  $('#tile-planos').textContent = a.planos.length ? `${pend.length} a fazer` : 'o que vai comprar';
+  $('#res-planos').textContent = a.planos.length ? `${pend.length} a fazer` : 'o que vai comprar';
   $('#plan-list').innerHTML = a.planos.length ? a.planos.map(p => `
     <li class="${p.feito ? 'feito' : ''}">
       <label class="plan-info"><input type="checkbox" data-plan-feito="${esc(p.id)}" ${p.feito ? 'checked' : ''}><span>${esc(p.nome)}</span></label>
@@ -2559,7 +2583,10 @@ function posicionarMeAjuda() {
   // guarda em fração da tela, pra continuar no mesmo canto se o celular girar
   const w = b.offsetWidth || 120, h = b.offsetHeight || 44;
   const x = Math.min(Math.max(8, p.x * innerWidth), innerWidth - w - 8);
-  const y = Math.min(Math.max(8, p.y * innerHeight), innerHeight - h - 8);
+  // JF, 14/11: pode ir pra qualquer canto, mas nunca em cima da barra de baixo (Lançar, abas)
+  const barra = $('.tabbar')?.getBoundingClientRect();
+  const fundo = barra && barra.height ? Math.min(innerHeight, barra.top) : innerHeight;
+  const y = Math.min(Math.max(8, p.y * innerHeight), fundo - h - 8);
   Object.assign(b.style, { left: `${x}px`, top: `${y}px`, right: 'auto', bottom: 'auto' });
 }
 
@@ -3045,6 +3072,13 @@ function bind() {
   for (const r of document.querySelectorAll('input[name="kind"]')) {
     r.addEventListener('change', e => { state.kind = e.target.value; renderLancar(); });
   }
+  $('#category-select').addEventListener('change', e => {
+    const v = e.target.value || null;
+    if (state.kind === 'gasto') { state.selectedCategory = v; state.catSugerida = false; $('#cat-sugestao').hidden = true; }
+    else state.selectedSource = v;
+    renderLancar();
+  });
+  $('#forma-select').addEventListener('change', e => { state.forma = e.target.value || null; renderLancar(); });
   $('#category-chips').addEventListener('click', e => {
     const b = e.target.closest('[data-cat]');
     if (!b) return;

@@ -910,8 +910,30 @@ export function sugerirCategoria(texto, expenses) {
     if (peso) votos[e.categoryId] = (votos[e.categoryId] || 0) + peso;
   }
   const melhor = Object.entries(votos).sort((a, b) => b[1] - a[1])[0];
-  return melhor && melhor[1] >= 1 ? { categoryId: melhor[0], votos: melhor[1] } : null;
+  if (melhor && melhor[1] >= 1) return { categoryId: melhor[0], votos: melhor[1] };
+  // sem histórico (JF, 14/11: "cerveja e casquinha caíram em Outros"): um dicionário básico de palavras
+  for (const [cat, palavras] of Object.entries(PALAVRAS_CATEGORIA)) {
+    if (alvo.some(w => palavras.includes(w))) return { categoryId: cat, votos: 0 };
+  }
+  return null;
 }
+
+// Palavra comum → categoria (sem acento, minúscula). Só vale quando a pessoa ainda não ensinou outra coisa.
+export const PALAVRAS_CATEGORIA = Object.freeze({
+  mercado: ['mercado', 'supermercado', 'feira', 'hortifruti', 'acougue', 'padaria', 'pao', 'leite', 'arroz', 'feijao', 'carne', 'frango',
+    'cerveja', 'cervejas', 'bebida', 'bebidas', 'refrigerante', 'refri', 'agua', 'fruta', 'frutas', 'verdura', 'ovos', 'cafe'],
+  restaurante: ['restaurante', 'almoco', 'jantar', 'lanche', 'lanchonete', 'sorvete', 'casquinha', 'sorveteria', 'acai', 'pastel', 'salgado',
+    'coxinha', 'hamburguer', 'pizzaria', 'bar', 'churrascaria', 'cafeteria'],
+  delivery: ['ifood', 'delivery', 'rappi'],
+  transporte: ['uber', 'gasolina', 'combustivel', 'onibus', 'metro', 'taxi', 'estacionamento', 'pedagio', 'etanol'],
+  saude: ['academia', 'farmacia', 'remedio', 'remedios', 'medico', 'consulta', 'dentista', 'exame', 'drogaria'],
+  contas: ['luz', 'energia', 'internet', 'celular', 'telefone', 'gas', 'boleto'],
+  moradia: ['aluguel', 'condominio', 'iptu'],
+  lazer: ['cinema', 'show', 'festa', 'viagem', 'passeio', 'jogo', 'game', 'ingresso'],
+  streaming: ['netflix', 'spotify', 'disney', 'hbo', 'globoplay', 'deezer', 'youtube'],
+  compras: ['roupa', 'roupas', 'tenis', 'sapato', 'shopping', 'presente', 'shopee', 'shein', 'amazon'],
+  educacao: ['faculdade', 'escola', 'curso', 'livro', 'livros', 'apostila', 'material'],
+});
 
 // ---------- Backup: validar ANTES de gravar (revisão 06/11) ----------
 // Mesmas regras do motor. Se qualquer coisa estiver errada, nada é gravado.

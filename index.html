@@ -113,6 +113,16 @@
     </header>
     <main>
       <button type="button" class="novidade-aviso" id="novidade-aviso" hidden>🆕 <span>Tem novidade no app! Toque pra ver.</span></button>
+      <button class="caos" id="caos" aria-live="polite" type="button" aria-label="Conversar com o C.A.O.S.">
+        <span class="caos-avatar" id="caos-avatar"></span>
+        <span class="caos-face" id="caos-face" aria-hidden="true">(•‿•)</span>
+        <div class="caos-body">
+          <p class="caos-name">C.A.O.S. <span id="caos-mood"></span></p>
+          <p class="caos-line" id="caos-line">Iniciando…</p>
+        </div>
+      </button>
+
+
       <!-- 14/11 (Anne: "não sei por onde começar"): os primeiros passos, até a pessoa fazer os 3 -->
       <section class="card comece" id="comece-card" hidden>
         <h2>Comece por aqui <small class="muted" id="comece-conta"></small></h2>
@@ -125,7 +135,7 @@
         <button type="button" class="atalho transf" data-atalho="transf"><svg class="ico" aria-hidden="true"><use href="#i-transf"/></svg> Transferir</button>
       </nav>
       <section class="card summary" aria-live="polite">
-        <p class="label">Gasto no mês</p>
+        <p class="label gasto-titulo"><svg class="ico" aria-hidden="true"><use href="#i-gasto"/></svg> Gasto no mês</p>
         <p class="big" id="total">R$ 0,00</p>
         <div class="bar" id="total-bar-wrap" hidden><div class="bar-fill" id="total-bar"></div></div>
         <p class="muted" id="total-sub">Defina orçamentos para ver quanto ainda pode gastar.</p>
@@ -136,17 +146,8 @@
         </div>
       </section>
 
-      <button class="caos" id="caos" aria-live="polite" type="button" aria-label="Conversar com o C.A.O.S.">
-        <span class="caos-avatar" id="caos-avatar"></span>
-        <span class="caos-face" id="caos-face" aria-hidden="true">(•‿•)</span>
-        <div class="caos-body">
-          <p class="caos-name">C.A.O.S. <span id="caos-mood"></span></p>
-          <p class="caos-line" id="caos-line">Iniciando…</p>
-        </div>
-      </button>
-
-      <section class="card" id="alerts-card" hidden>
-        <h2>Alertas</h2>
+      <section class="card alertas-card" id="alerts-card" hidden>
+        <h2><svg class="ico" aria-hidden="true"><use href="#i-alerta"/></svg> Alertas</h2>
         <ul class="alert-list" id="alert-list"></ul>
       </section>
 
@@ -186,7 +187,21 @@
         </div>
       </details>
 
-      <details class="card bloco graficos" id="graficos-card" data-bloco="graficos">
+      <!-- 14/11 (JF): gráficos, categorias e lançamentos foram pra tela de Análise -->
+      <a href="#analise" class="card ir-analise"><svg class="ico" aria-hidden="true"><use href="#e-rendimento"/></svg>
+        <span><b>Análise do mês</b><small>Gráficos, gastos por categoria e todos os lançamentos</small></span><span class="passo-seta" aria-hidden="true">›</span></a>
+
+    </main>
+  </section>
+
+    <!-- ============ ANÁLISE (14/11, JF: "uma aba de controle financeiro") ============ -->
+  <section class="tela" id="tela-analise" data-tela="analise" hidden>
+    <header class="topbar">
+      <a href="#inicio" class="icon-btn" aria-label="Voltar pro Início">‹</a>
+      <h1>Análise · <span id="analise-mes"></span></h1>
+    </header>
+    <main>
+      <details class="card bloco graficos" id="graficos-card" data-bloco="graficos" open>
         <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#e-rendimento"/></svg><span class="bloco-tit">Como anda o seu dinheiro</span></summary>
         <figure class="grafico" id="ritmo-fig">
           <div class="g-topo"><figcaption id="ritmo-titulo">Ritmo de gastos no mês</figcaption>
@@ -209,13 +224,15 @@
         </figure>
       </details>
 
-      <details class="card bloco" id="cat-card" data-bloco="categorias">
+
+      <details class="card bloco" id="cat-card" data-bloco="categorias" open>
         <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#c-compras"/></svg><span class="bloco-tit">Por categoria</span><span class="bloco-res num" id="res-cat"></span></summary>
         <div class="g-topo">
           <div class="seg" role="group" aria-label="Como ver as categorias"><button type="button" data-catvista="barras" aria-pressed="true">Barras</button><button type="button" data-catvista="rosca" aria-pressed="false">Rosca</button></div></div>
         <div class="cat-rosca" id="cat-rosca" hidden></div>
         <ul class="cat-list" id="cat-list"></ul>
       </details>
+
 
       <details class="card bloco" id="exp-card" data-bloco="lancamentos" open>
         <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#i-recibo"/></svg><span class="bloco-tit" id="exp-titulo">Lançamentos do mês</span><span class="bloco-res" id="res-exp"></span></summary>
@@ -237,7 +254,7 @@
     </main>
   </section>
 
-  <!-- ============ LANÇAR ============ -->
+<!-- ============ LANÇAR ============ -->
   <section class="tela" id="tela-lancar" data-tela="lancar" hidden>
     <header class="topbar"><h1>Lançar</h1></header>
     <main>
@@ -254,16 +271,16 @@
           <div class="chips valor-rapido" id="valor-rapido" aria-label="Somar ao valor">
             <button type="button" class="chip" data-somar="1000">+10</button><button type="button" class="chip" data-somar="2000">+20</button><button type="button" class="chip" data-somar="5000">+50</button><button type="button" class="chip" data-somar="10000">+100</button><button type="button" class="chip" data-somar="20000">+200</button><button type="button" class="chip limpar" data-somar="0">Limpar</button>
           </div>
-          <div class="chips" id="category-chips" role="radiogroup" aria-label="Categoria"></div>
-          <p class="sugestao" id="cat-sugestao" hidden></p>
           <div class="row">
-            <input id="note" name="note" type="text" maxlength="120" placeholder="Descrição" aria-label="Descrição">
+            <input id="note" name="note" type="text" maxlength="120" placeholder="Descrição (ex.: mercado, cerveja)" aria-label="Descrição">
             <input id="date" name="date" type="date" aria-label="Data">
           </div>
-          <div class="field" id="forma-field">
-            <span>Pagou como?</span>
-            <div class="chips" id="forma-chips" role="radiogroup" aria-label="Pagou como?"></div>
-          </div>
+          <!-- 14/11 (JF: "menos é mais"): categoria e forma de pagamento num menu de escolher, no lugar de 13 botões -->
+          <label class="field"><span id="cat-label">Categoria</span><select id="category-select" aria-label="Categoria"></select></label>
+          <div class="chips" id="category-chips" role="radiogroup" aria-label="Categoria" hidden></div>
+          <p class="sugestao" id="cat-sugestao" hidden></p>
+          <label class="field" id="forma-field"><span>Pagou como?</span><select id="forma-select" aria-label="Pagou como?"></select></label>
+          <div class="chips" id="forma-chips" role="radiogroup" aria-label="Pagou como?" hidden></div>
           <label class="field" id="account-field" hidden>
             <span id="account-label">Conta</span>
             <select id="account-select" aria-label="Conta"></select>
@@ -297,11 +314,11 @@
         </form>
       </section>
 
-      <section class="card" id="ultimos-card" hidden>
-        <h2>Últimos lançamentos</h2>
+      <details class="card bloco" id="ultimos-card" data-bloco="ultimos" hidden>
+        <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#i-recibo"/></svg><span class="bloco-tit">Últimos lançamentos</span><span class="bloco-res" id="res-ultimos"></span></summary>
         <p class="muted small">Errou algo? Toque no lápis pra corrigir ou no × pra apagar.</p>
         <ul class="exp-list" id="ultimos-list"></ul>
-      </section>
+      </details>
     </main>
   </section>
 
@@ -365,15 +382,9 @@
         <p class="caos-dica" id="plan-caos"></p>
       </section>
 
-      <!-- 14/11 (Anne: "menos lista, mais blocos, que a gente saiba o que fazer"): atalhos pros blocos do mês -->
-      <nav class="mes-tiles" aria-label="Partes do mês">
-        <button type="button" class="tile" data-abre="comp-card"><svg class="ico" aria-hidden="true"><use href="#i-relogio"/></svg><b>Compromissos</b><small id="tile-comp">contas fixas</small></button>
-        <button type="button" class="tile" data-abre="planos-card"><svg class="ico" aria-hidden="true"><use href="#i-lancar"/></svg><b>Planos</b><small id="tile-planos">o que vai comprar</small></button>
-        <button type="button" class="tile" data-abre="metas-card"><svg class="ico" aria-hidden="true"><use href="#i-meta"/></svg><b>Metas</b><small id="tile-metas">juntar dinheiro</small></button>
-        <button type="button" class="tile" data-abre="sim-card"><svg class="ico" aria-hidden="true"><use href="#a-cartao"/></svg><b>E se eu comprar?</b><small>simular antes</small></button>
-      </nav>
-
-      <details class="card bloco" id="comp-card" data-bloco="comp-card">
+      <!-- 14/11 (JF): cada bloco abre ali mesmo; abriu um, os outros somem até fechar. Levar pra fora fica embaixo. -->
+      <div class="painel-blocos" id="mes-blocos">
+      <details class="card bloco tile-bloco" id="comp-card" data-bloco="comp-card">
         <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#i-relogio"/></svg><span class="bloco-tit">Compromissos</span><span class="bloco-res" id="res-comp"></span></summary>
         <p class="muted small">Contas fixas, faturas, assinaturas e planos que se repetem (ex.: comida japonesa a cada 2 meses). Eu lembro dos vencimentos e você lança quando pagar.</p>
         <ul class="comp-list" id="comp-list"></ul>
@@ -401,15 +412,7 @@
           </form>
         </details>
       </details>
-
-      <details class="card bloco" id="metas-card" data-bloco="metas-card">
-        <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#i-meta"/></svg><span class="bloco-tit">Metas</span><span class="bloco-res" id="res-metas"></span></summary>
-        <p class="muted small">Pra que você quer juntar dinheiro. O C.A.O.S. calcula quanto guardar por mês e comemora com você.</p>
-        <ul class="account-list meta-list" id="meta-list"></ul>
-        <button type="button" class="ghost" id="meta-nova">＋ Nova meta com o C.A.O.S.</button>
-      </details>
-
-      <details class="card bloco" id="planos-card" data-bloco="planos-card">
+      <details class="card bloco tile-bloco" id="planos-card" data-bloco="planos-card">
         <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#i-lancar"/></svg><span class="bloco-tit">Planos deste mês</span><span class="bloco-res" id="res-planos"></span></summary>
         <p class="muted small">O que você planejou comprar ou gastar. Eu calculo se cabe e o que dá pra adiar.</p>
         <ul class="plan-list" id="plan-list"></ul>
@@ -421,8 +424,15 @@
         <p class="error" id="plan-error" role="alert" hidden></p>
       </details>
 
-      <details class="card bloco" id="sim-card" data-bloco="sim-card">
-        <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#a-cartao"/></svg><span class="bloco-tit">E se eu comprar?</span><span class="bloco-res" id="res-sim"></span></summary>
+      <details class="card bloco tile-bloco" id="metas-card" data-bloco="metas-card">
+        <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#i-meta"/></svg><span class="bloco-tit">Metas</span><span class="bloco-res" id="res-metas"></span></summary>
+        <p class="muted small">Pra que você quer juntar dinheiro. O C.A.O.S. calcula quanto guardar por mês e comemora com você.</p>
+        <ul class="account-list meta-list" id="meta-list"></ul>
+        <button type="button" class="ghost" id="meta-nova">＋ Nova meta com o C.A.O.S.</button>
+      </details>
+
+      <details class="card bloco tile-bloco" id="sim-card" data-bloco="sim-card">
+        <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#a-cartao"/></svg><span class="bloco-tit">E se eu comprar?</span><span class="bloco-res" id="res-sim">simular antes</span></summary>
         <p class="muted small">Veja o que uma compra faz com a sobra do mês antes de passar o cartão. Não grava nada.</p>
         <form id="sim-form" class="sim-form" autocomplete="off" novalidate>
           <label class="field"><span>Valor (R$)</span><input id="sim-valor" type="text" inputmode="decimal" placeholder="0,00"></label>
@@ -431,6 +441,9 @@
         </form>
         <p class="sim-resultado" id="sim-resultado" aria-live="polite" hidden></p>
       </details>
+
+      </div>
+
 
       <details class="card bloco" id="exportar-card" data-bloco="exportar-card">
         <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#i-recibo"/></svg><span class="bloco-tit">Levar o mês pra fora</span><span class="bloco-res" id="res-exportar"></span></summary>
@@ -452,7 +465,8 @@
         <p class="muted small">O app não acessa seu banco. O saldo é o que você informa, mais o que foi lançado na conta depois disso. Confira no app do banco de vez em quando e atualize aqui.</p>
       </section>
       <ul class="account-list" id="account-list"></ul>
-      <details class="card bloco" id="add-conta-card" data-bloco="add-conta">
+      <div class="painel-blocos" id="contas-blocos">
+      <details class="card bloco tile-bloco" id="add-conta-card" data-bloco="add-conta">
         <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#i-contas"/></svg><span class="bloco-tit">Adicionar conta</span></summary>
         <form id="account-form" autocomplete="off" novalidate>
           <label class="field"><span>Banco</span><select id="bank-select" aria-label="Banco"></select></label>
@@ -468,7 +482,7 @@
           <button class="primary" type="submit">Adicionar conta</button>
         </form>
       </details>
-      <details class="card bloco" id="transf-card">
+      <details class="card bloco tile-bloco" id="transf-card">
         <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#i-transf"/></svg><span class="bloco-tit">Transferir entre contas</span></summary>
         <form id="transf-form" autocomplete="off" novalidate>
           <p class="muted">Dinheiro que só mudou de lugar (da conta pra poupança, pro cofrinho…). Não conta como gasto nem como entrada.</p>
@@ -480,7 +494,7 @@
           <button class="primary" type="submit">Transferir</button>
         </form>
       </details>
-      <details class="card bloco" id="add-cartao-card">
+      <details class="card bloco tile-bloco" id="add-cartao-card">
         <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#a-cartao"/></svg><span class="bloco-tit">Adicionar cartão de crédito</span></summary>
         <form id="card-form" autocomplete="off" novalidate>
           <label class="field"><span>Banco do cartão</span><select id="card-bank" aria-label="Banco do cartão"></select></label>
@@ -498,7 +512,7 @@
         </form>
       </details>
 
-      <details class="card bloco" id="inv-card" data-bloco="investimentos">
+      <details class="card bloco tile-bloco" id="inv-card" data-bloco="investimentos">
         <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#e-rendimento"/></svg><span class="bloco-tit">Investimentos</span><span class="bloco-res" id="res-inv"></span></summary>
         <p class="muted small">Coloque o que você tem investido. O app não acessa banco nem corretora: de vez em quando, olhe o valor no app deles e toque em "Atualizar valor".</p>
         <div class="inv-resumo" id="inv-resumo" hidden></div>
@@ -518,6 +532,7 @@
           </form>
         </details>
       </details>
+      </div>
     </main>
   </section>
 

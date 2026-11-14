@@ -1169,6 +1169,31 @@ export const GERADORES = {
       ],
     },
   },
+  // 2.1.6 (JF, 14/11): cutucou demais, ele cansa e depois se estressa (sem xingar, sem zoeira no Suave)
+  cutucar_cansado: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Tá, tá, já entendi que você tá aí.',
+        'Mais um cutucão? Eu tô ficando tonto.',
+        'Ei, assim cansa. Bora conversar de verdade?',
+        'Hum. Você não tem uma fatura pra conferir, não?',
+        'Isso já tá virando hábito. Cuidado.',
+      ],
+    },
+  },
+  cutucar_bravo: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Chega! Agora eu fiquei bravo.',
+        'Para de me cutucar! Vou contar até dez.',
+        'Sério, para. Me dá uns segundos de paz.',
+        'Tô de mal. Volta daqui a pouco.',
+        'Assim não dá! Me deixa respirar um pouco.',
+      ],
+    },
+  },
   apelido_curto: {
     moldes: ['{inteira}'],
     inteira: {
