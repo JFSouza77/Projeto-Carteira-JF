@@ -33,6 +33,8 @@ function aleatorio(semente) { let s = semente >>> 0; return () => ((s = (s * 166
     const sorte = aleatorio(SEMENTE + k * 101);
     const ctx = await b.newContext({ viewport: rod.vp, serviceWorkers: "block", colorScheme: rod.tema });
     const p = await ctx.newPage();
+    // o servidor de verdade fica de fora do teste (14/11): responde "sem dados" sem sair pra internet
+    await ctx.route(/workers\.dev/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
     await p.addInitScript(() => { window.print = () => {}; }); // o PDF abriria a janela de impressão
     let ultimo = "(início)";
     p.on("pageerror", (e) => erros.push(`[${rod.nome}] erro depois de ${ultimo}: ${e.message}`));

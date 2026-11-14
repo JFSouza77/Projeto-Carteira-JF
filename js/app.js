@@ -31,12 +31,16 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const cap = s => (s ? s[0].toUpperCase() + s.slice(1) : s);
 const centsToInput = c => (c ? (c / 100).toFixed(2).replace('.', ',') : '');
 
+// Servidor do C.A.O.S. Finanças (publicado com o JF em 14/11/2026). Vem ligado pra todo mundo: conta, sincronização e
+// mercado funcionam sem configurar nada. A IA online continua desligada até a pessoa ligar em Ajustes.
+const SERVIDOR_PADRAO = 'https://carteira-jf.caos-financas.workers.dev';
+
 const state = {
   categories: [],
   expenses: [],
   incomes: [],
   accounts: [],
-  settings: { mood: DEFAULT_MOOD, voice: false, aiOn: false, aiUrl: '', letra: 'normal', tema: 'escuro', temaV: 2, vozVel: 1, menosMov: null },
+  settings: { mood: DEFAULT_MOOD, voice: false, aiOn: false, aiUrl: SERVIDOR_PADRAO, servidorV: 1, letra: 'normal', tema: 'escuro', temaV: 2, vozVel: 1, menosMov: null },
   caosMemory: memoriaInicial(),
   viewMonth: monthKey(toISODate()),
   kind: 'gasto',
@@ -3163,6 +3167,8 @@ async function init() {
     Object.assign(state, { expenses, incomes, accounts: accounts.sort((a, b) => a.createdAt - b.createdAt) });
     if (settings) state.settings = { ...state.settings, ...settings };
     // escuro por padrão (JF + Code, 12/11): quem nunca escolheu tema ("do aparelho" de fábrica) passa pro escuro, uma vez só
+    // quem já usava o app sem servidor ganha o servidor padrão uma vez (14/11); quem pôs outro endereço fica com o seu
+    if (settings && !settings.servidorV) state.settings = { ...state.settings, aiUrl: (settings.aiUrl || '').trim() || SERVIDOR_PADRAO, servidorV: 1 };
     if (settings && !settings.temaV) state.settings = { ...state.settings, tema: ['claro', 'contraste'].includes(settings.tema) ? settings.tema : 'escuro', temaV: 2 };
     aplicarAcessibilidade();
     posicionarMeAjuda(); // o lugar onde a pessoa deixou o "Me ajuda" vem das configurações
