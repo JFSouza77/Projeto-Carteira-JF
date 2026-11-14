@@ -10,7 +10,7 @@ import {
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
   TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
-  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, progressoOrcamentoDiario, mascaraCentavos, valorForaDoComum, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
+  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, depoisDoSaldo, progressoOrcamentoDiario, mascaraCentavos, valorForaDoComum, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, rostoEspantado, rostoDaEmo, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
@@ -1130,6 +1130,7 @@ async function registrarGasto({ amountCents, categoryId, note, date, accountId, 
   const cartao = conta?.tipo === 'cartao';
   const antes = conta ? (cartao ? faturaDoCartao(comReforco(conta, state.accounts, state.expenses, state.incomes, state.transferencias), state.expenses, toISODate()).pct : accountBalance(conta, state.expenses, state.incomes, state.transferencias)) : null;
   await db.put(db.STORES.expenses, expense);
+  avisarAntesDoSaldo(expense);
   state.expenses.push(expense);
   const events = detectExpenseEvents({ expenses: state.expenses, categories: state.categories, newExpense: expense });
   if (conta && cartao) {
@@ -1153,11 +1154,20 @@ async function registrarGasto({ amountCents, categoryId, note, date, accountId, 
   return events;
 }
 
+/** JF, 14/11: lançamento com data de antes do saldo informado já está dentro dele; avisa que o saldo não mudou. */
+function avisarAntesDoSaldo(item) {
+  const conta = item.accountId && state.accounts.find(a => a.id === item.accountId && a.tipo !== 'cartao');
+  if (!conta || depoisDoSaldo(item, conta)) return;
+  const dia = new Date(conta.balanceAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  setTimeout(() => toast(`Anotado com a data certa. O saldo de ${accountLabel(conta)} que você informou em ${dia} já inclui esse valor, então o saldo não mudou.`), 900);
+}
+
 async function registrarEntrada({ amountCents, sourceId, note, date, accountId }) {
   const ofAntes = ofensivaAgora();
   const income = createIncome({ amountCents, sourceId, note, date, accountId });
   await db.put(db.STORES.incomes, income);
   state.incomes.push(income);
+  avisarAntesDoSaldo(income);
   state.viewMonth = income.month;
   render();
   return [{ type: 'entrada_cadastrada', amountCents, sourceId }, ...eventoOfensiva(ofAntes)];

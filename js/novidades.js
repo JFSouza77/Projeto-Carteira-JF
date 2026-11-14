@@ -20,6 +20,7 @@ export const NOVIDADES = Object.freeze([
       '📱 Barras no lugar: o teclado não deixa mais as barras soltas na tela.',
     ],
     qol: [
+      '🏦 Saldo certo: lançamento de antes do saldo informado não conta duas vezes.',
       '🍔 Lanchonetes conhecidas: McDonald\'s, Subway e cia. vão pra Restaurante.',
       '✨ Respostas da IA sem asteriscos: o destaque aparece em negrito.',
       '🎯 Valores no centro: gasto do mês, saldo, hoje e metas mais alinhados.',

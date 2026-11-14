@@ -80,7 +80,8 @@ test('rachadinha no cartão: o Pix do amigo soma na conta escolhida, não no car
   const recebido = marcarRecebido(pizza, ana.id, new Date(2026, 10, 11).getTime(), 'nu-9');
   assert.equal(accountBalance(nu, [recebido], []), 10000 + ana.valorCents);
   // sem conta escolhida (gasto em conta corrente): volta pra conta do gasto, como antes
-  const debito = { ...pizza, accountId: 'nu-9', createdAt: new Date(2026, 9, 1).getTime() };
+  // gasto de antes do saldo informado (vale a DATA, 14/11): ele não mexe no saldo; só a parte da Ana entra
+  const debito = { ...pizza, accountId: 'nu-9', date: '2026-10-01', createdAt: new Date(2026, 9, 1).getTime() };
   assert.equal(accountBalance(nu, [marcarRecebido(debito, ana.id, new Date(2026, 10, 11).getTime())], []), 10000 + ana.valorCents);
 });
 
