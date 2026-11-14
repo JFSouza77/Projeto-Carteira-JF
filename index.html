@@ -26,19 +26,26 @@
       <p class="abertura-titulo">C.A.O.S.</p>
       <p class="abertura-frase">Um C.A.O.S. pra organizar o seu caos.</p>
       <p class="abertura-dica" id="abertura-dica" aria-live="polite"></p>
-      <p class="abertura-versao" id="abertura-versao">Carregando…</p>
       <p class="abertura-pula">toque pra pular</p>
-      <div class="abertura-login" id="abertura-login" hidden>
-        <div class="abertura-form" id="abertura-form">
-          <input id="ab-apelido" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="30" placeholder="Apelido da conta" aria-label="Apelido da conta">
-          <input id="ab-senha" type="password" autocomplete="current-password" maxlength="200" placeholder="Senha" aria-label="Senha">
-          <p class="error" id="ab-erro" role="alert" hidden></p>
-        </div>
-        <button type="button" class="primary" id="abertura-entrar">Entrar na conta</button>
-        <button type="button" class="ghost" id="abertura-criar">Criar conta</button>
-        <button type="button" class="link-btn" id="abertura-pular">Continuar sem conta</button>
-      </div>
     </div>
+    <!-- 14/11 (JF + namorada: "mais slim", como a entrada dos bancos): um cartão embaixo, pouca coisa na tela -->
+    <div class="abertura-cartao" id="abertura-login" hidden>
+      <p class="abertura-ola" id="abertura-ola">Olá!</p>
+      <div class="abertura-atalhos" id="abertura-atalhos" hidden>
+        <button type="button" data-ir="lancar"><svg class="ico" aria-hidden="true"><use href="#i-lancar"/></svg>Lançar</button>
+        <button type="button" data-ir="conversa"><svg class="ico" aria-hidden="true"><use href="#i-conversa"/></svg>Conversar</button>
+        <button type="button" data-ir="mes"><svg class="ico" aria-hidden="true"><use href="#i-mes"/></svg>Meu mês</button>
+      </div>
+      <div class="abertura-form" id="abertura-form" hidden>
+        <input id="ab-apelido" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="30" placeholder="Apelido da conta" aria-label="Apelido da conta">
+        <input id="ab-senha" type="password" autocomplete="current-password" maxlength="200" placeholder="Senha" aria-label="Senha">
+        <p class="error" id="ab-erro" role="alert" hidden></p>
+      </div>
+      <button type="button" class="primary" id="abertura-entrar">Entrar na conta</button>
+      <button type="button" class="ghost" id="abertura-criar">Criar conta nova</button>
+      <button type="button" class="link-btn" id="abertura-pular">Continuar sem conta</button>
+    </div>
+    <p class="abertura-versao" id="abertura-versao">Carregando…</p>
   </div>
   <!-- Ícones próprios (06/11): traço simples, cor do texto, brilho neon na aba ativa -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
