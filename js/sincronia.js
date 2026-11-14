@@ -54,10 +54,10 @@ export function mudancasDesde(estado, desde = 0) {
   return regs.filter(r => r.v > desde).map(({ store, id, em, rec }) => ({ store, id, em, rec }));
 }
 
-/** Apelido da conta: letras, números, ponto, traço e sublinhado, de 3 a 30. Comparado sem maiúsculas e sem acento. */
+/** Apelido da conta: letras, números, ponto, traço e sublinhado, de 2 a 30. Comparado sem maiúsculas e sem acento. */
 export function normalizarApelido(apelido) {
   const a = String(apelido || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
-  return /^[a-z0-9_.-]{3,30}$/.test(a) ? a : null;
+  return /^[a-z0-9_.-]{2,30}$/.test(a) ? a : null; // 14/11 (JF): de 2 em diante, pra caber o "jf"
 }
 
 export const SENHA_MINIMA = 6;

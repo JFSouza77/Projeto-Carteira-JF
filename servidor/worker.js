@@ -584,7 +584,7 @@ async function limiteTentativas(req, env, apelido) {
 
 function lerCredenciais(corpo) {
   const apelido = normalizarApelido(corpo.apelido);
-  if (!apelido) throw new ErroHttp(400, 'Apelido de 3 a 30 letras ou números (pode ponto, traço e sublinhado).');
+  if (!apelido) throw new ErroHttp(400, 'Apelido de 2 a 30 letras ou números (pode ponto, traço e sublinhado).');
   // Ponta a ponta (07/11): o app manda uma "senha de acesso" tirada da senha de verdade, que nunca sai do aparelho.
   const senha = typeof corpo.senha === 'string' ? corpo.senha : '';
   if (!ACESSO_RE.test(senha)) throw new ErroHttp(400, 'Atualize o app pra entrar na conta (agora a senha fica só no seu aparelho).');
