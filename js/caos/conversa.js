@@ -4,7 +4,7 @@
 
 import {
   formatBRL, parseAmount, periodRange, ofensiva, aReceber, comReforco, sumInRange, topCategories, summarizeMonth, forecastMonth,
-  incomeIn, monthKey, shiftMonth, monthLabel, accountBalance, accountLabel, totalBalance, analyze,
+  incomeIn, monthKey, shiftMonth, monthLabel, accountBalance, accountLabel, totalBalance, analyze, folgaDoPiso, dividirEntrePisos,
   spentIn, toISODate, INCOME_SOURCES, idadeDe, faixaEtaria, situacaoCompromissos, analisarPlanejamento, cabeNoMes, sugerirCategoria, palavrasDe, faturaDoCartao, progressoMeta, resumoInvestimentos,
 } from '../engine.js';
 import { IDENTIDADE, textoPodeNaoPode, textoVida, textoComoFunciona, textoPrivacidade } from './identidade.js';
@@ -415,6 +415,13 @@ function entenderSimples(t, { categories = [] } = {}) {
     && /\b(ontem|anteontem|hoje|dia \d{1,2}|domingo|segunda|terca|quarta|quinta|sexta|sabado)\b/.test(t) && !pergunta) {
     return { ...r, valor: null, intent: 'corrigir_data' };
   }
+  // Piso de segurança e salário (JF, 14/11): "meu piso no Banestes é 2000", "quanto posso gastar no C6?",
+  // "me ajuda a dividir meu salário entre os bancos", "tive aumento?", "recebi mais ou menos que mês passado?"
+  if (/\b(piso|pisos|minimo de seguranca|valor de seguranca)\b/.test(t)) return { ...r, intent: r.valor && !pergunta ? 'definir_piso' : 'pisos' };
+  if (/\b(dividir|distribuir|repartir|partilhar|parcionar|particionar|separar|organizar)\b/.test(t) && /\b(banco|bancos|contas)\b/.test(t)) return { ...r, intent: 'dividir_entre_bancos' };
+  if (/quanto (eu )?(ainda )?(posso|da pra|consigo|devo) (gastar|usar|tirar)( ainda)? (no|na|do|da|pelo|pela)\b/.test(t)) return { ...r, intent: 'folga_conta' };
+  if (/\b(aumento|aumentou|reajuste|diminuiu|reducao|reduziu|caiu meu salario)\b/.test(t) && /\b(salario|recebi|ganho|ganhei|tive|meu)\b/.test(t) && !r.valor) return { ...r, intent: 'entradas_comparar' };
+  if (/\b(mais ou menos|menos ou mais|comparad[oa]|do que o mes passado|que o mes passado|que mes passado)\b/.test(t) && /\b(recebi|salario|entrou|entrada|entradas|ganhei)\b/.test(t)) return { ...r, intent: 'entradas_comparar' };
   // Registro ("gastei 30 no mercado", "paguei 120 de luz", "recebi 1500 de salario")
   if (r.valor && !/\bquanto\b/.test(t)) {
     // sem verbo, mas dizendo como pagou (JF, 14/11: "7 reais no débito do Inter", "5,50 numa casquinha pelo débito")
@@ -790,6 +797,28 @@ function semBase() {
 }
 
 /** "gastei 30 no uber" → "uber"; "paguei 120 de luz" → "luz". */
+/** Acha o banco citado na frase ("no C6", "do banestes", "mercado pago"), pelo nome ou apelido. */
+function acharConta(t, contas) {
+  let melhor = null;
+  for (const a of contas) {
+    const nomes = [a.bank, a.nickname, String(a.bank || '').split(/\s+/)[0]].filter(x => x && norm(x).length >= 2).map(norm);
+    for (const n of nomes) if (new RegExp(`(^|\\s)${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\s|$)`).test(t) && (!melhor || n.length > melhor.n.length)) melhor = { a, n };
+  }
+  return melhor?.a || null;
+}
+
+const diaMes = iso => `${Number(iso.slice(8, 10))}/${Number(iso.slice(5, 7))}`;
+
+/** Descrição da entrada ("recebi 200 de extra da gasolina" → "Extra da gasolina"); vazia se for só o nome da fonte. */
+function notaDaEntrada(t, fonte, accounts = []) {
+  const m = String(t).match(/\b(?:de|do|da|pelo|pela|pra|por)\s+([a-z0-9 ]{3,60})$/);
+  let d = m ? m[1] : '';
+  d = limparPagamento(d.replace(/\b(no|na)\s+[a-z0-9 ]+$/, ''), accounts) || '';
+  d = d.replace(/\b(dia \d{1,2}|ontem|hoje|anteontem)\b/g, '').trim();
+  if (!d || norm(fonte.name).includes(d) || /^(salario|pagamento|freela|extra)$/.test(d)) return '';
+  return (d[0].toUpperCase() + d.slice(1)).slice(0, 60);
+}
+
 export function descricaoDe(t) {
   const m = String(t).match(/\b(?:no|na|nos|nas|em|de|do|da|com|pro|pra)\s+([a-z0-9 ]{2,40})$/);
   if (!m) return '';
@@ -934,7 +963,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         gatilho: 'proposta_registro',
         vars: { valor: formatBRL(intencao.valor), categoria: `entrada (${fonte.name})` },
         // "recebi 1500 de salário no nubank": a entrada cai na conta (achado do Gemini); cartão nunca recebe entrada
-        acao: { tipo: 'registrar_entrada', amountCents: intencao.valor, sourceId: fonte.id, date: dataDoTexto(intencao.t, today), note: '',
+        acao: { tipo: 'registrar_entrada', amountCents: intencao.valor, sourceId: fonte.id, date: dataDoTexto(intencao.t, today), note: notaDaEntrada(intencao.t, fonte, dados.accounts),
           accountId: lerPagamento(intencao.t, (dados.accounts || []).filter(a => a.tipo !== 'cartao')).accountId || null },
       };
     }
@@ -975,14 +1004,65 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
           sugestoes: ['Recebi 1500 de salário', 'Qual meu saldo?'],
         };
       }
-      const porFonte = INCOME_SOURCES.map(s => ({ s, v: sumInRange(incomes, range, i => i.sourceId === s.id).totalCents }))
+      const porFonte = INCOME_SOURCES.map(s => ({ s, v: sumInRange(incomes, range, i => i.sourceId === s.id && filtro(i)).totalCents }))
         .filter(x => x.v > 0).map(x => `${x.s.emoji} ${x.s.name} ${formatBRL(x.v)}`).join(', ');
       const gastos = sumInRange(expenses, range).totalCents;
       const saldo = totalCents - gastos;
+      // o que entrou além do salário, com a descrição (JF, 14/11: "o extra da gasolina")
+      const extras = incomes.filter(i => i.date >= range.from && i.date <= range.to && i.sourceId !== 'salario' && filtro(i)).slice(0, 4)
+        .map(i => `${i.note || INCOME_SOURCES.find(s => s.id === i.sourceId)?.name} ${formatBRL(i.amountCents)} (${diaMes(i.date)})`);
       return {
-        fato: `Entrou ${formatBRL(totalCents)} ${range.label} (${porFonte}). Saiu ${formatBRL(gastos)}, então o saldo do período está ${saldo >= 0 ? 'positivo em' : 'negativo em'} ${formatBRL(Math.abs(saldo))}.`,
+        fato: `Entrou ${formatBRL(totalCents)} ${range.label} (${porFonte}).${extras.length && intencao.fonte !== 'salario' ? ` ${especifica ? 'Foi' : 'Além do salário'}: ${extras.join(', ')}.` : ''}${especifica ? '' : ` Saiu ${formatBRL(gastos)}, então o saldo do período está ${saldo >= 0 ? 'positivo em' : 'negativo em'} ${formatBRL(Math.abs(saldo))}.`}`,
         sugestoes: ['Onde mais gastei?', 'Qual meu saldo?'],
       };
+    }
+    case 'entradas_comparar': {
+      const este = monthKey(today), antes = shiftMonth(este, -1);
+      const doMes = (m, f = () => true) => incomes.filter(i => i.month === m && f(i)).reduce((t, i) => t + i.amountCents, 0);
+      const salA = doMes(este, i => i.sourceId === 'salario'), salB = doMes(antes, i => i.sourceId === 'salario');
+      const totA = doMes(este), totB = doMes(antes);
+      if (!totA && !totB) return { fato: 'Ainda não tem entrada anotada neste mês nem no passado. Me fala tipo "recebi 3000 de salário dia 5 no Banestes".', cru: true, sugestoes: ['Recebi 3000 de salário'] };
+      const comp = (a, b, nome) => !b ? `${nome} deste mês: ${formatBRL(a)} (mês passado não tem anotado)` : a === b ? `${nome}: ${formatBRL(a)}, igual ao mês passado` : `${nome}: ${formatBRL(a)}, ${a > b ? 'mais' : 'menos'} ${formatBRL(Math.abs(a - b))} que o mês passado (${formatBRL(b)})`;
+      const extras = incomes.filter(i => i.month === este && i.sourceId !== 'salario').map(i => `${i.note || INCOME_SOURCES.find(s => s.id === i.sourceId)?.name} ${formatBRL(i.amountCents)} dia ${Number(i.date.slice(8))}`);
+      const aumento = salA && salB && salA !== salB ? (salA > salB ? ' Pelo salário anotado, teve aumento.' : ' Pelo salário anotado, veio menor.') : '';
+      return { fato: `${comp(salA, salB, 'Salário')}. ${comp(totA, totB, 'Tudo que entrou')}.${aumento}${extras.length ? ` Extras deste mês: ${extras.slice(0, 4).join(', ')}.` : ''}`, cru: true,
+        sugestoes: ['Me ajuda a dividir o salário entre os bancos', 'Quanto gastei este mês?'] };
+    }
+    case 'definir_piso': {
+      const contas = (dados.accounts || []).filter(a => a.tipo !== 'cartao');
+      const conta = acharConta(intencao.t, contas) || (contas.length === 1 ? contas[0] : null);
+      if (!conta) return { fato: `Piso de ${formatBRL(intencao.valor)} em qual banco? Me fala tipo "meu piso no Banestes é 2000".`, cru: true, sugestoes: contas.slice(0, 4).map(a => `Piso no ${a.bank} é ${(intencao.valor / 100).toFixed(0)}`) };
+      return { fato: `Combinado: o piso de segurança de ${accountLabel(conta)} fica em ${formatBRL(intencao.valor)}. Eu aviso quando o saldo chegar perto. Confirma?`, cru: true, sugestoes: [],
+        acao: { tipo: 'definir_piso', accountId: conta.id, pisoCents: intencao.valor } };
+    }
+    case 'pisos':
+    case 'folga_conta': {
+      const contas = (dados.accounts || []).filter(a => a.tipo !== 'cartao');
+      const achada = acharConta(intencao.t, contas);
+      const lista = (achada ? [achada] : contas).map(a => ({ a, saldo: accountBalance(a, expenses, incomes, dados.transferencias || []) }));
+      if (!contas.length) return { fato: 'Cadastra seus bancos em Contas primeiro. Depois me fala o piso de cada um, tipo "meu piso no Banestes é 2000".', cru: true, sugestoes: [] };
+      const linhas = lista.map(({ a, saldo }) => {
+        const p = folgaDoPiso(a, saldo);
+        if (!p) return `${accountLabel(a)}: ${formatBRL(saldo)}, sem piso definido`;
+        return p.abaixo ? `${accountLabel(a)}: ${formatBRL(saldo)}, ${formatBRL(-p.folgaCents)} abaixo do piso de ${formatBRL(p.pisoCents)}`
+          : `${accountLabel(a)}: dá pra gastar até ${formatBRL(p.folgaCents)} sem passar do piso de ${formatBRL(p.pisoCents)}`;
+      });
+      const semPiso = lista.some(({ a }) => !(a.pisoCents > 0));
+      return { fato: `${linhas.join('. ')}.${semPiso ? ' Pra definir um piso, me fala tipo "meu piso no Banestes é 2000".' : ''}`, cru: true,
+        sugestoes: ['Me ajuda a dividir o salário entre os bancos'] };
+    }
+    case 'dividir_entre_bancos': {
+      const contas = (dados.accounts || []).filter(a => a.tipo !== 'cartao' && !a.paraQuem);
+      const ultimoSalario = [...incomes].filter(i => i.sourceId === 'salario').sort((a, b) => b.date.localeCompare(a.date))[0];
+      const valor = intencao.valor || ultimoSalario?.amountCents || 0;
+      if (!valor) return { fato: 'Quanto você quer dividir? Me fala tipo "dividir 3000 entre os bancos".', cru: true, sugestoes: [] };
+      const lista = contas.map(a => ({ id: a.id, nome: accountLabel(a), pisoCents: a.pisoCents || 0, saldoCents: accountBalance(a, expenses, incomes, dados.transferencias || []) }));
+      if (!lista.some(c => c.pisoCents > 0)) return { fato: `Pra dividir ${formatBRL(valor)} do jeito certo, preciso saber o piso de segurança de cada banco: o mínimo que você quer manter lá. Me fala tipo "meu piso no Banestes é 2000".`, cru: true, sugestoes: [] };
+      const d = dividirEntrePisos(valor, lista);
+      const passos = d.passos.map((p, i) => `${i + 1}) ${formatBRL(p.valorCents)} pro ${p.nome}${p.completo ? ' voltar ao piso' : ' (ainda não chega no piso)'}`);
+      const base = intencao.valor ? '' : ` (seu último salário, de ${diaMes(ultimoSalario.date)})`;
+      if (!passos.length) return { fato: `Todos os bancos estão acima do piso, então os ${formatBRL(valor)}${base} estão livres. Uma ideia: separar uma parte pra reserva antes de gastar. A decisão é sua.`, cru: true, sugestoes: [] };
+      return { fato: `Com ${formatBRL(valor)}${base}: ${passos.join('; ')}.${d.livreCents ? ` Sobram ${formatBRL(d.livreCents)} livres: uma ideia é guardar uma parte antes de gastar.` : ' Não sobra nada livre depois de cobrir os pisos.'} É uma sugestão; quem decide é você.`, cru: true, sugestoes: [] };
     }
     case 'explicar_print':
       return { fato: 'Manda o print aqui pelo 📎 que eu te explico o que o banco quis dizer. A imagem só vai pro servidor do C.A.O.S. Finanças pra isso, e eu não repito números de conta nem de cartão.', modoFoto: 'explicar', sugestoes: [] };

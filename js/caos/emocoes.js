@@ -54,6 +54,8 @@ const EFEITO = {
   ritmo_alto: { ansiedade: 2 },
   mes_negativo: { ansiedade: 3, tristeza: 1.5, carinho: 1 },
   conta_negativa: { ansiedade: 3.5, medo: 2, carinho: 1.5 },
+  abaixo_do_piso: { ansiedade: 3, medo: 1.5, carinho: 1.5 },
+  perto_do_piso: { ansiedade: 1.5, carinho: 1 },
   cartao_limite: { ansiedade: 3, medo: 2 },
   sem_registro: { tedio: 2.5, carinho: 0.5 },
   pergunta: { curiosidade: 1, tedio: -1 },

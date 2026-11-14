@@ -14,7 +14,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '2.1.7'; // 2.1.7 (14/11): hora não vira valor, dia da semana, corrigir data do último gasto, gasto sem "gastei" (só com o jeito de pagar), "não" cancela, pergunta em quê. 2.1.6 2.1.6 (14/11): cutucão em escada (brinca, cansa, se estressa) e categorias de lanche. 2.1.5 2.1.5 (14/11): sem "bem-vindo de volta" na abertura (Anne). 2.1.4 (14/11): entende apelido de amigo (corno, vagabundo) e xingamento junto com pergunta. 2.1.3 2.1.3 (13/11): rostinho de volta no balão, combinando com o avatar. 2.1.2: benefícios, bolsas, matemática
+export const CAOS_VERSAO = '2.1.8'; // 2.1.8 (14/11): piso de segurança por banco, folga, dividir salário entre bancos, comparar salário/aumento, extras com descrição. 2.1.7 2.1.7 (14/11): hora não vira valor, dia da semana, corrigir data do último gasto, gasto sem "gastei" (só com o jeito de pagar), "não" cancela, pergunta em quê. 2.1.6 2.1.6 (14/11): cutucão em escada (brinca, cansa, se estressa) e categorias de lanche. 2.1.5 2.1.5 (14/11): sem "bem-vindo de volta" na abertura (Anne). 2.1.4 (14/11): entende apelido de amigo (corno, vagabundo) e xingamento junto com pergunta. 2.1.3 2.1.3 (13/11): rostinho de volta no balão, combinando com o avatar. 2.1.2: benefícios, bolsas, matemática
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -23,7 +23,7 @@ export { IDENTIDADE, resumoIdentidade } from './identidade.js';
 
 // Prioridade: só uma fala por reação, a mais importante (para não virar spam).
 const PRIORIDADE = {
-  categoria_estourada: 50, compromisso_atrasado: 49, conta_negativa: 48, cartao_limite: 47, mes_negativo: 46, cartao_vence: 45, compromisso_vence: 44,
+  categoria_estourada: 50, compromisso_atrasado: 49, conta_negativa: 48, abaixo_do_piso: 48, perto_do_piso: 41, cartao_limite: 47, mes_negativo: 46, cartao_vence: 45, compromisso_vence: 44,
   orcamento_80: 40, mes_verde: 35, plano_do_mes: 25, confira_banco: 9, auditor_assinatura: 9, meta_ritmo: 6,
   ritmo_alto: 30, ofensiva_marco: 28, racha_cadastrada: 27, a_receber: 22, delivery_repetido: 20, entrada_cadastrada: 15, gasto_cadastrado: 10, sem_registro: 8, boas_vindas: 5,
 };
@@ -51,7 +51,7 @@ const RADAR_COOLDOWN = 6 * 3_600_000;
 const PACIENCIA_ZERA = 30 * 60_000; // xingamento de mais de meia hora atrás não conta pra escalada
 const SILENCIO_MS = 3 * 60_000; // quanto tempo ele fica quietinho depois da última resposta
 const LIMITES_INTERVALO = 6 * 60 * 60 * 1000; // "1 vez por conversa ou assunto" (núcleo 1.4.0)
-const ALERTAS = new Set(['cartao_limite', 'cartao_vence', 'categoria_estourada', 'orcamento_80', 'delivery_repetido', 'ritmo_alto', 'mes_negativo', 'conta_negativa', 'compromisso_vence', 'compromisso_atrasado', 'a_receber']);
+const ALERTAS = new Set(['cartao_limite', 'cartao_vence', 'categoria_estourada', 'orcamento_80', 'delivery_repetido', 'ritmo_alto', 'mes_negativo', 'conta_negativa', 'abaixo_do_piso', 'perto_do_piso', 'compromisso_vence', 'compromisso_atrasado', 'a_receber']);
 
 export function memoriaInicial(now = Date.now()) {
   return { versao: CAOS_VERSAO, gerador: {}, emocoes: emocoesIniciais(now), lastAt: {}, lastMonthClosed: null, rosto: memoriaRostoInicial(), rostoUltimo: null, conversa: null };
@@ -149,7 +149,7 @@ function varsDoEvento(ev) {
     mes: ev.monthName ? ev.monthName[0].toUpperCase() + ev.monthName.slice(1) : null,
     economia: r(ev.savedCents), previsto: r(ev.projectedCents), porDia: r(ev.perDayCents),
     orcamento: r(ev.budgetCents), entradas: r(ev.incomeCents), gastos: r(ev.totalCents),
-    ano: r(ev.anoCents), quem: ev.quem, conta: ev.accountName ?? ev.nome, saldo: r(ev.balanceCents), dia: ev.dia, meta: ev.metaNome,
+    ano: r(ev.anoCents), quem: ev.quem, conta: ev.accountName ?? ev.nome, saldo: r(ev.balanceCents), piso: r(ev.pisoCents), dia: ev.dia, meta: ev.metaNome,
     quando: ev.type === 'compromisso_vence' || ev.type === 'cartao_vence'
       ? (ev.days === 0 ? 'hoje' : ev.days === 1 ? 'amanhã' : `em ${ev.days} dias (dia ${ev.dia})`) : null,
   };
@@ -430,6 +430,8 @@ function nomeAlerta(a) {
     case 'ritmo_alto': return 'ritmo acima do orçamento';
     case 'mes_negativo': return 'saindo mais do que entrando';
     case 'conta_negativa': return `${a.accountName} no negativo`;
+    case 'abaixo_do_piso': return `${a.accountName} abaixo do piso (${formatBRL(a.balanceCents)} de ${formatBRL(a.pisoCents)})`;
+    case 'perto_do_piso': return `${a.accountName} perto do piso: faltam ${formatBRL(a.leftCents)}`;
     case 'delivery_repetido': return `${a.count} deliveries na semana`;
     case 'sem_registro': return `${a.days} dias sem anotar`;
     case 'compromisso_vence': return `${a.nome} vence ${a.days === 0 ? 'hoje' : a.days === 1 ? 'amanhã' : `em ${a.days} dias`}`;

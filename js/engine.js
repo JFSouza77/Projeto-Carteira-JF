@@ -424,7 +424,7 @@ export function createAccount({ bank, nickname = '', balanceCents, subtipo = 'co
  * Editar conta (13/11): apelido, tipo, cartão que o cofrinho reforça, rendimento (% do CDI) e pra quem é o dinheiro.
  * Não mexe no saldo (isso é o "Atualizar saldo"). Devolve uma cópia nova.
  */
-export function editarConta(conta, { nickname, subtipo, reforcaCartaoId, rendeCdiPct, paraQuem }, { accounts = [] } = {}) {
+export function editarConta(conta, { nickname, subtipo, reforcaCartaoId, rendeCdiPct, paraQuem, pisoCents }, { accounts = [] } = {}) {
   if (!conta || conta.tipo === 'cartao') throw new Error('Isso é um cartão: ele não tem esses campos.');
   const novo = { ...conta };
   if (nickname !== undefined) novo.nickname = String(nickname).trim().slice(0, 30);
@@ -443,7 +443,40 @@ export function editarConta(conta, { nickname, subtipo, reforcaCartaoId, rendeCd
     novo.rendeCdiPct = pct;
   }
   if (paraQuem !== undefined) novo.paraQuem = String(paraQuem || '').trim().slice(0, 40);
+  if (pisoCents !== undefined) {
+    if (pisoCents != null && (!Number.isInteger(pisoCents) || pisoCents < 0)) throw new Error('Piso de segurança inválido.');
+    novo.pisoCents = pisoCents || null;
+  }
   return novo;
+}
+
+/**
+ * Piso de segurança (JF, 14/11: "no Banestes meu piso é R$ 2.000; não posso ficar abaixo disso"): o mínimo que a
+ * pessoa quer manter na conta. Folga = quanto ainda dá pra gastar dela sem passar do piso. Pura.
+ */
+export function folgaDoPiso(conta, saldoCents) {
+  if (!(conta?.pisoCents > 0)) return null;
+  const folga = saldoCents - conta.pisoCents;
+  return { pisoCents: conta.pisoCents, saldoCents, folgaCents: folga, abaixo: folga < 0, perto: folga >= 0 && folga < Math.max(5000, Math.round(conta.pisoCents * 0.1)) };
+}
+
+/**
+ * Dividir um valor (ex.: o salário) entre as contas (JF, 14/11): primeiro completa quem está abaixo do piso, depois
+ * mostra quanto sobra livre. Não decide pela pessoa: só faz a conta. Pura.
+ */
+export function dividirEntrePisos(valorCents, contas) {
+  const faltas = contas.filter(c => c.pisoCents > 0 && c.saldoCents < c.pisoCents)
+    .map(c => ({ id: c.id, nome: c.nome, faltaCents: c.pisoCents - c.saldoCents }))
+    .sort((a, b) => b.faltaCents - a.faltaCents);
+  let resto = valorCents;
+  const passos = [];
+  for (const f of faltas) {
+    if (resto <= 0) break;
+    const v = Math.min(f.faltaCents, resto);
+    passos.push({ ...f, valorCents: v, completo: v === f.faltaCents });
+    resto -= v;
+  }
+  return { passos, livreCents: Math.max(0, resto), faltaAindaCents: faltas.reduce((t, f) => t + f.faltaCents, 0) - (valorCents - Math.max(0, resto)) };
 }
 
 /** Quanto rende por mês e por ano, estimado: CDI ao ano (ex.: 10,65) × % do CDI (ex.: 102). Juros compostos ao mês. */
@@ -706,6 +739,11 @@ export function analyze({ expenses, incomes = [], categories, accounts = [], com
   for (const a of accounts.filter(x => x.tipo !== 'cartao')) {
     const bal = accountBalance(a, expenses, incomes, transferencias);
     if (bal < 0) out.push({ type: 'conta_negativa', severity: 'alta', accountId: a.id, accountName: accountLabel(a), balanceCents: bal });
+    else {
+      const p = folgaDoPiso(a, bal);
+      if (p?.abaixo) out.push({ type: 'abaixo_do_piso', severity: 'alta', accountId: a.id, accountName: accountLabel(a), balanceCents: bal, pisoCents: p.pisoCents, faltaCents: -p.folgaCents });
+      else if (p?.perto) out.push({ type: 'perto_do_piso', severity: 'media', accountId: a.id, accountName: accountLabel(a), balanceCents: bal, pisoCents: p.pisoCents, leftCents: p.folgaCents });
+    }
   }
 
   const recentDelivery = expenses.filter(e => e.categoryId === 'delivery' && daysBetween(e.date, today) >= 0
@@ -1015,7 +1053,7 @@ export function validarBackup(bruto) {
       || !Number.isInteger(a.balanceCents) || Math.abs(a.balanceCents) > VALOR_MAX
       || !(a.tipo == null || a.tipo === 'cartao')
       || !(a.subtipo == null || TIPOS_CONTA[a.subtipo]) || !(a.reforcaCartaoId == null || ID_RE.test(a.reforcaCartaoId))
-      || !pctCdiOk(a.rendeCdiPct) || !textoOuNada(a.paraQuem, 40)
+      || !pctCdiOk(a.rendeCdiPct) || !textoOuNada(a.paraQuem, 40) || !(a.pisoCents == null || centavos(a.pisoCents, 0))
       || !(a.faturaPagaAte == null || isValidISODate(a.faturaPagaAte))
       || (a.tipo === 'cartao' && (!centavos(a.limiteCents, 1) || !centavos(a.usadoInicialCents ?? 0, 0)
         || ![a.fechamentoDia, a.vencimentoDia].every(d => Number.isInteger(d) && d >= 1 && d <= 31)))) erro(`Conta ${i + 1} do backup está com dado inválido.`);

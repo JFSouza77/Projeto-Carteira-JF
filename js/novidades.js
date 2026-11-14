@@ -7,6 +7,24 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.0.8 Alfa',
+    data: '14/11/2026',
+    nome: 'Piso Firme',
+    t: 'Cada banco pode ter um piso de segurança, e o C.A.O.S. entende melhor o seu salário.',
+    itens: [
+      '🛡️ Piso de segurança: o mínimo que você quer manter em cada banco.',
+      '⚠️ Aviso do piso: o app avisa quando o saldo chega perto ou passa dele.',
+      '💸 Quanto posso gastar: "quanto posso gastar no C6?" e ele faz a conta.',
+      '🧩 Dividir o salário: primeiro cobre os pisos, depois mostra o que sobra.',
+      '📈 Tive aumento?: ele compara o salário e as entradas com o mês passado.',
+      '⛽ Extras com nome: "recebi 200 de extra da gasolina" fica anotado assim.',
+      '🗓️ Entrada de antes: ele explica quando o valor já estava no saldo.',
+    ],
+    qol: [
+      '✏️ Piso no Editar conta: dá pra definir ou mudar quando quiser.',
+    ],
+  },
+  {
     v: '2.0.7 Alfa',
     data: '14/11/2026',
     nome: 'Bom Ouvinte',

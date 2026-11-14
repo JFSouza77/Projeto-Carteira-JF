@@ -482,6 +482,50 @@ export const GERADORES = {
     },
   },
 
+  // 2.1.8 (JF, 14/11): piso de segurança por banco
+  abaixo_do_piso: {
+    moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+    abre: { geral: ['Atenção.', 'Olha o piso.', 'Alerta de segurança.', 'Cuidado.', 'Importante:'] },
+    fato: {
+      geral: [
+        '{conta} está com {saldo}, abaixo do piso de {piso}.',
+        'O saldo de {conta} ({saldo}) passou do seu piso de {piso}.',
+        '{conta} desceu do piso: {saldo} de {piso}.',
+        'Pelas minhas contas, {conta} tem {saldo}, e o piso é {piso}.',
+        '{conta} furou o piso de segurança: {saldo}.',
+      ],
+    },
+    fecho: {
+      geral: [
+        'Segura os gastos nessa conta até a próxima entrada.',
+        'Se der, passa um dinheiro de outra conta pra cobrir.',
+        'Se o valor real for outro, atualiza o saldo na aba Contas.',
+        'Vale olhar o que ainda vai sair dessa conta este mês.',
+        'O piso é pra imprevisto: bora voltar pra cima dele.',
+      ],
+    },
+  },
+  perto_do_piso: {
+    moldes: ['{fato} {fecho}'],
+    fato: {
+      geral: [
+        '{conta} está chegando no piso de {piso}.',
+        'Falta pouco pra {conta} encostar no piso de {piso}.',
+        '{conta} está quase no seu piso de segurança ({piso}).',
+        'O saldo de {conta} está colado no piso de {piso}.',
+        '{conta} está perto do limite que você definiu ({piso}).',
+      ],
+    },
+    fecho: {
+      geral: [
+        'Vai devagar nos gastos dessa conta.',
+        'Se puder, usa outra conta por uns dias.',
+        'Me pergunta "quanto posso gastar" que eu faço a conta.',
+        'Ainda dá, mas com cuidado.',
+        'Bom momento pra frear um pouco.',
+      ],
+    },
+  },
   conta_negativa: {
     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
     abre: { geral: ['Cuidado.', 'Alerta de conta.', 'Atenção.', 'Olha isso.', 'Importante:'] },
