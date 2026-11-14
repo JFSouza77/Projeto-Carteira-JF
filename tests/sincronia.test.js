@@ -32,3 +32,12 @@ test('apelido da conta', () => {
   assert.equal(normalizarApelido('JF'), 'jf'); // 14/11: 2 letras valem
   assert.equal(normalizarApelido('<b>oi</b>'), null);
 });
+
+test('nome que aparece na conta (14/11, JF): "JF" maiúsculo na tela, login sem ligar pra maiúscula', async () => {
+  const { nomeDeExibicao } = await import('../js/conta.js');
+  assert.equal(nomeDeExibicao('JF'), 'JF');
+  assert.equal(nomeDeExibicao(' João  Fernando '), 'João Fernando');
+  assert.equal(nomeDeExibicao('a'), null);
+  assert.equal(nomeDeExibicao('<b>oi</b>'), null);
+  assert.equal(normalizarApelido('JF'), normalizarApelido('jf'));
+});

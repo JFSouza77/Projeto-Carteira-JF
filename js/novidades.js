@@ -20,7 +20,11 @@ export const NOVIDADES = Object.freeze([
       '💰 Onde rende mais: os números que ele tem anotado, com data e sem indicar banco.',
       '😂 Piadas novas: paraquedas com defeito, Rexona e companhia.',
     ],
-    qol: ['📖 Glossário com 100 termos: tudo que envolve dinheiro, explicado simples.'],
+    qol: [
+      '📖 Glossário com 100 termos: tudo que envolve dinheiro, explicado simples.',
+      '☁️ Conta pronta pra usar: o servidor já vem ligado, sem configurar nada.',
+      '✏️ Trocar nome: escolha como seu nome aparece na conta, com maiúscula e tudo.',
+    ],
   },
   {
     v: '2.0.2 Alfa',

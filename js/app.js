@@ -2495,7 +2495,7 @@ async function renderConta() {
   $('#conta-dentro').hidden = !c;
   $('#conta-aviso-servidor').hidden = !!servidor();
   if (c) {
-    $('#conta-nome').textContent = `Conectado como ${c.apelido}`;
+    $('#conta-nome').textContent = `Conectado como ${c.exibicao || c.apelido}`;
     const pend = (await db.pegarPendentes().catch(() => [])).length;
     $('#conta-status').textContent = `${cap(quandoFoi(c.ultimaSync))}.${pend ? ` ${pend} ${pend === 1 ? 'mudança espera' : 'mudanças esperam'} a internet.` : ''}`;
   }
@@ -2546,7 +2546,7 @@ async function entrarNaConta(criar) {
   botoes.forEach(b => { b.disabled = true; });
   (criar ? botoes[1] : botoes[0]).textContent = 'Protegendo…';
   try {
-    const { apelido: nome, criador } = await conta.entrar(servidor(), { apelido, senha, criar });
+    const { exibicao: nome, criador } = await conta.entrar(servidor(), { apelido, senha, criar });
     $('#conta-senha').value = '';
     // selo de criador: só o servidor dá (lista de contas dele), nunca o nome digitado
     await marcarSelo(criador);
@@ -3071,6 +3071,14 @@ function bind() {
   $('#novidade-aviso').addEventListener('click', abrirNovidades);
   $('#conta-entrar').addEventListener('click', () => entrarNaConta(false));
   $('#conta-criar').addEventListener('click', () => entrarNaConta(true));
+  // trocar o nick (14/11, JF): só o nome que aparece; o login continua igual
+  $('#conta-nick').addEventListener('click', async () => {
+    const c = await conta.contaAtual().catch(() => null);
+    const novo = prompt('Como seu nome aparece? (pra entrar, continua valendo o apelido da conta)', c?.exibicao || c?.apelido || '');
+    if (novo == null) return;
+    try { const n = await conta.trocarExibicao(novo); toast(`Pronto! Agora você aparece como ${n}.`); } catch (e) { toast(e.message); }
+    renderConta();
+  });
   $('#conta-sync').addEventListener('click', () => sincronizarAgora({ avisar: true }));
   $('#conta-sair').addEventListener('click', async () => {
     if (!confirm('Sair da conta neste aparelho? Seus dados continuam aqui e na conta; só param de sincronizar.')) return;
