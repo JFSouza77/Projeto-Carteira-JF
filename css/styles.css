@@ -1025,12 +1025,11 @@ h1, h2 { font-weight: 700; letter-spacing: .005em; }
 /* 14/11 (JF: "mais slim", como a entrada dos bancos): C.A.O.S. em cima, um cartão embaixo, a versão bem pequena */
 .abertura.esperando { cursor: default; overflow-y: auto; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch;
   gap: 14px; padding: max(24px, env(safe-area-inset-top)) 16px max(14px, env(safe-area-inset-bottom)); }
-/* Anne (14/11): o nome vai pro alto, como a marca dos bancos; sem o slogan aqui ("C.A.O.S., um C.A.O.S. pro seu
-   caos" repetia) e com ar entre as coisas */
+/* 14/11 (Anne + JF): só o avatar e o slogan, sem o nome (o app já se chama C.A.O.S. Finanças e repetia), com ar */
 .abertura.esperando .abertura-caixa { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0; max-width: none; }
-.abertura.esperando .abertura-titulo { order: -1; margin: 8px 0 0; font-size: 2rem; }
-.abertura.esperando .abertura-frase { display: none; }
-.abertura.esperando .abertura-avatar { margin: auto 0; }
+.abertura.esperando .abertura-titulo { display: none; }
+.abertura.esperando .abertura-avatar { margin: auto 0 0; }
+.abertura.esperando .abertura-frase { margin: 12px 0 auto; font-size: 1.1rem; color: var(--text); }
 .abertura.esperando .abertura-dica { display: none; }
 .abertura.esperando .abertura-avatar { width: min(190px, 50vw); }
 .abertura.com-campos .abertura-avatar { width: min(110px, 30vw); }
