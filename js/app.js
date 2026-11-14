@@ -10,7 +10,7 @@ import {
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
   TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
-  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, depoisDoSaldo, progressoOrcamentoDiario, mascaraCentavos, valorForaDoComum, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
+  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, depoisDoSaldo, folgaDoPiso, progressoOrcamentoDiario, mascaraCentavos, valorForaDoComum, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, rostoEspantado, rostoDaEmo, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
@@ -1157,7 +1157,7 @@ async function registrarGasto({ amountCents, categoryId, note, date, accountId, 
 /** JF, 14/11: lançamento com data de antes do saldo informado já está dentro dele; avisa que o saldo não mudou. */
 function avisarAntesDoSaldo(item) {
   const conta = item.accountId && state.accounts.find(a => a.id === item.accountId && a.tipo !== 'cartao');
-  if (!conta || depoisDoSaldo(item, conta)) return;
+  if (!conta || depoisDoSaldo(item, conta) || location.hash === '#conversa') return; // na conversa, o C.A.O.S. explica
   const dia = new Date(conta.balanceAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   setTimeout(() => toast(`Anotado com a data certa. O saldo de ${accountLabel(conta)} que você informou em ${dia} já inclui esse valor, então o saldo não mudou.`), 900);
 }
@@ -1665,6 +1665,16 @@ async function confirmarAcao(i, ok) {
       addMsg({ de: 'caos', texto: `Fechado! A partir de agora te chamo de ${a.apelido}.` });
       return;
     }
+    if (a.tipo === 'definir_piso') {
+      const conta = state.accounts.find(x => x.id === a.accountId);
+      if (!conta) { addMsg({ de: 'caos', texto: 'Não achei mais essa conta.' }); return; }
+      const novo = editarConta(conta, { pisoCents: a.pisoCents }, { accounts: state.accounts });
+      await db.put(db.STORES.accounts, novo);
+      state.accounts = state.accounts.map(x => (x.id === novo.id ? novo : x));
+      renderContas(); render();
+      addMsg({ de: 'caos', texto: `Piso de ${accountLabel(novo)} salvo: ${formatBRL(a.pisoCents)}. Quando o saldo chegar perto, eu aviso.` });
+      return;
+    }
     if (a.tipo === 'editar_data') {
       // "esse gasto foi na quarta" (14/11): o C.A.O.S. propõe, a pessoa confirma, o app grava
       const x = state.expenses.find(e => e.id === a.expenseId);
@@ -1691,6 +1701,11 @@ async function confirmarAcao(i, ok) {
     if (a.compromissoId) renderMes();
     const fala = narrate(events, { ignoreCooldown: true });
     addMsg({ de: 'caos', texto: fala ? fala.texto : 'Anotado!', rosto: fala?.rosto });
+    // JF, 14/11: lançamento com data de antes do saldo informado já está dentro dele; o C.A.O.S. explica
+    const conta = a.accountId && state.accounts.find(x => x.id === a.accountId && x.tipo !== 'cartao');
+    if (conta && a.date && !depoisDoSaldo({ date: a.date, createdAt: Date.now() }, conta)) {
+      addMsg({ de: 'caos', texto: `Só lembrando: como isso foi dia ${Number(a.date.slice(8, 10))}/${Number(a.date.slice(5, 7))}, antes do saldo de ${accountLabel(conta)} que você informou, o valor já está dentro dele. Anotei pra conta do mês, mas o saldo do banco não mudou.` });
+    }
     if (state.settings.voice && fala) falar(fala.texto, fala.emocao);
   } catch (e) {
     m.acaoFeita = false;
@@ -1948,6 +1963,8 @@ function itemConta(a) {
     a.rendeCdiPct ? `<span class="tag rende">rende ${String(a.rendeCdiPct).replace('.', ',')}% do CDI</span>` : '',
     reforca ? `<span class="tag reforca">aumenta o limite do ${esc(accountLabel(reforca))}</span>` : '',
     a.paraQuem ? `<span class="tag outro">guardado pra ${esc(a.paraQuem)}</span>` : '',
+    (() => { const p = folgaDoPiso(a, bal); if (!p) return '';
+      return `<span class="tag ${p.abaixo ? 'piso-abaixo' : p.perto ? 'piso-perto' : 'piso-ok'}">${p.abaixo ? 'abaixo do piso' : `piso ${saldoVisivel() ? formatBRL(p.pisoCents) : '••••'}`}${!p.abaixo && saldoVisivel() ? ` · folga ${formatBRL(p.folgaCents)}` : ''}</span>`; })(),
   ].join('');
   return `
     <li class="${a.paraQuem ? 'de-outro' : ''}"><details class="conta-det"${contasAbertas.has(a.id) ? ' open' : ''} data-conta-det="${esc(a.id)}">
@@ -2028,6 +2045,7 @@ function abrirEditarConta(id) {
   $('#cd-reforca').innerHTML = '<option value="">Não aumenta limite</option>' + cartoes.map(c => `<option value="${esc(c.id)}">${esc(accountLabel(c))}</option>`).join('');
   $('#cd-reforca').value = a.reforcaCartaoId || '';
   $('#cd-cdi').value = a.rendeCdiPct ? String(a.rendeCdiPct).replace('.', ',') : '';
+  $('#cd-piso').value = a.pisoCents ? centsToInput(a.pisoCents) : '';
   $('#cd-outro').checked = !!a.paraQuem;
   $('#cd-quem').value = a.paraQuem || '';
   $('#cd-erro').hidden = true;
@@ -2051,7 +2069,11 @@ async function salvarConta(ev) {
     const cdiTxt = $('#cd-cdi').value.trim().replace(',', '.').replace('%', '');
     if (cdiTxt && !Number.isFinite(Number(cdiTxt))) throw new Error('Rendimento: só o número, ex.: 102.');
     if ($('#cd-outro').checked && !$('#cd-quem').value.trim()) throw new Error('De quem é esse dinheiro?');
+    const pisoTxt = $('#cd-piso').value.trim();
+    const piso = pisoTxt ? parseAmount(pisoTxt) : null;
+    if (pisoTxt && piso == null) throw new Error('Piso: digite um valor, ex.: 2.000,00.');
     const novo = editarConta(a, {
+      pisoCents: piso,
       nickname: $('#cd-apelido').value, subtipo: $('#cd-tipo').value, reforcaCartaoId: $('#cd-reforca').value || null,
       rendeCdiPct: cdiTxt ? Number(cdiTxt) : null, paraQuem: $('#cd-outro').checked ? $('#cd-quem').value : '',
     }, { accounts: state.accounts });

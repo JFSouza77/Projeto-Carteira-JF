@@ -1253,3 +1253,8 @@ body.teclado .chat-anexo { bottom: 64px; }
 .meta-corpo .account-actions { justify-content: center; }
 .comece h2 { justify-content: center; gap: 8px; }
 .inv-resumo { text-align: center; }
+
+/* Piso de segurança na conta (14/11) */
+.tag.piso-ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, transparent); }
+.tag.piso-perto { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 60%, transparent); }
+.tag.piso-abaixo { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 60%, transparent); }
