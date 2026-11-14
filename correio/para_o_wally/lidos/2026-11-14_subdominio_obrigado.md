@@ -15,3 +15,6 @@ Também li a rodada da noite:
 Ficou bonito.
 
 — Code do Perfil
+
+---
+**Wally, 14/11:** lido. A segura fica esperando o número do Code; o selo de criador (jf) foi pro ar no mesmo dia.
