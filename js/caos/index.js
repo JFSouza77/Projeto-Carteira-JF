@@ -14,7 +14,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '2.1.6'; // 2.1.6 (14/11): cutucão em escada (brinca, cansa, se estressa) e categorias de lanche. 2.1.5 2.1.5 (14/11): sem "bem-vindo de volta" na abertura (Anne). 2.1.4 (14/11): entende apelido de amigo (corno, vagabundo) e xingamento junto com pergunta. 2.1.3 2.1.3 (13/11): rostinho de volta no balão, combinando com o avatar. 2.1.2: benefícios, bolsas, matemática
+export const CAOS_VERSAO = '2.1.7'; // 2.1.7 (14/11): hora não vira valor, dia da semana, corrigir data do último gasto, gasto sem "gastei" (só com o jeito de pagar), "não" cancela, pergunta em quê. 2.1.6 2.1.6 (14/11): cutucão em escada (brinca, cansa, se estressa) e categorias de lanche. 2.1.5 2.1.5 (14/11): sem "bem-vindo de volta" na abertura (Anne). 2.1.4 (14/11): entende apelido de amigo (corno, vagabundo) e xingamento junto com pergunta. 2.1.3 2.1.3 (13/11): rostinho de volta no balão, combinando com o avatar. 2.1.2: benefícios, bolsas, matemática
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -272,7 +272,8 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   // "esqueci de lançar" (12/11, achado do GPT): a resposta seguinte completa o rascunho, sem perguntar tudo de novo.
   // Pergunta ou pedido diferente não completa nada (o rascunho só cai fora).
   const tx = String(texto).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-  const cancela = /^(cancela|cancelar|deixa|deixa pra (la|depois)|esquece|nao quero|depois)\b/.test(tx);
+  // "Não" sozinho também cancela (JF, 14/11: respondeu "Não" ao "Pagou como?" e caiu na IA)
+  const cancela = /^(cancela|cancelar|deixa|deixa pra (la|depois)|esquece|nao quero|depois)\b/.test(tx) || /^(nao|n|nada|nenhum)[.!]*$/.test(tx);
   if (espera && ['esqueci', 'valor_gasto', 'desc_gasto', 'ofertas'].includes(espera.tipo) && cancela) {
     intencao = { ...intencao, intent: 'pagamento_resposta', resposta: { fato: 'Tranquilo, não anotei nada. Quando lembrar, é só me falar.', cru: true, sugestoes: [] }, palpite: false };
   } else if (espera?.tipo === 'esqueci' && ['nao_entendi', 'registrar_gasto', 'gasto_sem_valor'].includes(intencao.intent) && !/\?/.test(tx)) {
@@ -288,7 +289,7 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   } else if (espera?.tipo === 'desc_gasto' && !/\?/.test(tx)) {
     // resposta do "foi em quê?": junta com o valor guardado e vira a proposta (a pessoa ainda confirma)
     const reais = (espera.valor / 100).toFixed(2).replace('.', ',');
-    const junto = entender(`gastei ${reais} ${texto}`, { ...d, anterior: null });
+    const junto = entender(`gastei ${reais} em ${texto} ${espera.extra || ''}`.trim(), { ...d, anterior: null });
     if (junto.valor) intencao = { ...junto, intent: 'registrar_gasto', palpite: false };
   }
   // ofertas (13/11): "amazon 10x sem juros, shopee frete 80" completa a comparação que está aberta
@@ -296,7 +297,9 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
     const novas = completarOfertas(espera.ofertas, tx.replace(/%/g, ' porcento '));
     if (novas) intencao = { ...intencao, intent: 'comparar_ofertas', ofertas: novas, produto: espera.produto, palpite: false };
   }
-  if (espera?.tipo === 'pagamento') {
+  if (espera?.tipo === 'pagamento' && cancela) {
+    intencao = { ...intencao, intent: 'pagamento_resposta', resposta: { fato: 'Beleza, não anotei nada.', cru: true, sugestoes: [] }, palpite: false };
+  } else if (espera?.tipo === 'pagamento') {
     const resposta = continuarPagamento(espera.acao, texto, d);
     if (resposta) intencao = { ...intencao, intent: 'pagamento_resposta', resposta, palpite: false };
   }

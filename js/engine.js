@@ -923,7 +923,7 @@ export const PALAVRAS_CATEGORIA = Object.freeze({
   mercado: ['mercado', 'supermercado', 'feira', 'hortifruti', 'acougue', 'padaria', 'pao', 'leite', 'arroz', 'feijao', 'carne', 'frango',
     'cerveja', 'cervejas', 'bebida', 'bebidas', 'refrigerante', 'refri', 'agua', 'fruta', 'frutas', 'verdura', 'ovos', 'cafe'],
   restaurante: ['restaurante', 'almoco', 'jantar', 'lanche', 'lanchonete', 'sorvete', 'casquinha', 'sorveteria', 'acai', 'pastel', 'salgado',
-    'coxinha', 'hamburguer', 'pizzaria', 'bar', 'churrascaria', 'cafeteria'],
+    'coxinha', 'hamburguer', 'pizzaria', 'bar', 'churrascaria', 'cafeteria', 'mcdonalds', 'mcdonald', 'subway', 'bobs'],
   delivery: ['ifood', 'delivery', 'rappi'],
   transporte: ['uber', 'gasolina', 'combustivel', 'onibus', 'metro', 'taxi', 'estacionamento', 'pedagio', 'etanol'],
   saude: ['academia', 'farmacia', 'remedio', 'remedios', 'medico', 'consulta', 'dentista', 'exame', 'drogaria'],

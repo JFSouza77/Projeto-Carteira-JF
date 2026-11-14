@@ -1224,3 +1224,8 @@ details.conta-det > :not(summary) { margin-top: 8px; }
   background: var(--card); border: 1px solid var(--line); border-radius: 14px; font-size: .9rem; color: var(--muted); }
 .chat-anexo img { width: 48px; height: 48px; object-fit: cover; border-radius: 10px; flex: none; }
 .chat-anexo span { flex: 1; }
+
+/* Teclado aberto (14/11): a barra de abas sai e a barra da conversa encosta no teclado */
+body.teclado .tabbar, body.teclado .me-ajuda { display: none; }
+body.teclado .chat-bar { bottom: 0; }
+body.teclado .chat-anexo { bottom: 64px; }
