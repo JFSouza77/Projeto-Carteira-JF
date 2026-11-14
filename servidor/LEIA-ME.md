@@ -33,7 +33,7 @@ Mesma conta do Cloudflare do Perfil serve. Tudo dentro da pasta `servidor/`.
    npm install
    npx wrangler login
    ```
-2. Criar o banco de chave-valor e colar o `id` que aparecer em `wrangler.toml` (no lugar de `COLE_AQUI_O_ID_DO_KV`):
+2. Criar o banco de chave-valor e colar o `id` que aparecer em `wrangler.toml` (na Carteira do JF já está preenchido, desde 14/11):
    ```bash
    npx wrangler kv namespace create CARTEIRA_KV
    ```
