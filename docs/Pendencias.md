@@ -4,6 +4,19 @@ Um lugar só pra ver o que está aberto (sugestão do Code do Perfil, 12/11/2026
 Os detalhes continuam em `Pedidos_do_JF.md`, `Rascunhos_da_Semana.md` e `Ideias.md`; aqui fica só o resumo.
 Atualizada pelo Wally a cada rodada.
 
+## Teste da Anne (14/11): o que já entrou e o que falta
+
+Entrou na 2.0.5 Mais Simples: blocos que abrem e fecham (Início, Mês, Contas), "Comece por aqui", saldo escondido com
+o olhinho, banco → contas → conta por dentro, Estilo do app (Atual, Limpo, Direto), letra maior e menos cor.
+
+Falta:
+1. **Notícias do dia (ideia da Anne):** um bloco "Notícias de dinheiro" com 3 a 5 notícias curtas do dia (ex.:
+   bilionário perdeu milhões em cripto), explicadas simples pelo C.A.O.S., e um botão "o que isso tem a ver comigo?".
+   Plano: o servidor busca as notícias a cada 3 horas (a IA com busca na internet) e guarda; o app só lê. Custo: umas 8
+   buscas por dia pra todo mundo junto (não por pessoa), coisa de centavos. Precisa do ok do JF pro custo.
+2. **Estilo "Atual" repaginado:** o JF e a Anne veem a 2.0.5 e dizem o que ainda acham fliperama.
+3. **Lançar e Ajustes em blocos:** mesmo jeito do Início, se a Anne aprovar.
+
 ## Pra amanhã (14/11, com o JF): deixar o projeto 100% sozinho
 
 Feito em 14/11 de madrugada (2.0.4 Parceiro): apelido de amigo, xingamento + pergunta, glossário colorido, avatar grande

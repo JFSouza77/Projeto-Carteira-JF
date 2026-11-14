@@ -185,6 +185,7 @@ function aplicarAcessibilidade() {
   const raiz = document.documentElement;
   raiz.dataset.letra = ['grande', 'maior'].includes(s.letra) ? s.letra : 'normal';
   if (['claro', 'escuro', 'contraste'].includes(s.tema)) raiz.dataset.theme = s.tema; else delete raiz.dataset.theme;
+  raiz.dataset.estilo = ['limpo', 'direto'].includes(s.estilo) ? s.estilo : 'atual';
   raiz.classList.toggle('menos-mov', MENOS_MOVIMENTO.matches);
   setVelocidade(s.vozVel ?? 1);
 }
@@ -406,6 +407,7 @@ function renderHoje() {
   const o = progressoOrcamentoDiario(state.expenses, state.perfil?.orcamentoDiarioCents, toISODate());
   const lanc = `${o.countHoje} ${o.countHoje === 1 ? 'gasto' : 'gastos'} hoje`;
   $('#hoje-gasto').textContent = formatBRL(o.gastoHojeCents);
+  $('#res-hoje').textContent = o.limiteCents ? `${formatBRL(o.gastoHojeCents)} de ${formatBRL(o.limiteCents)}` : formatBRL(o.gastoHojeCents);
   $('#hoje-card').dataset.status = o.status;
   $('#hoje-ajustar').textContent = o.limiteCents ? 'Ajustar' : 'Definir limite';
   $('#hoje-remover').hidden = !o.limiteCents;
@@ -501,7 +503,8 @@ function render() {
   $('#stat-in').textContent = formatBRL(inc);
   $('#stat-net').textContent = formatBRL(net);
   $('#stat-net').className = `num ${net < 0 ? 'bad' : net > 0 ? 'ok' : ''}`;
-  $('#stat-bank').textContent = state.accounts.length ? formatBRL(totalBalance(state.accounts, state.expenses, state.incomes, state.transferencias)) : '—';
+  $('#stat-bank').textContent = state.accounts.length ? saldoTxt(totalBalance(state.accounts, state.expenses, state.incomes, state.transferencias)) : '—';
+  renderComece();
 
   renderOfensiva();
   renderAReceber();
@@ -522,6 +525,7 @@ function render() {
       </div>
       ${r.budgetCents ? `<div class="bar"><div class="bar-fill" style="${barStyle(r.ratio)}"></div></div>` : ''}
     </li>`).join('') : '<li class="muted">Sem gastos ainda.</li>';
+  $('#res-cat').textContent = rows[0]?.spentCents ? `${rows[0].name} · ${formatBRL(rows[0].spentCents)}` : 'sem gastos';
   marcarSeg('catvista', grafico.cat);
   $('#cat-rosca').hidden = grafico.cat !== 'rosca';
   $('#cat-list').hidden = grafico.cat === 'rosca';
@@ -549,6 +553,7 @@ function render() {
   $('#exp-titulo').textContent = busca ? `Busca: ${lanc.length} ${lanc.length === 1 ? 'lançamento' : 'lançamentos'}` : 'Lançamentos do mês';
   $('#exp-empty').textContent = busca ? 'Nada encontrado. Tente outra palavra ou um valor, tipo 49,90.' : 'Nenhum lançamento neste mês.';
   $('#exp-empty').hidden = lanc.length > 0;
+  $('#res-exp').textContent = `${lanc.length} ${lanc.length === 1 ? 'item' : 'itens'}`;
   $('#exp-list').innerHTML = lanc.map(x => {
     const [a, m, d] = x.date.split('-');
     const dataTxt = busca && x.month !== monthKey(toISODate()) ? `${d}/${m}/${a.slice(2)}` : `${d}/${m}`;
@@ -1479,6 +1484,9 @@ function renderMetas() {
   const el = $('#meta-list');
   if (!el) return;
   const hoje = toISODate();
+  const nM = state.metas.length;
+  if ($('#res-metas')) $('#res-metas').textContent = nM ? `${nM} ${nM === 1 ? 'meta' : 'metas'}` : 'nenhuma';
+  if ($('#tile-metas')) $('#tile-metas').textContent = nM ? `${nM} ${nM === 1 ? 'meta' : 'metas'}` : 'juntar dinheiro';
   el.innerHTML = state.metas.map(m => {
     const p = progressoMeta(m, hoje);
     const antes = pctAnteriorMeta.has(m.id) ? pctAnteriorMeta.get(m.id) : p.pct;
@@ -1726,19 +1734,21 @@ async function lerPrintDeOferta(img) {
 function renderContas() {
   renderInvestimentos();
   renderTransf();
-  $('#bank-total').textContent = formatBRL(totalBalance(state.accounts, state.expenses, state.incomes, state.transferencias));
+  $('#bank-total').textContent = saldoTxt(totalBalance(state.accounts, state.expenses, state.incomes, state.transferencias));
+  pintarOlhos();
   $('#account-list').innerHTML = agruparPorBanco(state.accounts).map(g => {
     const dinheiro = g.contas.filter(a => a.tipo !== 'cartao' && !a.paraQuem).reduce((t, a) => t + accountBalance(a, state.expenses, state.incomes, state.transferencias), 0);
     const temDinheiro = g.contas.some(a => a.tipo !== 'cartao');
     const tema = temaBanco(g.bank === 'Outro' ? (g.contas[0]?.nickname || 'Outro') : g.bank);
     return `
     <li class="banco-grupo" style="--banco-cor:${tema.cor};--banco-apoio:${tema.apoio};--banco-fundo:${tema.fundo};--banco-letra:${tema.letra}">
-      <button type="button" class="banco-head" data-raiox="${esc(g.bank)}" aria-expanded="${raioXAberto.has(g.bank)}">
+      <button type="button" class="banco-head" data-banco-abre="${esc(g.bank)}" aria-expanded="${bancosAbertos.has(g.bank)}">
         <strong><span class="banco-sigla" aria-hidden="true">${esc(tema.sigla)}</span>${esc(g.bank === 'Outro' ? 'Outros' : g.bank)}</strong>
-        <span class="banco-dir">${temDinheiro && g.contas.length > 1 ? `<span class="num muted">${formatBRL(dinheiro)} seus</span>` : ''}<span class="rx-seta" aria-hidden="true">${raioXAberto.has(g.bank) ? 'fechar' : 'ver por dentro'}</span></span>
+        <span class="banco-dir">${temDinheiro ? `<span class="num muted">${saldoTxt(dinheiro)}</span>` : ''}<span class="rx-seta" aria-hidden="true">${bancosAbertos.has(g.bank) ? '▴' : '▾'}</span></span>
       </button>
-      ${raioXAberto.has(g.bank) ? raioXDoBanco(g) : ''}
-      <ul class="banco-partes">${g.contas.map(a => (a.tipo === 'cartao' ? itemCartao(a) : itemConta(a))).join('')}</ul>
+      ${bancosAbertos.has(g.bank) ? `<button type="button" class="ghost small raiox-btn" data-raiox="${esc(g.bank)}" aria-expanded="${raioXAberto.has(g.bank)}">${raioXAberto.has(g.bank) ? 'Fechar o raio-X' : 'Ver por dentro (raio-X)'}</button>` : ''}
+      ${bancosAbertos.has(g.bank) && raioXAberto.has(g.bank) ? raioXDoBanco(g) : ''}
+      ${bancosAbertos.has(g.bank) ? `<ul class="banco-partes">${g.contas.map(a => (a.tipo === 'cartao' ? itemCartao(a) : itemConta(a))).join('')}</ul>` : ''}
     </li>`;
   }).join('');
   if (!$('#bank-select').options.length) {
@@ -1754,6 +1764,7 @@ function renderInvestimentos() {
   const lista = state.investimentos || [];
   const r = resumoInvestimentos(lista);
   const el = $('#inv-resumo');
+  $('#res-inv').textContent = lista.length ? `${lista.length} ${lista.length === 1 ? 'investimento' : 'investimentos'}` : 'nenhum';
   el.hidden = !lista.length;
   if (lista.length) {
     const cls = r.ganhoCents >= 0 ? 'ganho' : 'perda';
@@ -1841,20 +1852,28 @@ function itemConta(a) {
     a.paraQuem ? `<span class="tag outro">guardado pra ${esc(a.paraQuem)}</span>` : '',
   ].join('');
   return `
-    <li class="${a.paraQuem ? 'de-outro' : ''}">
-      <div class="account-head"><strong>${iconeConta(a)} ${esc(accountLabel(a))}</strong><span class="num ${bal < 0 ? 'bad' : ''}">${formatBRL(bal)}</span></div>
+    <li class="${a.paraQuem ? 'de-outro' : ''}"><details class="conta-det"${contasAbertas.has(a.id) ? ' open' : ''} data-conta-det="${esc(a.id)}">
+      <summary class="account-head"><strong>${iconeConta(a)} ${esc(accountLabel(a))}</strong><span class="num ${bal < 0 && saldoVisivel() ? 'bad' : ''}">${saldoTxt(bal)}</span></summary>
       ${tags ? `<div class="tags">${tags}</div>` : ''}
-      <small class="muted">Saldo informado ${formatBRL(a.balanceCents)} em ${desde}${bal !== a.balanceCents ? ', mais os lançamentos desde então' : ''}.${a.paraQuem ? ' Não entra no seu saldo total.' : ''}</small>
+      <small class="muted">${saldoVisivel() ? `Saldo informado ${formatBRL(a.balanceCents)} em ${desde}${bal !== a.balanceCents ? ', mais os lançamentos desde então' : ''}.` : `Saldo atualizado em ${desde}. Toque no olhinho pra ver os valores.`}${a.paraQuem ? ' Não entra no seu saldo total.' : ''}</small>
       <div class="account-actions">
         <button class="ghost" data-acc-update="${esc(a.id)}">Atualizar saldo</button>
         <button class="ghost" data-acc-edit="${esc(a.id)}">Editar</button>
         <button class="ghost" data-acc-del="${esc(a.id)}">Remover</button>
       </div>
-    </li>`;
+    </details></li>`;
 }
+// conta aberta continua aberta quando a lista é redesenhada
+const contasAbertas = new Set();
+document.addEventListener('toggle', e => {
+  const d = e.target;
+  if (d.dataset?.contaDet) d.open ? contasAbertas.add(d.dataset.contaDet) : contasAbertas.delete(d.dataset.contaDet);
+}, true);
 
 // ---------- Raio-X do banco (JF, 13/11): toca no banco e vê o que é cada conta e de onde vem o limite do cartão ----------
 const raioXAberto = new Set();
+// 14/11 (Anne): banco fechado de começo; 1º toque mostra as contas dele, 2º abre a conta por dentro
+const bancosAbertos = new Set();
 
 function raioXDoBanco(g) {
   // CDI: o mais recente entre o que a pessoa digitou e o do servidor (mercado, atualizado todo dia útil)
@@ -2126,6 +2145,8 @@ async function renderSettings() {
   $('#voice-toggle').checked = state.settings.voice;
   for (const r of document.querySelectorAll('input[name="letra"]')) r.checked = r.value === (state.settings.letra || 'normal');
   for (const r of document.querySelectorAll('input[name="tema"]')) r.checked = r.value === (state.settings.tema || 'auto');
+  for (const r of document.querySelectorAll('input[name="estilo"]')) r.checked = r.value === (state.settings.estilo || 'atual');
+  $('#estilo-desc').textContent = ESTILO_DESC[state.settings.estilo || 'atual'];
   $('#voz-vel').value = state.settings.vozVel ?? 1;
   $('#voz-vel-out').textContent = `${Number(state.settings.vozVel ?? 1).toFixed(1).replace('.', ',')}×`;
   $('#menos-mov').checked = MENOS_MOVIMENTO.matches;
@@ -2155,6 +2176,76 @@ async function onBudgetChange(input) {
 }
 
 const saveSettings = () => db.setMeta('settings', state.settings);
+
+// ---------- Blocos e privacidade (14/11, teste da Anne: "rola sem fim, não sei por onde começar, e qualquer um que
+// abrir vê meu saldo") ----------
+// Cada seção grande vira um bloco que abre e fecha (<details data-bloco>); o app lembra do jeito que a pessoa deixou.
+// Saldo das contas começa escondido (R$ ••••); o olhinho mostra.
+// Estilo do app (Anne, 14/11): Atual (a cara C.A.O.S.), Limpo (sem brilho neon, menos cor) e Direto (só o essencial)
+const ESTILO_DESC = {
+  atual: 'A cara do C.A.O.S.: neon, cores por categoria e tudo à mão.',
+  limpo: 'Sem brilho neon e com menos cor. Tudo continua lá, mais calmo.',
+  direto: 'Só o que você precisa: resumo, lançar e a lista. Gráficos e extras somem do Início e do Mês.',
+};
+const saldoVisivel = () => !!state.settings.mostrarSaldos;
+const saldoTxt = c => (saldoVisivel() ? formatBRL(c) : 'R$ ••••');
+function pintarOlhos() {
+  for (const b of document.querySelectorAll('[data-olho]')) {
+    b.setAttribute('aria-pressed', String(saldoVisivel()));
+    b.setAttribute('aria-label', saldoVisivel() ? 'Esconder saldos' : 'Mostrar saldos');
+    b.querySelector('use')?.setAttribute('href', saldoVisivel() ? '#i-olho' : '#i-olho-fechado');
+  }
+}
+function ligarBlocos() {
+  for (const d of document.querySelectorAll('details[data-bloco]')) {
+    const id = d.dataset.bloco;
+    const guardado = state.settings.blocos?.[id];
+    if (typeof guardado === 'boolean') d.open = guardado;
+    d.addEventListener('toggle', () => {
+      state.settings.blocos = { ...(state.settings.blocos || {}), [id]: d.open };
+      saveSettings();
+    });
+  }
+  document.addEventListener('click', e => {
+    const olho = e.target.closest('[data-olho]');
+    if (olho) {
+      state.settings.mostrarSaldos = !saldoVisivel();
+      saveSettings();
+      pintarOlhos();
+      render();
+      renderContas();
+      return;
+    }
+    const tile = e.target.closest('[data-abre]');
+    if (tile) {
+      const d = document.getElementById(tile.dataset.abre);
+      if (d) { d.open = true; d.scrollIntoView({ behavior: MENOS_MOVIMENTO.matches ? 'auto' : 'smooth', block: 'start' }); }
+    }
+    const passo = e.target.closest('[data-passo]');
+    if (passo) {
+      const ir = passo.dataset.passo;
+      if (ir === 'contas') { location.hash = 'contas'; setTimeout(() => { const c = $('#add-conta-card'); if (c) { c.open = true; c.scrollIntoView({ block: 'start' }); } }, 80); }
+      else atalho(ir);
+    }
+  });
+  pintarOlhos();
+}
+
+/** "Comece por aqui" (Anne, 14/11): os 3 primeiros passos, até a pessoa fazer todos. */
+function renderComece() {
+  const passos = [
+    { feito: state.accounts.length > 0, txt: 'Cadastre a conta do seu banco', ir: 'contas' },
+    { feito: state.incomes.length > 0, txt: 'Lance o que você recebe (salário, freela…)', ir: 'entrada' },
+    { feito: state.expenses.length > 0, txt: 'Anote seu primeiro gasto', ir: 'gasto' },
+  ];
+  const feitos = passos.filter(p => p.feito).length;
+  $('#comece-card').hidden = feitos === passos.length;
+  $('#comece-conta').textContent = `${feitos} de ${passos.length}`;
+  $('#comece-lista').innerHTML = passos.map((p, i) => `
+    <li class="${p.feito ? 'feito' : ''}">${p.feito
+      ? `<span class="passo-n" aria-hidden="true">${ic('i-ok')}</span><span>${esc(p.txt)}</span>`
+      : `<button type="button" data-passo="${p.ir}"><span class="passo-n" aria-hidden="true">${i + 1}</span><span>${esc(p.txt)}</span><span class="passo-seta" aria-hidden="true">›</span></button>`}</li>`).join('');
+}
 
 async function onRemindToggle(e) {
   const box = e.target;
@@ -2294,6 +2385,12 @@ function renderMes() {
     </li>`;
   }).join('') : '<li class="muted">Nenhum compromisso ainda. Adicione contas fixas, faturas e assinaturas.</li>';
 
+  const aPagar = sit.filter(c => c.noMes && c.status !== 'pago');
+  $('#res-comp').textContent = sit.length ? (aPagar.length ? `${aPagar.length} a pagar` : 'tudo pago') : 'nenhum';
+  $('#tile-comp').textContent = sit.length ? (aPagar.length ? `${aPagar.length} a pagar · ${formatBRL(aPagar.reduce((t, c) => t + c.valorCents, 0))}` : 'tudo pago') : 'contas fixas';
+  const pend = a.planos.filter(p => !p.feito);
+  $('#res-planos').textContent = a.planos.length ? `${pend.length} de ${a.planos.length} a fazer` : 'nenhum';
+  $('#tile-planos').textContent = a.planos.length ? `${pend.length} a fazer` : 'o que vai comprar';
   $('#plan-list').innerHTML = a.planos.length ? a.planos.map(p => `
     <li class="${p.feito ? 'feito' : ''}">
       <label class="plan-info"><input type="checkbox" data-plan-feito="${esc(p.id)}" ${p.feito ? 'checked' : ''}><span>${esc(p.nome)}</span></label>
@@ -3077,6 +3174,8 @@ function bind() {
     if (cc) return compraNoCartao(cc.dataset.compraCartao);
     const rx = e.target.closest('[data-raiox]');
     if (rx) { const b = rx.dataset.raiox; raioXAberto.has(b) ? raioXAberto.delete(b) : raioXAberto.add(b); return renderContas(); }
+    const ba = e.target.closest('[data-banco-abre]');
+    if (ba) { const b = ba.dataset.bancoAbre; bancosAbertos.has(b) ? bancosAbertos.delete(b) : bancosAbertos.add(b); return renderContas(); }
     const ed = e.target.closest('[data-acc-edit]');
     if (ed) return abrirEditarConta(ed.dataset.accEdit);
     if (e.target.closest('[data-cdi]')) return informarCdi().catch(er => toast(er.message));
@@ -3094,6 +3193,7 @@ function bind() {
   });
   $('#letra-options').addEventListener('change', e => { state.settings.letra = e.target.value; saveSettings(); aplicarAcessibilidade(); });
   $('#tema-options').addEventListener('change', e => { state.settings.tema = e.target.value; saveSettings(); aplicarAcessibilidade(); });
+  $('#estilo-options').addEventListener('change', e => { state.settings.estilo = e.target.value; saveSettings(); aplicarAcessibilidade(); $('#estilo-desc').textContent = ESTILO_DESC[e.target.value]; });
   $('#voz-vel').addEventListener('input', e => {
     state.settings.vozVel = Number(e.target.value);
     $('#voz-vel-out').textContent = `${Number(e.target.value).toFixed(1).replace('.', ',')}×`;
@@ -3268,6 +3368,7 @@ async function init() {
     toast('Não consegui abrir o banco local. Os dados não serão salvos.');
   }
 
+  ligarBlocos(); // depois das configurações: cada bloco abre do jeito que a pessoa deixou
   renderLancar();
   renderBudgets();
   await renderSettings();

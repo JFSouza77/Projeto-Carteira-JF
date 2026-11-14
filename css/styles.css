@@ -12,7 +12,7 @@
   --card-2: #1e2430;
   --line: #2a3140;
   --text: #e9edf3;
-  --muted: #8b95a7;
+  --muted: #a7b1c2; /* 14/11 (Anne): letra apagada demais; mais clara pra ler */
   --accent: #c8ff2e;
   --accent-ink: #12160a;
   /* botão/escolha marcada (JF, 12/11): no escuro, neon vazado (fundo translúcido, borda e brilho); no claro, sólido */
@@ -34,7 +34,7 @@
 }
 /* Acessibilidade (06/11): modo claro (pelo aparelho ou escolhido) e tamanho da letra */
 :root[data-theme="claro"] {
-  --bg: #f4f6fa; --card: #ffffff; --card-2: #eef1f6; --line: #d5dbe5; --text: #121722; --muted: #566175;
+  --bg: #f4f6fa; --card: #ffffff; --card-2: #eef1f6; --line: #d5dbe5; --text: #121722; --muted: #48536a;
   --accent: #5a7d00; --accent-ink: #ffffff; --caos: #c8155a; --ok: #12814f; --warn: #a86400; --danger: #c22727;
   --cyan: #0a7ea4; --violet: #7a3fd1; --indigo: #3f4fc9; --coral: #c2410c;
   --cat-mercado: #15803d; --cat-delivery: #c2410c; --cat-restaurante: #b91c1c; --cat-transporte: #1d4ed8; --cat-moradia: #6d28d9; --cat-contas: #a16207;
@@ -45,7 +45,7 @@
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="escuro"]):not([data-theme="claro"]):not([data-theme="contraste"]) {
-    --bg: #f4f6fa; --card: #ffffff; --card-2: #eef1f6; --line: #d5dbe5; --text: #121722; --muted: #566175;
+    --bg: #f4f6fa; --card: #ffffff; --card-2: #eef1f6; --line: #d5dbe5; --text: #121722; --muted: #48536a;
     --accent: #5a7d00; --accent-ink: #ffffff; --caos: #c8155a; --ok: #12814f; --warn: #a86400; --danger: #c22727;
     --cyan: #0a7ea4; --violet: #7a3fd1; --indigo: #3f4fc9; --coral: #c2410c;
     --cat-mercado: #15803d; --cat-delivery: #c2410c; --cat-restaurante: #b91c1c; --cat-transporte: #1d4ed8; --cat-moradia: #6d28d9; --cat-contas: #a16207;
@@ -75,7 +75,7 @@ main { max-width: 560px; margin: 0 auto; padding: 0 16px; display: grid; gap: 14
 h1, h2 { margin: 0; }
 h1 { font-size: 1.1rem; font-weight: 600; }
 h2 { font-size: 1rem; font-weight: 600; margin-bottom: 12px; }
-small, .small { font-size: .8rem; }
+small, .small { font-size: .875rem; } /* 14/11 (Anne): letra pequena demais */
 .muted { color: var(--muted); margin: 6px 0 0; }
 .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 html, body { overflow-x: clip; } /* a página nunca rola pro lado (o macaco achou na troca de aba, 13/11) */
@@ -140,8 +140,8 @@ details.card[open] { border-color: color-mix(in srgb, var(--accent) 35%, var(--l
 .atalho { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 46px; border-radius: 12px;
   border: 1px solid var(--line); background: var(--card); font: inherit; font-weight: 600; font-size: .9rem; cursor: pointer; }
 .atalho.gasto { background: var(--fill); color: var(--fill-ink); box-shadow: var(--fill-glow); border-color: transparent; }
-.atalho.entrada { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 55%, transparent); }
-.atalho.transf { color: var(--cyan, #3ad4ff); border-color: color-mix(in srgb, var(--cyan, #3ad4ff) 55%, transparent); }
+.atalho.entrada { color: var(--text); }
+.atalho.transf { color: var(--text); }
 .hoje-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .hoje-top h2 { margin: 0; }
 .hoje-valor { margin: 6px 0 8px; }
@@ -280,7 +280,7 @@ select { appearance: none; -webkit-appearance: none; }
 
 .mini-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
 .mini-stats div { background: var(--card-2); border-radius: 12px; padding: 8px 8px; display: grid; min-width: 0; }
-.mini-stats small { color: var(--muted); font-size: .72rem; }
+.mini-stats small { color: var(--muted); font-size: .8rem; }
 .mini-stats strong { font-size: clamp(.74rem, 3.4vw, .95rem); white-space: nowrap; letter-spacing: -.01em; }
 
 .alert-list { display: grid; gap: 8px; }
@@ -589,7 +589,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .ofensiva-legenda .q.sem { background: var(--ok); border-color: var(--ok); }
 @media (max-width: 420px) { .ofensiva-cal { grid-template-columns: repeat(7, 1fr); } }
 .ofensiva-fogo { font-size: 1.9rem; line-height: 1; filter: drop-shadow(0 0 8px #ff8a3d); }
-.ofensiva.apagada .ofensiva-fogo { filter: grayscale(1); opacity: .5; }
+.apagada .ofensiva-fogo { filter: grayscale(1); opacity: .5; }
 .ofensiva-txt { flex: 1; display: grid; gap: 2px; min-width: 0; }
 .ofensiva-txt strong { font-size: 1.05rem; }
 .ofensiva-txt small { font-size: .82rem; }
@@ -1110,3 +1110,73 @@ h1, h2 { font-weight: 700; letter-spacing: .005em; }
 /* Etiqueta da forma no balão (13/11 à noite): a mesma forma e a mesma cor do avatar, no lugar do rostinho de texto */
 .msg.caos-msg .msg-forma { display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .02em; padding: 2px 9px; border-radius: 99px;
   border: 1px solid var(--msg-cor); color: var(--text); background: color-mix(in srgb, var(--msg-cor) 16%, transparent); margin: 0 6px 4px 0; }
+
+/* ---------- Blocos (14/11, teste da Anne: "menos fliperama, mais blocos bem definidos") ----------
+   Cada seção grande é um bloco que abre e fecha: ícone, título, um resumo à direita e a setinha. Fechado, ocupa uma
+   linha; a tela deixa de "rolar sem fim". */
+details.bloco > summary.bloco-topo { display: flex; align-items: center; gap: 10px; min-height: 32px; }
+.bloco-topo > .ico { width: 22px; height: 22px; color: var(--muted); flex: none; }
+.bloco-tit { font-weight: 700; font-size: 1rem; flex: 1; min-width: 0; }
+.bloco-res { flex: 0 1 auto; color: var(--muted); font-size: .9rem; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.bloco-topo::after { content: ''; flex: none; width: 8px; height: 8px; margin: 0 4px 0 6px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg) translate(-2px, -2px); transition: transform .2s ease; }
+details.bloco[open] > .bloco-topo::after { transform: rotate(-135deg) translate(-2px, -2px); }
+details.bloco[open] > .bloco-topo { margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+details.bloco[open] > :not(summary) { animation: bloco-abre .22s ease both; }
+@keyframes bloco-abre { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.ofensiva-bloco .ofensiva-fogo { font-size: 1.3rem; filter: none; }
+.ofensiva-bloco .ofensiva { padding: 0; }
+.hoje-card .hoje-top { justify-content: flex-end; }
+
+/* "Comece por aqui" (Anne: "não sei o que fazer, por onde começar") */
+.comece { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.comece h2 { display: flex; justify-content: space-between; align-items: baseline; }
+.comece-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.comece-lista button, .comece-lista li.feito { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px;
+  background: var(--card-2); border: 1px solid var(--line); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.comece-lista li.feito { color: var(--muted); text-decoration: line-through; }
+.passo-n { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 700;
+  background: var(--accent); color: var(--accent-ink); }
+.passo-n .ico { width: 16px; height: 16px; }
+li.feito .passo-n { background: var(--ok); }
+.passo-seta { margin-left: auto; font-size: 1.4rem; color: var(--muted); }
+
+/* Mês em blocos: 4 atalhos grandes */
+.mes-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tile { display: grid; gap: 4px; justify-items: start; text-align: left; padding: 14px; min-height: 92px; border-radius: var(--radius);
+  background: var(--card); border: 1px solid var(--line); color: var(--text); font: inherit; cursor: pointer; }
+.tile .ico { width: 24px; height: 24px; color: var(--accent); }
+.tile b { font-size: 1rem; }
+.tile small { color: var(--muted); }
+
+/* Privacidade: saldo escondido com o olhinho */
+.saldo-topo { display: flex; justify-content: space-between; align-items: center; }
+.olho .ico { width: 22px; height: 22px; }
+.stat-olho { background: var(--card-2); border-radius: 12px; padding: 8px; display: grid; min-width: 0; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.stat-olho small { color: var(--muted); font-size: .8rem; display: flex; align-items: center; gap: 4px; }
+.stat-olho .ico { width: 14px; height: 14px; }
+.stat-olho strong { font-size: clamp(.74rem, 3.4vw, .95rem); white-space: nowrap; }
+
+/* Contas: banco fechado → contas dele → conta por dentro */
+.raiox-btn { margin: 0 0 8px; }
+details.conta-det > summary { list-style: none; cursor: pointer; }
+details.conta-det > summary::-webkit-details-marker { display: none; }
+details.conta-det > summary::after { content: '▾'; color: var(--muted); margin-left: 6px; }
+details.conta-det[open] > summary::after { content: '▴'; }
+details.conta-det > :not(summary) { margin-top: 8px; }
+
+/* ---------- Estilo do app (Anne, 14/11) ----------
+   Limpo: tira o brilho neon e a cor de enfeite; a cor fica só onde tem sentido (dinheiro entrando/saindo, categoria). */
+:root[data-estilo="limpo"], :root[data-estilo="direto"] { --fill-glow: none; }
+:root[data-estilo="limpo"] .card, :root[data-estilo="direto"] .card { border-color: var(--line); }
+:root[data-estilo="limpo"] .primary, :root[data-estilo="direto"] .primary,
+:root[data-estilo="limpo"] .big, :root[data-estilo="direto"] .big { text-shadow: none; box-shadow: none; }
+:root[data-estilo="limpo"] .atalho.gasto, :root[data-estilo="direto"] .atalho.gasto { box-shadow: none; }
+:root[data-estilo="limpo"] .caos, :root[data-estilo="direto"] .caos { background: var(--card); border-color: var(--line); }
+:root[data-estilo="limpo"] .me-ajuda, :root[data-estilo="direto"] .me-ajuda { box-shadow: 0 6px 18px #0006; }
+:root[data-estilo="limpo"] .banco-grupo, :root[data-estilo="direto"] .banco-grupo { border-top-color: var(--line) !important; }
+:root[data-estilo="limpo"] .tab.active, :root[data-estilo="direto"] .tab.active { text-shadow: none; }
+/* Direto: só o essencial (resumo, lançar, C.A.O.S. e a lista) */
+:root[data-estilo="direto"] #hoje-card, :root[data-estilo="direto"] #ofensiva-card, :root[data-estilo="direto"] #graficos-card,
+:root[data-estilo="direto"] #cat-card, :root[data-estilo="direto"] #sim-card, :root[data-estilo="direto"] #exportar-card,
+:root[data-estilo="direto"] .mes-tiles { display: none; }

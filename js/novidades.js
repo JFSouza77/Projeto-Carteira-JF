@@ -7,6 +7,24 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.0.5 Alfa',
+    data: '14/11/2026',
+    nome: 'Mais Simples',
+    t: 'O app ficou mais calmo e mais fácil de entender: tudo em blocos que abrem e fecham.',
+    itens: [
+      '🧭 Comece por aqui: os 3 primeiros passos aparecem no Início até você fazer.',
+      '📦 Tudo em blocos: toque no título pra abrir ou fechar, e o app lembra.',
+      '🙈 Saldo escondido: toque no olhinho pra mostrar os valores das contas.',
+      '🏦 Bancos fechados: toque no banco pra ver as contas e na conta pra ver por dentro.',
+      '🗂️ Mês em blocos: Compromissos, Planos, Metas e Simular com um toque.',
+      '🎨 Estilo do app: escolha Atual, Limpo ou Direto em Ajustes.',
+    ],
+    qol: [
+      '🔎 Letra maior e mais forte: menos texto apagadinho.',
+      '🌈 Menos cor de enfeite: a cor fica onde tem sentido.',
+    ],
+  },
+  {
     v: '2.0.4 Alfa',
     data: '14/11/2026',
     nome: 'Parceiro',
