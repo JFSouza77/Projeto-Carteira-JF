@@ -3360,7 +3360,7 @@ function comecarAbertura() {
   } catch (e) { console.warn('avatar', e); }
   const dica = $('#abertura-dica');
   ABERTURA_PASSOS.forEach(([forma, frase], i) => setTimeout(() => {
-    if (aberturaFechada) return;
+    if (aberturaFechada || ab.classList.contains('esperando')) return;
     avatares.abertura?.mostrar(forma);
     if (dica) dica.textContent = frase;
   }, i * (ABERTURA_MS / ABERTURA_PASSOS.length)));
@@ -3382,6 +3382,7 @@ async function mostrarAbertura() {
     return;
   }
   ab.classList.add('esperando');
+  avatares.abertura?.mostrar('confiante'); // JF, 14/11: "menos bobão" que o festeiro na tela de entrar
   $('.abertura-pula')?.remove();
   $('#abertura-login').hidden = false;
   if (temConta) {
