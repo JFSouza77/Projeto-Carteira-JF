@@ -7,6 +7,20 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.0.9 Alfa',
+    data: '14/11/2026',
+    nome: 'Rede de Segurança',
+    t: 'O C.A.O.S. soma os pisos dos seus bancos principais e avisa antes de estourar.',
+    itens: [
+      '🛡️ Média de segurança: soma os bancos que têm piso e compara.',
+      '⏳ Quando estoura: no ritmo atual, ele diz em quantos dias.',
+      '🚨 Aviso geral: além do aviso de cada banco, um do conjunto.',
+      '🔁 De onde transferir: "qual banco tem folga?" e ele sugere.',
+      '🛒 Comprar pelo banco: "posso comprar 300 pelo C6?" e ele vê o piso.',
+    ],
+    qol: [],
+  },
+  {
     v: '2.0.8 Alfa',
     data: '14/11/2026',
     nome: 'Piso Firme',

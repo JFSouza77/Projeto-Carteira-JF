@@ -461,6 +461,52 @@ export function folgaDoPiso(conta, saldoCents) {
 }
 
 /**
+ * Média de segurança (JF, 14/11): junta os bancos que têm piso (os principais) e compara o que tem neles com a soma dos
+ * pisos. Pelo ritmo de gasto do mês nesses bancos, diz em quantos dias a folga acaba. Bancos sem piso ficam fora da
+ * conta, mas entram como "de onde dá pra tirar". Pura.
+ */
+export function resumoPisos(accounts, expenses, incomes, transferencias = [], today = toISODate()) {
+  const contas = accounts.filter(a => a.tipo !== 'cartao' && !a.paraQuem).map(a => {
+    const saldoCents = accountBalance(a, expenses, incomes, transferencias);
+    return { id: a.id, nome: accountLabel(a), saldoCents, pisoCents: a.pisoCents > 0 ? a.pisoCents : 0,
+      folgaCents: a.pisoCents > 0 ? saldoCents - a.pisoCents : saldoCents };
+  });
+  const comPiso = contas.filter(c => c.pisoCents > 0);
+  if (!comPiso.length) return { contas, comPiso, pisoTotalCents: 0 };
+  const pisoTotalCents = comPiso.reduce((t, c) => t + c.pisoCents, 0);
+  const saldoTotalCents = comPiso.reduce((t, c) => t + c.saldoCents, 0);
+  const folgaTotalCents = saldoTotalCents - pisoTotalCents;
+  // ritmo: o que saiu desses bancos no mês (débito, Pix, dinheiro), por dia que já passou
+  const ids = new Set(comPiso.map(c => c.id));
+  const mes = monthKey(today), dia = Number(today.slice(8, 10));
+  const gastoMes = expenses.filter(e => e.month === mes && ids.has(e.accountId) && e.date <= today).reduce((t, e) => t + valorProprio(e), 0);
+  const gastoDiaCents = dia > 0 ? Math.round(gastoMes / dia) : 0;
+  const diasAteEstourar = folgaTotalCents <= 0 ? 0 : gastoDiaCents > 0 ? Math.floor(folgaTotalCents / gastoDiaCents) : null;
+  const status = folgaTotalCents < 0 ? 'estourado' : diasAteEstourar != null && diasAteEstourar <= 7 ? 'perto' : 'ok';
+  return { contas, comPiso, pisoTotalCents, saldoTotalCents, folgaTotalCents, gastoDiaCents, diasAteEstourar, status };
+}
+
+/**
+ * De onde pra onde transferir (JF, 14/11: "ele sugere qual banco tem folga; quem decide é o usuário"). Quem está
+ * abaixo do piso recebe; quem tem folga (ou não tem piso) manda, começando pela maior folga. Pura.
+ */
+export function sugerirTransferencias(contas) {
+  const faltam = contas.filter(c => c.pisoCents > 0 && c.folgaCents < 0).map(c => ({ ...c, falta: -c.folgaCents })).sort((a, b) => b.falta - a.falta);
+  const sobram = contas.filter(c => c.folgaCents > 0).map(c => ({ ...c, livre: c.folgaCents })).sort((a, b) => b.livre - a.livre);
+  const passos = [];
+  for (const f of faltam) {
+    for (const s of sobram) {
+      if (f.falta <= 0) break;
+      if (s.livre <= 0) continue;
+      const v = Math.min(f.falta, s.livre);
+      passos.push({ deId: s.id, de: s.nome, paraId: f.id, para: f.nome, valorCents: v });
+      f.falta -= v; s.livre -= v;
+    }
+  }
+  return { passos, aindaFaltaCents: faltam.reduce((t, f) => t + Math.max(0, f.falta), 0) };
+}
+
+/**
  * Dividir um valor (ex.: o salário) entre as contas (JF, 14/11): primeiro completa quem está abaixo do piso, depois
  * mostra quanto sobra livre. Não decide pela pessoa: só faz a conta. Pura.
  */
@@ -744,6 +790,13 @@ export function analyze({ expenses, incomes = [], categories, accounts = [], com
       if (p?.abaixo) out.push({ type: 'abaixo_do_piso', severity: 'alta', accountId: a.id, accountName: accountLabel(a), balanceCents: bal, pisoCents: p.pisoCents, faltaCents: -p.folgaCents });
       else if (p?.perto) out.push({ type: 'perto_do_piso', severity: 'media', accountId: a.id, accountName: accountLabel(a), balanceCents: bal, pisoCents: p.pisoCents, leftCents: p.folgaCents });
     }
+  }
+
+  // média de segurança dos bancos com piso (14/11)
+  const rp = resumoPisos(accounts, expenses, incomes, transferencias, today);
+  if (rp.comPiso.length >= 2 && rp.status !== 'ok') {
+    out.push({ type: rp.status === 'estourado' ? 'piso_geral_estourado' : 'piso_geral_perto', severity: rp.status === 'estourado' ? 'alta' : 'media', balanceCents: rp.saldoTotalCents, pisoCents: rp.pisoTotalCents,
+      leftCents: rp.folgaTotalCents, overCents: -rp.folgaTotalCents, days: rp.diasAteEstourar, perDayCents: rp.gastoDiaCents, estourado: rp.status === 'estourado' });
   }
 
   const recentDelivery = expenses.filter(e => e.categoryId === 'delivery' && daysBetween(e.date, today) >= 0

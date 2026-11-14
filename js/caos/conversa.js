@@ -4,7 +4,7 @@
 
 import {
   formatBRL, parseAmount, periodRange, ofensiva, aReceber, comReforco, sumInRange, topCategories, summarizeMonth, forecastMonth,
-  incomeIn, monthKey, shiftMonth, monthLabel, accountBalance, accountLabel, totalBalance, analyze, folgaDoPiso, dividirEntrePisos,
+  incomeIn, monthKey, shiftMonth, monthLabel, accountBalance, accountLabel, totalBalance, analyze, folgaDoPiso, dividirEntrePisos, resumoPisos, sugerirTransferencias,
   spentIn, toISODate, INCOME_SOURCES, idadeDe, faixaEtaria, situacaoCompromissos, analisarPlanejamento, cabeNoMes, sugerirCategoria, palavrasDe, faturaDoCartao, progressoMeta, resumoInvestimentos,
 } from '../engine.js';
 import { IDENTIDADE, textoPodeNaoPode, textoVida, textoComoFunciona, textoPrivacidade } from './identidade.js';
@@ -417,6 +417,9 @@ function entenderSimples(t, { categories = [] } = {}) {
   }
   // Piso de segurança e salário (JF, 14/11): "meu piso no Banestes é 2000", "quanto posso gastar no C6?",
   // "me ajuda a dividir meu salário entre os bancos", "tive aumento?", "recebi mais ou menos que mês passado?"
+  // média de segurança e transferências (JF, 14/11): "como tá minha média de segurança?", "qual banco tem folga?"
+  if (/\b(media de seguranca|seguranca (geral|dos bancos|media|como um todo)|piso (geral|total|medio)|pisos no geral|vou estourar (o |meu )?piso|quando (o piso )?estoura)\b/.test(t)) return { ...r, intent: 'media_seguranca' };
+  if (/\b(qual|que) (banco|conta) (tem|ta com|esta com) (folga|sobra|mais dinheiro)\b|\b(de onde|qual banco) (eu )?(tiro|transfiro|passo)\b|\b(sugere|sugira|sugestao de) (uma )?transferencia\b|\btransferir pra (cobrir|completar)\b/.test(t)) return { ...r, intent: 'sugerir_transferencia' };
   if (/\b(piso|pisos|minimo de seguranca|valor de seguranca)\b/.test(t)) return { ...r, intent: r.valor && !pergunta ? 'definir_piso' : 'pisos' };
   if (/\b(dividir|distribuir|repartir|partilhar|parcionar|particionar|separar|organizar)\b/.test(t) && /\b(banco|bancos|contas)\b/.test(t)) return { ...r, intent: 'dividir_entre_bancos' };
   if (/quanto (eu )?(ainda )?(posso|da pra|consigo|devo) (gastar|usar|tirar)( ainda)? (no|na|do|da|pelo|pela)\b/.test(t)) return { ...r, intent: 'folga_conta' };
@@ -1035,6 +1038,25 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       return { fato: `Combinado: o piso de segurança de ${accountLabel(conta)} fica em ${formatBRL(intencao.valor)}. Eu aviso quando o saldo chegar perto. Confirma?`, cru: true, sugestoes: [],
         acao: { tipo: 'definir_piso', accountId: conta.id, pisoCents: intencao.valor } };
     }
+    case 'media_seguranca':
+    case 'sugerir_transferencia': {
+      const rp = resumoPisos((accounts || []), expenses, incomes, dados.transferencias || [], today);
+      if (!rp.comPiso.length) return { fato: 'Pra fazer a média de segurança, preciso dos pisos dos seus bancos principais. Me fala tipo "meu piso no Banestes é 2000".', cru: true, sugestoes: [] };
+      const nomes = rp.comPiso.map(c => c.nome).join(' e ');
+      const comFolga = rp.contas.filter(c => c.folgaCents > 0).sort((a, b) => b.folgaCents - a.folgaCents).map(c => `${c.nome} ${formatBRL(c.folgaCents)}${c.pisoCents ? '' : ' (sem piso)'}`);
+      const abaixo = rp.contas.filter(c => c.pisoCents && c.folgaCents < 0).map(c => `${c.nome} está ${formatBRL(-c.folgaCents)} abaixo do piso`);
+      let fato = intencao.intent === 'sugerir_transferencia' ? `${comFolga.length ? `Folga: ${comFolga.join(', ')}. ` : ''}${abaixo.length ? `${abaixo.join('; ')}. ` : ''}` : `Somando ${nomes}: ${formatBRL(rp.saldoTotalCents)} pra um piso total de ${formatBRL(rp.pisoTotalCents)}. `;
+      if (intencao.intent !== 'sugerir_transferencia') {
+        if (rp.status === 'estourado') fato += `Já passou do piso em ${formatBRL(-rp.folgaTotalCents)}. `;
+        else if (rp.diasAteEstourar != null) fato += `Folga de ${formatBRL(rp.folgaTotalCents)}: no ritmo de ${formatBRL(rp.gastoDiaCents)} por dia nesses bancos, ela acaba em ${rp.diasAteEstourar} ${rp.diasAteEstourar === 1 ? 'dia' : 'dias'}. `;
+        else fato += `Folga de ${formatBRL(rp.folgaTotalCents)}, e ainda não tem gasto anotado nesses bancos este mês. `;
+      }
+      const t = sugerirTransferencias(rp.contas);
+      if (t.passos.length) fato += `Sugestão: ${t.passos.map(p => `passar ${formatBRL(p.valorCents)} do ${p.de} pro ${p.para}`).join('; ')}.${t.aindaFaltaCents ? ` Mesmo assim faltam ${formatBRL(t.aindaFaltaCents)}.` : ''} Quem decide é você.`;
+      else if (rp.contas.some(c => c.pisoCents && c.folgaCents < 0)) fato += 'Não tem outro banco com folga pra cobrir agora.';
+      else fato += intencao.intent === 'sugerir_transferencia' ? 'Nenhum banco está abaixo do piso: não precisa transferir agora.' : 'Cada banco está acima do próprio piso.';
+      return { fato: fato.trim(), cru: true, sugestoes: ['Quanto posso gastar no C6?', 'Me ajuda a dividir o salário entre os bancos'] };
+    }
     case 'pisos':
     case 'folga_conta': {
       const contas = (dados.accounts || []).filter(a => a.tipo !== 'cartao');
@@ -1225,6 +1247,21 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       return { fato: `${planos}${contas} ${textoSobra(a)}`, sugestoes: ['Cabe no mês?', 'O que tenho pra pagar?'] };
     }
     case 'cabe': {
+      // "posso comprar 300 pelo C6?" (JF, 14/11): vê se o banco aguenta sem furar o piso, e sugere outro se não der
+      const contasCabe = (accounts || []).filter(a => a.tipo !== 'cartao');
+      const banco = intencao.valor && acharConta(intencao.t, contasCabe);
+      if (banco) {
+        const rp = resumoPisos(contasCabe, expenses, incomes, dados.transferencias || [], today);
+        const c = rp.contas.find(x => x.id === banco.id);
+        const depois = c.saldoCents - intencao.valor;
+        const outro = rp.contas.filter(x => x.id !== banco.id && x.folgaCents >= intencao.valor).sort((a, b) => b.folgaCents - a.folgaCents)[0];
+        let fato;
+        if (depois < 0) fato = `No ${c.nome} não dá: tem ${formatBRL(c.saldoCents)} e a compra é ${formatBRL(intencao.valor)}.`;
+        else if (c.pisoCents && depois < c.pisoCents) fato = `Dá, mas o ${c.nome} fica com ${formatBRL(depois)}, ${formatBRL(c.pisoCents - depois)} abaixo do piso de ${formatBRL(c.pisoCents)}.`;
+        else fato = `Dá! O ${c.nome} fica com ${formatBRL(depois)}${c.pisoCents ? `, ainda ${formatBRL(depois - c.pisoCents)} acima do piso` : ''}.`;
+        if ((depois < 0 || (c.pisoCents && depois < c.pisoCents)) && outro) fato += ` O ${outro.nome} tem folga de ${formatBRL(outro.folgaCents)}: dá pra comprar por ele ou passar o dinheiro de lá.`;
+        return { fato: `${fato} A decisão é sua.`, cru: true, sugestoes: ['Como tá minha média de segurança?'] };
+      }
       if (intencao.valor) {
         const c = cabeNoMes(dados, intencao.valor, today);
         if (c.cabe == null) return { fato: semBase() };

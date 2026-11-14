@@ -505,6 +505,49 @@ export const GERADORES = {
       ],
     },
   },
+  piso_geral_estourado: {
+    moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+    abre: { geral: ['Atenção.', 'Olha a média.', 'Alerta geral.', 'Cuidado.', 'Importante:'] },
+    fato: {
+      geral: [
+        'Somando seus bancos principais, você está {passou} abaixo da média de segurança.',
+        'A média de segurança estourou: faltam {passou} pra voltar ao piso total de {piso}.',
+        'No geral, seus bancos principais têm {saldo}, e o piso somado é {piso}.',
+        'Seus pisos somados ({piso}) ficaram acima do que tem nos bancos: {saldo}.',
+        'A reserva dos bancos principais furou em {passou}.',
+      ],
+    },
+    fecho: {
+      geral: [
+        'Me pergunta "qual banco tem folga?" que eu sugiro uma transferência.',
+        'Segura os gastos até a próxima entrada.',
+        'Vale olhar o que ainda vai sair este mês.',
+        'Se tiver dinheiro em outro banco, dá pra cobrir.',
+        'Bora voltar pra cima do piso com calma.',
+      ],
+    },
+  },
+  piso_geral_perto: {
+    moldes: ['{fato} {fecho}'],
+    fato: {
+      geral: [
+        'No ritmo de {porDia} por dia, sua média de segurança acaba em {dias} dias.',
+        'Faltam {resta} pra encostar no piso total; nesse ritmo, uns {dias} dias.',
+        'A folga dos bancos principais ({resta}) dura uns {dias} dias.',
+        'Seus pisos somados estão perto: {resta} de folga.',
+        'Em {dias} dias, mantendo o ritmo, você chega no piso total.',
+      ],
+    },
+    fecho: {
+      geral: [
+        'Dá pra frear um pouco os gastos do dia a dia.',
+        'Me pergunta "qual banco tem folga?" se quiser reorganizar.',
+        'Ainda dá tempo de ajustar.',
+        'Bom momento pra rever o que ainda vai sair.',
+        'Vai devagar até a próxima entrada.',
+      ],
+    },
+  },
   perto_do_piso: {
     moldes: ['{fato} {fecho}'],
     fato: {
