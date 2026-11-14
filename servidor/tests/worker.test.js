@@ -265,3 +265,16 @@ test('2ª lei na IA (14/11): no Suave a instrução proíbe sarcasmo e bronca no
   assert.match(SISTEMA_CONVERSA, /nunca zombe/);
   assert.match(SISTEMA_CONVERSA, /erro de digitação/);
 });
+
+test('foto com vários pagamentos: esquema pede a lista e a limpeza joga fora o que não presta', async () => {
+  const { limparPagamentos } = await import('../worker.js');
+  assert.ok(esquemaImagem(['mercado']).required.includes('pagamentos'));
+  const l = limparPagamentos([
+    { valor_centavos: 1250, data: '2026-11-13', estabelecimento: 'Padaria', categoria: 'mercado' },
+    { valor_centavos: 0, data: '', estabelecimento: 'zero', categoria: '' },
+    { valor_centavos: 990, data: 'ontem', estabelecimento: 'Uber', categoria: 'inventada' },
+  ], [{ id: 'mercado' }]);
+  assert.equal(l.length, 2);
+  assert.equal(l[1].data, '');
+  assert.equal(l[1].categoria, '');
+});

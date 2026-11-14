@@ -21,6 +21,8 @@ export const NOVIDADES = Object.freeze([
       '😤 Cutucão com limite: o C.A.O.S. cansa e fica bravo se você exagerar.',
     ],
     qol: [
+      '🧾 Vários pagamentos num print: um Confirmar lança todos.',
+      '📷 Foto com legenda: anexa o print, escreve e manda junto.',
       '🍦 Categoria certa: cerveja vai pra Mercado e sorvete pra Restaurante.',
       '❓ Bolinha de ajuda: não cobre mais a barra de baixo.',
       '🧾 Últimos lançamentos: num bloco que abre e fecha.',
