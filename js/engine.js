@@ -520,17 +520,28 @@ export function comReforco(cartao, accounts = [], expenses = [], incomes = [], t
  * Saldo estimado da conta: o saldo que a pessoa informou + entradas − gastos lançados nessa conta DEPOIS disso.
  * O motor nunca muda o saldo guardado; quem atualiza é a pessoa ("Atualizar saldo").
  */
+/**
+ * O lançamento aconteceu DEPOIS do saldo informado? (JF, 14/11: "o salário caiu dia 4, anotei dia 14 e o app somou
+ * de novo um dinheiro que já estava no saldo"). Vale a DATA do lançamento, não a hora em que foi anotado:
+ * data antes do dia do saldo = já está dentro dele; data depois = conta; mesmo dia = vale a ordem em que foi anotado.
+ */
+export function depoisDoSaldo(item, account) {
+  const diaSaldo = toISODate(new Date(account.balanceAt));
+  if (!item.date || item.date === diaSaldo) return (item.createdAt || 0) > account.balanceAt;
+  return item.date > diaSaldo;
+}
+
 export function accountBalance(account, expenses, incomes, transferencias = []) {
   let v = account.balanceCents;
   // transferência entre contas (13/11, repaginada): sai de uma e entra na outra; não é gasto nem entrada
   for (const t of transferencias) {
-    if (t.createdAt <= account.balanceAt) continue;
+    if (!depoisDoSaldo(t, account)) continue;
     if (t.deId === account.id) v -= t.amountCents;
     if (t.paraId === account.id) v += t.amountCents;
   }
-  for (const i of incomes) if (i.accountId === account.id && i.createdAt > account.balanceAt) v += i.amountCents;
+  for (const i of incomes) if (i.accountId === account.id && depoisDoSaldo(i, account)) v += i.amountCents;
   for (const e of expenses) {
-    if (e.accountId === account.id && e.createdAt > account.balanceAt) v -= e.amountCents;
+    if (e.accountId === account.id && depoisDoSaldo(e, account)) v -= e.amountCents;
     // parte da rachadinha recebida depois do saldo informado: o dinheiro caiu na conta escolhida (ou na do gasto)
     if (Array.isArray(e.racha)) {
       for (const p of e.racha) {

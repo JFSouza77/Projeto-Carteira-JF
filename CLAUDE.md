@@ -107,7 +107,8 @@ Mapa do cérebro: `docs/CAOS_Carteira.md`.
 ## Dinheiro
 
 - Valores sempre em **centavos inteiros**. Datas `YYYY-MM-DD` (hora local); mês `YYYY-MM`.
-- Saldo da conta = saldo informado + lançamentos naquela conta **depois** do saldo informado. O motor nunca muda o
+- Saldo da conta = saldo informado + lançamentos naquela conta **depois** do saldo informado. "Depois" é pela **data** do
+  lançamento (no mesmo dia, pela hora em que foi anotado): salário de dia 4 anotado dia 14 já está dentro do saldo de dia 13 (JF, 14/11). O motor nunca muda o
   saldo guardado; quem atualiza é a pessoa.
 - Orçamento e previsão comparam só o gasto das **categorias com limite**.
 
