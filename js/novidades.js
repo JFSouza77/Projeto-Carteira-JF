@@ -7,6 +7,24 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.0.4 Alfa',
+    data: '14/11/2026',
+    nome: 'Parceiro',
+    t: 'O C.A.O.S. ficou mais seu parceiro: entende o seu jeito de falar e aparece grande quando você chama.',
+    itens: [
+      '🤝 Apelido de amigo: "corno, quem te criou?" é carinho, e ele responde a pergunta.',
+      '🗯️ Xingou e perguntou: ele ouve os dois e responde o que você quis saber.',
+      '🔍 C.A.O.S. grande: toque no avatar da conversa pra abrir ele na tela e cutucar.',
+      '🚪 Entrar logo na abertura: apelido e senha na primeira tela, ou criar conta ali mesmo.',
+      '👋 Entrar como você: com a conta pronta, é só tocar no botão com o seu nome.',
+      '🎨 Glossário colorido: termos separados por tema, com cor e animação.',
+    ],
+    qol: [
+      '🧒 Explicação bem simples: cada termo do glossário ganhou a versão sem complicação.',
+      '👀 Avatar maior: dá pra ver melhor no Início e na conversa.',
+    ],
+  },
+  {
     v: '2.0.3 Alfa',
     data: '13/11/2026',
     nome: 'Professor',
