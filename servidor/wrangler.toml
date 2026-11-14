@@ -17,7 +17,7 @@ id = "COLE_AQUI_O_ID_DO_KV"
 
 [vars]
 # Endereço(s) onde o app está publicado, separados por vírgula (ex.: https://carteira-jf.pages.dev)
-ORIGENS = ""
+ORIGENS = "https://carteira-jf.pages.dev"
 # Modelo da IA. Padrão: claude-opus-5-5. Mais barato: claude-haiku-5-5.
 IA_MODELO = "claude-opus-5-5"
 # Limites de uso da IA (protegem a conta de custo surpresa)
