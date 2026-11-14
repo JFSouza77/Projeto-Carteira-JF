@@ -109,11 +109,11 @@ Atualizada pelo Wally a cada rodada.
 
 - Endereço: `https://carteira-jf.caos-financas.workers.dev`, padrão no app pra todo mundo (conta, sincronização e mercado).
 - Falta: chave da IA online (o JF cria e cola com `npx.cmd wrangler secret put ANTHROPIC_API_KEY`), lembretes do iPhone
-  (VAPID) e o `CRIADOR_CONTAS` com o apelido da conta do JF.
+  (VAPID) (o `CRIADOR_CONTAS = "jf"` já está no `wrangler.toml` desde 14/11).
 
 ## Esperando o JF
 
-- **Selo de criador:** quando o servidor for pro ar, pôr o apelido da conta do JF em `CRIADOR_CONTAS`.
+- ~~**Selo de criador**~~ feito em 14/11 (`CRIADOR_CONTAS = "jf"`).
 
 - **Publicar o servidor juntos** (IA online, conta, push, mercado, Jornal). Passo a passo: `servidor/LEIA-ME.md`.
 - Contar mais sobre ele pro C.A.O.S. zoar com mais assunto (sem dado pessoal sensível).

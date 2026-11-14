@@ -13,7 +13,7 @@ crons = ["*/15 * * * *"]
 # Crie com: npx wrangler kv namespace create CARTEIRA_KV  e cole o id aqui.
 [[kv_namespaces]]
 binding = "CARTEIRA_KV"
-id = "COLE_AQUI_O_ID_DO_KV"
+id = "379949e5fbdc44f2bc3a99f8f8ce65cb" # criado com o JF em 14/11 (o id não é segredo: só funciona dentro da conta dele)
 
 [vars]
 # Endereço(s) onde o app está publicado, separados por vírgula (ex.: https://carteira-jf.pages.dev)
@@ -25,6 +25,8 @@ IA_LIMITE_DIA = "40"
 IA_TETO_DIA = "300"
 # Chave PÚBLICA dos lembretes (gerada por: node ferramentas/gerar_vapid.js). A privada vai em segredo.
 VAPID_PUBLIC_KEY = ""
+# Selo de criador (12/11): apelido(s) da conta do criador, separados por vírgula. Só com a senha certa vale.
+CRIADOR_CONTAS = "jf"
 # Contato exigido pelos serviços de push (pode ser um e-mail seu ou o site do app)
 VAPID_CONTATO = "mailto:troque@exemplo.com"
 
