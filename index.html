@@ -158,12 +158,12 @@
 
       <details class="card bloco hoje-card" id="hoje-card" data-bloco="hoje">
         <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#i-relogio"/></svg><span class="bloco-tit">Orçamento de hoje</span><span class="bloco-res num" id="res-hoje"></span></summary>
-        <div class="hoje-top">
-          <button type="button" class="ghost small" id="hoje-ajustar" aria-expanded="false" aria-controls="hoje-form">Definir limite</button>
-        </div>
         <p class="hoje-valor"><strong class="num" id="hoje-gasto">R$ 0,00</strong> <span class="muted" id="hoje-de"></span></p>
         <div class="bar" id="hoje-bar-wrap" hidden><div class="bar-fill" id="hoje-bar"></div></div>
         <p class="muted small" id="hoje-sub"></p>
+        <div class="hoje-top">
+          <button type="button" class="ghost small" id="hoje-ajustar" aria-expanded="false" aria-controls="hoje-form">Definir limite</button>
+        </div>
         <form id="hoje-form" class="hoje-form" autocomplete="off" novalidate hidden>
           <label class="field"><span>Limite por dia (R$)</span><input id="hoje-limite" type="text" inputmode="decimal" placeholder="0,00"></label>
           <div class="chips" id="hoje-chips">
