@@ -1833,7 +1833,7 @@ Object.assign(GERADORES, {
 });
 
 // Pedaços com o nome da pessoa (só saem quando ela disse o nome no primeiro acesso)
-GERADORES.boas_vindas.abre.temNome = ['Oi, {nome}!', 'E aí, {nome}?', 'Bem-vindo de volta, {nome}.', 'Que bom te ver, {nome}.', 'Olá, {nome}!'];
+GERADORES.boas_vindas.abre.temNome = ['Oi, {nome}!', 'E aí, {nome}?', 'Opa, {nome}!', 'Que bom te ver, {nome}.', 'Olá, {nome}!']; // 14/11 (Anne): "bem-vindo de volta" do nada soava estranho
 GERADORES.boas_vindas.abre.tratamento_formal = ['Olá, {nome}. Seja bem-vindo.', 'Bom te ver novamente, {nome}.', 'Olá, {nome}. À disposição.', 'Seja bem-vindo, {nome}.', 'Olá, {nome}. Vamos às contas?'];
 GERADORES.resposta.abre.temNome = ['Olha só, {nome}:', 'Fiz as contas, {nome}.', '{nome}, aqui está.', 'Deixa eu te mostrar, {nome}.', 'Pronto, {nome}.'];
 GERADORES.gasto_cadastrado.fecho.temNome = ['Valeu por anotar, {nome}.', 'Bom controle, {nome}.', 'Seguimos, {nome}.', 'Tá registrado, {nome}.', 'Anotado, {nome}. Tamo junto.'];
