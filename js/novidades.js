@@ -24,6 +24,7 @@ export const NOVIDADES = Object.freeze([
       '📖 Glossário com 100 termos: tudo que envolve dinheiro, explicado simples.',
       '☁️ Conta pronta pra usar: o servidor já vem ligado, sem configurar nada.',
       '✏️ Trocar nome: escolha como seu nome aparece na conta, com maiúscula e tudo.',
+      '(•‿•) Rostinhos de volta: cada mensagem tem o rostinho dele, combinando com o avatar.',
     ],
   },
   {

@@ -33,6 +33,18 @@ const POR_ASSUNTO = Object.freeze({
   desabafo: 'parceiro', limite_investido: 'banqueiro', bancos: 'investidor', conta: 'contador', glossario: 'professor', privacidade: 'anjinho', como_esta: 'calmo',
 });
 
+// forma do avatar → rostinho de texto que combina com ela (o balão mostra o rostinho, não emoji; JF, 13/11 à noite)
+export const EMO_DA_FORMA = Object.freeze({
+  calmo: 'calmo', anjinho: 'carinho', feliz: 'festa', orgulhoso: 'orgulho', pensando: 'pensando', triste: 'triste',
+  tentado: 'deboche', perturbado: 'raiva', alerta: 'preocupado', professor: 'pensando', parceiro: 'carinho', bronca: 'julgando',
+  lembrete: 'preocupado', chocado: 'ombros', economista: 'orgulho', rico: 'festa', decepcionado: 'triste', nojinho: 'julgando',
+  medo: 'preocupado', desconfiado: 'espiando', amigao: 'carinho', humorista: 'festa', gerente: 'pensando', investidor: 'pensando',
+  preocupado: 'preocupado', vidente: 'espiando', zen: 'alivio', detetive: 'analista', sobrevivente: 'ombros', desnorteado: 'surpresa',
+  recalculando: 'preocupado', sonolento: 'tedio', envergonhado: 'recompondo', contador: 'analista', banqueiro: 'orgulho',
+  ferias: 'alivio', simulador: 'analista', auditor: 'julgando', cobrador: 'julgando', surpreso: 'espantado', confiante: 'orgulho',
+  vermelho: 'raiva', treinador: 'festa', vovo: 'ombros',
+});
+
 /** Forma do avatar pro momento: o assunto (intenção ou evento) manda; senão, o rosto/emoção. */
 export function formaPara({ rosto = null, assunto = null } = {}) {
   if (assunto && POR_ASSUNTO[assunto]) return POR_ASSUNTO[assunto];

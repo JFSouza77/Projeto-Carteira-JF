@@ -165,3 +165,16 @@ export function rostoAnalista(rng = Math.random) {
   const quadros = ROSTO_ANALISTA[Math.floor(rng() * ROSTO_ANALISTA.length)] || ROSTO_ANALISTA[0];
   return { emo: 'analista', nome: 'analista', cor: '#3ad4ff', bg: 'rgba(8,34,46,0.96)', fr: 900, per: 2600, amp: 0.3, quadros, mistura: false };
 }
+
+/**
+ * Rostinho de uma emoção, sem memória (13/11 à noite, JF: "os rostinhos dão a característica dele, emoji não").
+ * `semente` escolhe o quadro sempre igual pra mesma mensagem (não troca a cada redesenho). Função pura.
+ */
+export function rostoDaEmo(emo, semente = 0) {
+  if (emo === 'espantado') return rostoEspantado(() => (semente % 5) / 5);
+  if (emo === 'analista') return rostoAnalista(() => (semente % 5) / 5);
+  const E = EMOS[emo] || EMOS.calmo;
+  const lista = E.niv[0];
+  const quadros = lista[Math.abs(semente) % lista.length];
+  return { emo: EMOS[emo] ? emo : 'calmo', nome: E.nome, cor: E.cor, bg: E.bg, fr: E.fr, per: E.per, amp: E.amp, quadros, mistura: false };
+}
