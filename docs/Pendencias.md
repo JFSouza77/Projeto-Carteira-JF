@@ -105,6 +105,12 @@ Atualizada pelo Wally a cada rodada.
 - **Núcleo 1.4.1?** Marco "ganhei corpo (avatar), primeiro na Carteira" (ok do JF em 13/11) e a paciência:
   o JF deixou com o Code decidir se entra no núcleo (13/11; no Perfil não há conversa digitada, então pode ficar só na Carteira). Recados: `correio/para_o_code/2026-11-13_nucleo_corpo_e_paciencia.md` e `..._paciencia_decisao_do_jf.md`.
 
+## Servidor (no ar desde 14/11)
+
+- Endereço: `https://carteira-jf.caos-financas.workers.dev`, padrão no app pra todo mundo (conta, sincronização e mercado).
+- Falta: chave da IA online (o JF cria e cola com `npx.cmd wrangler secret put ANTHROPIC_API_KEY`), lembretes do iPhone
+  (VAPID) e o `CRIADOR_CONTAS` com o apelido da conta do JF.
+
 ## Esperando o JF
 
 - **Selo de criador:** quando o servidor for pro ar, pôr o apelido da conta do JF em `CRIADOR_CONTAS`.

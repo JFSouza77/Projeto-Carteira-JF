@@ -21,6 +21,8 @@ const ABAS = ["inicio", "lancar", "mes", "conversa", "contas", "ajustes"];
   for (const tema of ["dark", "light"]) {
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block", colorScheme: tema });
     const p = await ctx.newPage();
+    // o servidor de verdade fica de fora do teste (14/11): responde "sem dados" sem sair pra internet
+    await ctx.route(/workers\.dev/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
     p.on("pageerror", (e) => erros.push(`[${tema}] ${e.message}`));
     p.on("console", (m) => m.type() === "error" && erros.push(`[${tema}] console: ${m.text()}`));
     await p.goto(`http://127.0.0.1:${porta}/`);
