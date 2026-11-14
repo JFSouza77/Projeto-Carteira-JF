@@ -4,6 +4,24 @@ Um lugar só pra ver o que está aberto (sugestão do Code do Perfil, 12/11/2026
 Os detalhes continuam em `Pedidos_do_JF.md`, `Rascunhos_da_Semana.md` e `Ideias.md`; aqui fica só o resumo.
 Atualizada pelo Wally a cada rodada.
 
+## Pra amanhã (14/11, com o JF): deixar o projeto 100% sozinho
+
+**Servidor (no ar: `carteira-jf.caos-financas.workers.dev`):** conta e sincronização ✅, mercado ✅, IA online ✅ (chave
+pré-paga), selo de criador `jf` ✅, humores da IA ✅ (deploy de 13/11 à noite).
+
+1. **Conferência rápida (JF, 2 min):** `/saude` com `"ia":true`; Sair e entrar de novo como **JF** (nome maiúsculo +
+   selo); perguntar "quem te criou?"; mudar o humor pra Ácido se quiser a zoeira.
+2. **Voz mais natural:** esperando a resposta do Code sobre a voz nova do Perfil
+   (`correio/para_o_code/2026-11-14_voz_e_chave.md`). Depois, ligar na Carteira, com a voz do aparelho como reserva.
+3. **Lembretes do iPhone (VAPID):** `node ferramentas/gerar_vapid.js` → chave pública no `wrangler.toml`, privada com
+   `npx.cmd wrangler secret put VAPID_PRIVATE_JWK`; trocar o `VAPID_CONTATO` (hoje é um endereço de exemplo).
+4. **Corrigir os lançamentos errados antigos** (JF): R$ 12.450 em Lazer e a entrada de R$ 146.486, em Lançar → Últimos
+   lançamentos.
+5. **Matemática do C.A.O.S.:** frações, potência, raiz, log e fatoração (a básica e a porcentagem já existem).
+6. **Esperando o Code:** o número da "segura" do estabilizador e o núcleo 1.4.1 ("ganhei corpo, primeiro na Carteira").
+7. **Rodada grande que continua aberta:** contas em outras moedas, cripto, Imposto de Renda, Dica do Dia e a
+   organização do código em 6 etapas.
+
 ## Bugs que o JF está caçando (13/11 à tarde): os 3 primeiros corrigidos em 13/11 à noite
 
 1. **Ajustes → Lembretes (UI):** a caixa do horário (20:30) passa da borda direita do cartão. O checkbox, o "Desligado." e o
