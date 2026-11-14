@@ -259,3 +259,9 @@ test('ofertas: lê o print no esquema e devolve só campos limpos (13/11)', asyn
   const ruim = await worker.fetch(req('/ia/ofertas', { imagem: 'não é base64!', tipo: 'image/png' }), envBase());
   assert.equal(ruim.status, 400);
 });
+
+test('2ª lei na IA (14/11): no Suave a instrução proíbe sarcasmo e bronca nos gastos', async () => {
+  const { SISTEMA_CONVERSA } = await import('../worker.js');
+  assert.match(SISTEMA_CONVERSA, /nunca zombe/);
+  assert.match(SISTEMA_CONVERSA, /erro de digitação/);
+});
