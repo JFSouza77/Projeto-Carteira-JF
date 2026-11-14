@@ -22,6 +22,8 @@ export const NOVIDADES = Object.freeze([
     qol: [
       '🍔 Lanchonetes conhecidas: McDonald\'s, Subway e cia. vão pra Restaurante.',
       '✨ Respostas da IA sem asteriscos: o destaque aparece em negrito.',
+      '🎯 Valores no centro: gasto do mês, saldo, hoje e metas mais alinhados.',
+      '🤖 Avatar mais pra cima: na tela de entrar, com mais respiro.',
     ],
   },
   {

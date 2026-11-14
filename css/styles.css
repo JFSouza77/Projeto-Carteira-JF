@@ -1029,8 +1029,8 @@ h1, h2 { font-weight: 700; letter-spacing: .005em; }
 /* 14/11 (Anne + JF): só o avatar e o slogan, sem o nome (o app já se chama C.A.O.S. Finanças e repetia), com ar */
 .abertura.esperando .abertura-caixa { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0; max-width: none; }
 .abertura.esperando .abertura-titulo { display: none; }
-.abertura.esperando .abertura-avatar { margin: auto 0 0; }
-.abertura.esperando .abertura-frase { margin: 12px 0 auto; font-size: 1.1rem; color: var(--text); }
+.abertura.esperando .abertura-avatar { margin: max(8px, 2vh) 0 0; } /* Anne (14/11): o avatar um pouco mais pra cima */
+.abertura.esperando .abertura-frase { margin: 14px 0 auto; font-size: 1.1rem; color: var(--text); }
 .abertura.esperando .abertura-dica { display: none; }
 .abertura.esperando .abertura-avatar { width: min(190px, 50vw); }
 .abertura.com-campos .abertura-avatar { width: min(110px, 30vw); }
@@ -1229,3 +1229,27 @@ details.conta-det > :not(summary) { margin-top: 8px; }
 body.teclado .tabbar, body.teclado .me-ajuda { display: none; }
 body.teclado .chat-bar { bottom: 0; }
 body.teclado .chat-anexo { bottom: 64px; }
+
+/* ---------- Textos e valores centralizados (JF + Anne, 14/11: "mais bonitinho, mais corretinho") ----------
+   Só o que é título de cartão e valor em destaque; listas (lançamentos, contas) continuam alinhadas à esquerda. */
+.abertura-ola { text-align: center; }
+.summary { text-align: center; }
+.summary .gasto-titulo { justify-content: center; }
+.summary .bar { margin-left: auto; margin-right: auto; }
+.mini-stats > *, .stat-olho { text-align: center; justify-items: center; }
+.stat-olho small { justify-content: center; }
+.saldo-topo { position: relative; justify-content: center; }
+.saldo-topo .olho { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
+.hoje-valor, #hoje-sub { text-align: center; }
+.hoje-card .hoje-top { justify-content: center; }
+.ofensiva-bloco .ofensiva { justify-content: center; text-align: center; }
+.ofensiva-bloco .ofensiva-txt { flex-basis: 100%; }
+.ofensiva-legenda { justify-content: center; }
+.plan-linhas { text-align: left; }
+#plan-caos { text-align: left; }
+/* Metas: anel em cima, texto e botões no meio */
+.meta-item { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+.meta-corpo { justify-items: center; }
+.meta-corpo .account-actions { justify-content: center; }
+.comece h2 { justify-content: center; gap: 8px; }
+.inv-resumo { text-align: center; }
