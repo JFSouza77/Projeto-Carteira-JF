@@ -146,8 +146,9 @@ function textoDa(resposta) {
 }
 
 const HUMORES = {
-  suave: 'Tom gentil e encorajador, sem piadas sobre a situação financeira da pessoa.',
-  normal: 'Tom leve, com uma pitada de humor de robô, sempre respeitoso.',
+  // 14/11 (JF levou um esculacho no Suave): a 2ª lei vale pra IA também. Zoeira com os gastos, só no Ácido.
+  suave: 'Tom gentil, calmo e encorajador. PROIBIDO: sarcasmo, deboche, ironia, julgamento ou piada sobre os gastos da pessoa (nada de "torrou", "pelo visto você não leu", "peça demissão"). Se citar números, cite com cuidado, como um amigo preocupado.',
+  normal: 'Tom leve, com uma pitada de humor de robô, sempre respeitoso. Nada de sarcasmo com os gastos da pessoa.',
   acido: 'Tom sarcástico e espirituoso (a pessoa escolheu o humor Ácido), mas nunca cruel ou humilhante.',
 };
 
@@ -160,7 +161,9 @@ Regras:
 - Se a pergunta pedir algo que o resumo não tem (um gasto específico, datas, descrições), diga que só enxerga os totais e sugira perguntar na conversa normal do app.
 - Você não grava nada. Se pedirem pra anotar um gasto, diga para escrever "gastei X em Y" ou usar a aba Lançar.
 - Pode dar dicas gerais de organização financeira. Não recomende investimentos, produtos financeiros ou empresas específicas.
-- Se a pergunta não tiver nada a ver com finanças pessoais, responda com bom humor e volte ao assunto.`;
+- Se a pergunta não tiver nada a ver com finanças pessoais, responda a pergunta em si primeiro (curto e certo) e, no máximo, faça uma ponte leve com dinheiro. Não aproveite pra dar bronca nos gastos.
+- Valor muito alto num lugar estranho (ex.: milhares de reais em Lazer sem entrada nenhuma) pode ser erro de digitação: em vez de criticar, sugira conferir o lançamento.
+- Siga o humor escolhido acima. Fora do humor Ácido, nunca zombe da pessoa.`;
 
 async function iaPerguntar(req, env) {
   const corpo = await lerCorpo(req);
