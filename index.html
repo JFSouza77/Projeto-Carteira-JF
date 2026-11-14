@@ -29,8 +29,14 @@
       <p class="abertura-versao" id="abertura-versao">Carregando…</p>
       <p class="abertura-pula">toque pra pular</p>
       <div class="abertura-login" id="abertura-login" hidden>
+        <div class="abertura-form" id="abertura-form">
+          <input id="ab-apelido" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="30" placeholder="Apelido da conta" aria-label="Apelido da conta">
+          <input id="ab-senha" type="password" autocomplete="current-password" maxlength="200" placeholder="Senha" aria-label="Senha">
+          <p class="error" id="ab-erro" role="alert" hidden></p>
+        </div>
         <button type="button" class="primary" id="abertura-entrar">Entrar na conta</button>
-        <button type="button" class="ghost" id="abertura-pular">Continuar sem conta</button>
+        <button type="button" class="ghost" id="abertura-criar">Criar conta</button>
+        <button type="button" class="link-btn" id="abertura-pular">Continuar sem conta</button>
       </div>
     </div>
   </div>
@@ -284,7 +290,7 @@
   <!-- ============ C.A.O.S. (conversa) ============ -->
   <section class="tela" id="tela-conversa" data-tela="conversa" hidden>
     <header class="topbar chat-top">
-      <span class="chat-avatar" id="chat-avatar"></span>
+      <button type="button" class="chat-avatar-btn" id="chat-avatar-btn" aria-label="Abrir o C.A.O.S. grande"><span class="chat-avatar" id="chat-avatar"></span></button>
       <span class="caos-face small" id="chat-face" aria-hidden="true">(•‿•)</span>
       <h1>C.A.O.S. <small id="chat-mood" class="muted"></small></h1>
       <button class="ghost small estudio-btn" id="estudio-btn" type="button" aria-pressed="false" aria-controls="estudio"><svg class="ico" aria-hidden="true"><use href="#i-livro"/></svg> Estúdio</button>
@@ -299,6 +305,7 @@
         <h2>Glossário</h2>
         <p class="muted small">Palavras do dinheiro explicadas sem complicar. <span id="glos-total"></span></p>
         <input id="glos-busca" type="search" placeholder="Procurar (ex.: juros, Pix, CDI)" aria-label="Procurar no glossário">
+        <div class="glos-temas" id="glos-temas" role="group" aria-label="Temas do glossário"></div>
         <div class="glos-lista" id="glos-lista"></div>
       </section>
       <section class="card">
@@ -666,6 +673,20 @@
     </form>
   </dialog>
 
+  <!-- 14/11 (JF): tocar no avatar do topo abre ele grande, pra interagir -->
+  <dialog id="palco-dialog" class="novidades-dialog palco-dialog" aria-labelledby="palco-nome">
+    <form method="dialog">
+      <button value="" class="icon-btn palco-fechar" aria-label="Fechar">✕</button>
+      <button type="button" class="palco-avatar" id="palco-avatar-btn" aria-label="Cutucar o C.A.O.S."><span class="palco-avatar-svg" id="palco-avatar"></span></button>
+      <h2 id="palco-nome">C.A.O.S. <small class="muted" id="palco-forma"></small></h2>
+      <p class="palco-fala" id="palco-fala" aria-live="polite">Me cutuca que eu reajo!</p>
+      <menu class="palco-acoes">
+        <button type="button" class="ghost" data-pergunta="Me conta uma piada">Piada</button>
+        <button type="button" class="ghost" data-pergunta="Tudo bem com você?">Tudo bem?</button>
+        <button type="button" class="ghost" data-pergunta="Como tá meu mês?">Meu mês</button>
+      </menu>
+    </form>
+  </dialog>
   <dialog id="espanto-dialog" class="novidades-dialog pix-dialog espanto-dialog" aria-labelledby="espanto-titulo">
     <form method="dialog">
       <header><span class="espanto-avatar" id="espanto-avatar"></span><span class="caos-face espanto-face" id="espanto-face" aria-hidden="true"></span><h2 id="espanto-titulo"></h2></header>

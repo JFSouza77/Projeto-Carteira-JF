@@ -14,7 +14,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '2.1.3'; // 2.1.3 (13/11): rostinho de volta no balão, combinando com o avatar. 2.1.2: benefícios, bolsas, matemática
+export const CAOS_VERSAO = '2.1.4'; // 2.1.4 (14/11): entende apelido de amigo (corno, vagabundo) e xingamento junto com pergunta. 2.1.3 2.1.3 (13/11): rostinho de volta no balão, combinando com o avatar. 2.1.2: benefícios, bolsas, matemática
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -221,7 +221,7 @@ function reagirBruto(eventos, { mood = DEFAULT_MOOD, memory, now = Date.now(), r
   return { fala: { texto, evento: ev.type, alerta: ALERTAS.has(ev.type), emocao, rosto: r.rosto }, memoria };
 }
 
-const EVENTO_DA_INTENCAO = { elogio: 'elogio', xingamento: 'xingamento', desabafo: 'pergunta', agradecimento: 'agradecimento', piada: 'piada', identidade: 'carinho_conversa', nao_entendi: 'nao_entendi' };
+const EVENTO_DA_INTENCAO = { elogio: 'elogio', xingamento: 'xingamento', desabafo: 'pergunta', agradecimento: 'agradecimento', piada: 'piada', identidade: 'carinho_conversa', apelido: 'carinho_conversa', nao_entendi: 'nao_entendi' };
 
 /**
  * Conversa: responde a uma mensagem da pessoa com os números do motor.
@@ -253,6 +253,8 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
       Object.assign(pac, { silencioAte: now + SILENCIO_MS, emburrou: true });
     } else if (pac.n === 4) assunto = forte ? 'xingamento_3_forte' : 'xingamento_3';
     else if (pac.n >= 2) assunto = 'xingamento_2';
+  } else if (intencao.xingouJunto && !pac.emburrou) {
+    pac.n += 1; pac.em = now; // xingou junto com a pergunta: responde, mas a paciência conta
   } else if (pac.emburrou && now < pac.silencioAte) {
     intencao = { ...intencao, intent: 'xingamento', palpite: false };
     assunto = 'silencio';
@@ -360,8 +362,11 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   if (resp.dica && saida) saida = `${saida} ${resp.dica}`;
   // 2.0.9 (JF, 13/11): desabafo com palavrão no meio de um pedido ("krlh, gastei 500"): uma reação curta antes, sem
   // palavrão, e o pedido segue normal
-  if (intencao.palavrao && !['xingamento', 'desabafo'].includes(intencao.intent) && saida) {
-    const dz = montar('desabafo_curto', {}, { humor, emocao, mem, now, rng, perfil });
+  // 2.1.4 (JF, 14/11): "corno, quem te criou?" → apelido de amigo + pergunta; "burro, quanto gastei?" → xingou e
+  // perguntou. Ele lê os dois: uma reação curta antes e a pergunta respondida.
+  const prefixo = intencao.apelido ? 'apelido_curto' : intencao.xingouJunto ? 'xingou_junto' : 'desabafo_curto';
+  if ((intencao.palavrao || intencao.apelido) && !['xingamento', 'desabafo', 'apelido'].includes(intencao.intent) && saida) {
+    const dz = montar(prefixo, {}, { humor, emocao, mem, now, rng, perfil });
     if (dz.texto) { saida = `${dz.texto} ${saida}`; mem = { ...mem, gerador: dz.gerador }; }
   }
   if (passouRaiva) {
@@ -371,7 +376,7 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
     assunto = 'passou_raiva';
   }
   // Papo avulso demais seguido (06/11): na 5ª pergunta fora do dinheiro, ele chama de volta (sem bronca no Suave)
-  const AVULSAS = new Set(['piada', 'identidade', 'significado', 'criador', 'origem', 'como_funciona', 'limites', 'elogio', 'xingamento', 'desabafo', 'como_esta', 'nao_entendi', 'sobre_jf', 'saudacao', 'agradecimento']);
+  const AVULSAS = new Set(['piada', 'identidade', 'significado', 'criador', 'origem', 'como_funciona', 'limites', 'elogio', 'xingamento', 'desabafo', 'como_esta', 'apelido', 'nao_entendi', 'sobre_jf', 'saudacao', 'agradecimento']);
   const avulsas = AVULSAS.has(intencao.intent) ? (mem.avulsas || 0) + 1 : 0;
   mem = { ...mem, avulsas };
   if (avulsas >= 5 && avulsas % 5 === 0 && saida && !assunto) { // na escalada da paciência, nada de "adoro conversar"
@@ -380,7 +385,7 @@ function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.
   }
 
   const EVENTO_ROSTO = { piada: 'piada', identidade: 'identidade', significado: 'identidade', criador: 'identidade', origem: 'identidade',
-    nao_entendi: 'nao_entendi', xingamento: 'xingamento', elogio: 'elogio', como_funciona: 'pensando', limites: 'pensando', sobre_jf: 'elogio' };
+    nao_entendi: 'nao_entendi', xingamento: 'xingamento', elogio: 'elogio', apelido: 'elogio', como_funciona: 'pensando', limites: 'pensando', sobre_jf: 'elogio' };
   const temAlerta = !!(resp.alertas && resp.alertas.some(a => ALERTAS.has(a.type)));
   // quando a pergunta já pede um rosto próprio (quem é você, o que pode fazer…), a frase não troca ele
   // ("o que você pode fazer?" saía preocupado por causa da palavra "aperta")

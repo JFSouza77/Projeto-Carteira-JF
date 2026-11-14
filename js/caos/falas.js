@@ -1133,6 +1133,66 @@ export const GERADORES = {
       ],
     },
   },
+  // 2.1.4 (JF, 14/11): "corno", "vagabundo"… vindo de amigo é tratamento, não xingamento.
+  apelido: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Fala, parceiro! Tô aqui. Manda a pergunta.',
+        'Opa, chegou o brother! Em que posso ajudar?',
+        'Apelido de amigo, anotado. E aí, o que manda?',
+        'Presente! Quer ver o mês ou anotar um gasto?',
+        'Fala tu! Bora olhar esse dinheiro?',
+        'Esse é o carinho do brasileiro, né? Tô ouvindo.',
+        'Aqui, firmeza! Me diz o que precisa.',
+        'Chamou, eu vim. Qual é a boa?',
+        'Diz aí, parceirinho. Pergunta que eu respondo.',
+        'Tô na área! Quer saber quanto gastou este mês?',
+      ],
+    },
+  },
+  // 2.1.4 (JF, 14/11): tocar no avatar grande. Ele reage ao cutucão, sem mexer em nada.
+  cutucar: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Ei! Isso faz cócegas!',
+        'Opa, tô acordado, tô acordado!',
+        'Cutucou, ganhou atenção. Fala!',
+        'Hihi. De novo não, que eu perco a pose.',
+        'Assim você me desconcentra das contas!',
+        'Toque registrado. Esse eu não cobro.',
+        'Tô aqui, tô aqui! Quer conversar?',
+        'Se cutucar mais, eu viro outra forma!',
+        'Ui! Calma que eu sou só um robozinho.',
+        'Gostei da visita. Bora ver o mês?',
+      ],
+    },
+  },
+  apelido_curto: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Fala, parceiro!',
+        'Opa, brother!',
+        'Diz aí!',
+        'Tô aqui!',
+        'Presente!',
+      ],
+    },
+  },
+  xingou_junto: {
+    moldes: ['{inteira}'],
+    inteira: {
+      geral: [
+        'Ouvi o xingamento e a pergunta. Respondo a pergunta:',
+        'Xingou, mas perguntou. Vamos à resposta:',
+        'Sem estresse. Sobre o que você perguntou:',
+        'Anotei a raiva. A resposta:',
+        'Tá bom, tá bom. Lá vai:',
+      ],
+    },
+  },
   desabafo_curto: {
     moldes: ['{inteira}'],
     inteira: {

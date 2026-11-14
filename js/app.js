@@ -14,7 +14,7 @@ import {
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, rostoEspantado, rostoDaEmo, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
-import { GLOSSARIO, ATUALIZADO_EM } from './caos/glossario.js';
+import { GLOSSARIO, ATUALIZADO_EM, GLOS_TEMAS, temaDoTermo } from './caos/glossario.js';
 import { fraseDoPrint, resumoDoPrint } from './caos/ofertas.js';
 import { corCategoria, corFonte, corForma, temaBanco } from './cores.js';
 import { NUCLEO } from './caos/nucleo.js';
@@ -106,6 +106,47 @@ function ligarAvatares() {
     console.warn('avatar', e);
   }
 }
+// Palco (JF, 14/11: "quando clicar no avatar, ele expandir pra aparecer na tela, pra gente poder interagir").
+// Tocar no avatar grande = cutucão: ele troca de forma e reage. Os botões mandam a pergunta pra conversa.
+const FORMAS_CUTUCAO = ['surpreso', 'feliz', 'envergonhado', 'humorista', 'amigao', 'confiante', 'desconfiado', 'zen', 'anjinho', 'sonolento'];
+let palcoTimer = null;
+function ligarPalco() {
+  const dlg = $('#palco-dialog');
+  const btn = $('#chat-avatar-btn');
+  if (!dlg || !btn) return;
+  btn.addEventListener('click', () => {
+    if (!avatares.palco) {
+      try { avatares.palco = criarAvatar($('#palco-avatar'), { tamanho: 'grande' }); } catch (e) { console.warn('avatar', e); }
+    }
+    const forma = formaPara({ rosto: emocaoDoMomento(state.caosMemory, state.settings.mood).rosto });
+    avatares.palco?.mostrar(forma, { imediato: true });
+    $('#palco-forma').textContent = nomeForma(forma);
+    $('#palco-fala').textContent = 'Me cutuca que eu reajo!';
+    dlg.showModal();
+  });
+  $('#palco-avatar-btn').addEventListener('click', () => {
+    const forma = FORMAS_CUTUCAO[Math.floor(Math.random() * FORMAS_CUTUCAO.length)];
+    avatares.palco?.mostrar(forma);
+    $('#palco-forma').textContent = nomeForma(forma);
+    const r = falaAvulsa('cutucar', {}, { mood: state.settings.mood, memory: state.caosMemory, perfil: state.perfil });
+    if (r.texto) {
+      guardarMemoria(r.memoria);
+      $('#palco-fala').textContent = r.texto;
+      avatares.palco?.falando(true);
+      clearTimeout(palcoTimer);
+      palcoTimer = setTimeout(() => avatares.palco?.falando(false), Math.min(2600, 600 + r.texto.length * 45));
+      if (state.settings.voice) falar(r.texto);
+    }
+  });
+  dlg.querySelector('.palco-acoes').addEventListener('click', e => {
+    const b = e.target.closest('[data-pergunta]');
+    if (!b) return;
+    dlg.close();
+    enviarPergunta(b.dataset.pergunta);
+  });
+  dlg.addEventListener('close', () => { clearTimeout(palcoTimer); avatares.palco?.falando(false); });
+}
+
 /** Mexe a boca dos avatares por um tempinho (enquanto ele "fala"). */
 let falaTimer = null;
 function avatarFala(ms) {
@@ -253,16 +294,40 @@ function renderEstudio() {
 
 const semAcento = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
+let glosTema = ''; // tema escolhido nos chips do glossário ('' = todos)
+const GLOS_TEMA_DE = new Map(GLOSSARIO.map(g => [g, temaDoTermo(g)]));
+
 function renderGlossario() {
   const q = semAcento($('#glos-busca').value.trim());
-  const achados = GLOSSARIO.filter(g => !q || semAcento(g.termo).includes(q) || g.chaves.some(k => semAcento(k).includes(q)) || semAcento(g.adulto).includes(q));
-  $('#glos-total').textContent = q ? `${achados.length} de ${GLOSSARIO.length} termos.` : `${GLOSSARIO.length} termos.`;
-  $('#glos-lista').innerHTML = achados.length ? achados.map(g => `
-    <details><summary>${esc(g.termo)}</summary>
-      <p>${esc(g.adulto)}</p>
-      <p class="mais">${esc(g.mais)}</p>
-      ${g.governo ? `<p class="mais">Regra de ${esc(ATUALIZADO_EM)}: confira no canal oficial, porque muda com o tempo.</p>` : ''}
-    </details>`).join('') : '<p class="muted">Não achei esse termo. Tente outra palavra ou pergunte pro C.A.O.S. na conversa.</p>';
+  const chips = $('#glos-temas');
+  if (chips && !chips.childElementCount) {
+    // 14/11 (JF: "mais lúdico, com coresinhas"): um chip colorido por tema, que filtra a lista
+    chips.innerHTML = [{ id: '', nome: 'Todos', cor: 'outros' }, ...GLOS_TEMAS].map(t =>
+      `<button type="button" class="glos-chip" data-tema="${t.id}" style="--tema:var(--cat-${t.cor})" aria-pressed="${t.id === glosTema}">${esc(t.nome)}</button>`).join('');
+    chips.addEventListener('click', e => {
+      const b = e.target.closest('.glos-chip');
+      if (!b) return;
+      glosTema = b.dataset.tema;
+      chips.querySelectorAll('.glos-chip').forEach(c => c.setAttribute('aria-pressed', String(c === b)));
+      renderGlossario();
+    });
+  }
+  const achados = GLOSSARIO.filter(g => (!glosTema || GLOS_TEMA_DE.get(g) === glosTema)
+    && (!q || semAcento(g.termo).includes(q) || g.chaves.some(k => semAcento(k).includes(q)) || semAcento(g.adulto).includes(q)));
+  $('#glos-total').textContent = q || glosTema ? `${achados.length} de ${GLOSSARIO.length} termos.` : `${GLOSSARIO.length} termos.`;
+  const corDe = id => GLOS_TEMAS.find(t => t.id === id)?.cor || 'outros';
+  $('#glos-lista').innerHTML = achados.length ? achados.map(g => {
+    const tema = GLOS_TEMA_DE.get(g);
+    return `
+    <details style="--tema:var(--cat-${corDe(tema)})"><summary><span class="glos-bola" aria-hidden="true">${esc(g.termo[0])}</span>${esc(g.termo)}</summary>
+      <div class="glos-corpo">
+        <p>${esc(g.adulto)}</p>
+        ${g.crianca ? `<p class="glos-crianca"><b>Bem simples:</b> ${esc(g.crianca)}</p>` : ''}
+        <p class="mais">${esc(g.mais)}</p>
+        ${g.governo ? `<p class="mais">Regra de ${esc(ATUALIZADO_EM)}: confira no canal oficial, porque muda com o tempo.</p>` : ''}
+      </div>
+    </details>`;
+  }).join('') : '<p class="muted">Não achei esse termo. Tente outra palavra ou pergunte pro C.A.O.S. na conversa.</p>';
 }
 
 function renderCalculadora() {
@@ -2536,28 +2601,31 @@ function sincronizarLogo() {
   syncTimer = setTimeout(() => sincronizarAgora(), 3000);
 }
 
-async function entrarNaConta(criar) {
-  const err = $('#conta-erro');
+// campos: os do cartão de Ajustes (padrão) ou os da abertura (JF, 14/11: login direto na tela inicial)
+async function entrarNaConta(criar, campos = { apelido: '#conta-apelido', senha: '#conta-senha', erro: '#conta-erro', entrar: '#conta-entrar', criar: '#conta-criar' }) {
+  const err = $(campos.erro);
   err.hidden = true;
-  const apelido = $('#conta-apelido').value.trim();
-  const senha = $('#conta-senha').value;
-  if (!servidor()) { err.textContent = 'Primeiro coloque o endereço do servidor do C.A.O.S. Finanças em "IA online e servidor".'; err.hidden = false; return; }
-  if (apelido.length < 2) { err.textContent = 'Escolha um apelido com pelo menos 2 letras.'; err.hidden = false; return; }
-  if (senha.length < 6) { err.textContent = 'A senha precisa ter pelo menos 6 letras ou números.'; err.hidden = false; return; }
+  const apelido = $(campos.apelido).value.trim();
+  const senha = $(campos.senha).value;
+  if (!servidor()) { err.textContent = 'Primeiro coloque o endereço do servidor do C.A.O.S. Finanças em "IA online e servidor".'; err.hidden = false; return false; }
+  if (apelido.length < 2) { err.textContent = 'Escolha um apelido com pelo menos 2 letras.'; err.hidden = false; return false; }
+  if (senha.length < 6) { err.textContent = 'A senha precisa ter pelo menos 6 letras ou números.'; err.hidden = false; return false; }
   // Troca de conta (achado do GPT, 12/11): os dados deste aparelho são de outra conta? Não manda sem perguntar.
   const dona = await conta.contaDona().catch(() => null);
   const temDados = state.expenses.length + state.incomes.length + state.accounts.length > 0;
   if (temDados && dona && dona !== (normalizarApelido(apelido) || apelido.trim().toLowerCase())) {
     const ok = confirm(`Os dados deste aparelho são da conta "${dona}". Se você entrar em "${apelido}", eles vão junto pra essa conta.\n\nQuer mesmo juntar?\n\n(Se não, toque em Cancelar, faça um backup e apague os dados em Ajustes antes de entrar.)`);
-    if (!ok) return;
+    if (!ok) return false;
   }
-  const botoes = [$('#conta-entrar'), $('#conta-criar')];
+  const botoes = [$(campos.entrar), $(campos.criar)];
   const textos = botoes.map(b => b.textContent);
+  let ok = false;
   botoes.forEach(b => { b.disabled = true; });
   (criar ? botoes[1] : botoes[0]).textContent = 'Protegendo…';
   try {
     const { exibicao: nome, criador } = await conta.entrar(servidor(), { apelido, senha, criar });
-    $('#conta-senha').value = '';
+    $(campos.senha).value = '';
+    ok = true;
     // selo de criador: só o servidor dá (lista de contas dele), nunca o nome digitado
     await marcarSelo(criador);
     toast(criar ? `Conta ${nome} criada! Agora seus aparelhos ficam juntos.` : `Bem-vindo de volta, ${nome}! Buscando seus dados…`);
@@ -2569,6 +2637,7 @@ async function entrarNaConta(criar) {
     botoes.forEach((b, i) => { b.disabled = false; b.textContent = textos[i]; });
   }
   renderConta();
+  return ok;
 }
 
 async function marcarSelo(criador) {
@@ -3156,6 +3225,7 @@ async function limparFotosOrfas() {
 async function init() {
   comecarAbertura();
   ligarAvatares();
+  ligarPalco();
   bind();
   $('#date').value = toISODate();
   try {
@@ -3294,27 +3364,37 @@ function comecarAbertura() {
     avatares.abertura?.mostrar(forma);
     if (dica) dica.textContent = frase;
   }, i * (ABERTURA_MS / ABERTURA_PASSOS.length)));
-  ab.addEventListener('click', e => { if (!e.target.closest('button')) fecharAbertura(); });
+  ab.addEventListener('click', e => { if (!ab.classList.contains('esperando') && !e.target.closest('button')) fecharAbertura(); });
 }
 
+// JF, 14/11: "a tela inicial tem que ter entrar na conta ou cadastrar. Depois que a conta está pronta, é só clicar
+// e entrar". Então a abertura espera um botão: com conta, "Entrar como JF"; sem conta, o login ali mesmo.
 async function mostrarAbertura() {
   const ab = $('#abertura');
   if (!ab) return;
   const n = NOVIDADES[0];
   $('#abertura-versao').textContent = `Versão ${VERSAO_APP}${n.nome ? ` · ${n.nome}` : ''} · atualizada em ${n.data}`;
   const temConta = await conta.contaAtual().catch(() => null);
-  const oferecerLogin = !temConta && servidor() && state.perfil && !state.onboarding && !state.settings.aberturaSemConta;
-  if (!oferecerLogin) {
+  if (state.onboarding || (!temConta && !servidor())) {
     setTimeout(fecharAbertura, Math.max(0, ABERTURA_MS - performance.now()));
     return;
   }
   ab.classList.add('esperando');
+  $('.abertura-pula')?.remove();
   $('#abertura-login').hidden = false;
-  $('#abertura-entrar').addEventListener('click', () => {
-    fecharAbertura();
-    location.hash = 'ajustes';
-    setTimeout(() => { const c = $('#conta-card'); if (c) { c.open = true; c.scrollIntoView({ block: 'start' }); $('#conta-apelido')?.focus(); } }, 350);
-  }, { once: true });
+  if (temConta) {
+    $('#abertura-form').hidden = true;
+    $('#abertura-pular').hidden = true;
+    $('#abertura-criar').hidden = true;
+    $('#abertura-entrar').textContent = `Entrar como ${temConta.exibicao || temConta.apelido}`;
+    $('#abertura-entrar').addEventListener('click', fecharAbertura, { once: true });
+    return;
+  }
+  const campos = { apelido: '#ab-apelido', senha: '#ab-senha', erro: '#ab-erro', entrar: '#abertura-entrar', criar: '#abertura-criar' };
+  const ir = async criar => { if (await entrarNaConta(criar, campos)) fecharAbertura(); };
+  $('#abertura-entrar').addEventListener('click', () => ir(false));
+  $('#abertura-criar').addEventListener('click', () => ir(true));
+  $('#ab-senha').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); ir(false); } });
   $('#abertura-pular').addEventListener('click', () => {
     state.settings.aberturaSemConta = true;
     saveSettings();

@@ -122,3 +122,28 @@ export function acharTermo(texto) {
   const t = ` ${norm(texto).replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ')} `;
   return INDICE.find(({ k }) => t.includes(` ${k} `))?.g ?? null;
 }
+
+// Temas do glossário (JF, 14/11: "deixar mais lúdico, com coresinhas"). Cada tema tem uma cor (token --cat-* do app,
+// que já tem versão clara e escura). Pura: o app só pinta.
+export const GLOS_TEMAS = Object.freeze([
+  { id: 'cartao', nome: 'Cartão e pagamento', cor: 'transporte' },
+  { id: 'dividas', nome: 'Juros e dívidas', cor: 'restaurante' },
+  { id: 'investir', nome: 'Guardar e investir', cor: 'mercado' },
+  { id: 'governo', nome: 'Governo e impostos', cor: 'moradia' },
+  { id: 'estudo', nome: 'Estudo', cor: 'educacao' },
+  { id: 'conta', nome: 'Matemática', cor: 'contas' },
+  { id: 'dia', nome: 'Dia a dia', cor: 'lazer' },
+]);
+
+/** Tema de um termo do glossário (id de GLOS_TEMAS). */
+export function temaDoTermo(g) {
+  const t = g.termo.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  if (/bolsa de estudo|bolsa parcial|prouni|fies|mensalidade/.test(t)) return 'estudo';
+  if (/aliquota|porcentagem|regra de tres|media|desconto/.test(t)) return 'conta';
+  if (/selic|poupanca|tesouro|fgc|lci|administracao|cdi|renda (fixa|variavel)|cdb|acoes|dividendo|fundo|diversifica|risco|rentabilidade|previdencia|cripto|liquidez|inflacao|reserva|cofrinho|^bolsa$|bolsa de valores|patrimonio|oportunidade/.test(t)) return 'investir';
+  if (/cambio|open finance/.test(t)) return 'dia';
+  if (/juros|taxa|rotativo|emprestimo|cet|consignado|mora|refinanciamento|cheque|financiamento|amortizacao|nome sujo|score|portabilidade/.test(t)) return 'dividas';
+  if (/fatura|limite|cartao|parcel|credito|debito|pix|boleto|anuidade|cashback|pagamento/.test(t)) return 'cartao';
+  if (g.governo || /imposto|iptu|ipva|inss|fgts|mei|licenciamento|13|restituicao|iof|salario minimo|bandeira/.test(t)) return 'governo';
+  return 'dia';
+}

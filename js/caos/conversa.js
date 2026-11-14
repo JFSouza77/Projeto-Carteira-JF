@@ -260,8 +260,15 @@ const PALAVROES = {
 const OFENSAS = {
   vsf: 'vai se foder', vtnc: 'vai tomar no cu', tnc: 'tomar no cu', fdp: 'filho da puta', vsfd: 'vai se foder', pnc: 'pau no cu',
   burro: 'burro', idiota: 'idiota', inutil: 'inutil', lixo: 'lixo', otario: 'otario', otaria: 'otaria', babaca: 'babaca', imbecil: 'imbecil',
-  trouxa: 'trouxa', arrombado: 'arrombado', corno: 'corno', bocó: 'boco', boco: 'boco', retardado: 'retardado', estupido: 'estupido', jumento: 'jumento', anta: 'anta',
+  trouxa: 'trouxa', arrombado: 'arrombado', bocó: 'boco', boco: 'boco', retardado: 'retardado', estupido: 'estupido', jumento: 'jumento', anta: 'anta',
   porcaria: 'porcaria', chato: 'chato', ridiculo: 'ridiculo', palhaco: 'palhaco', escroto: 'escroto', cuzao: 'cuzao',
+};
+// Apelido de amigo (JF, 14/11: "eu chamo meus melhores amigos de corno, de vagabundo… é meu jeito de tratar o caos"):
+// não é xingamento. Ele entende como tratamento de brother e responde a pergunta que veio junto.
+const APELIDOS = {
+  corno: 'corno', cornao: 'corno', vagabundo: 'vagabundo', vagabunda: 'vagabunda', vagaba: 'vagabundo', safado: 'safado', safada: 'safada',
+  malandro: 'malandro', maluco: 'maluco', doido: 'doido', doida: 'doida', mane: 'mane', pilantra: 'pilantra', folgado: 'folgado',
+  cabecudo: 'cabecudo', sacana: 'sacana', bandido: 'bandido', vacilao: 'vacilao',
 };
 const FRASES_OFENSA = /(vai (se|te) (foder|fuder|ferrar|lascar)|vai tomar no cu|filho da puta|odeio (voce|vc|o caos)|cala (a )?boca|tomar no cu)/;
 const PARA_ELE = /\b(voce|vc|tu|caos|seu|sua|te|contigo)\b/;
@@ -272,15 +279,30 @@ export function lerPalavroes(t) {
   const temPalavrao = palavras.some(w => PALAVROES[w]) || /puta que pariu|que merda|que porra/.test(t);
   // palavrão dito PRA ele ("caos de merda", "você é uma bosta") também é ofensa
   const ofensa = temOfensa || (temPalavrao && PARA_ELE.test(t) && /\b(e|eh|de|seu|sua|uma?|esse|essa)\b/.test(t) && palavras.length <= 7);
-  const limpo = palavras.filter(w => !PALAVROES[w] && !OFENSAS[w]).join(' ')
-    .replace(/\b(puta que pariu|que (merda|porra))\b/g, ' ').replace(/^(que|mano|meu|ai|nossa|ah|eita)( |$)/, '').replace(/\s+/g, ' ').trim();
-  return { limpo, palavrao: temPalavrao || temOfensa, ofensa };
+  const apelido = palavras.some(w => APELIDOS[w]);
+  const limpo = palavras.filter(w => !PALAVROES[w] && !OFENSAS[w] && !APELIDOS[w]).join(' ')
+    .replace(new RegExp(FRASES_OFENSA.source, 'g'), ' ').replace(/\b(puta que pariu|que (merda|porra))\b/g, ' ').replace(/^(que|mano|meu|ai|nossa|ah|eita)( |$)/, '').replace(/\s+/g, ' ').trim();
+  return { limpo, palavrao: temPalavrao || temOfensa, ofensa, apelido };
 }
+
+// Sobrou só "e aí", "fala", "oi"… depois de tirar o apelido? Então foi só um chamado de amigo.
+const SO_CHAMADO = /^(e ai|eai|fala|oi|ola|opa|salve|bom dia|boa tarde|boa noite|ei|ow|o|caos|meu|mano|ai|hein|ne)?( (caos|meu|mano|ai|hein|ne|ze))*$/;
 
 export function entender(texto, { categories = [], anterior = null } = {}) {
   const base = corrigirDigitacao(expandirGirias(norm(texto)), categories.map(c => norm(c.name)));
   const pv = lerPalavroes(base);
-  if (pv.ofensa) return { t: base, intent: 'xingamento', palavrao: true, categoria: null, periodo: acharPeriodo(base) };
+  // Xingou E perguntou ("burro, quanto gastei?"): ele lê os dois. Responde a pergunta, com uma reação curta antes.
+  // Só xingamento, sem pergunta de verdade: segue como xingamento (com a paciência escalando).
+  if (pv.ofensa) {
+    const r = pv.limpo && pv.limpo !== base && !SO_CHAMADO.test(pv.limpo) ? entender(pv.limpo, { categories, anterior }) : null;
+    if (r && r.intent !== 'nao_entendi' && r.intent !== 'xingamento' && r.intent !== 'desabafo') return { ...r, palavrao: true, xingouJunto: true };
+    return { t: base, intent: 'xingamento', palavrao: true, categoria: null, periodo: acharPeriodo(base) };
+  }
+  if (pv.apelido && !pv.palavrao) {
+    if (!pv.limpo || pv.limpo === base || SO_CHAMADO.test(pv.limpo)) return { t: base, intent: 'apelido', categoria: null, periodo: 'mes' };
+    const r = entender(pv.limpo, { categories, anterior });
+    return { ...r, apelido: true };
+  }
   if (pv.palavrao) {
     const r = entender(pv.limpo, { categories, anterior });
     if (!pv.limpo || (r.intent === 'nao_entendi' && !r.palpite)) return { ...r, t: base, intent: 'desabafo', palavrao: true };

@@ -25,6 +25,8 @@ Depois de cada correção, escreva no Registro: o que o JF viu, a causa, o que m
 | 12/11 | "C6 Bank" duas vezes (conta e cartão) | rótulo não dizia o tipo | `accountLabel` com "Cartão", "Poupança", "Cofrinho" | `tests/engine.test.js` (apelido da conta) |
 | 12/11 | "—" gigante na Sobra prevista parecia erro | placeholder sem texto | frase "Lance sua entrada pra eu calcular" | `npm run test:telas` (print) |
 | 12/11 | (achado do Code) Qualquer um que digitasse "JF" virava criador | `ehCriador` olhava só o nome digitado | criador só com `seloCriador`, que vem do login (lista `CRIADOR_CONTAS` no servidor) | `tests/idade.test.js`, `servidor/tests/conta.test.js` |
+| 14/11 | "Corno, quem te criou?" só respondeu ao "corno" | `corno` estava em `OFENSAS`, e ofensa virava xingamento sem olhar o resto | `APELIDOS` (tratamento de amigo) + ofensa com pergunta responde a pergunta (`xingouJunto`) | `tests/palavrao.test.js` |
+| 14/11 | Campo de senha com cara diferente (cinza, quadrado) | `input[type=password]` fora do seletor de campos | entrou no seletor global | print da abertura |
 | 13/11 | (GPT) Sair e entrar em outra conta levava os dados do aparelho pra ela | `entrar()` marcava tudo pra subir em qualquer login | `contaDona`: entrar em conta diferente pergunta antes | revisão manual (precisa do servidor pra teste de ponta a ponta) |
 | 13/11 | (GPT) Fatura vencida sumia do limite sem pagar | vencimento era tratado como pagamento | `faturaPagaAte` + botão "Paguei a fatura"; alerta de atraso | `tests/cartao.test.js`, `tests/debug_gpt.test.js` |
 | 13/11 | (GPT) Registro que não abria na sincronia ficava perdido | cursor avançava mesmo com registro ruim | com registro ruim, o cursor não avança | revisão manual |

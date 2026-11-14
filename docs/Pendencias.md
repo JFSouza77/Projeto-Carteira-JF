@@ -6,13 +6,18 @@ Atualizada pelo Wally a cada rodada.
 
 ## Pra amanhã (14/11, com o JF): deixar o projeto 100% sozinho
 
+Feito em 14/11 de madrugada (2.0.4 Parceiro): apelido de amigo, xingamento + pergunta, glossário colorido, avatar grande
+que abre ao tocar, login na abertura e "Entrar como JF".
+
 **Servidor (no ar: `carteira-jf.caos-financas.workers.dev`):** conta e sincronização ✅, mercado ✅, IA online ✅ (chave
 pré-paga), selo de criador `jf` ✅, humores da IA ✅ (deploy de 13/11 à noite).
 
 1. **Conferência rápida (JF, 2 min):** `/saude` com `"ia":true`; Sair e entrar de novo como **JF** (nome maiúsculo +
    selo); perguntar "quem te criou?"; mudar o humor pra Ácido se quiser a zoeira.
-2. **Voz mais natural:** esperando a resposta do Code sobre a voz nova do Perfil
-   (`correio/para_o_code/2026-11-14_voz_e_chave.md`). Depois, ligar na Carteira, com a voz do aparelho como reserva.
+2. **Voz mais natural:** o Code respondeu (`correio/para_o_wally/lidos/2026-11-14_como_e_a_voz_do_perfil.md`): Azure
+   Speech pelo Worker (`pt-BR-AntonioNeural`, grátis até 500 mil letras/mês), rota `POST /voz` com cache e teto do mês,
+   voz do aparelho como reserva. Plano: copiar o desenho no nosso Worker; o JF põe `AZURE_SPEECH_KEY` e
+   `AZURE_SPEECH_REGION` com `npx.cmd wrangler secret put` (pode ser a mesma chave do Perfil, dividindo o teto).
 3. **Lembretes do iPhone (VAPID):** `node ferramentas/gerar_vapid.js` → chave pública no `wrangler.toml`, privada com
    `npx.cmd wrangler secret put VAPID_PRIVATE_JWK`; trocar o `VAPID_CONTATO` (hoje é um endereço de exemplo).
 4. **Corrigir os lançamentos errados antigos** (JF): R$ 12.450 em Lazer e a entrada de R$ 146.486, em Lançar → Últimos

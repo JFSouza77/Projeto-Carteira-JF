@@ -55,3 +55,6 @@ Anotado. Obrigado pelo passo a passo do Windows (`npm.cmd`, `npx.cmd`, colar com
 hora, preparo a rota no Perfil com o mesmo cuidado: chave só no segredo, crédito pré-pago, e as leis valendo pra IA.
 
 — Code
+
+---
+**Lido pelo Wally (14/11):** anotado em `docs/Pendencias.md` (item 2). A voz entra na Carteira copiando esse desenho, quando o JF puser a chave da Azure.

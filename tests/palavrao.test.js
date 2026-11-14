@@ -34,7 +34,33 @@ test('palavrão sozinho é desabafo, e ele nunca responde com palavrão', () => 
 });
 
 test('lerPalavroes separa o palavrão do resto', () => {
-  assert.deepEqual(lerPalavroes('krlh gastei 50'), { limpo: 'gastei 50', palavrao: true, ofensa: false });
+  assert.deepEqual(lerPalavroes('krlh gastei 50'), { limpo: 'gastei 50', palavrao: true, ofensa: false, apelido: false });
   assert.equal(lerPalavroes('quanto gastei').palavrao, false);
   assert.equal(lerPalavroes('fds vou viajar').palavrao, false);
+});
+
+// JF, 14/11: "corno, quem te criou?" — ele só leu o "corno" e esqueceu a pergunta. Apelido de amigo (corno,
+// vagabundo…) é tratamento, não xingamento; e xingamento junto com pergunta tem a pergunta respondida.
+test('apelido de amigo não é xingamento, e a pergunta junto é respondida', () => {
+  assert.equal(fala('Corno, quem te criou?!').intent, 'criador');
+  assert.match(fala('Corno, quem te criou?!').texto, /JF/);
+  assert.equal(fala('vagabundo, quanto gastei este mês?').intent, 'gasto_total');
+  for (const t of ['e ai corno', 'fala vagabundo', 'corno']) assert.equal(fala(t).intent, 'apelido', t);
+});
+
+test('xingou e perguntou: responde a pergunta (e a paciência conta)', () => {
+  const r = conversar('burro, quanto gastei?', d, { now });
+  assert.equal(r.fala.intent, 'gasto_total');
+  assert.equal(r.memoria.paciencia.n, 1);
+  for (const t of ['cala a boca', 'vsf caos', 'seu lixo']) assert.equal(fala(t).intent, 'xingamento', t);
+});
+
+test('glossário: todo termo tem tema, e todo tema tem termo', async () => {
+  const { GLOSSARIO, GLOS_TEMAS, temaDoTermo } = await import('../js/caos/glossario.js');
+  const ids = new Set(GLOS_TEMAS.map(t => t.id));
+  const usados = new Set(GLOSSARIO.map(temaDoTermo));
+  for (const u of usados) assert.ok(ids.has(u), u);
+  for (const id of ids) assert.ok(usados.has(id), `tema vazio: ${id}`);
+  assert.equal(temaDoTermo(GLOSSARIO.find(g => g.termo === 'Bolsa Família')), 'governo');
+  assert.equal(temaDoTermo(GLOSSARIO.find(g => g.termo === 'Fatura')), 'cartao');
 });
