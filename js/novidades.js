@@ -17,10 +17,11 @@ export const NOVIDADES = Object.freeze([
       '⚠️ Alertas com o triângulo: dá pra ver na hora o que pede atenção.',
       '🧱 Blocos de foco: no Mês e em Contas, abriu um, os outros somem.',
       '📋 Lançar mais simples: categoria e forma de pagar num menu.',
-      '🍦 Categoria certa: cerveja vai pra Mercado e sorvete pra Restaurante.',
+      '📰 Notícias do dia: as de dinheiro, às 7h e às 17h, explicadas simples.',
       '😤 Cutucão com limite: o C.A.O.S. cansa e fica bravo se você exagerar.',
     ],
     qol: [
+      '🍦 Categoria certa: cerveja vai pra Mercado e sorvete pra Restaurante.',
       '❓ Bolinha de ajuda: não cobre mais a barra de baixo.',
       '🧾 Últimos lançamentos: num bloco que abre e fecha.',
       '📖 Previsão do mês: com letra mais forte.',
