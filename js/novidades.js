@@ -7,6 +7,24 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.0.7 Alfa',
+    data: '14/11/2026',
+    nome: 'Bom Ouvinte',
+    t: 'O C.A.O.S. entende melhor o jeito que você fala, e as barras não fogem mais com o teclado.',
+    itens: [
+      '🗣️ Sem precisar de "gastei": "7 reais no débito do Inter" já vira gasto.',
+      '📅 Corrige a data: "esse gasto foi na quarta" muda o dia do último gasto.',
+      '🕘 Hora não é dinheiro: "às 9 da manhã" não vira mais R$ 9.',
+      '✋ "Não" cancela: quando ele pergunta como você pagou.',
+      '❓ Foi em quê: sem saber o que foi, ele pergunta antes de anotar.',
+      '📱 Barras no lugar: o teclado não deixa mais as barras soltas na tela.',
+    ],
+    qol: [
+      '🍔 Lanchonetes conhecidas: McDonald\'s, Subway e cia. vão pra Restaurante.',
+      '✨ Respostas da IA sem asteriscos: o destaque aparece em negrito.',
+    ],
+  },
+  {
     v: '2.0.6 Alfa',
     data: '14/11/2026',
     nome: 'Organizado',

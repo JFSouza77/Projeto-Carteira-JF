@@ -23,7 +23,7 @@ const norm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLow
 const SINONIMOS = {
   mercado: ['mercado', 'supermercado', 'feira', 'acougue', 'padaria', 'hortifruti', 'atacadao', 'compras do mes', 'cerveja', 'refrigerante', 'bebida'],
   delivery: ['delivery', 'ifood', 'i food', 'rappi', 'pedido de comida', 'pedi comida', 'lanche em casa'],
-  restaurante: ['restaurante', 'almoco', 'jantar', 'lanche', 'lanchonete', 'bar', 'cafe', 'pizzaria', 'hamburguer', 'sorvete', 'casquinha', 'acai', 'pastel', 'salgado', 'coxinha'],
+  restaurante: ['restaurante', 'almoco', 'jantar', 'lanche', 'lanchonete', 'bar', 'cafe', 'pizzaria', 'hamburguer', 'sorvete', 'casquinha', 'acai', 'pastel', 'salgado', 'coxinha', 'mcdonalds', 'mcdonald s', 'mc donalds', 'burger king', 'subway', 'bobs'],
   transporte: ['transporte', 'uber', '99', 'onibus', 'metro', 'gasolina', 'combustivel', 'estacionamento', 'pedagio', 'taxi', 'carro', 'posto', 'etanol', 'alcool', 'diesel'],
   moradia: ['moradia', 'aluguel', 'condominio', 'iptu', 'casa'],
   contas: ['contas', 'conta de luz', 'luz', 'agua', 'internet', 'celular', 'telefone', 'gas', 'energia', 'boleto'],
@@ -118,6 +118,13 @@ export function dataDoTexto(t, today) {
   const menos = n => { const d = new Date(`${today}T12:00:00`); d.setDate(d.getDate() - n); return toISODate(d); };
   if (/\banteontem\b/.test(t)) return menos(2);
   if (/\bontem\b/.test(t)) return menos(1);
+  // dia da semana (14/11): "foi na quarta" = a última quarta (hoje, se hoje for quarta)
+  const sem = t.match(/\b(domingo|segunda|terca|quarta|quinta|sexta|sabado)(?:[- ]feira)?\b/);
+  if (sem) {
+    const alvo = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'].indexOf(sem[1]);
+    const hoje = new Date(`${today}T12:00:00`).getDay();
+    return menos((hoje - alvo + 7) % 7);
+  }
   const m = t.match(/\bdia (\d{1,2})\b/);
   if (m) {
     const dia = Number(m[1]);
@@ -134,7 +141,10 @@ function avisoDaData(data, today) {
   return `Vou anotar com a data de ${Number(data.slice(8, 10))}/${Number(data.slice(5, 7))}.`;
 }
 
+// Hora não é dinheiro (JF, 14/11: "foi na quarta 09:15 da manhã" virava R$ 9,00)
+const HORAS = /\b\d{1,2}[:h]\d{2}\b|\b\d{1,2}h\b|\bas \d{1,2}(?:h| horas?)?\b|\b\d{1,2} ?(?:h|horas?)?(?= (?:da manha|da tarde|da noite|da madrugada)\b)/g;
 function acharValor(t) {
+  t = String(t).replace(HORAS, ' ');
   const m = t.match(/(?:r\$\s?)?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(reais|real|conto|pila|r\$)?/);
   return m ? parseAmount(m[1]) : null;
 }
@@ -399,8 +409,16 @@ function entenderSimples(t, { categories = [] } = {}) {
     const pct = lerPorcentagem(t);
     if (pct) return { ...r, intent: 'porcentagem', pct };
   }
+  // Corrigir a data do último gasto (JF, 14/11: "esse gasto foi na quarta-feira 09:15 da manhã")
+  if (/\b(esse|este|essa|esta|aquele|aquela|o ultimo|a ultima|ultimo|ultima)\s+(gasto|lancamento|pagamento|valor|compra)\b/.test(t)
+    && /\b(foi|era|e|aconteceu|pago|paguei|caiu)\b/.test(t)
+    && /\b(ontem|anteontem|hoje|dia \d{1,2}|domingo|segunda|terca|quarta|quinta|sexta|sabado)\b/.test(t) && !pergunta) {
+    return { ...r, valor: null, intent: 'corrigir_data' };
+  }
   // Registro ("gastei 30 no mercado", "paguei 120 de luz", "recebi 1500 de salario")
   if (r.valor && !/\bquanto\b/.test(t)) {
+    // sem verbo, mas dizendo como pagou (JF, 14/11: "7 reais no débito do Inter", "5,50 numa casquinha pelo débito")
+    if (!pergunta && /\b(pix|debito|credito|cartao|dinheiro)\b/.test(t) && !/\b(recebi|ganhei|entrou|caiu)\b/.test(t)) return { ...r, intent: 'registrar_gasto' };
     if (/\b(recebi|recebo|ganhei|ganho|entrou|caiu|recebemos|me pagaram)\b/.test(t)) return { ...r, intent: 'registrar_entrada' };
     if (/\b(gastei|paguei|comprei|torrei|saiu|pedi|abasteci|gasto de|gastamos|passei|deixei|foram|foi)\b/.test(t)) return { ...r, intent: 'registrar_gasto' };
     // Anotação curta, sem verbo, do jeito de quem anota num papel: "uber 30", "50 no posto" (achado do Gemini, 06/11)
@@ -607,7 +625,7 @@ const CONTA_DE = { credito: a => a.tipo === 'cartao', pix: a => a.tipo !== 'cart
 /** Tira da descrição as palavras do pagamento (pix, crédito, 3x, nome do banco). */
 function limparPagamento(desc, accounts = []) {
   if (!desc) return desc;
-  desc = desc.replace(/\b(dia \d{1,2}|anteontem|ontem|hoje)\b/gi, ' ').replace(/\bdia\s*$/i, ' ').replace(/\s+/g, ' ').trim();
+  desc = desc.replace(HORAS, ' ').replace(/\b(da manha|da tarde|da noite|da madrugada)\b/g, ' ').replace(/\b(dia \d{1,2}|anteontem|ontem|hoje)\b/gi, ' ').replace(/\bdia\s*$/i, ' ').replace(/\s+/g, ' ').trim();
   if (!desc) return null;
   const bancos = new Set(accounts.flatMap(a => [a.bank, a.nickname]).filter(Boolean).map(norm));
   const LIGA = /^(no|na|de|do|da|em|a|com|pelo|pela|e)$/;
@@ -804,11 +822,19 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
     case 'registrar_gasto': {
       // descrição: o que vem depois de "no/na/de/em/com" ("gastei 30 no uber" → "Uber")
       // descrição sem o jeito de pagar ("no pix no mercado" → "mercado")
-      const desc = limparPagamento(descricaoDe(intencao.t), dados.accounts);
+      // corta o jeito de pagar antes de achar a descrição ("5,50 numa casquinha no mcdonalds pelo débito do inter")
+      const semPag = intencao.t.split(/\s+(?:(?:no|na|pelo|pela|via|com|em|de|do|da)\s+)?(?:pix|debito|credito|cartao|dinheiro)\b/)[0];
+      const desc = limparPagamento(descricaoDe(semPag) || descricaoDe(intencao.t), dados.accounts);
       // categoria: pela palavra (sinônimos) ou pelo que ele aprendeu com o histórico da pessoa
       const aprendida = !intencao.categoria && desc ? sugerirCategoria(desc, expenses) : null;
       const cat = intencao.categoria || (aprendida && categories.find(c => c.id === aprendida.categoryId))
         || categories.find(c => c.id === 'outros') || categories[0];
+      // nem categoria nem descrição ("7 reais no débito do Inter"): pergunta em quê, sem inventar "Outros"
+      if (!intencao.categoria && !aprendida && !desc) {
+        const extra = intencao.t.slice(semPag.length).trim();
+        return { fato: `Anotando ${formatBRL(intencao.valor)}. Foi em quê? Tipo "mercado", "uber" ou "farmácia".`, cru: true,
+          sugestoes: ['Mercado', 'Restaurante', 'Transporte', 'Deixa pra depois'], aguardar: { tipo: 'desc_gasto', valor: intencao.valor, extra } };
+      }
       const recorrente = /\b(internet|luz|energia|agua|aluguel|condominio|netflix|spotify|streaming|academia|plano|celular|telefone|assinatura|mensalidade|escola|faculdade|seguro|gas)\b/.test(intencao.t)
         || ['contas', 'moradia', 'streaming'].includes(cat?.id);
       return {
@@ -823,6 +849,19 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
     }
     case 'pagamento_resposta':
       return intencao.resposta;
+    case 'corrigir_data': {
+      // o último gasto anotado (da categoria, se a frase disser: "esse valor em saúde")
+      const lista = [...expenses].filter(e => !intencao.categoria || e.categoryId === intencao.categoria.id)
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      const ult = lista[0];
+      if (!ult) return { fato: 'Não achei esse gasto aqui. Me fala de novo o valor e onde foi, que eu anoto com a data certa.', cru: true, sugestoes: [] };
+      const nova = dataDoTexto(intencao.t, today);
+      const dm = iso => `${Number(iso.slice(8, 10))}/${Number(iso.slice(5, 7))}`;
+      const nome = ult.note || categories.find(c => c.id === ult.categoryId)?.name || 'gasto';
+      if (nova === ult.date) return { fato: `O gasto "${nome}" (${formatBRL(ult.amountCents)}) já está no dia ${dm(nova)}.`, cru: true, sugestoes: [] };
+      return { fato: `Mudar a data de "${nome}" (${formatBRL(ult.amountCents)}) de ${dm(ult.date)} pra ${dm(nova)}?`, cru: true, sugestoes: [],
+        acao: { tipo: 'editar_data', expenseId: ult.id, date: nova } };
+    }
     case 'glossario': {
       const g = intencao.termo;
       const idade = idadeDe(perfil?.aniversario, today);

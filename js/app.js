@@ -1362,7 +1362,7 @@ function renderChat() {
         : '';
       const f = formaDaMsg(m), fcor = FORMAS[f]?.cor || 'var(--caos)';
       if (m.digitando) return `<li class="msg caos-msg pensando digitando" style="--msg-cor:${fcor}" aria-label="C.A.O.S. está digitando"><span class="who" aria-hidden="true"><span class="caos-face mini" data-msg="${i}"></span></span><span class="pontos" aria-hidden="true"><i></i><i></i><i></i></span> digitando</li>`;
-      return `<li class="msg caos-msg ${m.temp ? 'pensando' : ''}" style="--msg-cor:${fcor}"><span class="who" aria-label="C.A.O.S.${m.ia ? ' com IA' : ''}"><span class="caos-face mini" data-msg="${i}" aria-hidden="true"></span>${m.ia ? '<span class="tag-ia">IA</span>' : ''}</span>${esc(m.texto)}${acao}</li>`;
+      return `<li class="msg caos-msg ${m.temp ? 'pensando' : ''}" style="--msg-cor:${fcor}"><span class="who" aria-label="C.A.O.S.${m.ia ? ' com IA' : ''}"><span class="caos-face mini" data-msg="${i}" aria-hidden="true"></span>${m.ia ? '<span class="tag-ia">IA</span>' : ''}</span>${textoDaMsg(m.texto)}${acao}</li>`;
     }).join('');
     // rostinho no balão (JF, 13/11 à noite: "emoji quebra a lógica; os rostinhos é que dão a característica dele").
     // Combina com o avatar: o rosto da própria fala, se já bate com a forma; senão, o rostinho da forma. Mesma cor.
@@ -1655,6 +1655,17 @@ async function confirmarAcao(i, ok) {
       addMsg({ de: 'caos', texto: `Fechado! A partir de agora te chamo de ${a.apelido}.` });
       return;
     }
+    if (a.tipo === 'editar_data') {
+      // "esse gasto foi na quarta" (14/11): o C.A.O.S. propõe, a pessoa confirma, o app grava
+      const x = state.expenses.find(e => e.id === a.expenseId);
+      if (!x) { addMsg({ de: 'caos', texto: 'Não achei mais esse gasto. Ele foi apagado?' }); return; }
+      const novo = editarLancamento(x, { amountCents: x.amountCents, note: x.note, date: a.date, categoryId: x.categoryId }, { kind: 'gasto', categories: state.categories });
+      await db.put(db.STORES.expenses, novo);
+      state.expenses = state.expenses.map(e => (e.id === x.id ? novo : e));
+      render();
+      addMsg({ de: 'caos', texto: `Pronto: agora está no dia ${Number(a.date.slice(8, 10))}/${Number(a.date.slice(5, 7))}.` });
+      return;
+    }
     if (a.tipo === 'registrar_varios') {
       let eventos = [];
       for (const x of a.itens) eventos = await registrarGasto({ ...x, imageId: a.imageId });
@@ -1697,6 +1708,30 @@ async function explicarPrint(img, duvida) {
   fila.push({ tipo: 'explicar', imagemId: img.id, duvida: String(duvida || '').slice(0, 300), id: crypto.randomUUID?.() || String(Date.now()), criadoEm: Date.now() });
   await db.setMeta('fila', fila);
   addMsg({ de: 'caos', texto: 'Agora eu não consigo falar com o servidor do C.A.O.S. Finanças, mas guardei o print aqui no aparelho. Assim que tiver conexão, eu explico e te aviso.' });
+}
+
+// Negrito simples (14/11: a IA às vezes manda **R$ 238,58** e os asteriscos apareciam). Escapa antes, então é seguro.
+const textoDaMsg = t => esc(t || '').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*\*/g, '');
+
+// Teclado do iPhone (14/11, JF: "as barras descem junto com a tela"): quando o teclado fecha, o iPhone às vezes deixa
+// as barras de baixo no meio da tela. O app percebe o teclado, esconde a barra de abas enquanto ele está aberto e,
+// quando fecha, dá um "empurrãozinho" na rolagem pra ele recalcular o lugar das barras.
+function ligarTeclado() {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  let aberto = false;
+  const conferir = () => {
+    const agora = innerHeight - vv.height > 140;
+    if (agora === aberto) return;
+    aberto = agora;
+    document.body.classList.toggle('teclado', aberto);
+    if (!aberto) requestAnimationFrame(() => { window.scrollTo(window.scrollX, window.scrollY + 1); window.scrollTo(window.scrollX, window.scrollY - 1); });
+  };
+  vv.addEventListener('resize', conferir);
+  document.addEventListener('focusout', () => setTimeout(() => {
+    conferir();
+    if (!document.activeElement?.matches?.('input, textarea, select')) window.scrollTo(window.scrollX, window.scrollY);
+  }, 60));
 }
 
 function tirarAnexo() {
@@ -3438,6 +3473,7 @@ async function init() {
   comecarAbertura();
   ligarAvatares();
   ligarPalco();
+  ligarTeclado();
   bind();
   $('#date').value = toISODate();
   try {
