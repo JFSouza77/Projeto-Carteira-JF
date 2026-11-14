@@ -7,6 +7,26 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.0.6 Alfa',
+    data: '14/11/2026',
+    nome: 'Organizado',
+    t: 'Cada coisa no seu lugar: Início só com o essencial e uma tela nova de Análise.',
+    itens: [
+      '📊 Tela de Análise: gráficos, categorias e todos os lançamentos.',
+      '🔥 Gasto do mês em destaque: e o C.A.O.S. logo em cima.',
+      '⚠️ Alertas com o triângulo: dá pra ver na hora o que pede atenção.',
+      '🧱 Blocos de foco: no Mês e em Contas, abriu um, os outros somem.',
+      '📋 Lançar mais simples: categoria e forma de pagar num menu.',
+      '🍦 Categoria certa: cerveja vai pra Mercado e sorvete pra Restaurante.',
+      '😤 Cutucão com limite: o C.A.O.S. cansa e fica bravo se você exagerar.',
+    ],
+    qol: [
+      '❓ Bolinha de ajuda: não cobre mais a barra de baixo.',
+      '🧾 Últimos lançamentos: num bloco que abre e fecha.',
+      '📖 Previsão do mês: com letra mais forte.',
+    ],
+  },
+  {
     v: '2.0.5 Alfa',
     data: '14/11/2026',
     nome: 'Mais Simples',

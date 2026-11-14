@@ -1177,6 +1177,35 @@ details.conta-det > :not(summary) { margin-top: 8px; }
 :root[data-estilo="limpo"] .banco-grupo, :root[data-estilo="direto"] .banco-grupo { border-top-color: var(--line) !important; }
 :root[data-estilo="limpo"] .tab.active, :root[data-estilo="direto"] .tab.active { text-shadow: none; }
 /* Direto: só o essencial (resumo, lançar, C.A.O.S. e a lista) */
-:root[data-estilo="direto"] #hoje-card, :root[data-estilo="direto"] #ofensiva-card, :root[data-estilo="direto"] #graficos-card,
-:root[data-estilo="direto"] #cat-card, :root[data-estilo="direto"] #sim-card, :root[data-estilo="direto"] #exportar-card,
-:root[data-estilo="direto"] .mes-tiles { display: none; }
+:root[data-estilo="direto"] #hoje-card, :root[data-estilo="direto"] #ofensiva-card,
+:root[data-estilo="direto"] #sim-card, :root[data-estilo="direto"] #exportar-card { display: none; }
+
+/* ---------- 14/11 à tarde (JF): blocos de foco, destaque e Análise ---------- */
+.painel-blocos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.painel-blocos.focado { grid-template-columns: 1fr; }
+.painel-blocos.focado > details:not([open]) { display: none; }
+.tile-bloco:not([open]) > summary.bloco-topo { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 6px; min-height: 96px; }
+.tile-bloco:not([open]) > summary.bloco-topo::after { display: none; }
+.tile-bloco:not([open]) .bloco-tit { flex: none; }
+.tile-bloco:not([open]) .bloco-res { text-align: left; white-space: normal; font-size: .85rem; }
+.tile-bloco > summary .ico { color: var(--accent); width: 26px; height: 26px; }
+.tile-bloco[open] > summary .bloco-res { display: none; }
+/* Análise: voltar à esquerda, título ao lado */
+#tela-analise .topbar { justify-content: flex-start; gap: 12px; }
+#tela-analise .topbar a.icon-btn { display: grid; place-items: center; text-decoration: none; color: var(--text); font-size: 1.6rem; line-height: 1; }
+/* Gasto do mês em destaque (JF: "tá apagado, tem que chamar a atenção") */
+.summary .gasto-titulo { color: var(--warn); font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; gap: 6px; }
+.gasto-titulo .ico { width: 20px; height: 20px; }
+/* Alertas com o triângulo e a cor de atenção */
+.alertas-card { border-color: color-mix(in srgb, var(--warn) 55%, var(--line)); background: color-mix(in srgb, var(--warn) 6%, var(--card)); }
+.alertas-card h2 { color: var(--warn); display: flex; align-items: center; gap: 8px; }
+.alertas-card h2 .ico { width: 22px; height: 22px; }
+.alert-list li { font-weight: 500; }
+/* Botão pra tela de Análise */
+.ir-analise { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text); }
+.ir-analise > .ico { width: 28px; height: 28px; color: var(--accent); flex: none; }
+.ir-analise span:not(.passo-seta) { display: grid; gap: 2px; }
+.ir-analise small { color: var(--muted); }
+/* Mês: a previsão legível (JF: "tá apagado, ruim de ler") */
+.plan-linhas li span:first-child { color: var(--text); }
+.plan-linhas { font-size: 1rem; }

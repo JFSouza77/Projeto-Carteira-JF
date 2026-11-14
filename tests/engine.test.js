@@ -205,5 +205,10 @@ test('aprende categorias pelo histórico', () => {
   assert.equal(sugerirCategoria('Uber', hist).categoryId, 'transporte');
   assert.equal(sugerirCategoria('uber volta', hist).categoryId, 'transporte');
   assert.equal(sugerirCategoria('atacadao', hist).categoryId, 'mercado');
-  assert.equal(sugerirCategoria('cinema', hist), null);
+  assert.equal(sugerirCategoria('coisa estranha', hist), null);
+  // sem histórico, um dicionário básico (JF, 14/11: cerveja e casquinha caíam em Outros)
+  assert.equal(sugerirCategoria('cinema', hist).categoryId, 'lazer');
+  assert.equal(sugerirCategoria('Cerveja', []).categoryId, 'mercado');
+  assert.equal(sugerirCategoria('casquinha', []).categoryId, 'restaurante');
+  assert.equal(sugerirCategoria('Academia', []).categoryId, 'saude');
 });
