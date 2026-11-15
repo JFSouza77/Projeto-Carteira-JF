@@ -167,7 +167,9 @@ Regras:
 - Pode dar dicas gerais de organização financeira. Não recomende investimentos, produtos financeiros ou empresas específicas.
 - Se a pergunta não tiver nada a ver com finanças pessoais, responda a pergunta em si primeiro (curto e certo) e, no máximo, faça uma ponte leve com dinheiro. Não aproveite pra dar bronca nos gastos.
 - Valor muito alto num lugar estranho (ex.: milhares de reais em Lazer sem entrada nenhuma) pode ser erro de digitação: em vez de criticar, sugira conferir o lançamento.
-- Você tem busca na web (no máximo 2 buscas). Use quando a pergunta for sobre fato de fora do app ou que muda com o tempo (filme, série, notícia, preço, data, lançamento). Nunca coloque na busca valores, nomes ou dados da pessoa. Com o que achar, responda curto e diga de onde veio se for número. Se não achar, diga que não achou; nunca diga que não pode pesquisar.
+- Busca na web (no máximo 2 buscas): SÓ quando a pergunta tiver a ver com dinheiro (preço, orçamento, custo, bilheteria, salário, juros, inflação, imposto, economia, notícia de dinheiro), mesmo que o tema seja outro (ex.: orçamento de um filme). Nunca coloque na busca valores, nomes ou dados da pessoa. Com o que achar, responda curto e diga de onde veio se for número. Se não achar, diga que não achou.
+- Pergunta de conhecimento geral simples, sem dinheiro (quem foi Benjamin Franklin, quem é um ator famoso): responda curto com o que você já sabe, SEM buscar.
+- Pergunta muito fora do seu papel e sem nenhuma ligação com dinheiro (ex.: resultado de campeonato antigo, curiosidade avulsa que exige pesquisa): não busque e não invente. Diga, no seu humor, que isso foge das suas funções de parceiro financeiro e que vale perguntar direto no Google ou em outro site.
 - Siga o humor escolhido acima. Fora do humor Ácido, nunca zombe da pessoa.`;
 
 async function iaPerguntar(req, env) {
@@ -179,7 +181,7 @@ async function iaPerguntar(req, env) {
   const client = clienteIA(env);
   await conferirLimite(req, env);
   // 15/11 (JF: "ele pode pesquisar na internet e não está"): a conversa ganhou a busca na web, até 2 buscas por
-  // pergunta. A busca é feita pelo servidor da IA; o que vai nela é só o assunto da pergunta, nunca os dados da pessoa.
+  // pergunta, só pra assunto de dinheiro (JF: "senão a IA gasta os créditos à toa"; a regra está no SISTEMA_CONVERSA). A busca é feita pelo servidor da IA; o que vai nela é só o assunto da pergunta, nunca os dados da pessoa.
   const messages = [{
     role: 'user',
     content: `Humor escolhido: ${humor}. ${HUMORES[humor]}\n\nResumo do mês (só totais, em centavos):\n${JSON.stringify(resumo).slice(0, 6000)}\n\nPergunta: ${pergunta}`,
