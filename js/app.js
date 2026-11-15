@@ -596,6 +596,7 @@ function render() {
   $('#stat-net').textContent = formatBRL(Math.abs(net));
   $('#stat-net').className = `num ${deficit ? 'warn' : net > 0 ? 'ok' : ''}`;
   $('#stat-net-box').classList.toggle('deficit', deficit);
+  $('#stat-net-box').classList.toggle('sobra', net > 0); // 15/11 (JF): a sobra também ganha o quadrinho, em verde
   $('#stat-bank').textContent = state.accounts.length ? saldoTxt(totalBalance(state.accounts, state.expenses, state.incomes, state.transferencias)) : '—';
   renderComece();
 

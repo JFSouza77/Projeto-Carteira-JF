@@ -1332,3 +1332,5 @@ body.teclado .chat-anexo { bottom: 64px; }
 /* Déficit do mês (15/11): saiu mais do que entrou, o quadrinho fica laranja */
 .mini-stats #stat-net-box.deficit { background: color-mix(in srgb, var(--warn) 12%, var(--card-2)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 55%, transparent); }
 .mini-stats #stat-net-box.deficit small, .mini-stats #stat-net-box.deficit small .ico { color: var(--warn); }
+.mini-stats #stat-net-box.sobra { background: color-mix(in srgb, var(--ok) 12%, var(--card-2)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok) 55%, transparent); }
+.mini-stats #stat-net-box.sobra small, .mini-stats #stat-net-box.sobra small .ico { color: var(--ok); }
