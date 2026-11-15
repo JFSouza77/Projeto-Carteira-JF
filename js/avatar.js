@@ -30,6 +30,7 @@ const POR_ASSUNTO = Object.freeze({
   // paciência (13/11): firme → decepcionado → cartão vermelho → sem reação (quietinho) → de volta
   xingamento: 'parceiro', xingamento_2: 'desconfiado', xingamento_3: 'decepcionado', xingamento_3_forte: 'decepcionado',
   xingamento_fim: 'chocado', xingamento_fim_forte: 'vermelho', silencio: 'chocado', passou_raiva: 'anjinho', desculpa_aceita: 'parceiro',
+  moeda_jogo: 'gamer', // 15/11 (JF): moedas de jogo
   desabafo: 'parceiro', limite_investido: 'banqueiro', bancos: 'investidor', conta: 'contador', glossario: 'professor', privacidade: 'anjinho', como_esta: 'calmo',
 });
 
@@ -42,7 +43,7 @@ export const EMO_DA_FORMA = Object.freeze({
   preocupado: 'preocupado', vidente: 'espiando', zen: 'alivio', detetive: 'analista', sobrevivente: 'ombros', desnorteado: 'surpresa',
   recalculando: 'preocupado', sonolento: 'tedio', envergonhado: 'recompondo', contador: 'analista', banqueiro: 'orgulho',
   ferias: 'alivio', simulador: 'analista', auditor: 'julgando', cobrador: 'julgando', surpreso: 'espantado', confiante: 'orgulho',
-  vermelho: 'raiva', treinador: 'festa', vovo: 'ombros',
+  vermelho: 'raiva', treinador: 'festa', vovo: 'ombros', gamer: 'festa',
 });
 
 /** Forma do avatar pro momento: o assunto (intenção ou evento) manda; senão, o rosto/emoção. */
@@ -227,6 +228,11 @@ export const FORMAS = Object.freeze({
     acc:['chama','faixa','apito'], corpo:'translateY(-6px) rotate(-4deg)', anim:'ri',
     olhoE:{ d:'M150 190 h22 v20 h-22 z', cheio:true }, olhoD:{ d:'M228 190 h22 v20 h-22 z', cheio:true },
     sob:'', boca:'M176 250 Q 190 256, 204 250', extra:'' },
+  // 15/11 (JF): o C.A.O.S. Gamer, pra moedas de jogo e gastos com jogos. Fone com microfone e controle na mão.
+  gamer:     { nome:'🎮 Gamer', quando:'moedas de jogo e gastos com jogos', cor:'#a78bfa', modo:'calmo', grupo:'estilos',
+    acc:['fone','controle'], corpo:'rotate(-3deg)', anim:'balanca',
+    olhoE:{ d:'M150 200 h22 v14 h-22 z', cheio:true }, olhoD:{ d:'M228 200 h22 v14 h-22 z', cheio:true },
+    sob:'M148 188 L 174 184 M226 184 L 252 188', boca:'M174 242 Q 202 262, 228 242', extra:'' },
   vovo:      { nome:'👴 Vovô', quando:'inflação, comparar com o ano passado', cor:'#f5d0a9', modo:'lento', grupo:'gemini2',
     acc:['bengala','sobrancelhoes','bigodao','oculos'], corpo:'translateY(8px) rotate(-3deg)', anim:'balanca',
     olhoE:{ d:'M150 204 Q 161 196, 172 204', cheio:false }, olhoD:{ d:'M230 204 Q 241 196, 252 204', cheio:false },
@@ -240,7 +246,7 @@ const ANIM_ACC = Object.freeze({
   alvo:'pulsa', calendario:'balanca', cartola:'sobe', chapeuPraia:'balanca', touca:'balanca', corado:'pulsa', sobrancelhoes:'sobe',
   bigodao:'bigode', bigode:'bigode', chapeu:'balanca', coroa:'balanca', gravata:'balanca', terno:'sobe', tesoura:'balanca',
   boneCobrador:'sobe', faixa:'sobe', viseira:'sobe', chapeuDetetive:'balanca', turbante:'sobe', nariz:'pulsa', microfone:'balanca',
-  medidor:'balanca', evolucao:'sobe', capelo:'balanca', bochechas:'pulsa', monoculo:'balanca', bilhete:'balanca', olheiras:'pulsa',
+  medidor:'balanca', evolucao:'sobe', capelo:'balanca', bochechas:'pulsa', monoculo:'balanca', fone:'sobe', controle:'balanca', bilhete:'balanca', olheiras:'pulsa',
 });
 
 const SVG = `<g class="av-particulas"></g>
@@ -337,6 +343,18 @@ d="M150 96 C 136 96, 132 76, 148 72 C 150 56, 174 52, 182 66 C 192 50, 222 54, 2
 <path class="neon" fill="none" stroke-width="7" stroke-linecap="round" d="M80 228 L 100 266"/>
 <circle class="neon" cx="72" cy="212" r="16" fill="#0f1320" stroke-width="4"/>
 <path class="neon" fill="none" stroke-width="2" d="M60 206 h24 M58 214 h28 M62 222 h20"/>
+</g></g>
+<g class="acc" data-acc="fone">
+<path class="neon" fill="none" stroke-width="7" stroke-linecap="round" d="M94 196 Q 94 92, 200 92 Q 306 92, 306 196"/>
+<rect class="neon" x="78" y="172" width="26" height="50" rx="10" fill="#0f1320" stroke-width="4"/>
+<rect class="neon" x="296" y="172" width="26" height="50" rx="10" fill="#0f1320" stroke-width="4"/>
+<path class="neon" fill="none" stroke-width="4" stroke-linecap="round" d="M90 222 Q 88 288, 132 302"/>
+<circle class="neon" cx="138" cy="303" r="7" fill="var(--cor)" stroke-width="2"/>
+</g>
+<g class="acc" data-acc="controle"><g class="av-controle">
+<path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M312 246 Q 314 232, 330 232 h28 Q 374 232, 376 246 l 6 22 Q 384 282, 372 282 Q 364 282, 358 272 h-28 Q 324 282, 316 282 Q 304 282, 306 268 Z"/>
+<path class="neon" fill="none" stroke-width="3" stroke-linecap="round" d="M328 248 v12 M322 254 h12"/>
+<circle cx="360" cy="250" r="3.5" fill="var(--cor)"/><circle cx="368" cy="258" r="3.5" fill="var(--cor)"/>
 </g></g>
 <g class="acc" data-acc="maleta">
 <path class="neon" fill="none" stroke-width="4" stroke-linejoin="round" d="M330 238 v-10 h24 v10"/>

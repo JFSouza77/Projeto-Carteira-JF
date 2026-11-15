@@ -887,7 +887,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       const jogoReg = acharMoedaJogo(intencao.t);
       const desc = limparPagamento(descricaoDe(semPag) || descricaoDe(intencao.t), dados.accounts) || (jogoReg ? jogoReg.moeda.split(' (')[0] : '');
       // categoria: pela palavra (sinônimos) ou pelo que ele aprendeu com o histórico da pessoa
-      const aprendida = !intencao.categoria && jogoReg && !/\b(mercado|restaurante|uber)\b/.test(intencao.t) ? { categoryId: 'lazer' }
+      const aprendida = !intencao.categoria && jogoReg && !/\b(mercado|restaurante|uber)\b/.test(intencao.t) ? { categoryId: 'jogos' }
         : !intencao.categoria && desc ? sugerirCategoria(desc, expenses) : null;
       const cat = intencao.categoria || (aprendida && categories.find(c => c.id === aprendida.categoryId))
         || categories.find(c => c.id === 'outros') || categories[0];
@@ -901,7 +901,9 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         || ['contas', 'moradia', 'streaming'].includes(cat?.id);
       return {
         gatilho: 'proposta_registro',
-        dica: [avisoDaData(dataDoTexto(intencao.t, today), today), recorrente ? 'Isso parece conta de todo mês. Se for, cadastra em 📅 Mês → Contas fixas que eu passo a lembrar do vencimento e já entra no planejamento.' : null].filter(Boolean).join(' ') || null,
+        dica: [avisoDaData(dataDoTexto(intencao.t, today), today), recorrente ? 'Isso parece conta de todo mês. Se for, cadastra em 📅 Mês → Contas fixas que eu passo a lembrar do vencimento e já entra no planejamento.' : null,
+          // 15/11 (JF, que compra Robux): gasto com jogo ganha a dica de gift card × crédito
+          cat?.id === 'jogos' && !lerPagamento(intencao.t, dados.accounts).forma ? 'Dica de gamer: gift card ajuda a gastar só o que você separou pro jogo; no crédito é mais prático pra compra que se repete (passe, assinatura), mas aí vale ficar de olho na fatura.' : null].filter(Boolean).join(' ') || null,
         vars: { valor: formatBRL(intencao.valor), categoria: cat?.name ?? 'Outros' },
         acao: { tipo: 'registrar_gasto', amountCents: intencao.valor, categoryId: cat?.id ?? 'outros', date: dataDoTexto(intencao.t, today),
           note: desc ? desc[0].toUpperCase() + desc.slice(1) : '', ...lerPagamento(intencao.t, dados.accounts) },
