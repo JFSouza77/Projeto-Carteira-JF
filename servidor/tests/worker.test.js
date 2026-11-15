@@ -307,3 +307,9 @@ test('travas de crédito (15/11): pergunta repetida usa a resposta guardada; tet
     api.restaurar();
   }
 });
+
+test('moedas de jogo são assunto de dinheiro (JF, 15/11)', async () => {
+  const { SISTEMA_CONVERSA } = await import('../worker.js');
+  assert.match(SISTEMA_CONVERSA, /Robux, V-Bucks/);
+  assert.match(SISTEMA_CONVERSA, /golpe/);
+});

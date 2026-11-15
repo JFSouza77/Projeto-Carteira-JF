@@ -9,6 +9,7 @@ import {
 } from '../engine.js';
 import { IDENTIDADE, textoPodeNaoPode, textoVida, textoComoFunciona, textoPrivacidade } from './identidade.js';
 import { acharTermo, ATUALIZADO_EM, GLOSSARIO } from './glossario.js';
+import { acharMoedaJogo, lerPacote, DICA_SEGURANCA } from './moedas_jogos.js';
 import { lerPorcentagem, textoPorcentagem, lerOfertas, analisarOfertas, textoOfertas, lerOfertaUnica, textoOfertaUnica } from './ofertas.js';
 
 const GLOSSARIO_POR_TERMO = new Map(GLOSSARIO.map(g => [g.termo, g]));
@@ -388,13 +389,15 @@ export function textoConta({ a, b, op }) {
   return `${A} − ${B} = ${fmtNum(r)}.${r < 0 ? ' Deu negativo: o segundo número é maior que o primeiro.' : ` Pra conferir: ${fmtNum(r)} + ${B} = ${A}.`}`;
 }
 
+// "800 robux" é quantidade de moeda de jogo, não valor em reais (JF, 15/11)
+const MOEDA_QTD = /\b\d+(?:\.\d{3})*\s*(?:robux|v ?-?bucks|vp|rp|diamantes?|minecoins?|gemas?|uc|cp|cristais|primogemas?|fc points|cod points)\b/g;
 const FORA_DO_PAPEL = /\b(quem (venceu|ganhou|foi campeao|e o artilheiro)|campeonato|brasileirao|libertadores|placar|resultado do jogo|escalacao|artilheiro|horoscopo|meu signo|signo de|receita de|como (fazer|faco|preparo) (um |uma )?(bolo|torta|pao|lasanha|pudim)|letra da musica|previsao do tempo|vai chover|capital d[aeo]s? |quantos anos tem|quem descobriu|quem inventou)\b/;
 const FORA_DO_TEMA = /\b(series?|filmes?|novelas?|livros?|jogos? de|games?|animes?|desenhos?|temporadas?|episodios?|ator|atriz|atores|cantor|cantora|bandas?|albuns?|album|time de|campeonato|copa do mundo|marvel|dc comics|estreias?|estreou|bilheteria|personagens?|elenco|trailer|diretor|roteiro|oscar|hbo|disney|pixar)\b/;
 const PAPO_PESSOAL = /\b(como (voce )?(se sente|esta se sentindo|ta se sentindo|se sentiu|tem se sentido)|voce se sente|o que (voce )?(acha|achou|tem achado|pensa|pensou) (da|do|de|sobre) (sua|seu|voce|mim|ser|ter)|o que (voce )?(tem achado|acha) da (sua )?evolucao|voce (gosta|curte|prefere|sonha|tem medo|tem saudade|fica feliz|fica triste|se diverte)|(seu|sua) (filme|musica|serie|comida|cor|time|jogo|livro|desenho) (favorit|preferid)|qual (e )?(o |a )?(seu|sua) (filme|musica|serie|comida|cor|time|jogo|livro|desenho)|se voce fosse|voce (ja )?(sonhou|imaginou))/;
 
 function entenderSimples(t, { categories = [] } = {}) {
   // "dia 10" é data, não valor (P9, "esqueci de lançar": "gastei 50 no mercado dia 10")
-  const r = { t, categoria: acharCategoria(t, categories), periodo: acharPeriodo(t), valor: acharValor(t.replace(/\bdia \d{1,2}\b/g, ' ')), fonte: acharFonte(t) };
+  const r = { t, categoria: acharCategoria(t, categories), periodo: acharPeriodo(t), valor: acharValor(t.replace(/\bdia \d{1,2}\b/g, ' ').replace(MOEDA_QTD, ' ')), fonte: acharFonte(t) };
   const pergunta = /\b(quanto|qual|quais|onde|como|tive|teve|tenho|vai|posso|consigo|algum|alguma)\b|\?/.test(t);
 
   if (!t) return { ...r, intent: 'nao_entendi' };
@@ -402,6 +405,14 @@ function entenderSimples(t, { categories = [] } = {}) {
   // palavra "internet"): pergunta sobre o que ele sente, acha ou gosta vai pra IA online quando está ligada; sem ela,
   // ele responde como está. Não pega pergunta de dinheiro ("o que você acha de eu comprar 300?").
   if (PAPO_PESSOAL.test(t) && !r.valor && !/\b(gast|saldo|fatura|orcamento|dinheiro|comprar|compra|paguei|pagar|investir|economizar|guardar)/.test(t)) return { ...r, categoria: null, intent: 'papo_pessoal' };
+  // Moedas de jogo (JF, 15/11): Robux, V-Bucks, Diamantes, VP… é dinheiro de verdade, então é com ele.
+  // Registro ("comprei 800 robux por 40") continua sendo registro.
+  const jogo = acharMoedaJogo(t);
+  if (jogo && !/\b(gastei|comprei|paguei)\b/.test(t)
+    && /\b(moeda|moedas|quanto|quantos|preco|precos|vale|valendo|valor|cotacao|converter|convert|em reais|reais|real|comprar|compro|recarga|recarregar|gift|card|cartao|onde|qual|quais|como|pacote|barato|caro|compensa|pena)\b|\?/.test(t)) {
+    const precoDeHoje = /\b(quanto|quantos|preco|precos|vale|valendo|valor|cotacao|converter|convert|em reais|barato|caro|compensa)\b/.test(t);
+    return { ...r, categoria: null, intent: 'moeda_jogo', jogo, pacote: lerPacote(t), precoDeHoje };
+  }
   // Fora do papel (JF, 15/11: "quem venceu o Brasileirão de 19xx? aí foge muito; a IA gastaria crédito à toa"):
   // esporte, horóscopo, receita de comida, letra de música, clima… sem dinheiro no meio, ele responde aqui mesmo,
   // sem chamar a IA, e sugere o Google.
@@ -872,9 +883,12 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       // descrição sem o jeito de pagar ("no pix no mercado" → "mercado")
       // corta o jeito de pagar antes de achar a descrição ("5,50 numa casquinha no mcdonalds pelo débito do inter")
       const semPag = intencao.t.split(/\s+(?:(?:no|na|pelo|pela|via|com|em|de|do|da)\s+)?(?:pix|debito|credito|cartao|dinheiro)\b/)[0];
-      const desc = limparPagamento(descricaoDe(semPag) || descricaoDe(intencao.t), dados.accounts);
+      // moeda de jogo ("comprei 800 robux por 40"): a descrição é a moeda e a categoria é Lazer (15/11)
+      const jogoReg = acharMoedaJogo(intencao.t);
+      const desc = limparPagamento(descricaoDe(semPag) || descricaoDe(intencao.t), dados.accounts) || (jogoReg ? jogoReg.moeda.split(' (')[0] : '');
       // categoria: pela palavra (sinônimos) ou pelo que ele aprendeu com o histórico da pessoa
-      const aprendida = !intencao.categoria && desc ? sugerirCategoria(desc, expenses) : null;
+      const aprendida = !intencao.categoria && jogoReg && !/\b(mercado|restaurante|uber)\b/.test(intencao.t) ? { categoryId: 'lazer' }
+        : !intencao.categoria && desc ? sugerirCategoria(desc, expenses) : null;
       const cat = intencao.categoria || (aprendida && categories.find(c => c.id === aprendida.categoryId))
         || categories.find(c => c.id === 'outros') || categories[0];
       // nem categoria nem descrição ("7 reais no débito do Inter"): pergunta em quê, sem inventar "Outros"
@@ -1358,6 +1372,19 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         fato = ['USD', 'EUR', 'IBOV', 'SELIC'].map(linhaAtivo).filter(Boolean).join(' ');
       }
       return { fato: `${fato} (Atualizado ${quando}.)${velho}`, aviso: true, sugestoes: ['Como está o dólar?', 'A bolsa tende a subir?', 'Qual a Selic?'] };
+    }
+    case 'moeda_jogo': {
+      const { jogo, pacote } = intencao;
+      const partes = [`No ${jogo.jogo}, a moeda é ${jogo.moeda}. Dá pra comprar ${jogo.onde}.`];
+      if (jogo.extra) partes.push(jogo.extra);
+      if (pacote) {
+        const por100 = Math.round((pacote.reaisCents / pacote.quantidade) * 100);
+        partes.push(`Nesse pacote, sai ${formatBRL(por100)} a cada 100. Compare com os outros pacotes: o maior costuma sair mais barato por unidade, mas só vale se você ia usar tudo.`);
+      } else if (intencao.precoDeHoje) {
+        partes.push('O preço muda com promoção e com o dólar; sem internet eu não sei o valor de hoje. Com a IA online ligada, eu pesquiso.');
+      }
+      partes.push(DICA_SEGURANCA);
+      return { fato: partes.join(' '), cru: true, sugestoes: ['Quanto gastei com jogos este mês?', 'Dá pra gastar quanto até o salário?'] };
     }
     case 'fora_do_papel': {
       const frases = [
