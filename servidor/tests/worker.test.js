@@ -280,3 +280,10 @@ test('foto com vários pagamentos: esquema pede a lista e a limpeza joga fora o 
   assert.equal(l[1].data, '');
   assert.equal(l[1].categoria, '');
 });
+
+test('busca só pra assunto de dinheiro; fora do papel, manda pro Google (JF, 15/11)', async () => {
+  const { SISTEMA_CONVERSA } = await import('../worker.js');
+  assert.match(SISTEMA_CONVERSA, /SÓ quando a pergunta tiver a ver com dinheiro/);
+  assert.match(SISTEMA_CONVERSA, /SEM buscar/);
+  assert.match(SISTEMA_CONVERSA, /perguntar direto no Google/);
+});
