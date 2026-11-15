@@ -388,6 +388,7 @@ export function textoConta({ a, b, op }) {
   return `${A} − ${B} = ${fmtNum(r)}.${r < 0 ? ' Deu negativo: o segundo número é maior que o primeiro.' : ` Pra conferir: ${fmtNum(r)} + ${B} = ${A}.`}`;
 }
 
+const FORA_DO_PAPEL = /\b(quem (venceu|ganhou|foi campeao|e o artilheiro)|campeonato|brasileirao|libertadores|placar|resultado do jogo|escalacao|artilheiro|horoscopo|meu signo|signo de|receita de|como (fazer|faco|preparo) (um |uma )?(bolo|torta|pao|lasanha|pudim)|letra da musica|previsao do tempo|vai chover|capital d[aeo]s? |quantos anos tem|quem descobriu|quem inventou)\b/;
 const FORA_DO_TEMA = /\b(series?|filmes?|novelas?|livros?|jogos? de|games?|animes?|desenhos?|temporadas?|episodios?|ator|atriz|atores|cantor|cantora|bandas?|albuns?|album|time de|campeonato|copa do mundo|marvel|dc comics|estreias?|estreou|bilheteria|personagens?|elenco|trailer|diretor|roteiro|oscar|hbo|disney|pixar)\b/;
 const PAPO_PESSOAL = /\b(como (voce )?(se sente|esta se sentindo|ta se sentindo|se sentiu|tem se sentido)|voce se sente|o que (voce )?(acha|achou|tem achado|pensa|pensou) (da|do|de|sobre) (sua|seu|voce|mim|ser|ter)|o que (voce )?(tem achado|acha) da (sua )?evolucao|voce (gosta|curte|prefere|sonha|tem medo|tem saudade|fica feliz|fica triste|se diverte)|(seu|sua) (filme|musica|serie|comida|cor|time|jogo|livro|desenho) (favorit|preferid)|qual (e )?(o |a )?(seu|sua) (filme|musica|serie|comida|cor|time|jogo|livro|desenho)|se voce fosse|voce (ja )?(sonhou|imaginou))/;
 
@@ -401,6 +402,10 @@ function entenderSimples(t, { categories = [] } = {}) {
   // palavra "internet"): pergunta sobre o que ele sente, acha ou gosta vai pra IA online quando está ligada; sem ela,
   // ele responde como está. Não pega pergunta de dinheiro ("o que você acha de eu comprar 300?").
   if (PAPO_PESSOAL.test(t) && !r.valor && !/\b(gast|saldo|fatura|orcamento|dinheiro|comprar|compra|paguei|pagar|investir|economizar|guardar)/.test(t)) return { ...r, categoria: null, intent: 'papo_pessoal' };
+  // Fora do papel (JF, 15/11: "quem venceu o Brasileirão de 19xx? aí foge muito; a IA gastaria crédito à toa"):
+  // esporte, horóscopo, receita de comida, letra de música, clima… sem dinheiro no meio, ele responde aqui mesmo,
+  // sem chamar a IA, e sugere o Google.
+  if (FORA_DO_PAPEL.test(t) && !/\b(gast|paguei|comprei|preco|precos|custa|custou|custo|orcamento|salario|dinheiro|reais|valor|ingresso|aposta|bilheteria|caro|barato|quanto (custa|sai|paga|ganha|ganhou))/.test(t)) return { ...r, categoria: null, intent: 'fora_do_papel' };
   // Fora do tema (JF, 15/11: "VisionQuest teve o mesmo orçamento da série Lanterns?!" virava "você não definiu
   // orçamentos"): fala de filme, série, jogo, time, artista… sem falar do próprio dinheiro vai pra IA online
   // (sem ela, "ainda não sei responder"). Registro com valor ("gastei 40 no cinema") continua sendo registro.
@@ -1353,6 +1358,16 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         fato = ['USD', 'EUR', 'IBOV', 'SELIC'].map(linhaAtivo).filter(Boolean).join(' ');
       }
       return { fato: `${fato} (Atualizado ${quando}.)${velho}`, aviso: true, sugestoes: ['Como está o dólar?', 'A bolsa tende a subir?', 'Qual a Selic?'] };
+    }
+    case 'fora_do_papel': {
+      const frases = [
+        'Essa foge das minhas funções: eu sou uma IA de bolso, parceiro do seu dinheiro. Pra isso, o Google resolve rapidinho.',
+        'Aí já é fora do meu campo. Eu cuido das suas finanças; essa pergunta o Google responde melhor que eu.',
+        'Boa pergunta, mas não é comigo: sou especialista no seu bolso, não nisso. Dá uma busca no Google.',
+        'Isso está além do que eu faço. Meu negócio é o seu dinheiro. Pra essa, vale perguntar no Google ou em outro site.',
+        'Essa eu passo: sou um parceiro financeiro de bolso. Pergunta pro Google que ele sabe.',
+      ];
+      return { fato: frases[intencao.t.length % frases.length], cru: true, sugestoes: ['Quanto gastei este mês?', 'Dá pra gastar quanto até o salário?'] };
     }
     case 'como_esta':
     case 'papo_pessoal': // sem IA online, ele conta como está (com IA, o app manda a pergunta pra ela)

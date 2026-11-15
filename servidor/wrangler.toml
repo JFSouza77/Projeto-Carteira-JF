@@ -21,8 +21,13 @@ ORIGENS = "https://carteira-jf.pages.dev"
 # Modelo da IA. Padrão: claude-opus-5-5. Mais barato: claude-haiku-5-5.
 IA_MODELO = "claude-opus-5-5"
 # Limites de uso da IA (protegem a conta de custo surpresa)
-IA_LIMITE_DIA = "40"
-IA_TETO_DIA = "300"
+# 15/11 (JF: "IA de bolso, sem abusar dos créditos"): limites mais baixos, teto do mês, teto de buscas na web e um
+# modelo mais em conta só pra conversa (a leitura de fotos continua no IA_MODELO). Pra voltar, é só trocar aqui.
+IA_MODELO_CONVERSA = "claude-sonnet-5-5"
+IA_LIMITE_DIA = "20"
+IA_TETO_DIA = "120"
+IA_TETO_MES = "1500"
+BUSCA_TETO_DIA = "15"
 # Notícias do dia (14/11): a IA busca 2x por dia (7h e 17h de Brasília). "1" liga, "0" desliga.
 # Modelo barato pra caber no crédito; no máximo 2 buscas por vez (US$ 0,01 cada) e um teto de rodadas por mês.
 NOTICIAS_LIGADAS = "1"

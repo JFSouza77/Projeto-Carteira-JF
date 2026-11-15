@@ -1497,6 +1497,13 @@ function renderChat() {
   if (!$('#tela-conversa').hidden) window.scrollTo(0, document.body.scrollHeight);
 }
 
+const IA_POR_DIA = 20;
+const iaRecentes = new Map(); // pergunta → { texto, em }: some quando o app fecha
+async function usoDaIAHoje() {
+  const u = await db.getMeta('iaUso', null).catch(() => null);
+  return u && u.dia === toISODate() ? u : { dia: toISODate(), n: 0 };
+}
+
 async function enviarPergunta(texto, { doPrint = false } = {}) {
   const t = String(texto || '').trim();
   if (!t) return;
@@ -1507,12 +1514,26 @@ async function enviarPergunta(texto, { doPrint = false } = {}) {
   guardarMemoria(memoria);
   pintarRosto(fala.rosto, fala.intent);
 
-  if (!fala.entendeu && state.settings.aiOn && state.settings.aiUrl) {
+  // Travas de crédito no aparelho (15/11, JF: "IA de bolso, sem abusar"): a mesma pergunta na última meia hora usa a
+  // resposta guardada; e cada aparelho manda no máximo IA_POR_DIA perguntas por dia pra IA (o servidor tem os dele).
+  const chaveIA = t.toLowerCase().replace(/\s+/g, ' ').trim();
+  const repetida = iaRecentes.get(chaveIA);
+  if (!fala.entendeu && repetida && Date.now() - repetida.em < 30 * 60_000) {
+    addMsg({ de: 'caos', texto: repetida.texto, ia: true, sugestoes: SUGESTOES.slice(0, 5), rosto: fala.rosto });
+    return;
+  }
+  const usoIA = await usoDaIAHoje();
+  const iaCansada = !fala.entendeu && state.settings.aiOn && state.settings.aiUrl && usoIA.n >= IA_POR_DIA;
+  if (iaCansada) {
+    fala.texto = `Por hoje a minha IA online já respondeu ${IA_POR_DIA} perguntas: sou uma IA de bolso e economizo pra não pesar no bolso de ninguém. Amanhã eu volto com tudo! Enquanto isso, pergunta dos seus gastos que eu respondo aqui mesmo.`;
+  } else if (!fala.entendeu && state.settings.aiOn && state.settings.aiUrl) {
     const pensando = rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory });
     pintarRosto(pensando);
     addMsg({ de: 'caos', texto: 'Deixa eu pensar com a IA…', temp: true, rosto: pensando });
     try {
       const resposta = await ia.perguntar(state.settings.aiUrl, { pergunta: t, humor: state.settings.mood, dados: dados() });
+      await db.setMeta('iaUso', { dia: toISODate(), n: usoIA.n + 1 });
+      iaRecentes.set(chaveIA, { texto: resposta, em: Date.now() });
       state.chat = state.chat.filter(m => !m.temp);
       addMsg({ de: 'caos', texto: resposta, ia: true, sugestoes: SUGESTOES.slice(0, 5), rosto: fala.rosto });
       pintarRosto(fala.rosto);
@@ -1526,7 +1547,7 @@ async function enviarPergunta(texto, { doPrint = false } = {}) {
       return;
     }
   }
-  if (!fala.entendeu && !fala.palpite && await guardarPergunta(t)) {
+  if (!iaCansada && !fala.entendeu && !fala.palpite && await guardarPergunta(t)) {
     // Fila geral (1.6.0): o que ele não sabe vai pro servidor quando der; a resposta volta na conversa.
     fala.texto = 'Ainda não sei responder isso, mas guardei sua pergunta. Quando eu tiver conexão com o servidor do C.A.O.S. Finanças, eu trago a resposta aqui.';
   }

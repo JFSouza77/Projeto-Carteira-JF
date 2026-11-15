@@ -492,3 +492,15 @@ test('conversa de filme ou série vai pra IA, não pra orçamento (JF, 15/11)', 
   assert.equal(entender('qual meu orçamento de streaming', { categories: [] }).intent, 'orcamento');
   assert.equal(entender('gastei 40 no cinema', { categories: [] }).intent, 'registrar_gasto');
 });
+
+test('fora do papel (esporte, tempo, receita) responde aqui, sem chamar a IA (JF, 15/11)', async () => {
+  const { conversar } = await import('../js/caos/index.js');
+  const d = { expenses: [], incomes: [], accounts: [], categories: [], budgets: {}, compromissos: [], planos: [], metas: [] };
+  for (const t of ['quem venceu o brasileirão de 1959?', 'receita de bolo de cenoura', 'vai chover amanhã?']) {
+    const f = conversar(t, d, { now: Date.UTC(2026, 10, 15, 12) }).fala;
+    assert.equal(f.entendeu, true, t); // entendeu = não vai pra IA
+    assert.match(f.texto, /Google/, t);
+  }
+  const ing = conversar('quanto custa o ingresso do brasileirão', d, { now: Date.UTC(2026, 10, 15, 12) }).fala;
+  assert.equal(ing.entendeu, false); // tem dinheiro: pode ir pra IA
+});

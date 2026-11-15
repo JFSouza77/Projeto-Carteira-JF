@@ -74,8 +74,8 @@ test('limite diário por endereço', async () => {
   const api = simularAPI({ texto: 'ok' });
   try {
     const env = envBase();
-    for (let i = 0; i < 2; i++) assert.equal((await worker.fetch(req('/ia/perguntar', { pergunta: 'oi' }), env)).status, 200);
-    assert.equal((await worker.fetch(req('/ia/perguntar', { pergunta: 'oi' }), env)).status, 429);
+    for (let i = 0; i < 2; i++) assert.equal((await worker.fetch(req('/ia/perguntar', { pergunta: `oi ${i}` }), env)).status, 200);
+    assert.equal((await worker.fetch(req('/ia/perguntar', { pergunta: 'oi 3' }), env)).status, 429);
   } finally {
     api.restaurar();
   }
@@ -286,4 +286,24 @@ test('busca só pra assunto de dinheiro; fora do papel, manda pro Google (JF, 15
   assert.match(SISTEMA_CONVERSA, /SÓ quando a pergunta tiver a ver com dinheiro/);
   assert.match(SISTEMA_CONVERSA, /SEM buscar/);
   assert.match(SISTEMA_CONVERSA, /perguntar direto no Google/);
+});
+
+test('travas de crédito (15/11): pergunta repetida usa a resposta guardada; teto do mês; sem busca depois do teto', async () => {
+  const api = simularAPI({ texto: 'resposta' });
+  try {
+    const env = { ...envBase(), IA_LIMITE_DIA: '50' };
+    await worker.fetch(req('/ia/perguntar', { pergunta: 'quanto custa um carro?' }), env);
+    const j = await (await worker.fetch(req('/ia/perguntar', { pergunta: 'Quanto custa  um carro?' }), env)).json();
+    assert.equal(j.guardada, true);
+    assert.equal(api.chamadas.length, 1); // a segunda nem chamou a IA
+    const env2 = { ...envBase(), IA_TETO_MES: '1' };
+    assert.equal((await worker.fetch(req('/ia/perguntar', { pergunta: 'a' }), env2)).status, 200);
+    assert.equal((await worker.fetch(req('/ia/perguntar', { pergunta: 'b' }), env2)).status, 429);
+    const env3 = { ...envBase(), BUSCA_TETO_DIA: '0' };
+    await worker.fetch(req('/ia/perguntar', { pergunta: 'preço do dólar?' }), env3);
+    assert.equal(api.chamadas.at(-1).body.tools, undefined);
+    assert.equal(api.chamadas.at(-1).body.max_tokens, 2500);
+  } finally {
+    api.restaurar();
+  }
 });
