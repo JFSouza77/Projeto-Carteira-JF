@@ -133,7 +133,7 @@
       <nav class="atalhos" aria-label="Lançar rápido">
         <button type="button" class="atalho gasto" data-resumo="gasto" aria-pressed="true"><svg class="ico" aria-hidden="true"><use href="#i-gasto"/></svg> Gasto</button>
         <button type="button" class="atalho entrada" data-resumo="entrada" aria-pressed="false" aria-label="Ver as entradas do mês"><svg class="ico" aria-hidden="true"><use href="#i-entrada"/></svg> Entradas</button>
-        <button type="button" class="atalho transf" data-atalho="transf"><svg class="ico" aria-hidden="true"><use href="#i-transf"/></svg> Transferir</button>
+        <button type="button" class="atalho transf" data-resumo="transf" aria-pressed="false"><svg class="ico" aria-hidden="true"><use href="#i-transf"/></svg> Transferir</button>
       </nav>
       <!-- 15/11 (Anne): alerta em cima do gasto do mês -->
       <section class="card alertas-card" id="alerts-card" hidden>
@@ -156,6 +156,13 @@
             <p class="pode-valor"><strong class="num" id="falta-valor"></strong> <span id="falta-ate"></span></p>
             <p class="muted small" id="falta-sub"></p>
           </div>
+        </div>
+        <!-- 15/11 (Anne): Transferir é a 3ª aba do cartão: o que mudou de um banco pro outro no mês -->
+        <div id="resumo-transf" hidden>
+          <p class="label transf-titulo"><svg class="ico" aria-hidden="true"><use href="#i-transf"/></svg> Transferido no mês</p>
+          <p class="big" id="transf-total">R$ 0,00</p>
+          <p class="muted" id="transf-sub"></p>
+          <ul class="previstas-lista transf-lista" id="transf-lista"></ul>
         </div>
         <div id="resumo-gasto">
         <p class="label gasto-titulo"><svg class="ico" aria-hidden="true"><use href="#i-gasto"/></svg> Gasto no mês</p>
@@ -291,6 +298,12 @@
   <section class="tela" id="tela-lancar" data-tela="lancar" hidden>
     <header class="topbar"><h1>Lançar</h1></header>
     <main>
+      <!-- 15/11 (Anne): sem conta cadastrada, primeiro a conta; depois gasto e entrada -->
+      <section class="card lancar-trava" id="lancar-trava" hidden>
+        <h2>Primeiro, cadastre uma conta</h2>
+        <p>Pra anotar gastos e entradas, o app precisa saber de onde sai e pra onde vai o dinheiro. É rapidinho: só o banco e o saldo, nada de senha nem número de cartão.</p>
+        <button type="button" class="primary" data-guia="banco">Cadastrar minha conta</button>
+      </section>
       <section class="card">
         <div class="segmented two" role="tablist" aria-label="Tipo de lançamento">
           <label><input type="radio" name="kind" value="gasto" checked><span><svg class="ico" aria-hidden="true"><use href="#i-gasto"/></svg> Gasto</span></label>
@@ -312,6 +325,10 @@
           <label class="field"><span id="cat-label">Categoria</span><select id="category-select" aria-label="Categoria"></select></label>
           <div class="chips" id="category-chips" role="radiogroup" aria-label="Categoria" hidden></div>
           <p class="sugestao" id="cat-sugestao" hidden></p>
+          <div class="sem-nada" id="sem-nada">
+            <button type="button" class="link-btn" id="mes-sem-entrada" hidden>Este mês não entrou nada</button>
+            <button type="button" class="link-btn" id="dia-sem-gasto">Hoje não gastei nada</button>
+          </div>
           <label class="check prevista-check" id="prevista-field" hidden><input type="checkbox" id="entrada-prevista"> Ainda vou receber (fica como previsto até cair)</label>
           <label class="field" id="forma-field"><span>Pagou como?</span><select id="forma-select" aria-label="Pagou como?"></select></label>
           <div class="chips" id="forma-chips" role="radiogroup" aria-label="Pagou como?" hidden></div>
@@ -685,7 +702,7 @@
 
       <details class="card">
         <summary><h2>IA online e servidor</h2></summary>
-        <p class="muted small">Opcional. Com o servidor do projeto, o C.A.O.S. lê fotos de comprovante e responde perguntas livres. Na conversa vão só totais por categoria (nunca a lista de gastos). A foto só vai quando você toca em "Ler com IA". O servidor também envia os lembretes do iPhone.</p>
+        <p class="muted small">Já vem ligada. Com ela, o C.A.O.S. lê fotos de comprovante e responde perguntas livres. Na conversa vão só totais por categoria (nunca a lista de gastos). A foto só vai quando você toca em "Ler com IA". O servidor também envia os lembretes do iPhone.</p>
         <label class="switch"><input type="checkbox" id="ai-toggle"><span>Usar IA online</span></label>
         <input id="ai-url" type="url" inputmode="url" placeholder="https://carteira-jf.SEU-USUARIO.workers.dev" aria-label="Endereço do servidor">
         <div class="backup">
@@ -812,6 +829,13 @@
     <div id="novidades-lista"></div>
     <form method="dialog" class="nov-fim"><button class="primary">Entendi</button></form>
   </dialog>
+
+  <!-- 15/11 (Anne): o passo a passo "pega na mão": leva até o lugar e explica num balão -->
+  <div class="guia" id="guia" role="dialog" aria-live="polite" hidden>
+    <p class="guia-passo" id="guia-passo"></p>
+    <p class="guia-texto" id="guia-texto"></p>
+    <div class="guia-botoes"><button type="button" class="ghost small" id="guia-pular" hidden>Pular este passo</button><button type="button" class="primary small" id="guia-ok">Entendi</button></div>
+  </div>
 
   <div class="toast" id="toast" role="status" hidden></div>
 </body>

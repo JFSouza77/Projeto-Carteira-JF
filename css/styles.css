@@ -1349,3 +1349,27 @@ body.teclado .chat-anexo { bottom: 64px; }
 .previstas-lista small { display: block; color: var(--muted); font-size: .78rem; }
 .previstas-lista .num { color: var(--accent); font-weight: 700; white-space: nowrap; }
 .prevista-check { margin: 4px 0; }
+
+/* Transferências no Início (15/11) */
+.summary .transf-titulo { color: var(--cyan, #22d3ee); font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.transf-titulo .ico { width: 20px; height: 20px; }
+.atalho.transf[aria-pressed="true"] { background: var(--fill); color: var(--fill-ink); box-shadow: var(--fill-glow); border-color: transparent; }
+.transf-lista { margin-top: 8px; }
+.transf-lista .num { color: var(--text); }
+/* Lançar sem conta e os botões "não entrou/gastei nada" (15/11) */
+.lancar-trava { text-align: center; }
+.lancar-trava p { color: var(--muted); }
+.sem-nada { display: flex; justify-content: center; gap: 12px; margin: -2px 0 4px; }
+.sem-nada .link-btn { background: none; border: 0; color: var(--muted); text-decoration: underline; font: inherit; font-size: .88rem; cursor: pointer; min-height: 36px; }
+.sem-nada .link-btn[hidden] { display: none; }
+/* Guia do passo a passo (15/11): balão embaixo + destaque no lugar */
+.guia { position: fixed; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 92px); z-index: 40; max-width: 520px; margin: 0 auto;
+  padding: 14px 16px; border-radius: 18px; background: var(--card); border: 2px solid var(--accent); box-shadow: 0 10px 30px #000a, var(--fill-glow); }
+.guia[hidden] { display: none; }
+.guia-passo { margin: 0 0 6px; font-family: var(--font-display); font-weight: 800; color: var(--accent); }
+.guia-texto { margin: 0 0 10px; line-height: 1.45; }
+.guia-botoes { display: flex; justify-content: flex-end; gap: 8px; }
+.guia-botoes [hidden] { display: none; }
+.guia-foco { outline: 3px solid var(--accent); outline-offset: 4px; border-radius: 16px; animation: guia-pisca 1.4s ease-in-out 3; }
+@keyframes guia-pisca { 50% { outline-color: transparent; } }
+@media (prefers-reduced-motion: reduce) { .guia-foco { animation: none; } }

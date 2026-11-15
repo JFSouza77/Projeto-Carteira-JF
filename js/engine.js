@@ -774,7 +774,7 @@ const SEVERITY = { alta: 3, media: 2, baixa: 1 };
  * Alertas do momento (o "radar" do C.A.O.S.). Só leitura: devolve uma lista ordenada por gravidade.
  * Cada alerta tem type, severity e os números que o narrador precisa para falar.
  */
-export function analyze({ expenses, incomes = [], categories, accounts = [], compromissos = [], transferencias = [] }, today = toISODate()) {
+export function analyze({ expenses, incomes = [], categories, accounts = [], compromissos = [], transferencias = [], diasSemGasto = [] }, today = toISODate()) {
   const month = monthKey(today);
   const s = summarizeMonth(expenses, categories, month);
   const out = [];
@@ -867,7 +867,8 @@ export function analyze({ expenses, incomes = [], categories, accounts = [], com
   }
 
   if (expenses.length > 0) {
-    const last = expenses.reduce((mx, e) => (e.date > mx ? e.date : mx), '0000-00-00');
+    // "hoje não gastei nada" também conta como anotado (Anne, 15/11): ele não acha que você esqueceu
+    const last = [...expenses.map(e => e.date), ...diasSemGasto].reduce((mx, d) => (d > mx ? d : mx), '0000-00-00');
     const gap = daysBetween(last, today);
     if (gap >= 3) out.push({ type: 'sem_registro', severity: 'baixa', days: gap });
   }

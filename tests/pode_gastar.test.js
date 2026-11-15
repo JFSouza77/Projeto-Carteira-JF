@@ -59,3 +59,9 @@ test('entrada prevista e saldo saudável (JF, 15/11)', async () => {
   const mp = createAccount({ bank: 'Mercado Pago', balanceCents: 30000 }, { id: 'mp', now: new Date(2026, 10, 1) });
   assert.equal(resumoPisos([mp], [], []).contas[0].folgaCents, 30000 - SALDO_SAUDAVEL_CENTS);
 });
+
+test('"hoje não gastei nada" conta como anotado no aviso de dias sem anotar (Anne, 15/11)', () => {
+  const velho = { ...d, expenses: [g(5000, 'mercado', '2026-11-05')], accounts: [] };
+  assert.ok(analyze(velho, '2026-11-15').some(a => a.type === 'sem_registro'));
+  assert.ok(!analyze({ ...velho, diasSemGasto: ['2026-11-14'] }, '2026-11-15').some(a => a.type === 'sem_registro'));
+});

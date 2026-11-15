@@ -41,7 +41,7 @@ const state = {
   incomes: [],
   previstas: [], // entradas que ainda vão cair (15/11); ficam no mesmo armazém, com prevista: true
   accounts: [],
-  settings: { mood: DEFAULT_MOOD, voice: false, aiOn: false, aiUrl: SERVIDOR_PADRAO, servidorV: 1, letra: 'normal', tema: 'escuro', temaV: 2, vozVel: 1, menosMov: null },
+  settings: { mood: DEFAULT_MOOD, voice: false, aiOn: true, iaV: 1, aiUrl: SERVIDOR_PADRAO, servidorV: 1, letra: 'normal', tema: 'escuro', temaV: 2, vozVel: 1, menosMov: null },
   caosMemory: memoriaInicial(),
   viewMonth: monthKey(toISODate()),
   kind: 'gasto',
@@ -64,6 +64,7 @@ const state = {
 
 const dados = () => ({
   expenses: state.expenses, incomes: state.incomes, previstas: state.previstas, categories: state.categories, accounts: state.accounts,
+  diasSemGasto: state.perfil?.diasSemGasto || [], mesesSemEntrada: state.perfil?.mesesSemEntrada || [],
   compromissos: state.compromissos, planos: state.planos, mercado: state.mercado, metas: state.metas, investimentos: state.investimentos, transferencias: state.transferencias,
 });
 const catById = id => state.categories.find(c => c.id === id);
@@ -423,25 +424,35 @@ function renderResumoEntradas() {
   $('#resumo-card').dataset.modo = modo;
   $('#resumo-gasto').hidden = modo !== 'gasto';
   $('#resumo-entrada').hidden = modo !== 'entrada';
+  $('#resumo-transf').hidden = modo !== 'transf';
   for (const b of document.querySelectorAll('[data-resumo]')) b.setAttribute('aria-pressed', String(b.dataset.resumo === modo));
   // fileira de baixo (rascunho do GPT): semana, mês e saldo; gasto em laranja, entrada em verde
   const hojeISO = toISODate();
   const [y, m, d] = hojeISO.split('-').map(Number);
   const dow = (new Date(y, m - 1, d).getDay() + 6) % 7; // segunda = 0
   const iniSemana = toISODate(new Date(y, m - 1, d - dow));
-  const lista = modo === 'entrada' ? state.incomes : state.expenses;
+  const lista = modo === 'entrada' ? state.incomes : modo === 'transf' ? state.transferencias : state.expenses;
   const semana = lista.filter(x => x.date >= iniSemana && x.date <= hojeISO).reduce((t, x) => t + x.amountCents, 0);
   const doMes = lista.filter(x => (x.month || monthKey(x.date)) === state.viewMonth).reduce((t, x) => t + x.amountCents, 0);
-  const cor = modo === 'entrada' ? 'ok' : 'warn';
-  $('#stat-semana-tit').textContent = modo === 'entrada' ? 'Entradas' : 'Gastos';
-  $('#stat-mes-tit').textContent = modo === 'entrada' ? 'Entradas do mês' : 'Gastos do mês';
+  const cor = modo === 'entrada' ? 'ok' : modo === 'transf' ? '' : 'warn';
+  $('#stat-semana-tit').textContent = modo === 'entrada' ? 'Entradas' : modo === 'transf' ? 'Transferido' : 'Gastos';
+  $('#stat-mes-tit').textContent = modo === 'entrada' ? 'Entradas do mês' : modo === 'transf' ? 'Transferido no mês' : 'Gastos do mês';
+  // Transferências (Anne, 15/11): o que mudou de um banco pro outro no mês; transferir de verdade é em Contas
+  const nome = id => { const c = state.accounts.find(a => a.id === id); return c ? accountLabel(c) : 'conta apagada'; };
+  const tMes = state.transferencias.filter(t => (t.month || monthKey(t.date)) === state.viewMonth).sort((a, b) => b.date.localeCompare(a.date));
+  $('#transf-total').textContent = formatBRL(tMes.reduce((t, x) => t + x.amountCents, 0));
+  $('#transf-sub').textContent = tMes.length
+    ? `${tMes.length} ${tMes.length === 1 ? 'transferência' : 'transferências'} neste mês. Dinheiro que só mudou de lugar: não é gasto nem entrada.`
+    : 'Nenhuma transferência neste mês. Pra transferir, vá em Contas → Transferir entre contas.';
+  $('#transf-lista').innerHTML = tMes.slice(0, 8).map(t => `<li><span>${t.date.slice(8, 10)}/${t.date.slice(5, 7)} · ${esc(nome(t.deId))} → ${esc(nome(t.paraId))}${t.note ? ` <small>${esc(t.note)}</small>` : ''}</span><span class="num">${formatBRL(t.amountCents)}</span></li>`).join('');
   $('#stat-semana').textContent = formatBRL(semana);
   $('#stat-mes').textContent = formatBRL(doMes);
   $('#stat-semana').className = `num ${cor}`;
   $('#stat-mes').className = `num ${cor}`;
   const r = resumoEntradas(state.incomes, state.expenses, state.viewMonth);
   $('#entrada-total').textContent = formatBRL(r.totalCents);
-  $('#entrada-sub').textContent = r.quantas ? `${r.quantas} ${r.quantas === 1 ? 'entrada' : 'entradas'} neste mês. Toque em "Entradas do mês" embaixo pra ver o relatório.` : 'Nenhuma entrada neste mês ainda. Quando receber, use o botão Lançar.';
+  const semEntrada = (state.perfil?.mesesSemEntrada || []).includes(state.viewMonth);
+  $('#entrada-sub').textContent = !r.quantas && semEntrada ? 'Você marcou que este mês não entrou nada. Tudo certo, anotado.' : r.quantas ? `${r.quantas} ${r.quantas === 1 ? 'entrada' : 'entradas'} neste mês. Toque em "Entradas do mês" embaixo pra ver o relatório.` : 'Nenhuma entrada neste mês ainda. Quando receber, use o botão Lançar.';
   // previstas (15/11): o que ainda vai cair, do mais perto pro mais longe, com o botão Recebi
   const prev = [...state.previstas].sort((a, b) => a.date.localeCompare(b.date));
   $('#previstas-box').hidden = !prev.length;
@@ -925,6 +936,11 @@ function previaRacha() {
 
 function renderLancar() {
   const gasto = state.kind === 'gasto';
+  const semConta = !state.accounts.some(a => a.tipo !== 'cartao');
+  $('#lancar-trava').hidden = !semConta;
+  $('#entry-form').closest('.card').hidden = semConta;
+  $('#mes-sem-entrada').hidden = gasto;
+  $('#dia-sem-gasto').hidden = !gasto;
   const opcoes = gasto ? state.categories : INCOME_SOURCES;
   const sel = gasto ? state.selectedCategory : state.selectedSource;
   $('#category-chips').setAttribute('aria-label', gasto ? 'Categoria' : 'De onde veio');
@@ -1806,6 +1822,12 @@ async function confirmarAcao(i, ok) {
   }
   try {
     const a = m.acao;
+    // sem conta cadastrada, gasto e entrada esperam (Anne, 15/11): primeiro a conta
+    if (['registrar_gasto', 'registrar_entrada', 'registrar_varios'].includes(a.tipo) && !state.accounts.some(x => x.tipo !== 'cartao')) {
+      m.acaoFeita = false;
+      addMsg({ de: 'caos', texto: 'Antes de anotar, cadastra uma conta (o banco e o saldo, nada de senha). Toca em Contas aqui embaixo, ou no passo 2 do "Comece por aqui", que eu te levo.' });
+      return;
+    }
     if (a.tipo === 'criar_meta') {
       await salvarMetas([...state.metas, a.meta]);
       addMsg({ de: 'caos', texto: `Meta ${a.meta.nome} salva! Ela fica na aba 📅 Mês. Quando guardar dinheiro, me fala "guardei 50 na meta ${a.meta.nome}" que eu somo.` });
@@ -2533,22 +2555,59 @@ function ligarBlocos() {
       const d = document.getElementById(tile.dataset.abre);
       if (d) { d.open = true; d.scrollIntoView({ behavior: MENOS_MOVIMENTO.matches ? 'auto' : 'smooth', block: 'start' }); }
     }
-    const passo = e.target.closest('[data-passo]');
-    if (passo) {
-      const ir = passo.dataset.passo;
-      if (ir === 'contas') { location.hash = 'contas'; setTimeout(() => { const c = $('#add-conta-card'); if (c) { c.open = true; c.scrollIntoView({ block: 'start' }); } }, 80); }
-      else atalho(ir);
-    }
   });
   pintarOlhos();
 }
 
-/** "Comece por aqui" (Anne, 14/11): os 3 primeiros passos, até a pessoa fazer todos. */
+/** "Comece por aqui" (Anne, 14/11 e 15/11): 5 passos; cada um leva até o lugar e explica num balão (o guia). */
+const GUIAS = {
+  conta: { passo: 'Passo 1 de 5 · sua conta no app', hash: 'ajustes', abre: '#conta-card', foco: '#conta-card',
+    texto: 'Aqui você cria seu login: escolha um apelido e uma senha. Com ele, seus dados aparecem no celular, no tablet e no computador, e sobem embaralhados com a sua senha (nem o servidor consegue ler). Prefere não criar? Pode pular: o app funciona só neste aparelho.' },
+  banco: { passo: 'Passo 2 de 5 · seu banco', hash: 'contas', abre: '#add-conta-card', foco: '#add-conta-card',
+    texto: 'Escolha o banco, o tipo de conta e coloque o saldo que aparece no app do banco. A gente nunca pede número de cartão, agência nem senha: só valores. O app não mexe no seu banco; o saldo é você que atualiza de vez em quando.' },
+  entrada: { passo: 'Passo 3 de 5 · o que você recebe', kind: 'entrada', foco: '#entry-form',
+    texto: 'Coloque quanto entrou (salário, freela, Pix) e em qual conta caiu. Se o dinheiro ainda vai cair, marque "Ainda vou receber". Se este mês não entrou nada, toque em "Este mês não entrou nada".' },
+  gasto: { passo: 'Passo 4 de 5 · seu primeiro gasto', kind: 'gasto', foco: '#entry-form',
+    texto: 'Valor, o que foi e como pagou. Mais rápido ainda: no Chat, escreva "gastei 30 no mercado" ou mande a foto do comprovante. Hoje não gastou nada? Toque em "Hoje não gastei nada".' },
+  chat: { passo: 'Passo 5 de 5 · converse comigo', hash: 'conversa', foco: '#chat-form',
+    texto: 'Aqui você fala comigo: "quanto gastei este mês?", "dá pra gastar quanto até o salário?", "vou receber 500 dia 20". A IA online já vem ligada pra perguntas mais livres. Se travar, toca no "?" que eu ajudo.' },
+};
+
+function guiar(id) {
+  const g = GUIAS[id];
+  if (!g) return;
+  if (g.kind) atalhoLancar(g.kind); else location.hash = g.hash;
+  setTimeout(() => {
+    const d = g.abre && $(g.abre);
+    if (d && 'open' in d) d.open = true;
+    document.querySelectorAll('.guia-foco').forEach(e => e.classList.remove('guia-foco'));
+    const alvo = $(g.foco);
+    if (alvo) { alvo.classList.add('guia-foco'); alvo.scrollIntoView({ behavior: MENOS_MOVIMENTO.matches ? 'auto' : 'smooth', block: 'start' }); }
+    $('#guia-passo').textContent = g.passo;
+    $('#guia-texto').textContent = g.texto;
+    $('#guia-pular').hidden = id !== 'conta';
+    $('#guia').hidden = false;
+  }, 120);
+}
+function fecharGuia() {
+  $('#guia').hidden = true;
+  document.querySelectorAll('.guia-foco').forEach(e => e.classList.remove('guia-foco'));
+}
+function atalhoLancar(tipo) {
+  const r = document.querySelector(`input[name="kind"][value="${tipo}"]`);
+  if (r) { r.checked = true; state.kind = tipo; }
+  location.hash = 'lancar';
+  renderLancar();
+}
+
 function renderComece() {
+  const temBanco = state.accounts.some(a => a.tipo !== 'cartao');
   const passos = [
-    { feito: state.accounts.length > 0, txt: 'Cadastre a conta do seu banco', ir: 'contas' },
-    { feito: state.incomes.length > 0, txt: 'Lance o que você recebe (salário, freela…)', ir: 'entrada' },
-    { feito: state.expenses.length > 0, txt: 'Anote seu primeiro gasto', ir: 'gasto' },
+    { feito: !!state.temConta || !!state.settings.pulouConta, txt: 'Crie sua conta no app (ou pule)', ir: 'conta' },
+    { feito: temBanco, txt: 'Cadastre a conta do seu banco', ir: 'banco' },
+    { feito: state.incomes.length > 0 || state.previstas.length > 0 || (state.perfil?.mesesSemEntrada || []).length > 0, txt: 'Lance o que você recebe', ir: 'entrada' },
+    { feito: state.expenses.length > 0 || (state.perfil?.diasSemGasto || []).length > 0, txt: 'Anote seu primeiro gasto', ir: 'gasto' },
+    { feito: state.chat.some(m => m.de === 'eu'), txt: 'Converse com o C.A.O.S.', ir: 'chat' },
   ];
   const feitos = passos.filter(p => p.feito).length;
   $('#comece-card').hidden = feitos === passos.length;
@@ -2556,7 +2615,7 @@ function renderComece() {
   $('#comece-lista').innerHTML = passos.map((p, i) => `
     <li class="${p.feito ? 'feito' : ''}">${p.feito
       ? `<span class="passo-n" aria-hidden="true">${ic('i-ok')}</span><span>${esc(p.txt)}</span>`
-      : `<button type="button" data-passo="${p.ir}"><span class="passo-n" aria-hidden="true">${i + 1}</span><span>${esc(p.txt)}</span><span class="passo-seta" aria-hidden="true">›</span></button>`}</li>`).join('');
+      : `<button type="button" data-guia="${p.ir}"><span class="passo-n" aria-hidden="true">${i + 1}</span><span>${esc(p.txt)}</span><span class="passo-seta" aria-hidden="true">›</span></button>`}</li>`).join('');
 }
 
 async function onRemindToggle(e) {
@@ -2990,6 +3049,7 @@ function quandoFoi(ms) {
 
 async function renderConta() {
   const c = await conta.contaAtual().catch(() => null);
+  if (!!c !== state.temConta) { state.temConta = !!c; renderComece(); }
   $('#conta-fora').hidden = !!c;
   $('#conta-dentro').hidden = !c;
   $('#conta-aviso-servidor').hidden = !!servidor();
@@ -3389,8 +3449,23 @@ function bind() {
     toast(fala ? fala.texto : `Recebido: ${formatBRL(p.amountCents)}.`);
   });
   // "do mês" abre o relatório: das entradas na aba Entradas, o normal na aba Gasto
+  // passo a passo (15/11): qualquer [data-guia] leva até o lugar e abre o balão
+  document.addEventListener('click', e => { const g = e.target.closest('[data-guia]'); if (g) guiar(g.dataset.guia); });
+  $('#guia-ok').addEventListener('click', fecharGuia);
+  $('#guia-pular').addEventListener('click', async () => { state.settings.pulouConta = true; await db.setMeta('settings', state.settings); fecharGuia(); location.hash = 'inicio'; renderComece(); });
+  // "não entrou nada" e "não gastei nada" (Anne, 15/11): pro mês não passar batido e o C.A.O.S. não achar que você esqueceu
+  $('#dia-sem-gasto').addEventListener('click', hojeNaoGastei);
+  $('#mes-sem-entrada').addEventListener('click', async () => {
+    const mes = monthKey(toISODate());
+    const meses = [...new Set([...(state.perfil?.mesesSemEntrada || []), mes])].sort().slice(-36);
+    state.perfil = { ...(state.perfil || {}), mesesSemEntrada: meses };
+    await db.setMeta('perfil', state.perfil);
+    render();
+    toast('Anotado: este mês não entrou nada. Sem problema, eu não vou achar que você esqueceu.');
+  });
   $('#stat-mes-btn').addEventListener('click', () => {
     if ((state.resumoModo || 'gasto') === 'entrada') return mostrarEntradas();
+    if (state.resumoModo === 'transf') { state.filtroTipo = 'transf'; state.filtroCat = null; location.hash = 'analise'; render(); return; }
     state.filtroTipo = null; state.filtroCat = null; location.hash = 'analise'; render();
   });
   $('#hoje-ajustar').addEventListener('click', () => abrirLimiteDiario());
@@ -3769,6 +3844,8 @@ async function init() {
     // escuro por padrão (JF + Code, 12/11): quem nunca escolheu tema ("do aparelho" de fábrica) passa pro escuro, uma vez só
     // quem já usava o app sem servidor ganha o servidor padrão uma vez (14/11); quem pôs outro endereço fica com o seu
     if (settings && !settings.servidorV) state.settings = { ...state.settings, aiUrl: (settings.aiUrl || '').trim() || SERVIDOR_PADRAO, servidorV: 1 };
+    // IA online ligada de fábrica (Anne, 15/11: "não tem instrução de como ligar"); quem desligar depois fica desligado
+    if (settings && !settings.iaV) state.settings = { ...state.settings, aiOn: true, iaV: 1 };
     if (settings && !settings.temaV) state.settings = { ...state.settings, tema: ['claro', 'contraste'].includes(settings.tema) ? settings.tema : 'escuro', temaV: 2 };
     aplicarAcessibilidade();
     posicionarMeAjuda(); // o lugar onde a pessoa deixou o "Me ajuda" vem das configurações

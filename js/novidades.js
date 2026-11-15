@@ -7,6 +7,22 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.1.1 Alfa',
+    data: '15/11/2026',
+    nome: 'Pega na Mão',
+    t: 'Um passo a passo que leva você até cada lugar, e a aba de transferências no Início.',
+    itens: [
+      '👣 Passo a passo: 5 passos que levam você até o lugar certo.',
+      '🔁 Aba Transferências: o que mudou de um banco pro outro.',
+      '🤖 IA online já ligada: perguntas livres sem configurar nada.',
+      '🫙 Não entrou nada: marque o mês sem entrada sem lançar zero.',
+      '🙌 Hoje não gastei: o C.A.O.S. não acha que você esqueceu.',
+    ],
+    qol: [
+      '🔒 Primeiro a conta: gasto e entrada pedem uma conta antes.',
+    ],
+  },
+  {
     v: '2.1.0 Alfa',
     data: '15/11/2026',
     nome: 'Parceiro Gamer',
