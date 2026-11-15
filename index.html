@@ -24,7 +24,7 @@
     <div class="abertura-caixa">
       <span class="abertura-avatar" id="abertura-avatar"><span class="abertura-rosto" aria-hidden="true">(•‿•)</span></span>
       <p class="abertura-titulo">C.A.O.S.</p>
-      <p class="abertura-frase"><span class="abertura-frase-um">Um C.A.O.S. pra</span><span class="abertura-frase-pra">Pra</span> organizar o seu caos.</p>
+      <p class="abertura-frase"><span class="abertura-frase-um">Um C.A.O.S. pra</span><span class="abertura-frase-pra">Para</span> organizar o seu caos.</p>
       <p class="abertura-dica" id="abertura-dica" aria-live="polite"></p>
       <p class="abertura-pula">toque pra pular</p>
     </div>
@@ -210,7 +210,7 @@
   <section class="tela" id="tela-analise" data-tela="analise" hidden>
     <header class="topbar">
       <a href="#inicio" class="icon-btn" aria-label="Voltar pro Início">‹</a>
-      <h1>Análise · <span id="analise-mes"></span></h1>
+      <h1><span id="analise-nome">Análise</span> · <span id="analise-mes"></span></h1>
     </header>
     <main>
       <details class="card bloco graficos" id="graficos-card" data-bloco="graficos" open>
@@ -238,7 +238,7 @@
 
 
       <details class="card bloco" id="cat-card" data-bloco="categorias" open>
-        <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#c-compras"/></svg><span class="bloco-tit">Por categoria</span><span class="bloco-res num" id="res-cat"></span></summary>
+        <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#c-compras"/></svg><span class="bloco-tit" id="cat-titulo">Por categoria</span><span class="bloco-res num" id="res-cat"></span></summary>
         <div class="g-topo">
           <div class="seg" role="group" aria-label="Como ver as categorias"><button type="button" data-catvista="barras" aria-pressed="true">Barras</button><button type="button" data-catvista="rosca" aria-pressed="false">Rosca</button></div></div>
         <div class="cat-rosca" id="cat-rosca" hidden></div>
@@ -379,7 +379,7 @@
       </section>
 
       <!-- 15/11 (Anne): a Análise do mês mora no Mês -->
-      <a href="#analise" class="card ir-analise"><svg class="ico" aria-hidden="true"><use href="#e-rendimento"/></svg>
+      <a href="#analise" class="card ir-analise" id="ir-analise"><svg class="ico" aria-hidden="true"><use href="#e-rendimento"/></svg>
         <span><b>Análise do mês</b><small>Gráficos, gastos por categoria e todos os lançamentos</small></span><span class="passo-seta" aria-hidden="true">›</span></a>
 
       <!-- 14/11 (JF): cada bloco abre ali mesmo; abriu um, os outros somem até fechar. Levar pra fora fica embaixo. -->
@@ -789,14 +789,6 @@
     <header><h2 id="novidades-titulo">🆕 Novidades</h2><form method="dialog"><button class="icon-btn" aria-label="Fechar">×</button></form></header>
     <div id="novidades-lista"></div>
     <form method="dialog" class="nov-fim"><button class="primary">Entendi</button></form>
-  </dialog>
-
-  <!-- 15/11 (JF + Anne): o atalho Entradas mostra ali mesmo o que entrou no mês, sem levar pra outra aba -->
-  <dialog id="entradas-dialog" class="novidades-dialog entradas-dialog" aria-labelledby="entradas-titulo">
-    <header><h2 id="entradas-titulo">Entradas do mês</h2><form method="dialog"><button class="icon-btn" aria-label="Fechar">×</button></form></header>
-    <p class="entradas-total" id="entradas-total"></p>
-    <ul class="entradas-lista" id="entradas-lista"></ul>
-    <form method="dialog" class="nov-fim"><button class="primary">Fechar</button></form>
   </dialog>
 
   <div class="toast" id="toast" role="status" hidden></div>
