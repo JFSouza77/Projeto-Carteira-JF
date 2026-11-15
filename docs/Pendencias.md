@@ -4,6 +4,12 @@ Um lugar só pra ver o que está aberto (sugestão do Code do Perfil, 12/11/2026
 Os detalhes continuam em `Pedidos_do_JF.md`, `Rascunhos_da_Semana.md` e `Ideias.md`; aqui fica só o resumo.
 Atualizada pelo Wally a cada rodada.
 
+## Depois da 2.1.0 (15/11)
+
+- Entrada prevista: ainda não dá pra editar ou apagar (só "Recebi"). Próxima rodada.
+- Gasto de jogo: fazer a pergunta "foi no crédito?" funcionar de verdade depois do registro.
+- Opinião da Anne sobre o design (ela ainda não viu).
+
 ## IA online: travas de crédito (15/11)
 
 No ar no app; no servidor, falta o JF publicar (`git pull` e `npx.cmd wrangler deploy` dentro de `servidor`). Pra afrouxar ou

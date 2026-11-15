@@ -42,3 +42,20 @@ test('aba Entradas: total do mês e quanto falta pra igualar o mês passado', as
   assert.equal(r.faltaCents, 150000);
   assert.equal(r.acimaCents, 0);
 });
+
+test('entrada prevista e saldo saudável (JF, 15/11)', async () => {
+  const { conversar } = await import('../js/caos/index.js');
+  const { createAccount, resumoPisos, SALDO_SAUDAVEL_CENTS } = await import('../js/engine.js');
+  const p = createIncome({ amountCents: 50000, sourceId: 'freela', date: '2026-11-20', prevista: true }, { now: new Date(2026, 10, 15) });
+  assert.equal(p.prevista, true);
+  const f = conversar('vou receber 500 dia 20', { ...d, accounts: [], budgets: {}, metas: [] }, { now: Date.UTC(2026, 10, 15, 12) }).fala;
+  assert.equal(f.acao.prevista, true);
+  assert.equal(f.acao.date, '2026-11-20');
+  const q = conversar('quanto vou receber?', { ...d, previstas: [p], accounts: [], budgets: {}, metas: [] }, { now: Date.UTC(2026, 10, 15, 12) }).fala;
+  assert.match(q.texto, /R\$\s500,00/);
+  const inter = createAccount({ bank: 'Inter', balanceCents: 3200 }, { id: 'in', now: new Date(2026, 10, 1) });
+  const alerta = analyze({ ...d, expenses: [], accounts: [inter] }, '2026-11-15').find(a => a.type === 'saldo_baixo');
+  assert.match(alerta.accountName, /Inter/);
+  const mp = createAccount({ bank: 'Mercado Pago', balanceCents: 30000 }, { id: 'mp', now: new Date(2026, 10, 1) });
+  assert.equal(resumoPisos([mp], [], []).contas[0].folgaCents, 30000 - SALDO_SAUDAVEL_CENTS);
+});

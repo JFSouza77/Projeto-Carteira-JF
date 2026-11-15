@@ -444,6 +444,8 @@ function entenderSimples(t, { categories = [] } = {}) {
   }
   // Piso de segurança e salário (JF, 14/11): "meu piso no Banestes é 2000", "quanto posso gastar no C6?",
   // "me ajuda a dividir meu salário entre os bancos", "tive aumento?", "recebi mais ou menos que mês passado?"
+  // a receber (15/11): "quanto vou receber?", "o que tenho pra receber?"
+  if (!r.valor && /\b(quanto|o que|quando) (eu )?(ainda )?vou receber\b|\bentradas? previstas?\b/.test(t)) return { ...r, intent: 'previstas' };
   // média de segurança e transferências (JF, 14/11): "como tá minha média de segurança?", "qual banco tem folga?"
   if (/\b(media de seguranca|seguranca (geral|dos bancos|media|como um todo)|piso (geral|total|medio)|pisos no geral|vou estourar (o |meu )?piso|quando (o piso )?estoura)\b/.test(t)) return { ...r, intent: 'media_seguranca' };
   if (/\b(qual|que) (banco|conta) (tem|ta com|esta com) (folga|sobra|mais dinheiro)\b|\b(de onde|qual banco) (eu )?(tiro|transfiro|passo)\b|\b(sugere|sugira|sugestao de) (uma )?transferencia\b|\btransferir pra (cobrir|completar)\b/.test(t)) return { ...r, intent: 'sugerir_transferencia' };
@@ -456,6 +458,9 @@ function entenderSimples(t, { categories = [] } = {}) {
   if (r.valor && !/\bquanto\b/.test(t)) {
     // sem verbo, mas dizendo como pagou (JF, 14/11: "7 reais no débito do Inter", "5,50 numa casquinha pelo débito")
     if (!pergunta && /\b(pix|debito|credito|cartao|dinheiro)\b/.test(t) && !/\b(recebi|ganhei|entrou|caiu)\b/.test(t)) return { ...r, intent: 'registrar_gasto' };
+    // (o "quanto vou receber?" é pergunta, sem valor: fica mais abaixo)
+    // "vou receber 500 dia 20" (JF, 15/11): entrada prevista, ainda não entrou
+    if (/\b(vou receber|vou ganhar|vai cair|vai entrar|tenho (a|pra|para) receber|vao me pagar|vai me pagar|vou ser pago)\b/.test(t)) return { ...r, intent: 'registrar_entrada', prevista: true };
     if (/\b(recebi|recebo|ganhei|ganho|entrou|caiu|recebemos|me pagaram)\b/.test(t)) return { ...r, intent: 'registrar_entrada' };
     if (/\b(gastei|paguei|comprei|torrei|saiu|pedi|abasteci|gasto de|gastamos|passei|deixei|foram|foi)\b/.test(t)) return { ...r, intent: 'registrar_gasto' };
     // Anotação curta, sem verbo, do jeito de quem anota num papel: "uber 30", "50 no posto" (achado do Gemini, 06/11)
@@ -994,11 +999,19 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       return { fato: explicarMelhor(dados.anterior, dados, today) };
     case 'registrar_entrada': {
       const fonte = INCOME_SOURCES.find(s => s.id === (intencao.fonte || 'outros'));
+      // prevista: "dia 20" é o próximo dia 20 (este mês se ainda não passou, senão o que vem)
+      let data = dataDoTexto(intencao.t, today);
+      if (intencao.prevista) {
+        const m = intencao.t.match(/\bdia (\d{1,2})\b/);
+        const d = m ? Number(m[1]) : null;
+        const [ay, am, ad] = today.split('-').map(Number);
+        data = d ? toISODate(new Date(ay, am - 1 + (d > ad ? 0 : 1), d)) : data < today ? today : data;
+      }
       return {
         gatilho: 'proposta_registro',
-        vars: { valor: formatBRL(intencao.valor), categoria: `entrada (${fonte.name})` },
+        vars: { valor: formatBRL(intencao.valor), categoria: intencao.prevista ? `entrada prevista pra ${data.slice(8, 10)}/${data.slice(5, 7)} (${fonte.name})` : `entrada (${fonte.name})` },
         // "recebi 1500 de salário no nubank": a entrada cai na conta (achado do Gemini); cartão nunca recebe entrada
-        acao: { tipo: 'registrar_entrada', amountCents: intencao.valor, sourceId: fonte.id, date: dataDoTexto(intencao.t, today), note: notaDaEntrada(intencao.t, fonte, dados.accounts),
+        acao: { tipo: 'registrar_entrada', amountCents: intencao.valor, sourceId: fonte.id, date: data, note: notaDaEntrada(intencao.t, fonte, dados.accounts), ...(intencao.prevista ? { prevista: true } : {}),
           accountId: lerPagamento(intencao.t, (dados.accounts || []).filter(a => a.tipo !== 'cartao')).accountId || null },
       };
     }
@@ -1338,11 +1351,14 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
     }
     case 'a_receber': {
       const r = aReceber(expenses);
+      // também tem entrada prevista ("vou receber 500 dia 20", 15/11)? responde as duas coisas
+      const prevTot = (dados.previstas || []).reduce((t, p) => t + p.amountCents, 0);
+      if (!r.itens.length && prevTot) return responder({ ...intencao, intent: 'previstas' }, dados, { today, emocao, perfil, now });
       if (!r.itens.length) return { fato: 'Ninguém te deve nada agora. Quando rachar uma conta, marque "🍕 Dividir com amigos" na hora de lançar o gasto que eu guardo quem deve quanto.', sugestoes: ['Como divido uma conta?'] };
       const porPessoa = new Map();
       for (const x of r.itens) porPessoa.set(x.nome, (porPessoa.get(x.nome) || 0) + x.valorCents);
       const lista = [...porPessoa].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([n, v]) => `${n} (${formatBRL(v)})`).join(', ');
-      return { fato: `Você tem ${formatBRL(r.totalCents)} a receber: ${lista}${porPessoa.size > 5 ? ' e mais gente' : ''}. Quando o Pix cair, toca em "Recebi" na lista "A receber", no Início.`, sugestoes: ['Quanto gastei este mês?'] };
+      return { fato: `Você tem ${formatBRL(r.totalCents)} a receber: ${lista}${porPessoa.size > 5 ? ' e mais gente' : ''}. Quando o Pix cair, toca em "Recebi" na lista "A receber", no Início.${prevTot ? ` Fora isso, tem ${formatBRL(prevTot)} de entrada prevista (pergunta "quanto vou receber?" que eu detalho).` : ''}`, sugestoes: ['Quanto gastei este mês?'] };
     }
     case 'meus_investimentos': {
       const lista = dados.investimentos || [];
@@ -1374,6 +1390,13 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         fato = ['USD', 'EUR', 'IBOV', 'SELIC'].map(linhaAtivo).filter(Boolean).join(' ');
       }
       return { fato: `${fato} (Atualizado ${quando}.)${velho}`, aviso: true, sugestoes: ['Como está o dólar?', 'A bolsa tende a subir?', 'Qual a Selic?'] };
+    }
+    case 'previstas': {
+      const prev = [...(dados.previstas || [])].sort((a, b) => a.date.localeCompare(b.date));
+      if (!prev.length) return { fato: 'Não tem nada previsto pra receber. Quando souber de um dinheiro que vai cair, me fala tipo "vou receber 500 dia 20".', cru: true, sugestoes: [] };
+      const tot = prev.reduce((t, p) => t + p.amountCents, 0);
+      const lista = prev.slice(0, 5).map(p => `${formatBRL(p.amountCents)} dia ${p.date.slice(8, 10)}/${p.date.slice(5, 7)}${p.note ? ` (${p.note})` : ''}`).join('; ');
+      return { fato: `Você tem ${formatBRL(tot)} pra receber: ${lista}. Quando cair, toca em "Recebi" na aba Entradas do Início.`, cru: true, sugestoes: ['Dá pra gastar quanto até o salário?'] };
     }
     case 'moeda_jogo': {
       const { jogo, pacote } = intencao;

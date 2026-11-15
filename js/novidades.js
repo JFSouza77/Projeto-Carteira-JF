@@ -7,6 +7,30 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.1.0 Alfa',
+    data: '15/11/2026',
+    nome: 'Parceiro Gamer',
+    t: 'Entradas e gastos lado a lado, dinheiro que ainda vai cair e um C.A.O.S. que entende de jogo.',
+    itens: [
+      '💵 Aba Entradas: no Início, o que entrou e o que falta.',
+      '📥 A receber: "vou receber 500 dia 20" e o botão Recebi.',
+      '🟠 Sobra ou déficit: o mês mostra se entrou mais ou saiu mais.',
+      '🎮 Moedas de jogo: Robux, V-Bucks, Diamantes e onde comprar.',
+      '🕹️ Categoria Jogos: gasto de jogo tem cantinho próprio.',
+      '🔎 Pesquisa na internet: preço e notícia de dinheiro.',
+      '🏦 Saldo saudável: aviso quando um banco fica abaixo de R$ 100.',
+    ],
+    qol: [
+      '🎧 C.A.O.S. Gamer: avatar novo, de fone e controle.',
+      '✍️ Chat com várias linhas: o Enter pula linha.',
+      '📊 Semana, mês e saldo: números novos embaixo do cartão.',
+      '💡 Dicas na tela de entrar: como o app funciona.',
+      '🗓️ Fato da semana: o C.A.O.S. compara com a semana passada.',
+      '🧭 Fora do assunto: ele avisa e manda pro Google.',
+      '📲 Lançar no lugar: o botão não cobre mais o chat.',
+    ],
+  },
+  {
     v: '2.0.9 Alfa',
     data: '14/11/2026',
     nome: 'Rede de Segurança',

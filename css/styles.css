@@ -1339,3 +1339,13 @@ body.teclado .chat-anexo { bottom: 64px; }
 .chat-bar textarea { flex: 1; resize: none; min-height: 44px; max-height: 8.5em; padding: 11px 16px; line-height: 1.35; border-radius: 22px;
   background: var(--card); border: 1px solid var(--line); color: var(--text); overflow-y: auto; }
 .chat-bar textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* A receber (15/11): entradas previstas com o botão Recebi */
+.previstas { margin: 10px 0 4px; text-align: left; }
+.previstas-tit { margin: 0 0 6px; font-weight: 700; color: var(--accent); text-align: center; }
+.previstas-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.previstas-lista li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: var(--card-2); border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.previstas-lista li > span:first-child { flex: 1; }
+.previstas-lista small { display: block; color: var(--muted); font-size: .78rem; }
+.previstas-lista .num { color: var(--accent); font-weight: 700; white-space: nowrap; }
+.prevista-check { margin: 4px 0; }

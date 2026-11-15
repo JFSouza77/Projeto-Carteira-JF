@@ -868,6 +868,27 @@ export const GERADORES = {
     },
   },
 
+  saldo_baixo: {
+    moldes: ['{fato} {fecho}'],
+    fato: {
+      geral: [
+        '{conta} está com pouco: {saldo} no total, abaixo do saudável de R$ 100.',
+        'Olha o saldo de {conta}: {saldo}. O saudável é ter pelo menos R$ 100 em cada conta.',
+        '{conta} ficou magrinho: {saldo}.',
+        'Tem conta abaixo de R$ 100: {conta}, somando {saldo}.',
+        'O saldo de {conta} ({saldo}) está abaixo do que eu acho saudável.',
+      ],
+    },
+    fecho: {
+      geral: [
+        'Se outro banco tiver folga, dá pra passar um pouco pra lá.',
+        'Pergunta "qual banco tem folga?" que eu sugiro de onde tirar.',
+        'Vale segurar os gastos por essa conta até entrar dinheiro.',
+        'Se o valor real for outro, atualiza o saldo em Contas.',
+        'Um colchãozinho de R$ 100 evita susto com débito automático.',
+      ],
+    },
+  },
   categoria_pesando: {
     moldes: ['{fato} {fecho}'],
     fato: {
