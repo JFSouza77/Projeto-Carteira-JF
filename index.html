@@ -163,10 +163,12 @@
           <p class="muted small" id="pode-dia"></p>
         </div>
         </div>
-        <div class="mini-stats">
-          <button type="button" class="stat-olho" data-atalho="entradas" aria-label="Ver as entradas do mês"><small>Entradas</small><strong class="num ok" id="stat-in">R$ 0,00</strong></button>
-          <div><small>Saldo do mês</small><strong class="num" id="stat-net">R$ 0,00</strong></div>
-          <button type="button" class="stat-olho" data-olho aria-pressed="false" aria-label="Mostrar saldos"><small>Nas contas <svg class="ico" aria-hidden="true"><use href="#i-olho"/></svg></small><strong class="num" id="stat-bank">—</strong></button>
+        <!-- 15/11 (JF, rascunho do GPT): a mesma fileira nas duas abas; mostra gastos ou entradas conforme a aba -->
+        <div class="mini-stats stats-ico">
+          <div><small><svg class="ico" aria-hidden="true"><use href="#i-mes"/></svg> <span id="stat-semana-tit">Gastos</span> <span class="sub">(semana)</span></small><strong class="num" id="stat-semana">R$ 0,00</strong></div>
+          <button type="button" class="stat-olho" id="stat-mes-btn" aria-label="Ver o relatório do mês"><small><svg class="ico" aria-hidden="true"><use href="#e-rendimento"/></svg> <span id="stat-mes-tit">Gastos do mês</span></small><strong class="num" id="stat-mes">R$ 0,00</strong></button>
+          <div><small><svg class="ico" aria-hidden="true"><use href="#a-poupanca"/></svg> Saldo do mês</small><strong class="num" id="stat-net">R$ 0,00</strong></div>
+          <span id="stat-in" hidden></span><span id="stat-bank" hidden></span>
         </div>
       </section>
 

@@ -423,9 +423,24 @@ function renderResumoEntradas() {
   $('#resumo-gasto').hidden = modo !== 'gasto';
   $('#resumo-entrada').hidden = modo !== 'entrada';
   for (const b of document.querySelectorAll('[data-resumo]')) b.setAttribute('aria-pressed', String(b.dataset.resumo === modo));
+  // fileira de baixo (rascunho do GPT): semana, mês e saldo; gasto em laranja, entrada em verde
+  const hojeISO = toISODate();
+  const [y, m, d] = hojeISO.split('-').map(Number);
+  const dow = (new Date(y, m - 1, d).getDay() + 6) % 7; // segunda = 0
+  const iniSemana = toISODate(new Date(y, m - 1, d - dow));
+  const lista = modo === 'entrada' ? state.incomes : state.expenses;
+  const semana = lista.filter(x => x.date >= iniSemana && x.date <= hojeISO).reduce((t, x) => t + x.amountCents, 0);
+  const doMes = lista.filter(x => (x.month || monthKey(x.date)) === state.viewMonth).reduce((t, x) => t + x.amountCents, 0);
+  const cor = modo === 'entrada' ? 'ok' : 'warn';
+  $('#stat-semana-tit').textContent = modo === 'entrada' ? 'Entradas' : 'Gastos';
+  $('#stat-mes-tit').textContent = modo === 'entrada' ? 'Entradas do mês' : 'Gastos do mês';
+  $('#stat-semana').textContent = formatBRL(semana);
+  $('#stat-mes').textContent = formatBRL(doMes);
+  $('#stat-semana').className = `num ${cor}`;
+  $('#stat-mes').className = `num ${cor}`;
   const r = resumoEntradas(state.incomes, state.expenses, state.viewMonth);
   $('#entrada-total').textContent = formatBRL(r.totalCents);
-  $('#entrada-sub').textContent = r.quantas ? `${r.quantas} ${r.quantas === 1 ? 'entrada' : 'entradas'} neste mês. Toque em Entradas embaixo pra ver o relatório.` : 'Nenhuma entrada neste mês ainda. Quando receber, use o botão Lançar.';
+  $('#entrada-sub').textContent = r.quantas ? `${r.quantas} ${r.quantas === 1 ? 'entrada' : 'entradas'} neste mês. Toque em "Entradas do mês" embaixo pra ver o relatório.` : 'Nenhuma entrada neste mês ainda. Quando receber, use o botão Lançar.';
   const box = $('#falta-receber');
   box.hidden = !r.passadoCents;
   if (!r.passadoCents) return;
@@ -3296,6 +3311,11 @@ function bind() {
   }
   for (const b of document.querySelectorAll('[data-atalho]')) b.addEventListener('click', () => atalho(b.dataset.atalho));
   for (const b of document.querySelectorAll('[data-resumo]')) b.addEventListener('click', () => { state.resumoModo = b.dataset.resumo; renderResumoEntradas(); });
+  // "do mês" abre o relatório: das entradas na aba Entradas, o normal na aba Gasto
+  $('#stat-mes-btn').addEventListener('click', () => {
+    if ((state.resumoModo || 'gasto') === 'entrada') return mostrarEntradas();
+    state.filtroTipo = null; state.filtroCat = null; location.hash = 'analise'; render();
+  });
   $('#hoje-ajustar').addEventListener('click', () => abrirLimiteDiario());
   $('#hoje-chips').addEventListener('click', e => { const c = e.target.closest('[data-limite]'); if (c) $('#hoje-limite').value = centsToInput(Number(c.dataset.limite)); });
   $('#hoje-remover').addEventListener('click', () => salvarLimiteDiario(null));
