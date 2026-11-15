@@ -1322,3 +1322,9 @@ body.teclado .chat-anexo { bottom: 64px; }
 .entrada-titulo .ico { width: 20px; height: 20px; }
 .falta-receber { background: color-mix(in srgb, var(--accent) 8%, var(--card)); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
 .falta-receber .pode-valor strong { color: var(--accent); }
+
+/* fileira de baixo com ícone (15/11, rascunho do GPT) */
+.stats-ico small { display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-wrap: wrap; }
+.stats-ico small .ico { width: 15px; height: 15px; color: var(--muted); }
+.stats-ico small .sub { flex-basis: 100%; font-size: .72rem; }
+.stats-ico strong.warn { color: var(--warn); }
