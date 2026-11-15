@@ -1028,8 +1028,10 @@ h1, h2 { font-weight: 700; letter-spacing: .005em; }
   gap: 14px; padding: max(24px, env(safe-area-inset-top)) 16px max(14px, env(safe-area-inset-bottom)); }
 /* 14/11 (Anne + JF): só o avatar e o slogan, sem o nome (o app já se chama C.A.O.S. Finanças e repetia), com ar */
 .abertura.esperando .abertura-caixa { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0; max-width: none; }
-.abertura.esperando .abertura-titulo { display: none; }
-.abertura.esperando .abertura-avatar { margin: max(8px, 2vh) 0 0; } /* Anne (14/11): o avatar um pouco mais pra cima */
+.abertura.esperando .abertura-titulo { display: block; order: -1; margin: max(8px, 2vh) 0 4px; color: var(--text); font-size: 2.4rem;
+  text-shadow: 0 0 18px color-mix(in srgb, var(--caos) 35%, transparent); } /* 15/11 (print do JF): o nome volta, em cima do avatar */
+.abertura.esperando .abertura-frase-um { display: none; } /* com o nome em cima, a frase fica só "pra organizar o seu caos." */
+.abertura.esperando .abertura-avatar { margin: 0; } /* Anne (14/11): o avatar um pouco mais pra cima */
 .abertura.esperando .abertura-frase { margin: 14px 0 auto; font-size: 1.1rem; color: var(--text); }
 .abertura.esperando .abertura-dica { display: none; }
 .abertura.esperando .abertura-avatar { width: min(190px, 50vw); }
@@ -1258,3 +1260,35 @@ body.teclado .chat-anexo { bottom: 64px; }
 .tag.piso-ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, transparent); }
 .tag.piso-perto { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 60%, transparent); }
 .tag.piso-abaixo { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 60%, transparent); }
+
+/* ===== 15/11 (teste da Anne, parte 4) ===== */
+/* títulos que explicam o número de baixo, mais visíveis */
+.titulo-destaque { margin: 0 0 2px; font-family: var(--font-display); font-size: 1.25rem; font-weight: 800; color: var(--text); text-align: center; letter-spacing: .01em; }
+.saldo-topo .titulo-destaque { margin: 0; }
+/* Contas: aviso de que o app não lê o banco, em laranja pra chamar a atenção */
+.aviso-banco { display: flex; gap: 10px; align-items: flex-start; margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; text-align: left; font-size: .9rem;
+  background: color-mix(in srgb, var(--warn) 14%, var(--card)); border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent); color: var(--text); }
+.aviso-banco .ico { flex: none; width: 20px; height: 20px; color: var(--warn); margin-top: 1px; }
+.aviso-banco b { color: var(--warn); }
+/* Mês: cada linha da previsão abre e mostra o que tem dentro */
+.plan-resumo .plan-linhas { gap: 6px; margin-top: 12px; }
+.plan-linhas > li { display: block; }
+.plan-linha { border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--accent) 4%, var(--card)); }
+.plan-linha > summary { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; cursor: pointer; list-style: none; color: var(--text); font-weight: 600; }
+.plan-linha > summary::-webkit-details-marker { display: none; }
+.plan-linha > summary::after { content: '▾'; color: var(--muted); margin-left: 4px; transition: transform .2s; }
+.plan-linha[open] > summary::after { transform: rotate(180deg); }
+.plan-linha > summary .num { margin-left: auto; font-variant-numeric: tabular-nums; }
+.plan-linha[data-linha="entrada"] > summary .num { color: var(--ok, #22c55e); }
+.plan-det { display: grid; gap: 4px; margin: 0; padding: 0 12px 10px; list-style: none; }
+.plan-det li { display: flex; justify-content: space-between; gap: 8px; font-size: .9rem; color: var(--text); border-top: 1px dashed var(--line); padding-top: 6px; }
+.plan-det li small { display: block; color: var(--muted); font-size: .78rem; }
+.plan-det li > span:first-child { text-align: left; }
+.plan-det-vazio { margin: 0; padding: 0 12px 10px; text-align: left; }
+/* Contas: o quadradinho Bancos abre a lista de bancos */
+.bancos-bloco[open] .account-list { margin: 10px 0 0; }
+/* Glossário: título no meio e explicação mais clara */
+.glos-card > h2 { text-align: center; }
+.glos-intro { margin: 4px 0 10px; text-align: center; font-size: .95rem; color: var(--text); line-height: 1.45; }
+/* Ajustes: "Mais sobre o C.A.O.S." */
+#caos-info-card h3 { margin: 14px 0 6px; font-size: 1rem; }
