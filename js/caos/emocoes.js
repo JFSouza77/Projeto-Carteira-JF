@@ -73,6 +73,9 @@ const EFEITO = {
   carinho_conversa: { carinho: 1.5, curiosidade: 0.5 },
   ofensiva_marco: { alegria: 5, tedio: -1 },
   saldo_sem_gasto: { curiosidade: 2, ansiedade: 1 },
+  semana_menos: { alegria: 2, carinho: 1 },
+  categoria_pesando: { curiosidade: 1.5 },
+  semana_mais: { curiosidade: 1, ansiedade: 1 },
   saldo_sem_entrada: { curiosidade: 2, alegria: 1 },
   racha_cadastrada: { curiosidade: 1, carinho: 0.5 },
   a_receber: { curiosidade: 1, ansiedade: 0.5 },
@@ -99,7 +102,13 @@ export function decair(estado, now = Date.now()) {
   const e = { ...e0, v: migrar(e0.v) };
   const horas = Math.max(0, (now - (e.at ?? now)) / 3_600_000);
   const fator = Math.pow(0.5, horas / MEIA_VIDA_H);
-  return { v: Object.fromEntries(EMOCOES.map(k => [k, limpar((e.v[k] || 0) * fator)])), at: now };
+  // núcleo 1.5.0 ("segura", 0,75, igual ao Perfil): a emoção que está mandando perde só 75% do que as outras perdem,
+  // então fica um pouco mais no rosto e se acalma aos poucos, sem trocar de cara a cada evento.
+  const segura = NUCLEO.emocoes.estabilizador.segura ?? 1;
+  let dono = null;
+  for (const k of EMOCOES) if ((e.v[k] || 0) > 0 && (!dono || e.v[k] > e.v[dono])) dono = k;
+  const fatorDono = 1 - (1 - fator) * segura;
+  return { v: Object.fromEntries(EMOCOES.map(k => [k, limpar((e.v[k] || 0) * (k === dono ? fatorDono : fator))])), at: now };
 }
 
 /** Aplica um evento (depois de decair até agora). Devolve um estado NOVO. */

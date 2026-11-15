@@ -242,6 +242,34 @@ export function calendarioOfensiva(dados, today = toISODate(), n = 28) {
   return out;
 }
 
+/**
+ * Fato útil da semana (15/11, no lugar do troféu da ofensiva; ideia do Code): compara os últimos 7 dias com os 7
+ * anteriores. Só fala se as duas semanas tiverem gasto anotado em pelo menos 3 dias e a diferença for de R$ 10 ou mais.
+ * Devolve { type: 'semana_menos' | 'semana_mais', amountCents (diferença), totalCents (esta semana),
+ *           categoryName, overCents (quanto a categoria que mais mudou variou) } ou null.
+ */
+export function fatoDaSemana(expenses, categories = [], today = toISODate()) {
+  const [y, m, d] = today.split('-').map(Number);
+  const dia = n => toISODate(new Date(y, m - 1, d - n));
+  const ini = dia(6), iniAntes = dia(13), fimAntes = dia(7);
+  const desta = expenses.filter(e => e.date >= ini && e.date <= today);
+  const antes = expenses.filter(e => e.date >= iniAntes && e.date <= fimAntes);
+  if (new Set(desta.map(e => e.date)).size < 3 || new Set(antes.map(e => e.date)).size < 3) return null;
+  const soma = l => l.reduce((t, e) => t + e.amountCents, 0);
+  const diff = soma(desta) - soma(antes);
+  if (Math.abs(diff) < 1000) return null;
+  const porCat = new Map();
+  for (const e of desta) porCat.set(e.categoryId, (porCat.get(e.categoryId) || 0) + e.amountCents);
+  for (const e of antes) porCat.set(e.categoryId, (porCat.get(e.categoryId) || 0) - e.amountCents);
+  // a categoria que mais ajudou (semana menor) ou mais pesou (semana maior)
+  const [catId, catDiff] = [...porCat].sort((a, b) => (diff < 0 ? a[1] - b[1] : b[1] - a[1]))[0] || [];
+  const cat = categories.find(c => c.id === catId);
+  return {
+    type: diff < 0 ? 'semana_menos' : 'semana_mais', amountCents: Math.abs(diff), totalCents: soma(desta),
+    categoryName: cat ? cat.name : 'outras coisas', overCents: catDiff ? Math.abs(catDiff) : 0,
+  };
+}
+
 export const MARCOS_OFENSIVA = Object.freeze([3, 7, 14, 30, 60, 100, 200, 365]);
 
 /** Soma dos gastos de uma categoria num mês (só a minha parte, se a conta foi rachada). */
@@ -810,6 +838,14 @@ export function analyze({ expenses, incomes = [], categories, accounts = [], com
       leftCents: rp.folgaTotalCents, overCents: -rp.folgaTotalCents, days: rp.diasAteEstourar, perDayCents: rp.gastoDiaCents, estourado: rp.status === 'estourado' });
   }
 
+  // orçamento por lugar é opcional (15/11, ideia do Code): o C.A.O.S. só sugere quando uma categoria sem limite pesa
+  // 40% ou mais do mês (e o mês já tem pelo menos R$ 100 de gasto)
+  if (s.totalCents >= 10000) {
+    const pesada = s.rows.filter(r => !r.budgetCents && r.id !== 'outros').sort((a, b) => b.spentCents - a.spentCents)[0];
+    const pct = pesada ? Math.round((pesada.spentCents / s.totalCents) * 100) : 0;
+    if (pesada && pct >= 40) out.push({ type: 'categoria_pesando', severity: 'baixa', categoryId: pesada.id, categoryName: pesada.name, pct, amountCents: pesada.spentCents });
+  }
+
   const recentDelivery = expenses.filter(e => e.categoryId === 'delivery' && daysBetween(e.date, today) >= 0
     && daysBetween(e.date, today) < DELIVERY_WINDOW_DAYS);
   if (recentDelivery.length >= DELIVERY_REPEAT_COUNT) {
@@ -985,6 +1021,30 @@ export function analisarPlanejamento({ expenses, incomes = [], categories, compr
     compromissos: sit, compPendentesCents, planos: planosMes, planosPendentesCents, comprometidoCents: comprometido,
     sobraCents, adiar,
   };
+}
+
+/**
+ * "Dá pra gastar R$ X até o dia do salário" (15/11, ideia do Code: um número só, pra quem não entende de finanças).
+ * X = a sobra prevista do mês (entradas − o que já saiu − compromissos − planos). O dia do salário é o dia da última
+ * entrada de Salário; sem salário anotado, vale até o fim do mês. Devolve null sem entrada no mês.
+ */
+export function podeGastar(dados, today = toISODate()) {
+  const a = analisarPlanejamento(dados, today);
+  if (a.baseTipo !== 'entradas' || a.sobraCents == null) return null;
+  const [y, m, d] = today.split('-').map(Number);
+  const sal = (dados.incomes || []).filter(i => i.sourceId === 'salario' && i.date <= today).sort((p, q) => q.date.localeCompare(p.date))[0];
+  let ate, diaSalario = null;
+  if (sal) {
+    diaSalario = Number(sal.date.slice(8, 10));
+    const ultimoDia = (ano, mes) => new Date(ano, mes, 0).getDate(); // mes 1-12
+    const naData = (ano, mes) => toISODate(new Date(ano, mes - 1, Math.min(diaSalario, ultimoDia(ano, mes))));
+    ate = diaSalario > d ? naData(y, m) : naData(m === 12 ? y + 1 : y, m === 12 ? 1 : m + 1);
+  } else {
+    ate = toISODate(new Date(y, m, 1)); // primeiro dia do mês que vem
+  }
+  const dias = Math.max(1, daysBetween(today, ate));
+  const sobraCents = a.sobraCents;
+  return { sobraCents, ate, diaSalario, dias, porDiaCents: sobraCents > 0 ? Math.floor(sobraCents / dias) : 0 };
 }
 
 /** "Cabe no mês?" para uma compra de `valorCents`. */

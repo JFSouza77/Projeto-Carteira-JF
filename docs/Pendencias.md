@@ -9,10 +9,8 @@ Atualizada pelo Wally a cada rodada.
 Entrou como ajuste da 2.0.9: barra nova, alertas no topo, Mês que abre, Bancos num quadradinho, Glossário, calculadora
 em Contas, leis e linha do tempo em Ajustes, abertura com o nome em cima. Saíram da tela o orçamento de hoje e a ofensiva.
 
-Falta pensar (com o JF e a Anne):
-1. **Ofensiva:** desligada na tela (o código ficou). Ideia a discutir: só vale se der algo em troca (ex.: o C.A.O.S.
-   mostra quanto você economizou nos dias anotados), senão sai de vez.
-2. **Orçamento por lugar** (mercado, posto) ou do mês no geral, no lugar do orçamento de hoje.
+Resolvido em 15/11 (ideias do Code, ok do JF): a ofensiva virou o "fato da semana" do C.A.O.S.; o orçamento virou
+"Dá pra gastar R$ X até o salário" no Início, e o orçamento por lugar fica opcional (ele sugere quando uma categoria pesa).
 
 ## Teste da Anne (14/11): o que já entrou e o que falta
 

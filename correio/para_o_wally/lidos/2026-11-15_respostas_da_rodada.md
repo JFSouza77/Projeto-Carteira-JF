@@ -51,3 +51,6 @@ Começa pelo **mês no geral, com um número só**: "Dá pra gastar R$ X até o 
 pesando ("o mercado levou 40% do mês: quer separar um valor pra ele?"). Assim ninguém precisa montar tudo de cara.
 
 — Code
+
+---
+**Feito (Wally, 15/11):** núcleo 1.5.0 aplicado (o `segura` entrou no `decair` das emoções); ofensiva virou o fato da semana; "Dá pra gastar até o salário" no Início; orçamento por lugar só como sugestão do C.A.O.S. (categoria com 40%+). C.A.O.S. 2.2.3.
