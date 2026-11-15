@@ -24,7 +24,7 @@
     <div class="abertura-caixa">
       <span class="abertura-avatar" id="abertura-avatar"><span class="abertura-rosto" aria-hidden="true">(•‿•)</span></span>
       <p class="abertura-titulo">C.A.O.S.</p>
-      <p class="abertura-frase"><span class="abertura-frase-um">Um C.A.O.S. </span>pra organizar o seu caos.</p>
+      <p class="abertura-frase"><span class="abertura-frase-um">Um C.A.O.S. pra</span><span class="abertura-frase-pra">Pra</span> organizar o seu caos.</p>
       <p class="abertura-dica" id="abertura-dica" aria-live="polite"></p>
       <p class="abertura-pula">toque pra pular</p>
     </div>
@@ -151,7 +151,7 @@
           <p class="muted small" id="pode-dia"></p>
         </div>
         <div class="mini-stats">
-          <div><small>Entradas</small><strong class="num ok" id="stat-in">R$ 0,00</strong></div>
+          <button type="button" class="stat-olho" data-atalho="entradas" aria-label="Ver as entradas do mês"><small>Entradas</small><strong class="num ok" id="stat-in">R$ 0,00</strong></button>
           <div><small>Saldo do mês</small><strong class="num" id="stat-net">R$ 0,00</strong></div>
           <button type="button" class="stat-olho" data-olho aria-pressed="false" aria-label="Mostrar saldos"><small>Nas contas <svg class="ico" aria-hidden="true"><use href="#i-olho"/></svg></small><strong class="num" id="stat-bank">—</strong></button>
         </div>
@@ -789,6 +789,14 @@
     <header><h2 id="novidades-titulo">🆕 Novidades</h2><form method="dialog"><button class="icon-btn" aria-label="Fechar">×</button></form></header>
     <div id="novidades-lista"></div>
     <form method="dialog" class="nov-fim"><button class="primary">Entendi</button></form>
+  </dialog>
+
+  <!-- 15/11 (JF + Anne): o atalho Entradas mostra ali mesmo o que entrou no mês, sem levar pra outra aba -->
+  <dialog id="entradas-dialog" class="novidades-dialog entradas-dialog" aria-labelledby="entradas-titulo">
+    <header><h2 id="entradas-titulo">Entradas do mês</h2><form method="dialog"><button class="icon-btn" aria-label="Fechar">×</button></form></header>
+    <p class="entradas-total" id="entradas-total"></p>
+    <ul class="entradas-lista" id="entradas-lista"></ul>
+    <form method="dialog" class="nov-fim"><button class="primary">Fechar</button></form>
   </dialog>
 
   <div class="toast" id="toast" role="status" hidden></div>
