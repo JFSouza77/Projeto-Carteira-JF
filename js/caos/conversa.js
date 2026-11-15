@@ -329,7 +329,7 @@ export function entender(texto, { categories = [], anterior = null } = {}) {
     const intent = r0.intent === 'comparar' && anterior.intent !== 'comparar' ? 'comparar' : anterior.intent;
     return { ...r0, intent, categoria, periodo, continuacao: true };
   }
-  if (r0.intent === 'nao_entendi') {
+  if (r0.intent === 'nao_entendi' && !r0.foraDoTema) {
     const p = palpite(t);
     if (p) return { ...r0, intent: p, palpite: true };
   }
@@ -388,6 +388,7 @@ export function textoConta({ a, b, op }) {
   return `${A} − ${B} = ${fmtNum(r)}.${r < 0 ? ' Deu negativo: o segundo número é maior que o primeiro.' : ` Pra conferir: ${fmtNum(r)} + ${B} = ${A}.`}`;
 }
 
+const FORA_DO_TEMA = /\b(series?|filmes?|novelas?|livros?|jogos? de|games?|animes?|desenhos?|temporadas?|episodios?|ator|atriz|atores|cantor|cantora|bandas?|albuns?|album|time de|campeonato|copa do mundo|marvel|dc comics|estreias?|estreou|bilheteria|personagens?|elenco|trailer|diretor|roteiro|oscar|hbo|disney|pixar)\b/;
 const PAPO_PESSOAL = /\b(como (voce )?(se sente|esta se sentindo|ta se sentindo|se sentiu|tem se sentido)|voce se sente|o que (voce )?(acha|achou|tem achado|pensa|pensou) (da|do|de|sobre) (sua|seu|voce|mim|ser|ter)|o que (voce )?(tem achado|acha) da (sua )?evolucao|voce (gosta|curte|prefere|sonha|tem medo|tem saudade|fica feliz|fica triste|se diverte)|(seu|sua) (filme|musica|serie|comida|cor|time|jogo|livro|desenho) (favorit|preferid)|qual (e )?(o |a )?(seu|sua) (filme|musica|serie|comida|cor|time|jogo|livro|desenho)|se voce fosse|voce (ja )?(sonhou|imaginou))/;
 
 function entenderSimples(t, { categories = [] } = {}) {
@@ -400,6 +401,10 @@ function entenderSimples(t, { categories = [] } = {}) {
   // palavra "internet"): pergunta sobre o que ele sente, acha ou gosta vai pra IA online quando está ligada; sem ela,
   // ele responde como está. Não pega pergunta de dinheiro ("o que você acha de eu comprar 300?").
   if (PAPO_PESSOAL.test(t) && !r.valor && !/\b(gast|saldo|fatura|orcamento|dinheiro|comprar|compra|paguei|pagar|investir|economizar|guardar)/.test(t)) return { ...r, categoria: null, intent: 'papo_pessoal' };
+  // Fora do tema (JF, 15/11: "VisionQuest teve o mesmo orçamento da série Lanterns?!" virava "você não definiu
+  // orçamentos"): fala de filme, série, jogo, time, artista… sem falar do próprio dinheiro vai pra IA online
+  // (sem ela, "ainda não sei responder"). Registro com valor ("gastei 40 no cinema") continua sendo registro.
+  if (FORA_DO_TEMA.test(t) && !r.valor && !/\b(eu|meu|minha|meus|minhas|gastei|paguei|comprei|assinei|assinatura|gasto|gastos|cartao|fatura)\b/.test(t)) return { ...r, categoria: null, intent: 'nao_entendi', foraDoTema: true };
   // Matemática básica (JF, 13/11 à noite: "ele ensina matemática básica pra gente"): "quanto é 15 x 23?"
   const conta = lerConta(t);
   if (conta) return { ...r, intent: 'conta', conta };
