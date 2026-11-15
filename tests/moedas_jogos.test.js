@@ -29,9 +29,19 @@ test('preço de hoje vai pra IA; pacote informado ele calcula o preço por 100',
   assert.match(fala('pacote de 1000 robux por 50 reais compensa?').texto, /R\$\s5,00 a cada 100/);
 });
 
-test('"comprei 800 robux por 40" anota R$ 40 em Lazer, não R$ 800', () => {
+test('"comprei 800 robux por 40" anota R$ 40 em Jogos, não R$ 800', () => {
   const a = fala('comprei 800 robux por 40').acao;
   assert.equal(a.amountCents, 4000);
-  assert.equal(a.categoryId, 'lazer');
+  assert.equal(a.categoryId, 'jogos');
   assert.equal(a.note, 'Robux');
+});
+
+test('categoria Jogos: gasto de jogo vai pra ela e ganha a dica de gift card × crédito; avatar Gamer', async () => {
+  const f = fala('gastei 40 em robux');
+  assert.equal(f.acao.categoryId, 'jogos');
+  assert.match(f.texto, /gift card/);
+  assert.equal(fala('gastei 30 no cinema').acao.categoryId, 'lazer');
+  const { formaPara, FORMAS } = await import('../js/avatar.js');
+  assert.ok(FORMAS.gamer.acc.includes('controle'));
+  assert.equal(formaPara({ assunto: 'moeda_jogo' }), 'gamer');
 });

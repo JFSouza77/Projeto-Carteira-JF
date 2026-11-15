@@ -9,7 +9,8 @@ export const DEFAULT_CATEGORIES = Object.freeze([
   { id: 'moradia', name: 'Moradia', emoji: '🏠', budgetCents: 0 },
   { id: 'contas', name: 'Contas', emoji: '💡', budgetCents: 0 },
   { id: 'saude', name: 'Saúde', emoji: '💊', budgetCents: 0 },
-  { id: 'lazer', name: 'Lazer', emoji: '🎮', budgetCents: 0 },
+  { id: 'lazer', name: 'Lazer', emoji: '🎟️', budgetCents: 0 },
+  { id: 'jogos', name: 'Jogos', emoji: '🎮', budgetCents: 0 }, // 15/11 (JF): moedas e gastos de jogo (Robux, V-Bucks, skins…)
   { id: 'streaming', name: 'Streaming', emoji: '📺', budgetCents: 0 },
   { id: 'compras', name: 'Compras', emoji: '🛍️', budgetCents: 0 },
   { id: 'educacao', name: 'Educação', emoji: '🎓', budgetCents: 0 }, // 13/11 (JF): faculdade, curso, escola, material
@@ -1117,7 +1118,8 @@ export const PALAVRAS_CATEGORIA = Object.freeze({
   saude: ['academia', 'farmacia', 'remedio', 'remedios', 'medico', 'consulta', 'dentista', 'exame', 'drogaria'],
   contas: ['luz', 'energia', 'internet', 'celular', 'telefone', 'gas', 'boleto'],
   moradia: ['aluguel', 'condominio', 'iptu'],
-  lazer: ['cinema', 'show', 'festa', 'viagem', 'passeio', 'jogo', 'game', 'ingresso', 'robux', 'vbucks', 'diamantes', 'skin', 'skins', 'gemas', 'minecoins', 'steam'],
+  lazer: ['cinema', 'show', 'festa', 'viagem', 'passeio', 'ingresso'],
+  jogos: ['jogo', 'jogos', 'game', 'games', 'robux', 'vbucks', 'diamantes', 'skin', 'skins', 'gemas', 'minecoins', 'steam', 'roblox', 'fortnite', 'valorant', 'psn', 'playstation', 'xbox', 'nintendo', 'passe'],
   streaming: ['netflix', 'spotify', 'disney', 'hbo', 'globoplay', 'deezer', 'youtube'],
   compras: ['roupa', 'roupas', 'tenis', 'sapato', 'shopping', 'presente', 'shopee', 'shein', 'amazon'],
   educacao: ['faculdade', 'escola', 'curso', 'livro', 'livros', 'apostila', 'material'],
