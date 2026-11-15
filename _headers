@@ -1,3 +1,11 @@
+# 15/11 (teste do amigo do JF): cabeçalhos de segurança em todas as páginas.
+#  nosniff: o navegador não "adivinha" o tipo do arquivo; DENY: ninguém põe o app dentro de outro site (golpe de clique);
+#  Referrer-Policy: não manda o endereço completo pra outros sites; Permissions-Policy: só câmera e microfone, e só daqui.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(self), microphone=(self), geolocation=(), payment=(), usb=()
 /sw.js
   Cache-Control: no-cache
 /index.html

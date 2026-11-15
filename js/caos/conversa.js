@@ -559,7 +559,7 @@ function entenderSimples(t, { categories = [] } = {}) {
   if (/(media|por dia|diario|diaria)/.test(t)) return { ...r, intent: 'media' };
   if (/(dica|economiz|poupar|guardar dinheiro|como gastar menos|conselho|sugestao)/.test(t)) return { ...r, intent: 'dica' };
   if (/(gast|paguei|saiu|despesa|torrei)/.test(t) && pergunta) return { ...r, intent: 'gasto_total' };
-  if (/^(oi|ola|e ai|eai|opa|bom dia|boa tarde|boa noite|salve|hey|alo)\b/.test(t)) return { ...r, intent: 'saudacao' };
+  if (/^(o+i+e*|ola+|e a+i+|ea+i+|opa+|bom dia|boa tarde|boa noite|salve+|he+y+|alo+)\b/.test(t)) return { ...r, intent: 'saudacao' }; // "oii", "oie", "eaii" (teste do amigo do JF, 15/11)
   if (r.categoria && pergunta) return { ...r, intent: 'gasto_total' };
   return { ...r, intent: 'nao_entendi' };
 }

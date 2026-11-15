@@ -468,3 +468,8 @@ test('"esqueci de lançar" + só o valor: pergunta "em quê?" antes de propor; d
   assert.equal(c.fala.acao, null);
   assert.match(c.fala.texto, /não anotei nada/);
 });
+
+test('"oii", "oie" e "eaii" também são oi (teste do amigo do JF, 15/11)', async () => {
+  const { entender } = await import('../js/caos/conversa.js');
+  for (const t of ['oii', 'oie', 'eaii', 'oiii caos']) assert.equal(entender(t).intent, 'saudacao', t);
+});
