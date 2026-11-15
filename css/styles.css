@@ -1032,7 +1032,7 @@ h1, h2 { font-weight: 700; letter-spacing: .005em; }
   text-shadow: 0 0 18px color-mix(in srgb, var(--caos) 35%, transparent); } /* 15/11 (print do JF): o nome volta, em cima do avatar */
 .abertura.esperando .abertura-frase-um { display: none; }
 .abertura-frase-pra { display: none; }
-.abertura.esperando .abertura-frase-pra { display: inline; } /* 15/11 (JF): começo de frase, "Pra" com P maiúsculo */ /* com o nome em cima, a frase fica só "pra organizar o seu caos." */
+.abertura.esperando .abertura-frase-pra { display: inline; } /* 15/11 (JF): com o nome em cima, a frase fica "Para organizar o seu caos." */
 .abertura.esperando .abertura-avatar { margin: 0; } /* Anne (14/11): o avatar um pouco mais pra cima */
 .abertura.esperando .abertura-frase { margin: 14px 0 auto; font-size: 1.1rem; color: var(--text); }
 .abertura.esperando .abertura-dica { display: none; }
@@ -1312,10 +1312,5 @@ body.teclado .chat-anexo { bottom: 64px; }
   body.teclado .chat-bar { padding-bottom: 8px; }
 }
 
-/* Entradas do mês (15/11): a lista do que entrou, aberta ali mesmo */
-.entradas-total { margin: 0 16px 8px; text-align: center; font-family: var(--font-display); font-size: 1.5rem; font-weight: 800; color: var(--ok); }
-.entradas-lista { list-style: none; margin: 0; padding: 0 16px; display: grid; gap: 6px; max-height: 55vh; overflow-y: auto; }
-.entradas-lista li { display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--card-2); border: 1px solid var(--line); }
-.entradas-lista li > span:first-child { text-align: left; }
-.entradas-lista small { display: block; color: var(--muted); font-size: .8rem; }
-.entradas-lista .num { color: var(--ok); font-weight: 700; white-space: nowrap; }
+/* Entradas (15/11): a Análise no modo entradas esconde o que é só de gasto (gráficos e o seletor barras/rosca) */
+#tela-analise.modo-entradas #graficos-card, #tela-analise.modo-entradas #cat-card .seg { display: none; }

@@ -473,18 +473,12 @@ async function salvarLimiteDiario(cents) {
 }
 
 /** Atalhos do Início: abre o Lançar já no modo certo (transferência mora em Contas). */
-/** Lista das entradas do mês que está na tela (o que entrou nas contas), num quadro por cima. Só leitura. */
+/** Entradas (15/11, JF + Anne): o mesmo relatório dos gastos (tela de Análise), só que com as entradas do mês. */
 function mostrarEntradas() {
-  const mes = state.viewMonth || monthKey(toISODate());
-  const lista = state.incomes.filter(i => monthKey(i.date) === mes).sort((a, b) => b.date.localeCompare(a.date));
-  const total = lista.reduce((t, i) => t + i.amountCents, 0);
-  $('#entradas-titulo').textContent = mes === monthKey(toISODate()) ? 'Entradas do mês' : `Entradas · ${monthLabel(mes)}`;
-  $('#entradas-total').textContent = formatBRL(total);
-  const conta = id => { const c = state.accounts.find(x => x.id === id); return c ? accountLabel(c) : ''; };
-  $('#entradas-lista').innerHTML = lista.length ? lista.map(i => `<li><span>${i.date.slice(8, 10)}/${i.date.slice(5, 7)} · ${esc(srcById(i.sourceId)?.name || 'Entrada')}`
-    + `${i.note ? `<small>${esc(i.note)}</small>` : ''}${i.accountId ? `<small>${esc(conta(i.accountId))}</small>` : ''}</span><span class="num">${formatBRL(i.amountCents)}</span></li>`).join('')
-    : '<li class="muted">Nenhuma entrada neste mês. Quando receber, use o botão Lançar.</li>';
-  $('#entradas-dialog').showModal();
+  state.filtroTipo = 'entrada';
+  state.filtroCat = null;
+  location.hash = 'analise';
+  render();
 }
 
 function atalho(tipo) {
@@ -567,6 +561,25 @@ function render() {
     <li class="${a.severity}">${ic(ICONE_ALERTA[a.type] || 'i-alerta')}<span>${esc(cap(nomeAlerta(a)))}</span></li>`).join('');
 
   const rows = s.rows.filter(r => r.spentCents > 0 || r.budgetCents > 0).sort((a, b) => b.spentCents - a.spentCents);
+  // Modo Entradas (15/11): com o filtro "Entradas", a Análise vira o relatório das entradas, no mesmo formato
+  const modoEntradas = state.filtroTipo === 'entrada';
+  $('#tela-analise').classList.toggle('modo-entradas', modoEntradas);
+  $('#analise-nome').textContent = modoEntradas ? 'Entradas' : 'Análise';
+  $('#cat-titulo').textContent = modoEntradas ? 'De onde veio' : 'Por categoria';
+  if (modoEntradas) {
+    const doMesE = state.incomes.filter(i => i.month === state.viewMonth);
+    const totalE = doMesE.reduce((t, i) => t + i.amountCents, 0);
+    const porFonte = INCOME_SOURCES.map(f => ({ ...f, total: doMesE.filter(i => (i.sourceId || 'outros') === f.id).reduce((t, i) => t + i.amountCents, 0) }))
+      .filter(f => f.total > 0).sort((a, b) => b.total - a.total);
+    $('#cat-list').innerHTML = porFonte.length ? porFonte.map(f => `
+    <li>
+      <div class="cat-head"><span class="cat-nome">${esc(f.emoji)} ${esc(f.name)}</span><span class="num">${formatBRL(f.total)}</span></div>
+      <div class="bar"><div class="bar-fill" style="width:${Math.round((f.total / totalE) * 100)}%;background:var(--ok)"></div></div>
+    </li>`).join('') : '<li class="muted">Nenhuma entrada neste mês. Quando receber, use o botão Lançar.</li>';
+    $('#res-cat').textContent = totalE ? `Total · ${formatBRL(totalE)}` : 'sem entradas';
+    $('#cat-rosca').hidden = true;
+    $('#cat-list').hidden = false;
+  } else {
   // toque na categoria: filtra o extrato (13/11, repaginada)
   $('#cat-list').innerHTML = rows.length ? rows.map(r => `
     <li class="cat-filtra${state.filtroCat === r.id ? ' ativa' : ''}" data-filtra-cat="${esc(r.id)}" role="button" tabindex="0" aria-label="Ver lançamentos de ${esc(r.name)}">
@@ -581,6 +594,7 @@ function render() {
   $('#cat-rosca').hidden = grafico.cat !== 'rosca';
   $('#cat-list').hidden = grafico.cat === 'rosca';
   if (grafico.cat === 'rosca') renderRosca(rows);
+  }
 
   renderGraficos();
   renderPainel();
@@ -601,7 +615,7 @@ function render() {
   const catF = state.filtroCat && catById(state.filtroCat);
   $('#filtro-cat').hidden = !catF;
   if (catF) $('#filtro-cat').textContent = `${catF.name} ×`;
-  $('#exp-titulo').textContent = busca ? `Busca: ${lanc.length} ${lanc.length === 1 ? 'lançamento' : 'lançamentos'}` : 'Lançamentos do mês';
+  $('#exp-titulo').textContent = busca ? `Busca: ${lanc.length} ${lanc.length === 1 ? 'lançamento' : 'lançamentos'}` : (state.filtroTipo === 'entrada' ? 'Entradas do mês' : 'Lançamentos do mês');
   $('#exp-empty').textContent = busca ? 'Nada encontrado. Tente outra palavra ou um valor, tipo 49,90.' : 'Nenhum lançamento neste mês.';
   $('#exp-empty').hidden = lanc.length > 0;
   $('#res-exp').textContent = `${lanc.length} ${lanc.length === 1 ? 'item' : 'itens'}`;
@@ -3345,6 +3359,8 @@ function bind() {
     if (b) { state.filtroTipo = b.dataset.tipo || null; render(); }
   });
   $('#filtro-cat').addEventListener('click', () => { state.filtroCat = null; render(); });
+  // a Análise aberta pelo Mês começa com todos os lançamentos (o atalho Entradas abre no modo entradas)
+  $('#ir-analise').addEventListener('click', () => { state.filtroTipo = null; state.filtroCat = null; render(); });
   const filtrarCat = e => {
     const li = e.target.closest('[data-filtra-cat]');
     if (!li || (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ')) return;
