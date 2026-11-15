@@ -248,7 +248,7 @@ function narrate(events, { ignoreCooldown = false } = {}) {
 const TELAS = ['inicio', 'lancar', 'mes', 'conversa', 'contas', 'ajustes', 'analise'];
 // Ordem da barra de baixo (12/11: o Lançar, ação mais usada, fica no meio, grande). Arrastar pro lado anda nessa ordem; Ajustes fica fora (é a engrenagem).
 // barra de baixo (JF, 12/11): C.A.O.S., Contas, Lançar (meio), Mês, Início por último
-const ORDEM_ABAS = ['conversa', 'contas', 'lancar', 'mes', 'inicio'];
+const ORDEM_ABAS = ['inicio', 'contas', 'lancar', 'mes', 'conversa']; // 15/11 (Anne): Início na ponta esquerda, Chat na direita
 let telaAtual = 'inicio';
 
 function irPara(tela, { lado = null } = {}) {
@@ -287,12 +287,17 @@ function alternarEstudio(ligar = $('#estudio').hidden) {
   $('#tela-conversa').classList.toggle('modo-estudio', ligar);
   $('#estudio-btn').setAttribute('aria-pressed', String(ligar));
   // dica do Code (13/11): deixar claro como voltar pra conversa
-  $('#estudio-btn').innerHTML = ligar ? '← Conversa' : '<svg class="ico" aria-hidden="true"><use href="#i-livro"/></svg> Estúdio';
+  $('#estudio-btn').innerHTML = ligar ? '← Conversa' : '<svg class="ico" aria-hidden="true"><use href="#i-livro"/></svg> Glossário';
   if (ligar) { renderEstudio(); window.scrollTo(0, 0); }
 }
 
 let estudioMontado = false;
 function renderEstudio() {
+  renderGlossario();
+}
+
+// 15/11 (Anne): leis e linha do tempo moram nos Ajustes ("Mais sobre o C.A.O.S."); a calculadora, em Contas
+function montarInfoCaos() {
   if (!estudioMontado) {
     estudioMontado = true;
     // núcleo 1.3.0: cada lei tem o sentido geral e a frase de cada casa (aqui, a da Carteira)
@@ -300,7 +305,6 @@ function renderEstudio() {
     const dataBR = iso => { const [a, m, d] = iso.split('-'); return `${d}/${m}/${a}`; };
     $('#linha-tempo').innerHTML = NUCLEO.vida.map(v => `<li><small>${dataBR(v.data)}</small>${esc(v.fato)}</li>`).join('');
   }
-  renderGlossario();
   renderCalculadora();
 }
 
@@ -409,8 +413,7 @@ function renderPainel() {
   // menu lateral: saudação, saldo e foguinho
   $('#nav-ola').textContent = state.perfil?.apelido ? `Olá, ${state.perfil.apelido}` : 'Olá!';
   $('#nav-saldo').textContent = state.accounts.some(a => a.tipo !== 'cartao') ? formatBRL(totalBalance(state.accounts, state.expenses, state.incomes, state.transferencias)) : '—';
-  const o = ofensivaAgora();
-  $('#nav-fogo').textContent = o.dias ? `🔥 ${o.dias}d` : '';
+  $('#nav-fogo').textContent = ''; // 15/11: ofensiva fora da tela até ser repensada
 }
 
 // ---------- Orçamento diário ideal (V2 do AI Studio, 13/11): o limite mora no perfil, que sincroniza ----------
@@ -452,6 +455,11 @@ async function salvarLimiteDiario(cents) {
 
 /** Atalhos do Início: abre o Lançar já no modo certo (transferência mora em Contas). */
 function atalho(tipo) {
+  if (tipo === 'entradas') { // 15/11 (Anne): o atalho mostra as entradas do mês; lançar fica com o botão Lançar
+    location.hash = 'mes';
+    setTimeout(() => { const d = document.querySelector('#plan-linhas details[data-linha="entrada"]'); if (d) { d.open = true; d.scrollIntoView({ block: 'center' }); } }, 80);
+    return;
+  }
   if (tipo === 'transf') {
     location.hash = 'contas';
     setTimeout(() => { const t = $('#transf-card'); t.open = true; t.scrollIntoView({ block: 'start' }); }, 50);
@@ -663,8 +671,10 @@ function renderOfensiva() {
   }).join('');
 }
 
+const OFENSIVA_DESLIGADA = true;
 /** Se o lançamento de agora acendeu o dia e bateu um marco (3, 7, 14, 30…), o C.A.O.S. comemora. */
 function eventoOfensiva(antes) {
+  if (OFENSIVA_DESLIGADA) return []; // 15/11 (Anne): sem comemoração vazia até a ofensiva ser repensada
   const depois = ofensivaAgora();
   if (!antes.hojeFeito && depois.hojeFeito && MARCOS_OFENSIVA.includes(depois.dias)) return [{ type: 'ofensiva_marco', days: depois.dias }];
   return [];
@@ -1849,7 +1859,9 @@ function renderContas() {
   renderTransf();
   $('#bank-total').textContent = saldoTxt(totalBalance(state.accounts, state.expenses, state.incomes, state.transferencias));
   pintarOlhos();
-  $('#account-list').innerHTML = agruparPorBanco(state.accounts).map(g => {
+  const gruposBanco = agruparPorBanco(state.accounts);
+  $('#res-bancos').textContent = gruposBanco.length ? `${gruposBanco.length} ${gruposBanco.length === 1 ? 'banco' : 'bancos'}` : 'nenhum ainda';
+  $('#account-list').innerHTML = gruposBanco.map(g => {
     const dinheiro = g.contas.filter(a => a.tipo !== 'cartao' && !a.paraQuem).reduce((t, a) => t + accountBalance(a, state.expenses, state.incomes, state.transferencias), 0);
     const temDinheiro = g.contas.some(a => a.tipo !== 'cartao');
     const tema = temaBanco(g.bank === 'Outro' ? (g.contas[0]?.nickname || 'Outro') : g.bank);
@@ -2487,13 +2499,27 @@ function renderMes() {
     el.textContent = formatBRL(a.sobraCents);
     el.className = `big ${a.sobraCents < 0 ? 'bad' : 'ok'}`;
   }
+  // 15/11 (Anne): cada linha abre e mostra o que tem dentro (entradas do mês, onde gastou, o que falta pagar, os planos)
+  const dm = iso => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+  const det = (itens, vazio) => itens.length
+    ? `<ul class="plan-det">${itens.map(([k, v]) => `<li><span>${k}</span><span class="num">${esc(v)}</span></li>`).join('')}</ul>`
+    : `<p class="muted small plan-det-vazio">${esc(vazio)}</p>`;
+  const entradasMes = state.incomes.filter(i => monthKey(i.date) === a.month).sort((x, y) => y.date.localeCompare(x.date));
+  const contaNome = id => { const c = state.accounts.find(x => x.id === id); return c ? accountLabel(c) : ''; };
+  const itensEntrada = entradasMes.map(i => [`${dm(i.date)} · ${esc(srcById(i.sourceId)?.name || 'Entrada')}${i.note ? ` <small>${esc(i.note)}</small>` : ''}${i.accountId ? ` <small>${esc(contaNome(i.accountId))}</small>` : ''}`, formatBRL(i.amountCents)]);
+  const porCat = summarizeMonth(state.expenses, state.categories, a.month).rows.filter(r => r.spentCents > 0).sort((x, y) => y.spentCents - x.spentCents);
+  const itensGasto = porCat.map(r => [`${icCat(catById(r.id))} ${esc(r.name)}`, formatBRL(r.spentCents)]);
+  const itensComp = a.compromissos.filter(c => c.status !== 'pago').map(c => [`${esc(c.nome)} <small>${esc(textoStatus(c))}</small>`, formatBRL(c.faltaCents)]);
+  const itensPlanos = a.planos.filter(p => !p.feito).map(p => [esc(p.nome), formatBRL(p.valorCents)]);
   const linhas = [
-    [a.baseTipo === 'orcamento' ? 'Orçamento do mês' : 'Entradas do mês', a.baseTipo ? formatBRL(a.baseCents) : 'lance suas entradas'],
-    ['Já saiu', `− ${formatBRL(a.gastosCents)}`],
-    ['Compromissos a pagar', `− ${formatBRL(a.compPendentesCents)}`],
-    ['Planos a fazer', `− ${formatBRL(a.planosPendentesCents)}`],
+    [a.baseTipo === 'orcamento' ? 'Orçamento do mês' : 'Entradas do mês', a.baseTipo ? formatBRL(a.baseCents) : 'nenhuma ainda', 'entrada',
+      a.baseTipo === 'orcamento' && !entradasMes.length ? '<p class="muted small plan-det-vazio">Sem entrada lançada este mês: a conta usa a soma dos orçamentos.</p>' : det(itensEntrada, 'Nenhuma entrada este mês. Use o botão Lançar quando receber.')],
+    ['Já saiu', `− ${formatBRL(a.gastosCents)}`, 'saiu', det(itensGasto, 'Nenhum gasto este mês.')],
+    ['Compromissos a pagar', `− ${formatBRL(a.compPendentesCents)}`, 'comp', det(itensComp, 'Nada pendente este mês.')],
+    ['Planos a fazer', `− ${formatBRL(a.planosPendentesCents)}`, 'planos', det(itensPlanos, 'Nenhum plano pendente.')],
   ];
-  $('#plan-linhas').innerHTML = linhas.map(([k, v]) => `<li><span>${esc(k)}</span><span>${esc(v)}</span></li>`).join('');
+  const abertas = new Set([...document.querySelectorAll('#plan-linhas details[open]')].map(d => d.dataset.linha));
+  $('#plan-linhas').innerHTML = linhas.map(([k, v, id, corpo]) => `<li><details class="plan-linha" data-linha="${id}" ${abertas.has(id) ? 'open' : ''}><summary><span>${esc(k)}</span><span class="num">${esc(v)}</span></summary>${corpo}</details></li>`).join('');
   // a análise do C.A.O.S. (só leitura: não muda a memória dele)
   const { fala } = conversar('cabe no mês?', dados(), { mood: state.settings.mood, memory: state.caosMemory, perfil: state.perfil });
   $('#plan-caos').textContent = fala.texto;
@@ -3189,6 +3215,7 @@ function bind() {
   $('#estudio-btn').addEventListener('click', () => alternarEstudio());
   $('#glos-busca').addEventListener('input', renderGlossario);
   for (const id of ['#calc-valor', '#calc-taxa', '#calc-meses', '#calc-periodo']) $(id).addEventListener('input', renderCalculadora);
+  montarInfoCaos();
   $('#sim-parcelas').innerHTML = Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}">${i + 1 === 1 ? 'À vista' : `${i + 1}x`}</option>`).join('');
   $('#sim-form').addEventListener('submit', onSimular);
   $('#receber-list').addEventListener('click', e => {

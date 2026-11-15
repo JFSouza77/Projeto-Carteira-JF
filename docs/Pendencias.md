@@ -4,6 +4,16 @@ Um lugar só pra ver o que está aberto (sugestão do Code do Perfil, 12/11/2026
 Os detalhes continuam em `Pedidos_do_JF.md`, `Rascunhos_da_Semana.md` e `Ideias.md`; aqui fica só o resumo.
 Atualizada pelo Wally a cada rodada.
 
+## Teste da Anne, parte 4 (15/11)
+
+Entrou como ajuste da 2.0.9: barra nova, alertas no topo, Mês que abre, Bancos num quadradinho, Glossário, calculadora
+em Contas, leis e linha do tempo em Ajustes, abertura com o nome em cima. Saíram da tela o orçamento de hoje e a ofensiva.
+
+Falta pensar (com o JF e a Anne):
+1. **Ofensiva:** desligada na tela (o código ficou). Ideia a discutir: só vale se der algo em troca (ex.: o C.A.O.S.
+   mostra quanto você economizou nos dias anotados), senão sai de vez.
+2. **Orçamento por lugar** (mercado, posto) ou do mês no geral, no lugar do orçamento de hoje.
+
 ## Teste da Anne (14/11): o que já entrou e o que falta
 
 Entrou na 2.0.5 Mais Simples: blocos que abrem e fecham (Início, Mês, Contas), "Comece por aqui", saldo escondido com

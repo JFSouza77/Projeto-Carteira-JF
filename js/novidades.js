@@ -18,7 +18,15 @@ export const NOVIDADES = Object.freeze([
       '🔁 De onde transferir: "qual banco tem folga?" e ele sugere.',
       '🛒 Comprar pelo banco: "posso comprar 300 pelo C6?" e ele vê o piso.',
     ],
-    qol: [],
+    qol: [
+      '🧭 Barra nova: Início na ponta, e a conversa agora se chama Chat.',
+      '⚠️ Alertas no topo: aparecem antes do gasto do mês.',
+      '📅 Mês que abre: toque em Entradas, Já saiu, Compromissos ou Planos.',
+      '📊 Análise no Mês: os gráficos agora ficam na aba Mês.',
+      '🏦 Bancos num quadradinho: toque pra ver e escolher o banco.',
+      '📖 Glossário: o antigo Estúdio, com explicação mais clara.',
+      '🧮 Juros em Contas: a calculadora foi pra lá; leis e história, pros Ajustes.',
+    ],
   },
   {
     v: '2.0.8 Alfa',

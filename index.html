@@ -24,7 +24,7 @@
     <div class="abertura-caixa">
       <span class="abertura-avatar" id="abertura-avatar"><span class="abertura-rosto" aria-hidden="true">(•‿•)</span></span>
       <p class="abertura-titulo">C.A.O.S.</p>
-      <p class="abertura-frase">Um C.A.O.S. pra organizar o seu caos.</p>
+      <p class="abertura-frase"><span class="abertura-frase-um">Um C.A.O.S. </span>pra organizar o seu caos.</p>
       <p class="abertura-dica" id="abertura-dica" aria-live="polite"></p>
       <p class="abertura-pula">toque pra pular</p>
     </div>
@@ -131,9 +131,14 @@
 
       <nav class="atalhos" aria-label="Lançar rápido">
         <button type="button" class="atalho gasto" data-atalho="gasto"><svg class="ico" aria-hidden="true"><use href="#i-gasto"/></svg> Gasto</button>
-        <button type="button" class="atalho entrada" data-atalho="entrada"><svg class="ico" aria-hidden="true"><use href="#i-entrada"/></svg> Entrada</button>
+        <button type="button" class="atalho entrada" data-atalho="entradas" aria-label="Ver as entradas do mês"><svg class="ico" aria-hidden="true"><use href="#i-entrada"/></svg> Entradas</button>
         <button type="button" class="atalho transf" data-atalho="transf"><svg class="ico" aria-hidden="true"><use href="#i-transf"/></svg> Transferir</button>
       </nav>
+      <!-- 15/11 (Anne): alerta em cima do gasto do mês -->
+      <section class="card alertas-card" id="alerts-card" hidden>
+        <h2><svg class="ico" aria-hidden="true"><use href="#i-alerta"/></svg> Alertas</h2>
+        <ul class="alert-list" id="alert-list"></ul>
+      </section>
       <section class="card summary" aria-live="polite">
         <p class="label gasto-titulo"><svg class="ico" aria-hidden="true"><use href="#i-gasto"/></svg> Gasto no mês</p>
         <p class="big" id="total">R$ 0,00</p>
@@ -146,17 +151,14 @@
         </div>
       </section>
 
-      <section class="card alertas-card" id="alerts-card" hidden>
-        <h2><svg class="ico" aria-hidden="true"><use href="#i-alerta"/></svg> Alertas</h2>
-        <ul class="alert-list" id="alert-list"></ul>
-      </section>
 
       <section class="card" id="receber-card" hidden>
         <h2><svg class="ico" aria-hidden="true"><use href="#i-recibo"/></svg> A receber <small class="muted" id="receber-total"></small></h2>
         <ul class="receber-list" id="receber-list"></ul>
       </section>
 
-      <details class="card bloco hoje-card" id="hoje-card" data-bloco="hoje">
+      <!-- 15/11 (JF + Anne): orçamento de hoje e ofensiva saem da tela (não dá pra prever o gasto do dia; a ofensiva vai ser repensada) -->
+      <details class="card bloco hoje-card" id="hoje-card" data-bloco="hoje" hidden>
         <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#i-relogio"/></svg><span class="bloco-tit">Orçamento de hoje</span><span class="bloco-res num" id="res-hoje"></span></summary>
         <p class="hoje-valor"><strong class="num" id="hoje-gasto">R$ 0,00</strong> <span class="muted" id="hoje-de"></span></p>
         <div class="bar" id="hoje-bar-wrap" hidden><div class="bar-fill" id="hoje-bar"></div></div>
@@ -177,7 +179,7 @@
         </form>
       </details>
 
-      <details class="card bloco ofensiva-bloco" id="ofensiva-card" data-bloco="ofensiva">
+      <details class="card bloco ofensiva-bloco" id="ofensiva-card" data-bloco="ofensiva" hidden>
         <summary class="bloco-topo"><span class="ofensiva-fogo" id="ofensiva-fogo" aria-hidden="true">🔥</span><span class="bloco-tit" id="ofensiva-dias">0 dias seguidos</span><span class="bloco-res">anotações</span></summary>
         <div class="ofensiva">
           <div class="ofensiva-txt"><small id="ofensiva-sub" class="muted">Anote hoje pra acender o foguinho.</small></div>
@@ -194,9 +196,6 @@
         <ol class="noticias-lista" id="noticias-lista"></ol>
       </details>
 
-      <!-- 14/11 (JF): gráficos, categorias e lançamentos foram pra tela de Análise -->
-      <a href="#analise" class="card ir-analise"><svg class="ico" aria-hidden="true"><use href="#e-rendimento"/></svg>
-        <span><b>Análise do mês</b><small>Gráficos, gastos por categoria e todos os lançamentos</small></span><span class="passo-seta" aria-hidden="true">›</span></a>
 
     </main>
   </section>
@@ -335,7 +334,7 @@
       <button type="button" class="chat-avatar-btn" id="chat-avatar-btn" aria-label="Abrir o C.A.O.S. grande"><span class="chat-avatar" id="chat-avatar"></span></button>
       <span class="caos-face small" id="chat-face" aria-hidden="true">(•‿•)</span>
       <h1>C.A.O.S. <small id="chat-mood" class="muted"></small></h1>
-      <button class="ghost small estudio-btn" id="estudio-btn" type="button" aria-pressed="false" aria-controls="estudio"><svg class="ico" aria-hidden="true"><use href="#i-livro"/></svg> Estúdio</button>
+      <button class="ghost small estudio-btn" id="estudio-btn" type="button" aria-pressed="false" aria-controls="estudio"><svg class="ico" aria-hidden="true"><use href="#i-livro"/></svg> Glossário</button>
       <button class="icon-btn" id="chat-clear" aria-label="Limpar conversa"><svg class="ico" aria-hidden="true"><use href="#i-limpar"/></svg></button>
     </header>
     <main class="chat">
@@ -343,31 +342,12 @@
       <div class="chips scroll" id="chat-suggestions"></div>
     </main>
     <main class="estudio" id="estudio" hidden>
-      <section class="card">
-        <h2>Glossário</h2>
-        <p class="muted small">Palavras do dinheiro explicadas sem complicar. <span id="glos-total"></span></p>
+      <section class="card glos-card">
+        <h2 class="titulo-destaque">Glossário</h2>
+        <p class="glos-intro">As palavras do dinheiro explicadas do jeito mais simples. Toque num tema pra filtrar, ou procure uma palavra. Cada termo mostra o que é e um exemplo do dia a dia. <span class="muted" id="glos-total"></span></p>
         <input id="glos-busca" type="search" placeholder="Procurar (ex.: juros, Pix, CDI)" aria-label="Procurar no glossário">
         <div class="glos-temas" id="glos-temas" role="group" aria-label="Temas do glossário"></div>
         <div class="glos-lista" id="glos-lista"></div>
-      </section>
-      <section class="card">
-        <h2>Calculadora de juros</h2>
-        <p class="muted small">Mexa nos valores e veja a diferença entre juros simples e compostos.</p>
-        <div class="calc-grid">
-          <label class="field"><span>Valor (R$)</span><input id="calc-valor" type="text" inputmode="decimal" value="1.000,00"></label>
-          <label class="field"><span>Taxa (%)</span><input id="calc-taxa" type="number" inputmode="decimal" min="0" max="100" step="0.1" value="1"></label>
-          <label class="field"><span>A taxa é</span><select id="calc-periodo"><option value="mes">ao mês</option><option value="ano">ao ano</option></select></label>
-        </div>
-        <label class="field calc-meses"><span>Tempo: <b id="calc-meses-txt">12 meses</b></span><input id="calc-meses" type="range" min="1" max="120" value="12"></label>
-        <div class="calc-res" id="calc-res" aria-live="polite"></div>
-      </section>
-      <section class="card">
-        <h2>As 3 leis do C.A.O.S.</h2>
-        <ol class="leis" id="leis"></ol>
-      </section>
-      <section class="card">
-        <h2>Minha linha do tempo</h2>
-        <ol class="linha-tempo" id="linha-tempo"></ol>
       </section>
     </main>
     <!-- 14/11 (JF): a foto fica anexada aqui e vai junto com o texto (legenda) -->
@@ -384,12 +364,17 @@
   <section class="tela" id="tela-mes" data-tela="mes" hidden>
     <header class="topbar"><h1 id="mes-titulo">Planejamento do mês</h1></header>
     <main>
-      <section class="card summary">
-        <p class="label">Sobra prevista no mês</p>
+      <section class="card summary plan-resumo">
+        <h2 class="titulo-destaque">Previsão do mês</h2>
+        <p class="label">Quanto deve sobrar até o fim do mês</p>
         <p class="big vazio" id="plan-sobra">Lance sua entrada pra eu calcular</p>
         <ul class="plan-linhas" id="plan-linhas"></ul>
         <p class="caos-dica" id="plan-caos"></p>
       </section>
+
+      <!-- 15/11 (Anne): a Análise do mês mora no Mês -->
+      <a href="#analise" class="card ir-analise"><svg class="ico" aria-hidden="true"><use href="#e-rendimento"/></svg>
+        <span><b>Análise do mês</b><small>Gráficos, gastos por categoria e todos os lançamentos</small></span><span class="passo-seta" aria-hidden="true">›</span></a>
 
       <!-- 14/11 (JF): cada bloco abre ali mesmo; abriu um, os outros somem até fechar. Levar pra fora fica embaixo. -->
       <div class="painel-blocos" id="mes-blocos">
@@ -468,13 +453,17 @@
     <header class="topbar"><h1>Contas</h1></header>
     <main>
       <section class="card summary">
-        <div class="saldo-topo"><p class="label">Saldo estimado total</p>
+        <div class="saldo-topo"><h2 class="titulo-destaque">Saldo estimado total</h2>
           <button type="button" class="icon-btn olho" data-olho aria-pressed="false" aria-label="Mostrar saldos"><svg class="ico" aria-hidden="true"><use href="#i-olho"/></svg></button></div>
         <p class="big" id="bank-total">R$ 0,00</p>
-        <p class="muted small">O app não acessa seu banco. O saldo é o que você informa, mais o que foi lançado na conta depois disso. Confira no app do banco de vez em quando e atualize aqui.</p>
+        <p class="aviso-banco" role="note"><svg class="ico" aria-hidden="true"><use href="#i-alerta"/></svg><span><b>O app não acessa seu banco.</b> O saldo é o que você informa, mais o que foi lançado na conta depois disso. Confira no app do banco de vez em quando e atualize aqui.</span></p>
       </section>
-      <ul class="account-list" id="account-list"></ul>
+      <!-- 15/11 (Anne): os bancos ficam num quadradinho; abriu, aparecem os bancos; tocou num, as contas dele -->
       <div class="painel-blocos" id="contas-blocos">
+      <details class="card bloco tile-bloco bancos-bloco" id="bancos-card" data-bloco="bancos">
+        <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#i-contas"/></svg><span class="bloco-tit">Bancos</span><span class="bloco-res" id="res-bancos"></span></summary>
+        <ul class="account-list" id="account-list"></ul>
+      </details>
       <details class="card bloco tile-bloco" id="add-conta-card" data-bloco="add-conta">
         <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#i-contas"/></svg><span class="bloco-tit">Adicionar conta</span></summary>
         <form id="account-form" autocomplete="off" novalidate>
@@ -541,6 +530,17 @@
           </form>
         </details>
       </details>
+      <details class="card bloco tile-bloco calc-bloco" id="calc-card" data-bloco="calc">
+        <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#e-rendimento"/></svg><span class="bloco-tit">Calculadora de juros</span><span class="bloco-res">simples × compostos</span></summary>
+        <p class="muted small">Mexa nos valores e veja quanto o dinheiro cresce (ou a dívida aumenta) com juros simples e com juros compostos.</p>
+        <div class="calc-grid">
+          <label class="field"><span>Valor (R$)</span><input id="calc-valor" type="text" inputmode="decimal" value="1.000,00"></label>
+          <label class="field"><span>Taxa (%)</span><input id="calc-taxa" type="number" inputmode="decimal" min="0" max="100" step="0.1" value="1"></label>
+          <label class="field"><span>A taxa é</span><select id="calc-periodo"><option value="mes">ao mês</option><option value="ano">ao ano</option></select></label>
+        </div>
+        <label class="field calc-meses"><span>Tempo: <b id="calc-meses-txt">12 meses</b></span><input id="calc-meses" type="range" min="1" max="120" value="12"></label>
+        <div class="calc-res" id="calc-res" aria-live="polite"></div>
+      </details>
       </div>
     </main>
   </section>
@@ -594,6 +594,15 @@
         </fieldset>
         <label class="switch"><input type="checkbox" id="voice-toggle"><span>Voz do C.A.O.S.</span></label>
         <p class="muted small" id="caos-version"></p>
+      </details>
+
+      <!-- 15/11 (Anne): as leis e a linha do tempo saíram do Glossário e ficam aqui -->
+      <details class="card" id="caos-info-card">
+        <summary><h2>Mais sobre o C.A.O.S.</h2></summary>
+        <h3>As 3 leis do C.A.O.S.</h3>
+        <ol class="leis" id="leis"></ol>
+        <h3>Linha do tempo</h3>
+        <ol class="linha-tempo" id="linha-tempo"></ol>
       </details>
 
       <details class="card">
@@ -687,11 +696,11 @@
 
   <nav class="tabbar" aria-label="Navegação">
     <div class="nav-marca" aria-hidden="true"><span class="nav-logo">C</span><span><strong>C.A.O.S. Finanças</strong><small id="nav-ola">Olá!</small></span></div>
-    <a href="#conversa" data-tab="conversa"><svg class="ico" aria-hidden="true"><use href="#i-conversa"/></svg>C.A.O.S.</a>
+    <a href="#inicio" data-tab="inicio" aria-current="page"><svg class="ico" aria-hidden="true"><use href="#i-inicio"/></svg>Início</a>
     <a href="#contas" data-tab="contas"><svg class="ico" aria-hidden="true"><use href="#i-contas"/></svg>Contas</a>
     <a href="#lancar" data-tab="lancar" class="tab-inicio" aria-label="Lançar gasto ou entrada"><span class="tab-inicio-bola"><svg class="ico" aria-hidden="true"><use href="#i-lancar"/></svg></span>Lançar</a>
     <a href="#mes" data-tab="mes"><svg class="ico" aria-hidden="true"><use href="#i-mes"/></svg>Mês</a>
-    <a href="#inicio" data-tab="inicio" aria-current="page"><svg class="ico" aria-hidden="true"><use href="#i-inicio"/></svg>Início</a>
+    <a href="#conversa" data-tab="conversa" aria-label="Chat com o C.A.O.S."><svg class="ico" aria-hidden="true"><use href="#i-conversa"/></svg>Chat</a>
       <div class="nav-resumo"><small class="muted">Saldo em contas</small><strong id="nav-saldo">—</strong><span id="nav-fogo"></span></div>
   </nav>
   <button type="button" class="me-ajuda" id="me-ajuda" aria-label="Me ajuda (dá pra arrastar)" aria-haspopup="menu" aria-expanded="false"><svg class="ico" aria-hidden="true"><use href="#i-ajuda"/></svg><span class="me-ajuda-txt">Me ajuda</span></button>
