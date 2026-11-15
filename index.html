@@ -130,8 +130,8 @@
       </section>
 
       <nav class="atalhos" aria-label="Lançar rápido">
-        <button type="button" class="atalho gasto" data-atalho="gasto"><svg class="ico" aria-hidden="true"><use href="#i-gasto"/></svg> Gasto</button>
-        <button type="button" class="atalho entrada" data-atalho="entradas" aria-label="Ver as entradas do mês"><svg class="ico" aria-hidden="true"><use href="#i-entrada"/></svg> Entradas</button>
+        <button type="button" class="atalho gasto" data-resumo="gasto" aria-pressed="true"><svg class="ico" aria-hidden="true"><use href="#i-gasto"/></svg> Gasto</button>
+        <button type="button" class="atalho entrada" data-resumo="entrada" aria-pressed="false" aria-label="Ver as entradas do mês"><svg class="ico" aria-hidden="true"><use href="#i-entrada"/></svg> Entradas</button>
         <button type="button" class="atalho transf" data-atalho="transf"><svg class="ico" aria-hidden="true"><use href="#i-transf"/></svg> Transferir</button>
       </nav>
       <!-- 15/11 (Anne): alerta em cima do gasto do mês -->
@@ -139,7 +139,19 @@
         <h2><svg class="ico" aria-hidden="true"><use href="#i-alerta"/></svg> Alertas</h2>
         <ul class="alert-list" id="alert-list"></ul>
       </section>
-      <section class="card summary" aria-live="polite">
+      <!-- 15/11 (JF + Anne): Gasto e Entradas são duas abas do mesmo cartão; Entradas mostra o que entrou, no mesmo estilo -->
+      <section class="card summary" id="resumo-card" data-modo="gasto" aria-live="polite">
+        <div id="resumo-entrada" hidden>
+          <p class="label entrada-titulo"><svg class="ico" aria-hidden="true"><use href="#i-entrada"/></svg> Entrada no mês</p>
+          <p class="big" id="entrada-total">R$ 0,00</p>
+          <p class="muted" id="entrada-sub"></p>
+          <div class="pode-gastar falta-receber" id="falta-receber" hidden>
+            <p class="pode-titulo" id="falta-titulo">Falta receber</p>
+            <p class="pode-valor"><strong class="num" id="falta-valor"></strong> <span id="falta-ate"></span></p>
+            <p class="muted small" id="falta-sub"></p>
+          </div>
+        </div>
+        <div id="resumo-gasto">
         <p class="label gasto-titulo"><svg class="ico" aria-hidden="true"><use href="#i-gasto"/></svg> Gasto no mês</p>
         <p class="big" id="total">R$ 0,00</p>
         <div class="bar" id="total-bar-wrap" hidden><div class="bar-fill" id="total-bar"></div></div>
@@ -149,6 +161,7 @@
           <p class="pode-titulo">Dá pra gastar</p>
           <p class="pode-valor"><strong class="num" id="pode-valor"></strong> <span id="pode-ate"></span></p>
           <p class="muted small" id="pode-dia"></p>
+        </div>
         </div>
         <div class="mini-stats">
           <button type="button" class="stat-olho" data-atalho="entradas" aria-label="Ver as entradas do mês"><small>Entradas</small><strong class="num ok" id="stat-in">R$ 0,00</strong></button>

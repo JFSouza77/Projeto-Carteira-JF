@@ -1034,8 +1034,8 @@ h1, h2 { font-weight: 700; letter-spacing: .005em; }
 .abertura-frase-pra { display: none; }
 .abertura.esperando .abertura-frase-pra { display: inline; } /* 15/11 (JF): com o nome em cima, a frase fica "Para organizar o seu caos." */
 .abertura.esperando .abertura-avatar { margin: 0; } /* Anne (14/11): o avatar um pouco mais pra cima */
-.abertura.esperando .abertura-frase { margin: 14px 0 auto; font-size: 1.1rem; color: var(--text); }
-.abertura.esperando .abertura-dica { display: none; }
+.abertura.esperando .abertura-frase { margin: 14px 0 18px; font-size: 1.1rem; color: var(--text); }
+.abertura.esperando .abertura-dica { display: block; margin: 0 auto auto; max-width: 300px; min-height: 2.8em; font-size: .88rem; font-weight: 500; color: var(--muted); } /* 15/11 (JF): dicas discretas na tela de entrar */
 .abertura.esperando .abertura-avatar { width: min(190px, 50vw); }
 .abertura.com-campos .abertura-avatar { width: min(110px, 30vw); }
 .abertura-cartao { width: 100%; max-width: 440px; margin: 0 auto; display: grid; gap: 10px; padding: 18px 16px 10px;
@@ -1314,3 +1314,11 @@ body.teclado .chat-anexo { bottom: 64px; }
 
 /* Entradas (15/11): a Análise no modo entradas esconde o que é só de gasto (gráficos e o seletor barras/rosca) */
 #tela-analise.modo-entradas #graficos-card, #tela-analise.modo-entradas #cat-card .seg { display: none; }
+
+/* Abas Gasto | Entradas do Início (15/11): a escolhida fica acesa; o cartão troca o que mostra */
+.atalho.gasto[aria-pressed="false"] { background: var(--card); color: var(--text); box-shadow: none; border-color: var(--line); }
+.atalho.entrada[aria-pressed="true"] { background: var(--fill); color: var(--fill-ink); box-shadow: var(--fill-glow); border-color: transparent; }
+.summary .entrada-titulo { color: var(--accent); font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.entrada-titulo .ico { width: 20px; height: 20px; }
+.falta-receber { background: color-mix(in srgb, var(--accent) 8%, var(--card)); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.falta-receber .pode-valor strong { color: var(--accent); }
