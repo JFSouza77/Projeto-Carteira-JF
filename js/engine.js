@@ -1117,7 +1117,7 @@ export const PALAVRAS_CATEGORIA = Object.freeze({
   saude: ['academia', 'farmacia', 'remedio', 'remedios', 'medico', 'consulta', 'dentista', 'exame', 'drogaria'],
   contas: ['luz', 'energia', 'internet', 'celular', 'telefone', 'gas', 'boleto'],
   moradia: ['aluguel', 'condominio', 'iptu'],
-  lazer: ['cinema', 'show', 'festa', 'viagem', 'passeio', 'jogo', 'game', 'ingresso'],
+  lazer: ['cinema', 'show', 'festa', 'viagem', 'passeio', 'jogo', 'game', 'ingresso', 'robux', 'vbucks', 'diamantes', 'skin', 'skins', 'gemas', 'minecoins', 'steam'],
   streaming: ['netflix', 'spotify', 'disney', 'hbo', 'globoplay', 'deezer', 'youtube'],
   compras: ['roupa', 'roupas', 'tenis', 'sapato', 'shopping', 'presente', 'shopee', 'shein', 'amazon'],
   educacao: ['faculdade', 'escola', 'curso', 'livro', 'livros', 'apostila', 'material'],
