@@ -473,12 +473,22 @@ async function salvarLimiteDiario(cents) {
 }
 
 /** Atalhos do Início: abre o Lançar já no modo certo (transferência mora em Contas). */
+/** Lista das entradas do mês que está na tela (o que entrou nas contas), num quadro por cima. Só leitura. */
+function mostrarEntradas() {
+  const mes = state.viewMonth || monthKey(toISODate());
+  const lista = state.incomes.filter(i => monthKey(i.date) === mes).sort((a, b) => b.date.localeCompare(a.date));
+  const total = lista.reduce((t, i) => t + i.amountCents, 0);
+  $('#entradas-titulo').textContent = mes === monthKey(toISODate()) ? 'Entradas do mês' : `Entradas · ${monthLabel(mes)}`;
+  $('#entradas-total').textContent = formatBRL(total);
+  const conta = id => { const c = state.accounts.find(x => x.id === id); return c ? accountLabel(c) : ''; };
+  $('#entradas-lista').innerHTML = lista.length ? lista.map(i => `<li><span>${i.date.slice(8, 10)}/${i.date.slice(5, 7)} · ${esc(srcById(i.sourceId)?.name || 'Entrada')}`
+    + `${i.note ? `<small>${esc(i.note)}</small>` : ''}${i.accountId ? `<small>${esc(conta(i.accountId))}</small>` : ''}</span><span class="num">${formatBRL(i.amountCents)}</span></li>`).join('')
+    : '<li class="muted">Nenhuma entrada neste mês. Quando receber, use o botão Lançar.</li>';
+  $('#entradas-dialog').showModal();
+}
+
 function atalho(tipo) {
-  if (tipo === 'entradas') { // 15/11 (Anne): o atalho mostra as entradas do mês; lançar fica com o botão Lançar
-    location.hash = 'mes';
-    setTimeout(() => { const d = document.querySelector('#plan-linhas details[data-linha="entrada"]'); if (d) { d.open = true; d.scrollIntoView({ block: 'center' }); } }, 80);
-    return;
-  }
+  if (tipo === 'entradas') return mostrarEntradas(); // 15/11 (JF + Anne): mostra ali mesmo o que entrou no mês
   if (tipo === 'transf') {
     location.hash = 'contas';
     setTimeout(() => { const t = $('#transf-card'); t.open = true; t.scrollIntoView({ block: 'start' }); }, 50);
