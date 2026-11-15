@@ -146,6 +146,11 @@
           <p class="label entrada-titulo"><svg class="ico" aria-hidden="true"><use href="#i-entrada"/></svg> Entrada no mês</p>
           <p class="big" id="entrada-total">R$ 0,00</p>
           <p class="muted" id="entrada-sub"></p>
+          <!-- 15/11 (JF): o que ainda vai cair no mês, com o botão Recebi -->
+          <div class="previstas" id="previstas-box" hidden>
+            <p class="previstas-tit">A receber</p>
+            <ul class="previstas-lista" id="previstas-lista"></ul>
+          </div>
           <div class="pode-gastar falta-receber" id="falta-receber" hidden>
             <p class="pode-titulo" id="falta-titulo">Falta receber</p>
             <p class="pode-valor"><strong class="num" id="falta-valor"></strong> <span id="falta-ate"></span></p>
@@ -307,6 +312,7 @@
           <label class="field"><span id="cat-label">Categoria</span><select id="category-select" aria-label="Categoria"></select></label>
           <div class="chips" id="category-chips" role="radiogroup" aria-label="Categoria" hidden></div>
           <p class="sugestao" id="cat-sugestao" hidden></p>
+          <label class="check prevista-check" id="prevista-field" hidden><input type="checkbox" id="entrada-prevista"> Ainda vou receber (fica como previsto até cair)</label>
           <label class="field" id="forma-field"><span>Pagou como?</span><select id="forma-select" aria-label="Pagou como?"></select></label>
           <div class="chips" id="forma-chips" role="radiogroup" aria-label="Pagou como?" hidden></div>
           <label class="field" id="account-field" hidden>

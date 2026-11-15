@@ -39,6 +39,7 @@ const state = {
   categories: [],
   expenses: [],
   incomes: [],
+  previstas: [], // entradas que ainda vão cair (15/11); ficam no mesmo armazém, com prevista: true
   accounts: [],
   settings: { mood: DEFAULT_MOOD, voice: false, aiOn: false, aiUrl: SERVIDOR_PADRAO, servidorV: 1, letra: 'normal', tema: 'escuro', temaV: 2, vozVel: 1, menosMov: null },
   caosMemory: memoriaInicial(),
@@ -62,7 +63,7 @@ const state = {
 };
 
 const dados = () => ({
-  expenses: state.expenses, incomes: state.incomes, categories: state.categories, accounts: state.accounts,
+  expenses: state.expenses, incomes: state.incomes, previstas: state.previstas, categories: state.categories, accounts: state.accounts,
   compromissos: state.compromissos, planos: state.planos, mercado: state.mercado, metas: state.metas, investimentos: state.investimentos, transferencias: state.transferencias,
 });
 const catById = id => state.categories.find(c => c.id === id);
@@ -385,7 +386,7 @@ const ICONE_FORMA = { dinheiro: 'f-dinheiro', pix: 'f-pix', debito: 'a-cartao', 
 const ICONE_ALERTA = {
   categoria_estourada: 'i-alerta', orcamento_80: 'i-alerta', ritmo_alto: 'e-rendimento', mes_negativo: 'i-alerta', conta_negativa: 'i-contas',
   delivery_repetido: 'c-delivery', sem_registro: 'i-relogio', compromisso_vence: 'i-mes', compromisso_atrasado: 'i-relogio', plano_do_mes: 'i-mes',
-  confira_banco: 'i-lupa', auditor_assinatura: 'c-streaming', cartao_limite: 'a-cartao', cartao_vence: 'a-cartao', a_receber: 'i-recibo',
+  saldo_baixo: 'i-contas', confira_banco: 'i-lupa', auditor_assinatura: 'c-streaming', cartao_limite: 'a-cartao', cartao_vence: 'a-cartao', a_receber: 'i-recibo',
 };
 
 // ---------- Painel "C.A.O.S. ao vivo" e menu lateral (13/11, repaginada do AI Studio; só aparecem no computador) ----------
@@ -441,7 +442,23 @@ function renderResumoEntradas() {
   const r = resumoEntradas(state.incomes, state.expenses, state.viewMonth);
   $('#entrada-total').textContent = formatBRL(r.totalCents);
   $('#entrada-sub').textContent = r.quantas ? `${r.quantas} ${r.quantas === 1 ? 'entrada' : 'entradas'} neste mês. Toque em "Entradas do mês" embaixo pra ver o relatório.` : 'Nenhuma entrada neste mês ainda. Quando receber, use o botão Lançar.';
+  // previstas (15/11): o que ainda vai cair, do mais perto pro mais longe, com o botão Recebi
+  const prev = [...state.previstas].sort((a, b) => a.date.localeCompare(b.date));
+  $('#previstas-box').hidden = !prev.length;
+  $('#previstas-lista').innerHTML = prev.map(p => `<li><span>${p.date.slice(8, 10)}/${p.date.slice(5, 7)} · ${esc(srcById(p.sourceId)?.name || 'Entrada')}${p.note ? ` <small>${esc(p.note)}</small>` : ''}</span>`
+    + `<span class="num">${formatBRL(p.amountCents)}</span><button type="button" class="ghost small" data-recebi="${esc(p.id)}">Recebi</button></li>`).join('');
   const box = $('#falta-receber');
+  const doMesPrev = prev.filter(p => p.date.slice(0, 7) === state.viewMonth);
+  if (doMesPrev.length) { // com previsto, o "falta receber" usa o que você lançou, não o mês passado
+    const tot = doMesPrev.reduce((t, p) => t + p.amountCents, 0);
+    const ult = doMesPrev[doMesPrev.length - 1].date;
+    box.hidden = false;
+    $('#falta-titulo').textContent = 'Falta receber';
+    $('#falta-valor').textContent = formatBRL(tot);
+    $('#falta-ate').textContent = `até o dia ${Number(ult.slice(8, 10))}`;
+    $('#falta-sub').textContent = `Já entrou ${formatBRL(r.totalCents)}; com o previsto, o mês fecha em ${formatBRL(r.totalCents + tot)} de entradas.`;
+    return;
+  }
   box.hidden = !r.passadoCents;
   if (!r.passadoCents) return;
   if (r.faltaCents) {
@@ -474,6 +491,12 @@ function renderPodeGastar(isCurrent) {
   $('#pode-dia').textContent = p.sobraCents > 0
     ? `≈ ${formatBRL(p.porDiaCents)} por dia nos próximos ${p.dias} ${p.dias === 1 ? 'dia' : 'dias'}`
     : `O mês já passou ${formatBRL(-p.sobraCents)} do que entrou, contando o que ainda vai sair.`;
+  // previsto (15/11): o que ainda vai cair até lá entra só como aviso, não no número grande (dinheiro que não caiu não se gasta)
+  const vem = state.previstas.filter(x => x.date <= p.ate);
+  if (vem.length) {
+    const tot = vem.reduce((t, x) => t + x.amountCents, 0);
+    $('#pode-dia').textContent += ` · Com os ${formatBRL(tot)} que você vai receber, sobe pra ${formatBRL(Math.max(0, p.sobraCents) + tot)}.`;
+  }
   box.dataset.mes = mm;
 }
 
@@ -906,6 +929,7 @@ function renderLancar() {
   const sel = gasto ? state.selectedCategory : state.selectedSource;
   $('#category-chips').setAttribute('aria-label', gasto ? 'Categoria' : 'De onde veio');
   $('#racha-box').hidden = !gasto;
+  $('#prevista-field').hidden = gasto;
   $('#category-chips').innerHTML = opcoes.map(c => `
     <button type="button" class="chip colorido" style="--cor-chip:${gasto ? corCategoria(c.id) : corFonte(c.id)}" role="radio" aria-checked="${c.id === sel}" data-cat="${esc(c.id)}">${gasto ? icCat(c) : icFonte(c)} ${esc(c.name)}</button>`).join('');
   $('#cat-label').textContent = gasto ? 'Categoria' : 'De onde veio';
@@ -1265,10 +1289,16 @@ function avisarAntesDoSaldo(item) {
   setTimeout(() => toast(`Anotado com a data certa. O saldo de ${accountLabel(conta)} que você informou em ${dia} já inclui esse valor, então o saldo não mudou.`), 900);
 }
 
-async function registrarEntrada({ amountCents, sourceId, note, date, accountId }) {
+async function registrarEntrada({ amountCents, sourceId, note, date, accountId, prevista = false }) {
   const ofAntes = ofensivaAgora();
-  const income = createIncome({ amountCents, sourceId, note, date, accountId });
+  const income = createIncome({ amountCents, sourceId, note, date, accountId, prevista });
   await db.put(db.STORES.incomes, income);
+  if (prevista) { // 15/11 (JF): fica na lista do "a receber" até a pessoa tocar em Recebi
+    state.previstas.push(income);
+    render();
+    toast(`Anotado como previsto: ${formatBRL(amountCents)} pra ${date.slice(8, 10)}/${date.slice(5, 7)}. Quando cair, toca em "Recebi" na aba Entradas.`);
+    return [];
+  }
   state.incomes.push(income);
   avisarAntesDoSaldo(income);
   state.viewMonth = income.month;
@@ -1305,7 +1335,10 @@ async function onSubmit(ev) {
       previaRacha();
     } else {
       if (!state.selectedSource) throw new Error('Escolha de onde veio o dinheiro.');
-      events = await registrarEntrada({ ...base, sourceId: state.selectedSource });
+      const prevista = $('#entrada-prevista').checked;
+      if (prevista && base.date < toISODate()) throw new Error('Entrada prevista é pra uma data que ainda vai chegar.');
+      events = await registrarEntrada({ ...base, sourceId: state.selectedSource, prevista });
+      $('#entrada-prevista').checked = false;
       await limparFoto({ apagar: true });
     }
     $('#amount').value = '';
@@ -1819,7 +1852,7 @@ async function confirmarAcao(i, ok) {
       return;
     }
     const events = a.tipo === 'registrar_entrada'
-      ? await registrarEntrada({ amountCents: a.amountCents, sourceId: a.sourceId, note: a.note, date: a.date, accountId: a.accountId || null })
+      ? await registrarEntrada({ amountCents: a.amountCents, sourceId: a.sourceId, note: a.note, date: a.date, accountId: a.accountId || null, prevista: !!a.prevista })
       : await registrarGasto({ amountCents: a.amountCents, categoryId: a.categoryId, note: a.note, date: a.date, imageId: a.imageId, compromissoId: a.compromissoId, accountId: a.accountId,
           forma: a.forma || null, parcelas: a.parcelas || 1, limiteModo: a.limiteModo || 'total' });
     if (a.compromissoId) renderMes();
@@ -2940,7 +2973,7 @@ async function recarregarDoBanco() {
   state.transferencias = await db.getMeta('transferencias', []);
   const order = DEFAULT_CATEGORIES.map(c => c.id);
   Object.assign(state, {
-    categories: cats.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id)), expenses, incomes,
+    categories: cats.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id)), expenses, incomes: incomes.filter(i => !i.prevista), previstas: incomes.filter(i => i.prevista),
     accounts: accounts.sort((a, b) => a.createdAt - b.createdAt), compromissos, planos, perfil: perfil || state.perfil, metas: metas || [],
   });
   // perfil chegou de outro aparelho no meio do primeiro acesso: encerra a apresentação (achado do Gemini, 12/11)
@@ -3338,6 +3371,23 @@ function bind() {
   }
   for (const b of document.querySelectorAll('[data-atalho]')) b.addEventListener('click', () => atalho(b.dataset.atalho));
   for (const b of document.querySelectorAll('[data-resumo]')) b.addEventListener('click', () => { state.resumoModo = b.dataset.resumo; renderResumoEntradas(); });
+  // Recebi (15/11): a prevista vira entrada de verdade, com a data de hoje (é quando o dinheiro caiu)
+  $('#previstas-lista').addEventListener('click', async e => {
+    const b = e.target.closest('[data-recebi]');
+    if (!b) return;
+    const p = state.previstas.find(x => x.id === b.dataset.recebi);
+    if (!p) return;
+    const hoje = toISODate();
+    const dia = p.date < hoje ? p.date : hoje;
+    const { prevista, ...resto } = p;
+    const recebida = { ...resto, date: dia, month: monthKey(dia), createdAt: Date.now() };
+    await db.put(db.STORES.incomes, recebida);
+    state.previstas = state.previstas.filter(x => x.id !== p.id);
+    state.incomes.push(recebida);
+    render();
+    const fala = narrate([{ type: 'entrada_cadastrada', amountCents: p.amountCents, sourceId: p.sourceId }], { ignoreCooldown: true });
+    toast(fala ? fala.texto : `Recebido: ${formatBRL(p.amountCents)}.`);
+  });
   // "do mês" abre o relatório: das entradas na aba Entradas, o normal na aba Gasto
   $('#stat-mes-btn').addEventListener('click', () => {
     if ((state.resumoModo || 'gasto') === 'entrada') return mostrarEntradas();
@@ -3714,7 +3764,7 @@ async function init() {
       const order = DEFAULT_CATEGORIES.map(c => c.id);
       state.categories = cats.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
     }
-    Object.assign(state, { expenses, incomes, accounts: accounts.sort((a, b) => a.createdAt - b.createdAt) });
+    Object.assign(state, { expenses, incomes: incomes.filter(i => !i.prevista), previstas: incomes.filter(i => i.prevista), accounts: accounts.sort((a, b) => a.createdAt - b.createdAt) });
     if (settings) state.settings = { ...state.settings, ...settings };
     // escuro por padrão (JF + Code, 12/11): quem nunca escolheu tema ("do aparelho" de fábrica) passa pro escuro, uma vez só
     // quem já usava o app sem servidor ganha o servidor padrão uma vez (14/11); quem pôs outro endereço fica com o seu

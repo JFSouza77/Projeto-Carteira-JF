@@ -413,7 +413,7 @@ const BANCOS_AZ = [
 export const BANKS = Object.freeze([...BANCOS_AZ, 'Carteira (dinheiro vivo)', 'Outro']);
 
 /** Valida e monta uma entrada (rendimento). */
-export function createIncome({ amountCents, sourceId, note = '', date, accountId = null }, { now = new Date(), id } = {}) {
+export function createIncome({ amountCents, sourceId, note = '', date, accountId = null, prevista = false }, { now = new Date(), id } = {}) {
   if (!Number.isInteger(amountCents) || amountCents <= 0) throw new Error('Valor inválido.');
   if (amountCents > 100_000_000_00) throw new Error('Valor alto demais. Confere aí.');
   if (!INCOME_SOURCES.some(s => s.id === sourceId)) throw new Error('Escolha de onde veio o dinheiro.');
@@ -422,6 +422,8 @@ export function createIncome({ amountCents, sourceId, note = '', date, accountId
   return {
     id: id || newId(), amountCents, sourceId, note: String(note).trim().slice(0, 120),
     date: day, month: monthKey(day), accountId: accountId || null, createdAt: now.getTime(),
+    // 15/11 (JF): "vou receber 500 dia 20": entrada prevista não conta no saldo nem no mês até virar recebida
+    ...(prevista ? { prevista: true } : {}),
   };
 }
 
@@ -505,11 +507,14 @@ export function folgaDoPiso(conta, saldoCents) {
  * pisos. Pelo ritmo de gasto do mês nesses bancos, diz em quantos dias a folga acaba. Bancos sem piso ficam fora da
  * conta, mas entram como "de onde dá pra tirar". Pura.
  */
+export const SALDO_SAUDAVEL_CENTS = 10000; // R$ 100 (JF, 15/11: "algo saudável seria acima de uns 50/100 conto")
+
 export function resumoPisos(accounts, expenses, incomes, transferencias = [], today = toISODate()) {
   const contas = accounts.filter(a => a.tipo !== 'cartao' && !a.paraQuem).map(a => {
     const saldoCents = accountBalance(a, expenses, incomes, transferencias);
     return { id: a.id, nome: accountLabel(a), saldoCents, pisoCents: a.pisoCents > 0 ? a.pisoCents : 0,
-      folgaCents: a.pisoCents > 0 ? saldoCents - a.pisoCents : saldoCents };
+      // sem piso, o "saudável" é ter pelo menos R$ 100 (JF, 15/11): só o que passa disso é folga pra mexer
+      folgaCents: a.pisoCents > 0 ? saldoCents - a.pisoCents : Math.max(0, saldoCents - SALDO_SAUDAVEL_CENTS) };
   });
   const comPiso = contas.filter(c => c.pisoCents > 0);
   if (!comPiso.length) return { contas, comPiso, pisoTotalCents: 0 };
@@ -838,6 +843,13 @@ export function analyze({ expenses, incomes = [], categories, accounts = [], com
     out.push({ type: rp.status === 'estourado' ? 'piso_geral_estourado' : 'piso_geral_perto', severity: rp.status === 'estourado' ? 'alta' : 'media', balanceCents: rp.saldoTotalCents, pisoCents: rp.pisoTotalCents,
       leftCents: rp.folgaTotalCents, overCents: -rp.folgaTotalCents, days: rp.diasAteEstourar, perDayCents: rp.gastoDiaCents, estourado: rp.status === 'estourado' });
   }
+
+  // saldo saudável (JF, 15/11): conta corrente sem piso com menos de R$ 100 (e não negativa) ganha um aviso leve, num só
+  const baixas = accounts.filter(a => a.tipo !== 'cartao' && !a.paraQuem && !(a.pisoCents > 0) && (!a.subtipo || a.subtipo === 'corrente'))
+    .map(a => ({ a, bal: accountBalance(a, expenses, incomes, transferencias) }))
+    .filter(x => x.bal >= 0 && x.bal < SALDO_SAUDAVEL_CENTS);
+  if (baixas.length) out.push({ type: 'saldo_baixo', severity: 'baixa', count: baixas.length, accountName: baixas.map(x => accountLabel(x.a)).join(', '),
+    balanceCents: baixas.reduce((t, x) => t + x.bal, 0), contas: baixas.map(x => ({ nome: accountLabel(x.a), saldoCents: x.bal })) });
 
   // orçamento por lugar é opcional (15/11, ideia do Code): o C.A.O.S. só sugere quando uma categoria sem limite pesa
   // 40% ou mais do mês (e o mês já tem pelo menos R$ 100 de gasto)

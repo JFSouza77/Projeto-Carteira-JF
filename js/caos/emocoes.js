@@ -75,6 +75,7 @@ const EFEITO = {
   saldo_sem_gasto: { curiosidade: 2, ansiedade: 1 },
   semana_menos: { alegria: 2, carinho: 1 },
   categoria_pesando: { curiosidade: 1.5 },
+  saldo_baixo: { ansiedade: 1, carinho: 1 },
   semana_mais: { curiosidade: 1, ansiedade: 1 },
   saldo_sem_entrada: { curiosidade: 2, alegria: 1 },
   racha_cadastrada: { curiosidade: 1, carinho: 0.5 },
