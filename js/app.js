@@ -10,7 +10,7 @@ import {
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
   TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
-  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, depoisDoSaldo, folgaDoPiso, diferencaDoSaldo, progressoOrcamentoDiario, mascaraCentavos, valorForaDoComum, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
+  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, depoisDoSaldo, folgaDoPiso, diferencaDoSaldo, fatoDaSemana, podeGastar, progressoOrcamentoDiario, mascaraCentavos, valorForaDoComum, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, rostoEspantado, rostoDaEmo, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
@@ -416,6 +416,25 @@ function renderPainel() {
   $('#nav-fogo').textContent = ''; // 15/11: ofensiva fora da tela até ser repensada
 }
 
+// ---------- "Dá pra gastar R$ X até o dia do salário" (15/11, ideia do Code, ok do JF) ----------
+function renderPodeGastar(isCurrent) {
+  const box = $('#pode-gastar');
+  const p = isCurrent ? podeGastar(dados(), toISODate()) : null;
+  box.hidden = !p;
+  // sem orçamento, o "Defina orçamentos…" some quando já tem o número principal (menos texto na tela)
+  $('#total-sub').hidden = !!p && $('#total-bar-wrap').hidden;
+  if (!p) return;
+  const [, mm, dd] = p.ate.split('-');
+  const ate = p.diaSalario ? `até o salário (dia ${Number(dd)})` : 'até o fim do mês';
+  $('#pode-valor').textContent = formatBRL(Math.max(0, p.sobraCents));
+  $('#pode-valor').className = `num ${p.sobraCents > 0 ? 'ok' : 'bad'}`;
+  $('#pode-ate').textContent = ate;
+  $('#pode-dia').textContent = p.sobraCents > 0
+    ? `≈ ${formatBRL(p.porDiaCents)} por dia nos próximos ${p.dias} ${p.dias === 1 ? 'dia' : 'dias'}`
+    : `O mês já passou ${formatBRL(-p.sobraCents)} do que entrou, contando o que ainda vai sair.`;
+  box.dataset.mes = mm;
+}
+
 // ---------- Orçamento diário ideal (V2 do AI Studio, 13/11): o limite mora no perfil, que sincroniza ----------
 function renderHoje() {
   const o = progressoOrcamentoDiario(state.expenses, state.perfil?.orcamentoDiarioCents, toISODate());
@@ -519,6 +538,7 @@ function render() {
     $('#total-sub').textContent = 'Defina orçamentos em Ajustes para ver quanto ainda pode gastar.';
   }
 
+  renderPodeGastar(isCurrent);
   const inc = incomeIn(state.incomes, state.viewMonth);
   const net = inc - s.totalCents;
   $('#stat-in').textContent = formatBRL(inc);
@@ -3626,7 +3646,9 @@ async function init() {
   // dica de meta (13/11): a meta com prazo mais perto, com quanto guardar por mês
   const meta = state.metas.map(m => progressoMeta(m, today)).filter(m => !m.batida && m.porMesCents).sort((a, b) => a.mesesRestantes - b.mesesRestantes)[0];
   const dicaMeta = meta ? [{ type: 'meta_ritmo', metaNome: meta.nome, amountCents: meta.porMesCents, totalCents: meta.faltaCents, pct: meta.pct }] : [];
-  narrate([...closing, ...radar, ...especial, ...dicaMeta, { type: 'boas_vindas' }]);
+  // fato da semana (15/11, no lugar da ofensiva): só quando tem diferença de verdade, 1 vez por semana (cooldown)
+  const fato = fatoDaSemana(state.expenses, state.categories, today);
+  narrate([...closing, ...radar, ...especial, ...dicaMeta, ...(fato ? [fato] : []), { type: 'boas_vindas' }]);
   if ($('#caos-line').textContent === 'Iniciando…') $('#caos-line').textContent = 'De olho nos seus gastos. Toque aqui pra conversar.';
   pintarOlho();
 

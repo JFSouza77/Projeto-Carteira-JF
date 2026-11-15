@@ -1292,3 +1292,12 @@ body.teclado .chat-anexo { bottom: 64px; }
 .glos-intro { margin: 4px 0 10px; text-align: center; font-size: .95rem; color: var(--text); line-height: 1.45; }
 /* Ajustes: "Mais sobre o C.A.O.S." */
 #caos-info-card h3 { margin: 14px 0 6px; font-size: 1rem; }
+/* "Dá pra gastar" (15/11): o número principal pra quem não entende de finanças */
+.pode-gastar { margin: 12px 0 4px; padding: 12px; border-radius: 14px; text-align: center;
+  background: color-mix(in srgb, var(--ok) 10%, var(--card)); border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent); }
+.pode-gastar[hidden] { display: none; }
+.pode-titulo { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; color: var(--text); }
+.pode-valor { margin: 2px 0; font-size: .95rem; color: var(--muted); }
+.pode-valor strong { font-family: var(--font-display); font-size: 1.6rem; display: block; }
+.pode-valor strong.ok { color: var(--ok); } .pode-valor strong.bad { color: var(--danger); }
+.pode-gastar #pode-dia { margin: 0; }

@@ -12,6 +12,7 @@ export const NOVIDADES = Object.freeze([
     nome: 'Rede de Segurança',
     t: 'O C.A.O.S. soma os pisos dos seus bancos principais e avisa antes de estourar.',
     itens: [
+      '💰 Dá pra gastar: quanto sobra até o salário, e por dia.',
       '🛡️ Média de segurança: soma os bancos que têm piso e compara.',
       '⏳ Quando estoura: no ritmo atual, ele diz em quantos dias.',
       '🚨 Aviso geral: além do aviso de cada banco, um do conjunto.',

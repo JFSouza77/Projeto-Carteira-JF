@@ -14,7 +14,7 @@ import { GERADORES, SUGESTOES } from './falas.js';
 import { entender, responder, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
 
 // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
-export const CAOS_VERSAO = '2.2.1'; // 2.2.1 (15/11): entende "oii", "oie" e "eaii" como oi. 2.2.0 2.2.0 (15/11): atualizou o saldo e não bate com o anotado, ele avisa (gasto ou entrada sem anotar). 2.1.9 2.1.9 (14/11): média de segurança dos bancos, quando estoura, sugestão de transferência, "posso comprar pelo banco X?". 2.1.8 2.1.8 (14/11): piso de segurança por banco, folga, dividir salário entre bancos, comparar salário/aumento, extras com descrição. 2.1.7 2.1.7 (14/11): hora não vira valor, dia da semana, corrigir data do último gasto, gasto sem "gastei" (só com o jeito de pagar), "não" cancela, pergunta em quê. 2.1.6 2.1.6 (14/11): cutucão em escada (brinca, cansa, se estressa) e categorias de lanche. 2.1.5 2.1.5 (14/11): sem "bem-vindo de volta" na abertura (Anne). 2.1.4 (14/11): entende apelido de amigo (corno, vagabundo) e xingamento junto com pergunta. 2.1.3 2.1.3 (13/11): rostinho de volta no balão, combinando com o avatar. 2.1.2: benefícios, bolsas, matemática
+export const CAOS_VERSAO = '2.2.3'; // 2.2.3 (15/11): fato da semana (no lugar do troféu da ofensiva) e sugestão de orçamento quando uma categoria pesa. 2.2.2 2.2.2 (15/11): núcleo 1.5.0 (jeito de reagir; a emoção que manda segura mais no rosto). 2.2.1 2.2.1 (15/11): entende "oii", "oie" e "eaii" como oi. 2.2.0 2.2.0 (15/11): atualizou o saldo e não bate com o anotado, ele avisa (gasto ou entrada sem anotar). 2.1.9 2.1.9 (14/11): média de segurança dos bancos, quando estoura, sugestão de transferência, "posso comprar pelo banco X?". 2.1.8 2.1.8 (14/11): piso de segurança por banco, folga, dividir salário entre bancos, comparar salário/aumento, extras com descrição. 2.1.7 2.1.7 (14/11): hora não vira valor, dia da semana, corrigir data do último gasto, gasto sem "gastei" (só com o jeito de pagar), "não" cancela, pergunta em quê. 2.1.6 2.1.6 (14/11): cutucão em escada (brinca, cansa, se estressa) e categorias de lanche. 2.1.5 2.1.5 (14/11): sem "bem-vindo de volta" na abertura (Anne). 2.1.4 (14/11): entende apelido de amigo (corno, vagabundo) e xingamento junto com pergunta. 2.1.3 2.1.3 (13/11): rostinho de volta no balão, combinando com o avatar. 2.1.2: benefícios, bolsas, matemática
 
 export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
 export const DEFAULT_MOOD = 'suave';
@@ -25,7 +25,7 @@ export { IDENTIDADE, resumoIdentidade } from './identidade.js';
 const PRIORIDADE = {
   categoria_estourada: 50, compromisso_atrasado: 49, conta_negativa: 48, abaixo_do_piso: 48, perto_do_piso: 41, piso_geral_estourado: 47, piso_geral_perto: 42, cartao_limite: 47, mes_negativo: 46, cartao_vence: 45, compromisso_vence: 44,
   orcamento_80: 40, mes_verde: 35, plano_do_mes: 25, confira_banco: 9, auditor_assinatura: 9, meta_ritmo: 6,
-  ritmo_alto: 30, saldo_sem_gasto: 35, saldo_sem_entrada: 33, ofensiva_marco: 28, racha_cadastrada: 27, a_receber: 22, delivery_repetido: 20, entrada_cadastrada: 15, gasto_cadastrado: 10, sem_registro: 8, boas_vindas: 5,
+  ritmo_alto: 30, semana_menos: 12, semana_mais: 13, categoria_pesando: 11, saldo_sem_gasto: 35, saldo_sem_entrada: 33, ofensiva_marco: 28, racha_cadastrada: 27, a_receber: 22, delivery_repetido: 20, entrada_cadastrada: 15, gasto_cadastrado: 10, sem_registro: 8, boas_vindas: 5,
 };
 // Dias especiais (núcleo): todos com a mesma prioridade (logo acima das boas-vindas) e uma vez por dia
 for (const { id } of NUCLEO.dias.especiais) PRIORIDADE[`dia_${id}`] = 7;
@@ -46,6 +46,9 @@ const COOLDOWN = {
   meta_ritmo: 2 * 24 * 3_600_000, // a cada 2 dias, no máximo
   auditor_assinatura: 7 * 24 * 3_600_000, // uma vez na semana do começo do mês
   a_receber: 24 * 3_600_000,
+  semana_menos: 7 * 24 * 3_600_000,
+  categoria_pesando: 3 * 24 * 3_600_000, // sugestão de orçamento: a cada 3 dias, no máximo // fato da semana (15/11): no máximo 1 vez por semana
+  semana_mais: 7 * 24 * 3_600_000,
 };
 const RADAR_COOLDOWN = 6 * 3_600_000;
 const PACIENCIA_ZERA = 30 * 60_000; // xingamento de mais de meia hora atrás não conta pra escalada
@@ -431,6 +434,7 @@ function nomeAlerta(a) {
     case 'mes_negativo': return 'saindo mais do que entrando';
     case 'conta_negativa': return `${a.accountName} no negativo`;
     case 'abaixo_do_piso': return `${a.accountName} abaixo do piso (${formatBRL(a.balanceCents)} de ${formatBRL(a.pisoCents)})`;
+    case 'categoria_pesando': return `${a.categoryName} levou ${a.pct}% do mês`;
     case 'piso_geral_estourado': return `média de segurança estourada em ${formatBRL(a.overCents)}`;
     case 'piso_geral_perto': return `média de segurança acaba em ${a.days} ${a.days === 1 ? 'dia' : 'dias'}`;
     case 'perto_do_piso': return `${a.accountName} perto do piso: faltam ${formatBRL(a.leftCents)}`;

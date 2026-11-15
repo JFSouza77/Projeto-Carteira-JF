@@ -13,8 +13,8 @@ const now = Date.UTC(2026, 10, 13, 15);
 const LEMBRETES = GERADORES.lembrete_limites.inteira.geral;
 const temLembrete = t => LEMBRETES.some(l => t.includes(l));
 
-test('núcleo 1.4.0: IA de bolso, limites e jeito de ajudar', () => {
-  assert.equal(NUCLEO.versao, '1.4.0');
+test('núcleo (desde 1.4.0): IA de bolso, limites e jeito de ajudar', () => {
+  assert.match(NUCLEO.versao, /^1\.([4-9]|\d\d)\./);
   assert.match(IDENTIDADE.oQueSou.curto, /IA de bolso/);
   assert.ok(IDENTIDADE.oQueSou.porProjeto.carteira);
   assert.ok(IDENTIDADE.limites.frequencia);
@@ -64,4 +64,15 @@ test('estabilizador: o rosto fica 3 falas, só troca com 2 pontos de vantagem e 
   assert.equal(r.emocao, 'curiosidade');
   r = emocaoEstavel(est({ curiosidade: 2 }), 'suave', now, { atual: 'curiosidade', falas: 5 });
   assert.equal(r.emocao, 'calmo');
+});
+
+test('núcleo 1.5.0: jeito de reagir e o "segura" das emoções', async () => {
+  assert.equal(NUCLEO.versao, '1.5.0');
+  assert.equal(NUCLEO.jeitoDeReagir.length, 2);
+  assert.equal(NUCLEO.emocoes.estabilizador.segura, 0.75);
+  const { decair } = await import('../js/caos/emocoes.js');
+  const t0 = Date.UTC(2026, 10, 15, 12);
+  const e = decair({ v: { alegria: 8, tedio: 4 }, at: t0 }, t0 + 6 * 3_600_000);
+  // a que manda (alegria) perde menos, em proporção, que a outra
+  assert.ok(e.v.alegria / 8 > e.v.tedio / 4);
 });

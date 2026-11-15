@@ -868,6 +868,71 @@ export const GERADORES = {
     },
   },
 
+  categoria_pesando: {
+    moldes: ['{fato} {fecho}'],
+    fato: {
+      geral: [
+        '{categoria} levou {pct}% dos gastos do mês ({valor}).',
+        'Quase metade do mês foi em {categoria}: {pct}%, {valor}.',
+        '{categoria} está pesando: {valor}, {pct}% do que saiu.',
+        'De tudo que saiu este mês, {pct}% foi {categoria}.',
+        '{categoria} já soma {valor} no mês ({pct}%).',
+      ],
+    },
+    fecho: {
+      geral: [
+        'Quer separar um valor pra ela? É em Ajustes, Orçamentos.',
+        'Se quiser, dá pra pôr um limite só pra ela em Ajustes.',
+        'Um orçamento só pra ela ajudaria a segurar. Fica em Ajustes.',
+        'Vale pensar num limite pra ela. Eu aviso quando chegar perto.',
+        'Se quiser, eu cuido dela com um limite (Ajustes, Orçamentos).',
+      ],
+    },
+  },
+  semana_menos: {
+    moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+    abre: { geral: ['Olha que legal:', 'Repara:', 'Fato da semana:', 'Boa notícia:', 'Ó só:'] },
+    fato: {
+      geral: [
+        'Nos últimos 7 dias você gastou {valor} a menos que na semana anterior.',
+        'Essa semana saiu {valor} a menos do que na passada.',
+        'Comparando com a semana passada, ficaram {valor} no seu bolso.',
+        'Seus gastos da semana caíram {valor}.',
+        'Foram {valor} a menos que na semana anterior.',
+      ],
+    },
+    fecho: {
+      geral: [
+        'Quem mais ajudou foi {categoria}.',
+        '{categoria} foi onde mais deu pra segurar.',
+        'O que mais caiu foi {categoria}.',
+        'A maior diferença veio de {categoria}.',
+        'Destaque pra {categoria}.',
+      ],
+    },
+  },
+  semana_mais: {
+    moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+    abre: { geral: ['Fato da semana:', 'Repara:', 'Olha só:', 'Pra você saber:', 'Hum…'] },
+    fato: {
+      geral: [
+        'Nos últimos 7 dias você gastou {valor} a mais que na semana anterior.',
+        'Essa semana saiu {valor} a mais do que na passada.',
+        'Comparando com a semana passada, foram {valor} a mais.',
+        'Seus gastos da semana subiram {valor}.',
+        'A semana custou {valor} a mais que a anterior.',
+      ],
+    },
+    fecho: {
+      geral: [
+        'O que mais pesou foi {categoria}.',
+        '{categoria} foi onde mais subiu. Vale olhar.',
+        'A maior diferença veio de {categoria}.',
+        'Se der, segura um pouco {categoria} na próxima.',
+        'Fica de olho em {categoria}.',
+      ],
+    },
+  },
   saldo_sem_gasto: {
     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
     abre: { geral: ['Opa.', 'Repara:', 'Peraí.', 'Hum…', 'Olha só:'] },
