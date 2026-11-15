@@ -32,3 +32,13 @@ test('categoria que pesa 40% ou mais ganha sugestão de orçamento', () => {
   assert.match(fala.texto, /Mercado/);
   assert.match(fala.texto, /67%/);
 });
+
+test('aba Entradas: total do mês e quanto falta pra igualar o mês passado', async () => {
+  const { resumoEntradas } = await import('../js/engine.js');
+  const out = createIncome({ amountCents: 450000, sourceId: 'salario', date: '2026-10-04' }, { now: new Date(2026, 9, 4) });
+  const r = resumoEntradas([sal, out], [], '2026-11');
+  assert.equal(r.totalCents, 300000);
+  assert.equal(r.passadoCents, 450000);
+  assert.equal(r.faltaCents, 150000);
+  assert.equal(r.acimaCents, 0);
+});

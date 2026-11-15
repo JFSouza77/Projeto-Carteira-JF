@@ -22,8 +22,8 @@ export const NOVIDADES = Object.freeze([
     ],
     qol: [
       '🧭 Barra nova: Início na ponta, e a conversa agora se chama Chat.',
-      '⚠️ Alertas no topo: aparecem antes do gasto do mês.',
       '📅 Mês que abre: toque em Entradas, Já saiu, Compromissos ou Planos.',
+      '💵 Aba Entradas: no Início, o que entrou e o que falta receber.',
       '📊 Análise no Mês: os gráficos agora ficam na aba Mês.',
       '🏦 Bancos num quadradinho: toque pra ver e escolher o banco.',
       '📖 Glossário: o antigo Estúdio, com explicação mais clara.',

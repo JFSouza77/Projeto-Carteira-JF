@@ -1024,6 +1024,21 @@ export function analisarPlanejamento({ expenses, incomes = [], categories, compr
 }
 
 /**
+ * Aba Entradas do Início (15/11, JF + Anne): quanto entrou no mês e a comparação com o mês passado.
+ * Devolve { totalCents, passadoCents, faltaCents (pra igualar o mês passado; 0 se já passou), acimaCents, quantas, aReceberCents }.
+ */
+export function resumoEntradas(incomes, expenses, month) {
+  const doMes = m => incomes.filter(i => (i.month || monthKey(i.date)) === m);
+  const totalCents = doMes(month).reduce((t, i) => t + i.amountCents, 0);
+  const passadoCents = doMes(shiftMonth(month, -1)).reduce((t, i) => t + i.amountCents, 0);
+  return {
+    totalCents, passadoCents, quantas: doMes(month).length,
+    faltaCents: Math.max(0, passadoCents - totalCents), acimaCents: Math.max(0, totalCents - passadoCents),
+    aReceberCents: aReceber(expenses).totalCents,
+  };
+}
+
+/**
  * "Dá pra gastar R$ X até o dia do salário" (15/11, ideia do Code: um número só, pra quem não entende de finanças).
  * X = a sobra prevista do mês (entradas − o que já saiu − compromissos − planos). O dia do salário é o dia da última
  * entrada de Salário; sem salário anotado, vale até o fim do mês. Devolve null sem entrada no mês.

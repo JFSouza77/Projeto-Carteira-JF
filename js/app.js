@@ -10,7 +10,7 @@ import {
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
   TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
-  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, depoisDoSaldo, folgaDoPiso, diferencaDoSaldo, fatoDaSemana, podeGastar, progressoOrcamentoDiario, mascaraCentavos, valorForaDoComum, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
+  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, depoisDoSaldo, folgaDoPiso, diferencaDoSaldo, fatoDaSemana, podeGastar, resumoEntradas, progressoOrcamentoDiario, mascaraCentavos, valorForaDoComum, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, rostoEspantado, rostoDaEmo, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
@@ -416,6 +416,33 @@ function renderPainel() {
   $('#nav-fogo').textContent = ''; // 15/11: ofensiva fora da tela até ser repensada
 }
 
+// ---------- Aba Entradas do Início (15/11, JF + Anne): o mesmo cartão do gasto, mostrando o que entrou ----------
+function renderResumoEntradas() {
+  const modo = state.resumoModo || 'gasto';
+  $('#resumo-card').dataset.modo = modo;
+  $('#resumo-gasto').hidden = modo !== 'gasto';
+  $('#resumo-entrada').hidden = modo !== 'entrada';
+  for (const b of document.querySelectorAll('[data-resumo]')) b.setAttribute('aria-pressed', String(b.dataset.resumo === modo));
+  const r = resumoEntradas(state.incomes, state.expenses, state.viewMonth);
+  $('#entrada-total').textContent = formatBRL(r.totalCents);
+  $('#entrada-sub').textContent = r.quantas ? `${r.quantas} ${r.quantas === 1 ? 'entrada' : 'entradas'} neste mês. Toque em Entradas embaixo pra ver o relatório.` : 'Nenhuma entrada neste mês ainda. Quando receber, use o botão Lançar.';
+  const box = $('#falta-receber');
+  box.hidden = !r.passadoCents;
+  if (!r.passadoCents) return;
+  if (r.faltaCents) {
+    $('#falta-titulo').textContent = 'Falta receber';
+    $('#falta-valor').textContent = formatBRL(r.faltaCents);
+    $('#falta-ate').textContent = 'pra igualar o mês passado';
+    $('#falta-sub').textContent = `O mês passado entrou ${formatBRL(r.passadoCents)}; este já recebeu ${formatBRL(r.totalCents)}.`;
+  } else {
+    $('#falta-titulo').textContent = 'Acima do mês passado';
+    $('#falta-valor').textContent = formatBRL(r.acimaCents);
+    $('#falta-ate').textContent = `(o mês passado entrou ${formatBRL(r.passadoCents)})`;
+    $('#falta-sub').textContent = r.acimaCents ? 'Já entrou mais do que no mês passado.' : 'Igualzinho ao mês passado.';
+  }
+  if (r.aReceberCents) $('#falta-sub').textContent += ` Fora isso, ${formatBRL(r.aReceberCents)} pra receber de amigos.`;
+}
+
 // ---------- "Dá pra gastar R$ X até o dia do salário" (15/11, ideia do Code, ok do JF) ----------
 function renderPodeGastar(isCurrent) {
   const box = $('#pode-gastar');
@@ -543,6 +570,7 @@ function render() {
   }
 
   renderPodeGastar(isCurrent);
+  renderResumoEntradas();
   const inc = incomeIn(state.incomes, state.viewMonth);
   const net = inc - s.totalCents;
   $('#stat-in').textContent = formatBRL(inc);
@@ -3267,6 +3295,7 @@ function bind() {
     if (el) el.addEventListener('input', () => { el.value = mascaraCentavos(el.value, { sinal: true }); });
   }
   for (const b of document.querySelectorAll('[data-atalho]')) b.addEventListener('click', () => atalho(b.dataset.atalho));
+  for (const b of document.querySelectorAll('[data-resumo]')) b.addEventListener('click', () => { state.resumoModo = b.dataset.resumo; renderResumoEntradas(); });
   $('#hoje-ajustar').addEventListener('click', () => abrirLimiteDiario());
   $('#hoje-chips').addEventListener('click', e => { const c = e.target.closest('[data-limite]'); if (c) $('#hoje-limite').value = centsToInput(Number(c.dataset.limite)); });
   $('#hoje-remover').addEventListener('click', () => salvarLimiteDiario(null));
@@ -3753,6 +3782,32 @@ function comecarAbertura() {
 // e entrar". E, no mesmo dia, "mais slim, como a entrada dos bancos" (C6, Banestes, Inter): o C.A.O.S. em cima e um
 // cartão embaixo. Com conta: "Olá, JF", 3 atalhos e Entrar. Sem conta: Entrar / Criar conta (os campos só aparecem
 // depois do toque) e Continuar sem conta.
+// Dicas da tela de entrar (JF, 15/11: "está muito vazia; dicas pequenas e discretas de como funciona, pra brincar").
+// Uma por vez, trocando a cada 4,5 s, até a abertura fechar.
+const DICAS_ABERTURA = [
+  '💬 Escreva "gastei 30 no mercado" no Chat e eu anoto.',
+  '📸 Mande o print do Pix: eu leio o valor pra você.',
+  '🛡️ Defina um piso em cada banco e eu aviso antes de chegar nele.',
+  '💰 No Início eu mostro quanto dá pra gastar até o salário.',
+  '🔒 Seus dados ficam no seu celular. Com conta, vão embaralhados.',
+  '🤝 Dividiu a conta com amigos? Eu lembro quem falta pagar.',
+  '📅 Contas fixas e faturas: eu lembro antes de vencer.',
+  '🧮 Pergunte "quanto é 15% de 200?" que eu faço a conta.',
+  '📖 Não sabe o que é CDI? Tem um glossário no Chat.',
+  '😊 Eu tenho humor: suave, normal ou ácido. Você escolhe em Ajustes.',
+];
+function girarDicasDaAbertura(ab) {
+  const el = $('#abertura-dica');
+  if (!el) return;
+  let i = Math.floor(Math.random() * DICAS_ABERTURA.length);
+  const trocar = () => {
+    el.style.opacity = '0';
+    setTimeout(() => { el.textContent = DICAS_ABERTURA[i++ % DICAS_ABERTURA.length]; el.style.opacity = '1'; }, 300);
+  };
+  trocar();
+  const t = setInterval(() => (document.body.contains(ab) && !ab.classList.contains('saindo') ? trocar() : clearInterval(t)), 4500);
+}
+
 async function mostrarAbertura() {
   const ab = $('#abertura');
   if (!ab) return;
@@ -3764,6 +3819,7 @@ async function mostrarAbertura() {
     return;
   }
   ab.classList.add('esperando');
+  girarDicasDaAbertura(ab);
   avatares.abertura?.mostrar('confiante'); // JF, 14/11: "menos bobão" que o festeiro na tela de entrar
   $('.abertura-pula')?.remove();
   $('#abertura-login').hidden = false;
