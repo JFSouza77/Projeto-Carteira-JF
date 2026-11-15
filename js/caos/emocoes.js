@@ -72,6 +72,8 @@ const EFEITO = {
   confira_banco: { carinho: 1, curiosidade: 0.5 },
   carinho_conversa: { carinho: 1.5, curiosidade: 0.5 },
   ofensiva_marco: { alegria: 5, tedio: -1 },
+  saldo_sem_gasto: { curiosidade: 2, ansiedade: 1 },
+  saldo_sem_entrada: { curiosidade: 2, alegria: 1 },
   racha_cadastrada: { curiosidade: 1, carinho: 0.5 },
   a_receber: { curiosidade: 1, ansiedade: 0.5 },
 };

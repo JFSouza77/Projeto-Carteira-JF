@@ -454,6 +454,17 @@ export function editarConta(conta, { nickname, subtipo, reforcaCartaoId, rendeCd
  * Piso de segurança (JF, 14/11: "no Banestes meu piso é R$ 2.000; não posso ficar abaixo disso"): o mínimo que a
  * pessoa quer manter na conta. Folga = quanto ainda dá pra gastar dela sem passar do piso. Pura.
  */
+/**
+ * Atualizou o saldo (JF, 15/11): compara o que o banco mostra com o que o app esperava.
+ * Saldo menor que o esperado = provável gasto não anotado; maior = provável entrada não anotada.
+ * Diferença menor que R$ 1 é arredondamento e não conta.
+ */
+export function diferencaDoSaldo(esperadoCents, informadoCents) {
+  const diff = informadoCents - esperadoCents;
+  if (Math.abs(diff) < 100) return null;
+  return diff < 0 ? { tipo: 'saldo_sem_gasto', valorCents: -diff } : { tipo: 'saldo_sem_entrada', valorCents: diff };
+}
+
 export function folgaDoPiso(conta, saldoCents) {
   if (!(conta?.pisoCents > 0)) return null;
   const folga = saldoCents - conta.pisoCents;

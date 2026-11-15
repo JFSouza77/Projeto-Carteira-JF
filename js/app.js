@@ -10,7 +10,7 @@ import {
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
   TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
-  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, depoisDoSaldo, folgaDoPiso, progressoOrcamentoDiario, mascaraCentavos, valorForaDoComum, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
+  valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, depoisDoSaldo, folgaDoPiso, diferencaDoSaldo, progressoOrcamentoDiario, mascaraCentavos, valorForaDoComum, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, rostoEspantado, rostoDaEmo, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
@@ -2232,12 +2232,36 @@ async function onUpdateAccount(id) {
   if (r == null) return;
   const bal = parseSignedAmount(r);
   if (bal == null) return toast('Valor inválido.');
+  // 15/11 (JF): o saldo do banco não bate com o anotado? O C.A.O.S. avisa e oferece anotar a diferença.
+  // A diferença é anotada ANTES do saldo novo, pra já ficar dentro dele (sem contar duas vezes).
+  const dif = diferencaDoSaldo(atual, bal);
+  let anotou = false;
+  if (dif) {
+    narrate([{ type: dif.tipo, accountName: accountLabel(a), valorCents: dif.valorCents }], { ignoreCooldown: true });
+    const gasto = dif.tipo === 'saldo_sem_gasto';
+    const pergunta = gasto
+      ? `${accountLabel(a)} tem ${formatBRL(dif.valorCents)} a menos do que estava anotado. Pode ser um gasto que ficou sem anotar.\n\nQuer anotar ${formatBRL(dif.valorCents)} como gasto (em Outros)? Depois dá pra editar e escolher a categoria.`
+      : `${accountLabel(a)} tem ${formatBRL(dif.valorCents)} a mais do que estava anotado. Pode ser uma entrada que ficou sem anotar.\n\nQuer anotar ${formatBRL(dif.valorCents)} como entrada (em Outros)? Depois dá pra editar.`;
+    if (confirm(pergunta)) {
+      const hoje = toISODate();
+      if (gasto) {
+        const e = createExpense({ amountCents: dif.valorCents, categoryId: 'outros', note: 'Gasto sem anotar (achado ao atualizar o saldo)', date: hoje, accountId: a.id }, { categories: state.categories });
+        await db.put(db.STORES.expenses, e);
+        state.expenses.push(e);
+      } else {
+        const i = createIncome({ amountCents: dif.valorCents, sourceId: 'outros', note: 'Entrada sem anotar (achada ao atualizar o saldo)', date: hoje, accountId: a.id });
+        await db.put(db.STORES.incomes, i);
+        state.incomes.push(i);
+      }
+      anotou = true;
+    }
+  }
   const upd = { ...a, balanceCents: bal, balanceAt: Date.now() };
   await db.put(db.STORES.accounts, upd);
   state.accounts = state.accounts.map(x => (x.id === id ? upd : x));
   renderContas();
   render();
-  toast('Saldo atualizado.');
+  toast(anotou ? 'Saldo atualizado, e a diferença ficou anotada.' : 'Saldo atualizado.');
 }
 
 async function onRemoveAccount(id) {

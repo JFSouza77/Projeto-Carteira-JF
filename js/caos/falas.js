@@ -868,6 +868,50 @@ export const GERADORES = {
     },
   },
 
+  saldo_sem_gasto: {
+    moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+    abre: { geral: ['Opa.', 'Repara:', 'Peraí.', 'Hum…', 'Olha só:'] },
+    fato: {
+      geral: [
+        'No {conta} tem {valor} a menos do que eu esperava.',
+        'O saldo do {conta} ficou {valor} abaixo do que estava anotado.',
+        'Saiu {valor} do {conta} que não passou por mim.',
+        'Faltam {valor} no {conta} pela minha conta.',
+        'O {conta} está {valor} mais baixo do que eu calculei.',
+      ],
+    },
+    fecho: {
+      geral: [
+        'Pode ser um gasto que não foi anotado. Quer lançar?',
+        'Se foi gasto, anota pra eu não me perder.',
+        'Lembra de algum gasto que ficou pra trás?',
+        'Se foi uma tarifa ou um Pix, vale lançar.',
+        'Anota o que foi, que eu ajusto as contas.',
+      ],
+    },
+  },
+  saldo_sem_entrada: {
+    moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+    abre: { geral: ['Opa!', 'Olha só:', 'Repara:', 'Eita.', 'Hum…'] },
+    fato: {
+      geral: [
+        'No {conta} tem {valor} a mais do que eu esperava.',
+        'O saldo do {conta} ficou {valor} acima do que estava anotado.',
+        'Entrou {valor} no {conta} que não passou por mim.',
+        'Sobram {valor} no {conta} pela minha conta.',
+        'O {conta} está {valor} mais alto do que eu calculei.',
+      ],
+    },
+    fecho: {
+      geral: [
+        'Pode ser uma entrada que não foi anotada. Quer lançar?',
+        'Se foi entrada, anota pra eu contar direito.',
+        'Rendimento, Pix recebido? Vale lançar.',
+        'Anota de onde veio, que eu ajusto as contas.',
+        'Se foi dinheiro que chegou, me conta.',
+      ],
+    },
+  },
   ofensiva_marco: {
     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
     abre: {

@@ -17,6 +17,7 @@ export const NOVIDADES = Object.freeze([
       '🚨 Aviso geral: além do aviso de cada banco, um do conjunto.',
       '🔁 De onde transferir: "qual banco tem folga?" e ele sugere.',
       '🛒 Comprar pelo banco: "posso comprar 300 pelo C6?" e ele vê o piso.',
+      '🔎 Saldo que não bate: ao atualizar, ele avisa e oferece anotar.',
     ],
     qol: [
       '🧭 Barra nova: Início na ponta, e a conversa agora se chama Chat.',
