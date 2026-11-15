@@ -473,3 +473,13 @@ test('"oii", "oie" e "eaii" também são oi (teste do amigo do JF, 15/11)', asyn
   const { entender } = await import('../js/caos/conversa.js');
   for (const t of ['oii', 'oie', 'eaii', 'oiii caos']) assert.equal(entender(t).intent, 'saudacao', t);
 });
+
+test('papo pessoal vai pra IA e "internet" não vira gasto em Contas (JF, 15/11)', async () => {
+  const { entender } = await import('../js/caos/conversa.js');
+  const { DEFAULT_CATEGORIES } = await import('../js/engine.js');
+  for (const t of ['E como vc se sente tendo agora acesso a internet?!', 'O que vc tem achado da evolução sua?', 'qual seu filme favorito']) {
+    assert.equal(entender(t, { categories: DEFAULT_CATEGORIES }).intent, 'papo_pessoal', t);
+  }
+  assert.notEqual(entender('o que você acha de eu comprar um tenis de 300', { categories: DEFAULT_CATEGORIES }).intent, 'papo_pessoal');
+  assert.equal(entender('quanto gastei de internet', { categories: DEFAULT_CATEGORIES }).intent, 'gasto_total');
+});

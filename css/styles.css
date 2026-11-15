@@ -1301,3 +1301,11 @@ body.teclado .chat-anexo { bottom: 64px; }
 .pode-valor strong { font-family: var(--font-display); font-size: 1.6rem; display: block; }
 .pode-valor strong.ok { color: var(--ok); } .pode-valor strong.bad { color: var(--danger); }
 .pode-gastar #pode-dia { margin: 0; }
+/* 15/11 (JF): no celular, a bola do Lançar sobe 26px acima da barra e cobria o campo do chat. A barra do chat ganha
+   esse espaço embaixo (o fundo dela tampa a bola) e a conversa e o anexo sobem junto. No teclado aberto volta ao normal. */
+@media (max-width: 1023px) {
+  .chat-bar { padding-bottom: 36px; }
+  .chat { padding-bottom: 160px; }
+  .chat-anexo { bottom: calc(env(safe-area-inset-bottom) + 154px); }
+  body.teclado .chat-bar { padding-bottom: 8px; }
+}

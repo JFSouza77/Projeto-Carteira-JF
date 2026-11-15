@@ -388,12 +388,18 @@ export function textoConta({ a, b, op }) {
   return `${A} − ${B} = ${fmtNum(r)}.${r < 0 ? ' Deu negativo: o segundo número é maior que o primeiro.' : ` Pra conferir: ${fmtNum(r)} + ${B} = ${A}.`}`;
 }
 
+const PAPO_PESSOAL = /\b(como (voce )?(se sente|esta se sentindo|ta se sentindo|se sentiu|tem se sentido)|voce se sente|o que (voce )?(acha|achou|tem achado|pensa|pensou) (da|do|de|sobre) (sua|seu|voce|mim|ser|ter)|o que (voce )?(tem achado|acha) da (sua )?evolucao|voce (gosta|curte|prefere|sonha|tem medo|tem saudade|fica feliz|fica triste|se diverte)|(seu|sua) (filme|musica|serie|comida|cor|time|jogo|livro|desenho) (favorit|preferid)|qual (e )?(o |a )?(seu|sua) (filme|musica|serie|comida|cor|time|jogo|livro|desenho)|se voce fosse|voce (ja )?(sonhou|imaginou))/;
+
 function entenderSimples(t, { categories = [] } = {}) {
   // "dia 10" é data, não valor (P9, "esqueci de lançar": "gastei 50 no mercado dia 10")
   const r = { t, categoria: acharCategoria(t, categories), periodo: acharPeriodo(t), valor: acharValor(t.replace(/\bdia \d{1,2}\b/g, ' ')), fonte: acharFonte(t) };
   const pergunta = /\b(quanto|qual|quais|onde|como|tive|teve|tenho|vai|posso|consigo|algum|alguma)\b|\?/.test(t);
 
   if (!t) return { ...r, intent: 'nao_entendi' };
+  // Papo pessoal com ele (JF, 15/11: "como vc se sente tendo acesso à internet?" virava gasto em Contas, por causa da
+  // palavra "internet"): pergunta sobre o que ele sente, acha ou gosta vai pra IA online quando está ligada; sem ela,
+  // ele responde como está. Não pega pergunta de dinheiro ("o que você acha de eu comprar 300?").
+  if (PAPO_PESSOAL.test(t) && !r.valor && !/\b(gast|saldo|fatura|orcamento|dinheiro|comprar|compra|paguei|pagar|investir|economizar|guardar)/.test(t)) return { ...r, categoria: null, intent: 'papo_pessoal' };
   // Matemática básica (JF, 13/11 à noite: "ele ensina matemática básica pra gente"): "quanto é 15 x 23?"
   const conta = lerConta(t);
   if (conta) return { ...r, intent: 'conta', conta };
@@ -1344,6 +1350,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       return { fato: `${fato} (Atualizado ${quando}.)${velho}`, aviso: true, sugestoes: ['Como está o dólar?', 'A bolsa tende a subir?', 'Qual a Selic?'] };
     }
     case 'como_esta':
+    case 'papo_pessoal': // sem IA online, ele conta como está (com IA, o app manda a pergunta pra ela)
       return { gatilho: 'como_esta', vars: { emocao } };
     case 'retomar':
       return {};
