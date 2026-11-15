@@ -483,3 +483,12 @@ test('papo pessoal vai pra IA e "internet" não vira gasto em Contas (JF, 15/11)
   assert.notEqual(entender('o que você acha de eu comprar um tenis de 300', { categories: DEFAULT_CATEGORIES }).intent, 'papo_pessoal');
   assert.equal(entender('quanto gastei de internet', { categories: DEFAULT_CATEGORIES }).intent, 'gasto_total');
 });
+
+test('conversa de filme ou série vai pra IA, não pra orçamento (JF, 15/11)', async () => {
+  const { entender } = await import('../js/caos/conversa.js');
+  const r = entender('calma aí, tá me dizendo que VisionQuest teve o mesmo orçamento da série Lanterns?!', { categories: [] });
+  assert.equal(r.intent, 'nao_entendi');
+  assert.ok(!r.palpite);
+  assert.equal(entender('qual meu orçamento de streaming', { categories: [] }).intent, 'orcamento');
+  assert.equal(entender('gastei 40 no cinema', { categories: [] }).intent, 'registrar_gasto');
+});

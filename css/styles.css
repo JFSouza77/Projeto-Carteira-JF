@@ -1334,3 +1334,8 @@ body.teclado .chat-anexo { bottom: 64px; }
 .mini-stats #stat-net-box.deficit small, .mini-stats #stat-net-box.deficit small .ico { color: var(--warn); }
 .mini-stats #stat-net-box.sobra { background: color-mix(in srgb, var(--ok) 12%, var(--card-2)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok) 55%, transparent); }
 .mini-stats #stat-net-box.sobra small, .mini-stats #stat-net-box.sobra small .ico { color: var(--ok); }
+
+/* 15/11 (JF): o campo do chat aceita quebra de linha e cresce até 5 linhas */
+.chat-bar textarea { flex: 1; resize: none; min-height: 44px; max-height: 8.5em; padding: 11px 16px; line-height: 1.35; border-radius: 22px;
+  background: var(--card); border: 1px solid var(--line); color: var(--text); overflow-y: auto; }
+.chat-bar textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

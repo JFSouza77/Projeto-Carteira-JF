@@ -3396,6 +3396,15 @@ function bind() {
     if (state.fotoPendente) { const f = state.fotoPendente; tirarAnexo(); fotoNoChat(f, v.trim().slice(0, 300)); return; }
     enviarPergunta(v);
   });
+  // campo do chat com várias linhas (15/11, JF): no celular o Enter quebra a linha e quem envia é o botão;
+  // no computador, Enter envia e Shift+Enter quebra a linha. O campo cresce com o texto.
+  const campo = $('#chat-input');
+  const crescer = () => { campo.style.height = 'auto'; campo.style.height = `${Math.min(campo.scrollHeight, 150)}px`; };
+  campo.addEventListener('input', crescer);
+  campo.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey && matchMedia('(pointer: fine)').matches) { e.preventDefault(); $('#chat-form').requestSubmit(); }
+  });
+  $('#chat-form').addEventListener('submit', () => setTimeout(crescer, 0));
   $('#chat-anexo-tirar').addEventListener('click', tirarAnexo);
   $('#chat-suggestions').addEventListener('click', e => {
     const ir = e.target.closest('[data-ir]');
