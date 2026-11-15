@@ -4,6 +4,12 @@ Um lugar só pra ver o que está aberto (sugestão do Code do Perfil, 12/11/2026
 Os detalhes continuam em `Pedidos_do_JF.md`, `Rascunhos_da_Semana.md` e `Ideias.md`; aqui fica só o resumo.
 Atualizada pelo Wally a cada rodada.
 
+## IA online: travas de crédito (15/11)
+
+No ar no app; no servidor, falta o JF publicar (`git pull` e `npx.cmd wrangler deploy` dentro de `servidor`). Pra afrouxar ou
+apertar, é só mudar os números no `servidor/wrangler.toml` (IA_LIMITE_DIA, IA_TETO_DIA, IA_TETO_MES, BUSCA_TETO_DIA,
+IA_MODELO_CONVERSA) e no app (`IA_POR_DIA` em `js/app.js`).
+
 ## Teste da Anne, parte 4 (15/11)
 
 Entrou como ajuste da 2.0.9: barra nova, alertas no topo, Mês que abre, Bancos num quadradinho, Glossário, calculadora

@@ -110,12 +110,16 @@ async function conferirLimite(req, env) {
   const dia = hojeUTC();
   const kIp = `lim:${dia}:${await sha256(ip)}`;
   const kTot = `lim:${dia}:total`;
-  const [nIp, nTot] = await Promise.all([env.CARTEIRA_KV.get(kIp), env.CARTEIRA_KV.get(kTot)]);
-  if (Number(nIp || 0) >= Number(env.IA_LIMITE_DIA || 40)) throw new ErroHttp(429, 'Limite diário da IA atingido. Amanhã tem mais.');
-  if (Number(nTot || 0) >= Number(env.IA_TETO_DIA || 300)) throw new ErroHttp(429, 'A IA descansou por hoje (teto do dia).');
+  // 15/11 (JF: "IA de bolso, sem abusar dos créditos"): além do limite por pessoa e do teto do dia, um teto do mês
+  const kMes = `lim:mes:${dia.slice(0, 7)}`;
+  const [nIp, nTot, nMes] = await Promise.all([env.CARTEIRA_KV.get(kIp), env.CARTEIRA_KV.get(kTot), env.CARTEIRA_KV.get(kMes)]);
+  if (Number(nIp || 0) >= Number(env.IA_LIMITE_DIA || 20)) throw new ErroHttp(429, 'Limite diário da IA atingido. Amanhã tem mais.');
+  if (Number(nTot || 0) >= Number(env.IA_TETO_DIA || 120)) throw new ErroHttp(429, 'A IA descansou por hoje (teto do dia).');
+  if (Number(nMes || 0) >= Number(env.IA_TETO_MES || 1500)) throw new ErroHttp(429, 'A IA descansou por este mês (teto do mês).');
   await Promise.all([
     env.CARTEIRA_KV.put(kIp, String(Number(nIp || 0) + 1), { expirationTtl: 172800 }),
     env.CARTEIRA_KV.put(kTot, String(Number(nTot || 0) + 1), { expirationTtl: 172800 }),
+    env.CARTEIRA_KV.put(kMes, String(Number(nMes || 0) + 1), { expirationTtl: 40 * 86400 }),
   ]);
 }
 
@@ -174,26 +178,35 @@ Regras:
 
 async function iaPerguntar(req, env) {
   const corpo = await lerCorpo(req);
-  const pergunta = String(corpo.pergunta || '').trim().slice(0, 500);
+  const pergunta = String(corpo.pergunta || '').trim().slice(0, 300); // IA de bolso: pergunta curta (15/11)
   if (!pergunta) throw new ErroHttp(400, 'Faltou a pergunta.');
   const humor = HUMORES[corpo.humor] ? corpo.humor : 'suave';
   const resumo = corpo.resumo && typeof corpo.resumo === 'object' ? corpo.resumo : {};
+  const resumoTxt = JSON.stringify(resumo).slice(0, 3000);
+  // mesma pergunta, com os mesmos números, na última hora: devolve a resposta guardada (não gasta crédito)
+  const kCache = env.CARTEIRA_KV ? `cache:pergunta:${await sha256(`${humor}|${pergunta.toLowerCase().replace(/\s+/g, ' ')}|${resumoTxt}`)}` : null;
+  const guardada = kCache ? await env.CARTEIRA_KV.get(kCache) : null;
+  if (guardada) return { texto: guardada, guardada: true };
   const client = clienteIA(env);
   await conferirLimite(req, env);
+  // busca na web com teto do dia (15/11): passou do teto, a IA responde sem buscar
+  const kBusca = `busca:${hojeUTC()}`;
+  const buscasHoje = Number((await env.CARTEIRA_KV.get(kBusca)) || 0);
+  const podeBuscar = buscasHoje < Number(env.BUSCA_TETO_DIA || 15);
   // 15/11 (JF: "ele pode pesquisar na internet e não está"): a conversa ganhou a busca na web, até 2 buscas por
   // pergunta, só pra assunto de dinheiro (JF: "senão a IA gasta os créditos à toa"; a regra está no SISTEMA_CONVERSA). A busca é feita pelo servidor da IA; o que vai nela é só o assunto da pergunta, nunca os dados da pessoa.
   const messages = [{
     role: 'user',
-    content: `Humor escolhido: ${humor}. ${HUMORES[humor]}\n\nResumo do mês (só totais, em centavos):\n${JSON.stringify(resumo).slice(0, 6000)}\n\nPergunta: ${pergunta}`,
+    content: `Humor escolhido: ${humor}. ${HUMORES[humor]}\n\nResumo do mês (só totais, em centavos):\n${resumoTxt}\n\nPergunta: ${pergunta}`,
   }];
   let r;
   for (let volta = 0; volta < 3; volta++) {
     r = await client.beta.messages.create({
-      model: modelo(env),
-      max_tokens: 16000,
+      model: env.IA_MODELO_CONVERSA || modelo(env), // a conversa pode usar um modelo mais em conta que a leitura de fotos
+      max_tokens: 2500, // resposta de até 3 frases: não precisa de mais
       output_config: { effort: 'low' },
       system: SISTEMA_CONVERSA,
-      tools: [BUSCA_WEB],
+      ...(podeBuscar ? { tools: [BUSCA_WEB] } : {}),
       messages,
       ...extras(env),
     });
@@ -202,6 +215,9 @@ async function iaPerguntar(req, env) {
     messages.push({ role: 'assistant', content: r.content });
   }
   const texto = textoDa(r);
+  const usadas = Number(r?.usage?.server_tool_use?.web_search_requests || 0);
+  if (usadas) await env.CARTEIRA_KV.put(kBusca, String(buscasHoje + usadas), { expirationTtl: 172800 });
+  if (texto && kCache) await env.CARTEIRA_KV.put(kCache, texto, { expirationTtl: 3600 });
   return { texto: texto || 'Essa eu não posso responder. Pergunta outra coisa sobre a carteira?' };
 }
 
