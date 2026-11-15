@@ -63,6 +63,8 @@ test('pergunta vai com o modelo, o fallback e SÓ o resumo agregado', async () =
     assert.match(c.headers.get('anthropic-beta') || '', /server-side-fallback-2026-07-01/);
     assert.equal(c.body.output_config.effort, 'low');
     assert.match(c.body.messages[0].content, /gastoTotalCentavos/);
+    assert.equal(c.body.tools[0].name, 'web_search'); // 15/11: a conversa pode pesquisar na web
+    assert.equal(c.body.tools[0].max_uses, 2);
   } finally {
     api.restaurar();
   }
