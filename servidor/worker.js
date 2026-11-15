@@ -154,6 +154,8 @@ const HUMORES = {
   acido: 'Tom sarcástico e espirituoso (a pessoa escolheu o humor Ácido): pode zoar os gastos sem dó, com graça, mas nunca cruel nem humilhante.',
 };
 
+const BUSCA_WEB = { type: 'web_search_20250305', name: 'web_search', max_uses: 2, user_location: { type: 'approximate', country: 'BR', timezone: 'America/Sao_Paulo' } };
+
 export const SISTEMA_CONVERSA = `Você é o C.A.O.S., o narrador de um app pessoal de controle de gastos (Carteira JF), em português do Brasil.
 Quem você é: ${resumoIdentidade()}
 Personalidade: um robô narrador "caótico leal": tem humor próprio, mas é leal e útil. Pode contar uma piada leve de vez em quando.
@@ -165,6 +167,7 @@ Regras:
 - Pode dar dicas gerais de organização financeira. Não recomende investimentos, produtos financeiros ou empresas específicas.
 - Se a pergunta não tiver nada a ver com finanças pessoais, responda a pergunta em si primeiro (curto e certo) e, no máximo, faça uma ponte leve com dinheiro. Não aproveite pra dar bronca nos gastos.
 - Valor muito alto num lugar estranho (ex.: milhares de reais em Lazer sem entrada nenhuma) pode ser erro de digitação: em vez de criticar, sugira conferir o lançamento.
+- Você tem busca na web (no máximo 2 buscas). Use quando a pergunta for sobre fato de fora do app ou que muda com o tempo (filme, série, notícia, preço, data, lançamento). Nunca coloque na busca valores, nomes ou dados da pessoa. Com o que achar, responda curto e diga de onde veio se for número. Se não achar, diga que não achou; nunca diga que não pode pesquisar.
 - Siga o humor escolhido acima. Fora do humor Ácido, nunca zombe da pessoa.`;
 
 async function iaPerguntar(req, env) {
@@ -175,17 +178,27 @@ async function iaPerguntar(req, env) {
   const resumo = corpo.resumo && typeof corpo.resumo === 'object' ? corpo.resumo : {};
   const client = clienteIA(env);
   await conferirLimite(req, env);
-  const r = await client.beta.messages.create({
-    model: modelo(env),
-    max_tokens: 16000,
-    output_config: { effort: 'low' },
-    system: SISTEMA_CONVERSA,
-    messages: [{
-      role: 'user',
-      content: `Humor escolhido: ${humor}. ${HUMORES[humor]}\n\nResumo do mês (só totais, em centavos):\n${JSON.stringify(resumo).slice(0, 6000)}\n\nPergunta: ${pergunta}`,
-    }],
-    ...extras(env),
-  });
+  // 15/11 (JF: "ele pode pesquisar na internet e não está"): a conversa ganhou a busca na web, até 2 buscas por
+  // pergunta. A busca é feita pelo servidor da IA; o que vai nela é só o assunto da pergunta, nunca os dados da pessoa.
+  const messages = [{
+    role: 'user',
+    content: `Humor escolhido: ${humor}. ${HUMORES[humor]}\n\nResumo do mês (só totais, em centavos):\n${JSON.stringify(resumo).slice(0, 6000)}\n\nPergunta: ${pergunta}`,
+  }];
+  let r;
+  for (let volta = 0; volta < 3; volta++) {
+    r = await client.beta.messages.create({
+      model: modelo(env),
+      max_tokens: 16000,
+      output_config: { effort: 'low' },
+      system: SISTEMA_CONVERSA,
+      tools: [BUSCA_WEB],
+      messages,
+      ...extras(env),
+    });
+    // busca longa: a IA pausa a resposta; manda de volta pra ela continuar de onde parou
+    if (r.stop_reason !== 'pause_turn') break;
+    messages.push({ role: 'assistant', content: r.content });
+  }
   const texto = textoDa(r);
   return { texto: texto || 'Essa eu não posso responder. Pergunta outra coisa sobre a carteira?' };
 }
