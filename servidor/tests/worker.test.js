@@ -313,3 +313,33 @@ test('moedas de jogo são assunto de dinheiro (JF, 15/11)', async () => {
   assert.match(SISTEMA_CONVERSA, /Robux, V-Bucks/);
   assert.match(SISTEMA_CONVERSA, /golpe/);
 });
+
+// JF, 16/11: "quem tá pagando sou eu, não tem por que eu ter limite". A conta com selo de criador passa sem limite.
+test('criador (pelo token da conta) não tem limite nem teto de busca; o resto continua com limite', async () => {
+  const { createHash } = await import('node:crypto');
+  const A = s => `e2ee1:${createHash('sha256').update(s).digest('hex')}`;
+  const api = simularAPI({ texto: 'resposta {nome}' });
+  try {
+    const env = { ...envBase(), IA_LIMITE_DIA: '1', IA_TETO_MES: '1', BUSCA_TETO_DIA: '0', CRIADOR_CONTAS: 'jf' };
+    const entrar = async apelido => (await (await worker.fetch(req('/conta/criar', { apelido, senha: A('senha-de-mentira') }), env)).json()).token;
+    const comToken = (rota, corpo, token) => new Request(`https://srv.exemplo${rota}`, {
+      method: 'POST', headers: { origin: ORIGEM, 'content-type': 'application/json', 'cf-connecting-ip': '1.2.3.4', authorization: `Bearer ${token}` }, body: JSON.stringify(corpo),
+    });
+    const tJF = await entrar('jf');
+    for (const p of ['a', 'b', 'c']) assert.equal((await worker.fetch(comToken('/ia/perguntar', { pergunta: p }, tJF), env)).status, 200);
+    assert.ok(api.chamadas.at(-1).body.tools, 'criador busca mesmo depois do teto');
+    assert.match(JSON.stringify(api.chamadas.at(-1).body.messages), /seu criador/);
+    const tOutro = await entrar('fulano');
+    assert.equal((await worker.fetch(comToken('/ia/perguntar', { pergunta: 'd' }, tOutro), env)).status, 200);
+    assert.equal((await worker.fetch(comToken('/ia/perguntar', { pergunta: 'e' }, tOutro), env)).status, 429);
+    assert.doesNotMatch(JSON.stringify(api.chamadas.at(-1).body.messages), /seu criador/);
+  } finally {
+    api.restaurar();
+  }
+});
+
+test('ácido debocha de verdade e a IA chama pelo nome com {nome} (sem receber o nome)', async () => {
+  const { SISTEMA_CONVERSA } = await import('../worker.js');
+  assert.match(SISTEMA_CONVERSA, /\{nome\}/);
+});
+

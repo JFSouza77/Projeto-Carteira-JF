@@ -776,6 +776,7 @@ function quandoFoi(ms) {
 async function renderConta() {
   const c = await conta.contaAtual().catch(() => null);
   if (!!c !== state.temConta) { state.temConta = !!c; renderComece(); }
+  ia.definirCriador(c?.token && state.perfil?.seloCriador ? c.token : null); // criador sem limite na IA (JF, 16/11)
   $('#conta-fora').hidden = !!c;
   $('#conta-dentro').hidden = !c;
   $('#conta-aviso-servidor').hidden = !!servidor();

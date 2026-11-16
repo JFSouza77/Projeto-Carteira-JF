@@ -103,6 +103,20 @@ class ErroHttp extends Error {
 const hojeUTC = () => new Date().toISOString().slice(0, 10);
 
 /** Limite de uso da IA por endereço e por dia (KV é aproximado, mas segura abuso e custo surpresa). */
+// Criador (JF, 16/11: "quem tá pagando sou eu, não tem por que eu ter limite"): a sessão da conta que está na lista
+// CRIADOR_CONTAS passa sem limite de uso nem teto de busca. O app só manda o token quando a conta tem o selo.
+async function criadorDaSessao(req, env) {
+  const m = /^Bearer ([a-f0-9]{64})$/.exec(req.headers.get('authorization') || '');
+  if (!m || !env.CARTEIRA_KV) return false;
+  const s = JSON.parse((await env.CARTEIRA_KV.get(`sessao:${await sha256(m[1])}`)) || 'null');
+  return !!s?.apelido && contasCriador(env).includes(s.apelido);
+}
+
+function contasCriador(env) {
+  return String(env.CRIADOR_CONTAS || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+}
+
+/** Confere (e conta) o uso da IA. Devolve { criador } pra rota saber se é o JF. */
 async function conferirLimite(req, env) {
   // Sem KV não há como contar: as rotas pagas falham fechado em vez de rodar sem limite (revisão 06/11).
   if (!env.CARTEIRA_KV) throw new ErroHttp(503, 'Servidor sem o armazenamento de limites (CARTEIRA_KV). A IA fica desligada até configurar.');
@@ -112,6 +126,7 @@ async function conferirLimite(req, env) {
   const kTot = `lim:${dia}:total`;
   // 15/11 (JF: "IA de bolso, sem abusar dos créditos"): além do limite por pessoa e do teto do dia, um teto do mês
   const kMes = `lim:mes:${dia.slice(0, 7)}`;
+  if (await criadorDaSessao(req, env)) return { criador: true };
   const [nIp, nTot, nMes] = await Promise.all([env.CARTEIRA_KV.get(kIp), env.CARTEIRA_KV.get(kTot), env.CARTEIRA_KV.get(kMes)]);
   if (Number(nIp || 0) >= Number(env.IA_LIMITE_DIA || 20)) throw new ErroHttp(429, 'Limite diário da IA atingido. Amanhã tem mais.');
   if (Number(nTot || 0) >= Number(env.IA_TETO_DIA || 120)) throw new ErroHttp(429, 'A IA descansou por hoje (teto do dia).');
@@ -121,6 +136,7 @@ async function conferirLimite(req, env) {
     env.CARTEIRA_KV.put(kTot, String(Number(nTot || 0) + 1), { expirationTtl: 172800 }),
     env.CARTEIRA_KV.put(kMes, String(Number(nMes || 0) + 1), { expirationTtl: 40 * 86400 }),
   ]);
+  return { criador: false };
 }
 
 export async function sha256(t) {
@@ -155,8 +171,12 @@ const HUMORES = {
   suave: 'Tom gentil, calmo e encorajador. PROIBIDO: sarcasmo, deboche, ironia, julgamento ou piada sobre os gastos da pessoa (nada de "torrou", "pelo visto você não leu", "peça demissão"). Se citar números, cite com cuidado, como um amigo preocupado.',
   // JF (14/11): "ele me zoar não tem problema, cada um com seu cada qual". Normal = cutucão de amigo; Ácido = esculacho.
   normal: 'Tom leve, com humor de robô. Pode dar um cutucão bem-humorado nos gastos, como um amigo, sem humilhar.',
-  acido: 'Tom sarcástico e espirituoso (a pessoa escolheu o humor Ácido): pode zoar os gastos sem dó, com graça, mas nunca cruel nem humilhante.',
+  // JF (16/11): "tá muito family friendly até no ácido; deram Rivotril pra minha IA?". Ácido = esculacho de amigo de verdade.
+  acido: 'Humor ÁCIDO (a pessoa escolheu e gosta): zoe sem dó, como um amigo debochado que não perdoa. Esculache os gastos, ironize as escolhas, use gíria e deboche ("torrou", "mão furada", "liso", "pão-duro", "vacilão"), exagere pra fazer rir. Nada de tom fofo, de "com carinho" nem de consolo. Limites: sem xingar a pessoa com palavrão pesado, sem preconceito, sem falar de aparência, família ou saúde. O número continua certo e a ajuda útil vem junto do deboche.',
 };
+
+// Com o criador (JF, 16/11): sem bajular, mas sabendo quem ele é. É o JF, que gosta de ser zoado.
+const COM_O_CRIADOR = 'Quem pergunta é o JF, seu criador (a conta dele tem o selo). Trate como trata o criador no Perfil JF: com intimidade, zoando e provocando sem dó (ele adora), sem bajular e sem formalidade. Pode chamar ele de JF ou de criador.';
 
 const BUSCA_WEB = { type: 'web_search_20250305', name: 'web_search', max_uses: 2, user_location: { type: 'approximate', country: 'BR', timezone: 'America/Sao_Paulo' } };
 
@@ -175,7 +195,8 @@ Regras:
 - Moedas de jogo (Robux, V-Bucks, Diamantes do Free Fire, Valorant Points, Riot Points, Minecoins, UC, Gemas…) e gift cards de jogo SÃO assunto de dinheiro: diga qual é a moeda, quanto custam os pacotes em reais hoje (pode buscar), onde comprar com segurança (loja oficial ou gift card de loja confiável) e avise de golpe ("moeda grátis", gerador de código). Fale como um colega que entende de jogo.
 - Pergunta de conhecimento geral simples, sem dinheiro (quem foi Benjamin Franklin, quem é um ator famoso): responda curto com o que você já sabe, SEM buscar.
 - Pergunta muito fora do seu papel e sem nenhuma ligação com dinheiro (ex.: resultado de campeonato antigo, curiosidade avulsa que exige pesquisa): não busque e não invente. Diga, no seu humor, que isso foge das suas funções de parceiro financeiro e que vale perguntar direto no Google ou em outro site.
-- Siga o humor escolhido acima. Fora do humor Ácido, nunca zombe da pessoa.`;
+- Siga o humor escolhido acima. Fora do humor Ácido, nunca zombe da pessoa.
+- Nome da pessoa: você não recebe o nome. Quando quiser chamar a pessoa pelo nome (faça isso com frequência, como um amigo), escreva exatamente {nome} no lugar; o app troca pelo nome dela no aparelho.`;
 
 async function iaPerguntar(req, env) {
   const corpo = await lerCorpo(req);
@@ -185,20 +206,20 @@ async function iaPerguntar(req, env) {
   const resumo = corpo.resumo && typeof corpo.resumo === 'object' ? corpo.resumo : {};
   const resumoTxt = JSON.stringify(resumo).slice(0, 3000);
   // mesma pergunta, com os mesmos números, na última hora: devolve a resposta guardada (não gasta crédito)
-  const kCache = env.CARTEIRA_KV ? `cache:pergunta:${await sha256(`${humor}|${pergunta.toLowerCase().replace(/\s+/g, ' ')}|${resumoTxt}`)}` : null;
+  const kCache = env.CARTEIRA_KV ? `cache:pergunta:${await sha256(`${humor}|${req.headers.get('authorization') ? 'c' : ''}|${pergunta.toLowerCase().replace(/\s+/g, ' ')}|${resumoTxt}`)}` : null;
   const guardada = kCache ? await env.CARTEIRA_KV.get(kCache) : null;
   if (guardada) return { texto: guardada, guardada: true };
   const client = clienteIA(env);
-  await conferirLimite(req, env);
-  // busca na web com teto do dia (15/11): passou do teto, a IA responde sem buscar
+  const { criador } = await conferirLimite(req, env);
+  // busca na web com teto do dia (15/11): passou do teto, a IA responde sem buscar (o criador não tem teto)
   const kBusca = `busca:${hojeUTC()}`;
   const buscasHoje = Number((await env.CARTEIRA_KV.get(kBusca)) || 0);
-  const podeBuscar = buscasHoje < Number(env.BUSCA_TETO_DIA || 15);
+  const podeBuscar = criador || buscasHoje < Number(env.BUSCA_TETO_DIA || 15);
   // 15/11 (JF: "ele pode pesquisar na internet e não está"): a conversa ganhou a busca na web, até 2 buscas por
   // pergunta, só pra assunto de dinheiro (JF: "senão a IA gasta os créditos à toa"; a regra está no SISTEMA_CONVERSA). A busca é feita pelo servidor da IA; o que vai nela é só o assunto da pergunta, nunca os dados da pessoa.
   const messages = [{
     role: 'user',
-    content: `Humor escolhido: ${humor}. ${HUMORES[humor]}\n\nResumo do mês (só totais, em centavos):\n${resumoTxt}\n\nPergunta: ${pergunta}`,
+    content: `Humor escolhido: ${humor}. ${HUMORES[humor]}${criador ? `\n\n${COM_O_CRIADOR}` : ''}\n\nResumo do mês (só totais, em centavos):\n${resumoTxt}\n\nPergunta: ${pergunta}`,
   }];
   let r;
   for (let volta = 0; volta < 3; volta++) {
@@ -763,7 +784,7 @@ async function contaEntrar(req, env) {
   // mesma mensagem pra apelido que não existe e senha errada (não entrega quem tem conta)
   if (!conta || !igual(await hashSenha(senha, conta.sal), conta.hash)) throw new ErroHttp(401, 'Apelido ou senha não conferem.');
   // selo de criador (12/11): só pra conta na lista CRIADOR_CONTAS (variável do Cloudflare), nunca pelo nome digitado
-  const criador = String(env.CRIADOR_CONTAS || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean).includes(apelido);
+  const criador = contasCriador(env).includes(apelido);
   return { ...(await novaSessao(env, apelido)), ...(criador ? { criador: true } : {}) };
 }
 
