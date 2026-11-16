@@ -5,7 +5,8 @@ import { $, centsToInput, esc, state, renderizar } from '../estado.js';
 import { BANKS, TIPOS_CONTA, TIPOS_INVESTIMENTO, accountBalance, accountLabel, agruparPorBanco, atualizarInvestimento, comReforco, createAccount, createCartao, createExpense, createIncome, createInvestimento, createTransferencia, diferencaDoSaldo, editarConta, faturaDoCartao, folgaDoPiso, formatBRL, parseAmount, parseSignedAmount, raioXCartao, rendimentoEstimado, resumoInvestimentos, toISODate, totalBalance } from '../engine.js';
 import * as db from '../db.js';
 import { temaBanco } from '../cores.js';
-import { ic, narrate, pintarOlhos, renderLancar, saldoTxt, saldoVisivel, toast } from '../app.js';
+import { ic, narrate, pintarOlhos, saldoTxt, saldoVisivel, toast } from '../app.js';
+import { renderLancar } from './lancar.js';
 
 export function renderTransf() {
   const contas = state.accounts.filter(a => a.tipo !== 'cartao' && !a.paraQuem); // dinheiro de outra pessoa não entra (achado do GPT, 13/11)

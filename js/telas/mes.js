@@ -7,7 +7,8 @@ import { addMsg, renderChat } from './chat.js';
 import * as db from '../db.js';
 import { opcoesDeConta } from './contas.js';
 import { textoMeta } from '../caos/conversa.js';
-import { caosDiz, ic, icCat, narrate, registrarGasto, toast } from '../app.js';
+import { caosDiz, ic, icCat, narrate, toast } from '../app.js';
+import { registrarGasto } from './lancar.js';
 
 export function iniciarMeta(nome = null, { jaFalou = false } = {}) {
   state.metaFlow = { passo: nome ? 'quanto' : 'pra_que', dados: { nome } };
