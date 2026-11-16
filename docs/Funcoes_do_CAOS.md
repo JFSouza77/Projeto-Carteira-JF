@@ -1,7 +1,7 @@
 # Funções do C.A.O.S. (pra revisar)
 
 Lista feita pelo Wally em 16/11/2026, tirada do código (`js/caos/conversa.js`, função `entender()`).
-App 2.1.2 Alfa · C.A.O.S. 2.3.4 · núcleo 1.6.0. São **69 jeitos de entender** uma frase, em 7 grupos.
+App 2.1.2 Alfa · C.A.O.S. 2.3.5 · núcleo 1.6.0. São **69 jeitos de entender** uma frase, em 7 grupos.
 
 Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o que ele faz.
 - 🖥️ = responde sem internet (no próprio celular).
@@ -65,6 +65,7 @@ Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o q
 | Meus investimentos | "quanto tenho investido?" | Soma e rendimento 🖥️ |
 | Onde rende mais | "qual banco rende mais?" | Compara % do CDI 🌐 |
 | Limite investido | "quais bancos aumentam o limite se eu investir?" | Explica CDB que vira limite (C6, Inter, PicPay…) 🖥️ |
+| Planejar pet, moradia, transporte ou economizar | "quanto custa cuidar de um pincher?" / "meu aluguel está caro" / "gasto muito com gasolina" / "onde posso economizar?" | Questionário de 5 perguntas sem IA (com aviso de privacidade antes de pedir bairro); depois a IA faz a conta com as premissas à mostra e sugere caminhos, sem decidir 🌐 (sem IA: dicas do caminho 🖥️) |
 | Pesquisa de compra ou viagem | "quanto custaria uma viagem pros EUA?" / "me ajuda a achar uma geladeira" | Faz um questionário rápido sem IA (de onde, quando, quantos, região, orçamento; ou detalhes, uso, marca, prazo), com Pular; depois a IA compara 2 a 4 sites e diz o que conferir (frete, bagagem…). Ele orienta, não decide 🌐 (sem IA: o caminho das pedras 🖥️) |
 | Moedas de jogo | "quanto tá valendo 100 robux?" | A moeda, onde comprar, preço de hoje e alerta de golpe 🖥️/🌐 |
 
