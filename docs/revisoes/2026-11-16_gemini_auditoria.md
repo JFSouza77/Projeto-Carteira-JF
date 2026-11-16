@@ -52,3 +52,15 @@ lendo a função) antes de mexer. Versão depois: app 2.1.2 · C.A.O.S. 2.3.6.
 Tangentes de "TDAH", dois balões seguidos, emoção do momento indo pra IA online, alerta do "efeito formiguinha",
 pergunta curiosa depois do gasto, reação ao "hiperfoco". Jeito de ser é característica dele: o que entrar vai pro
 núcleo, com o ok do JF, nos dois projetos.
+
+## 2º relatório do Gemini (16/11): conferido, nada pra mudar
+
+| Achado | Veredito (frase rodada no código) |
+| --- | --- |
+| `explicar_print` pegando "não entendi como ponho orçamento" | Não procede: cai em `tutorial`; "não entendi a fatura" vai pro print, que é o certo |
+| `cabe` engolindo "quanto sobra do meu orçamento de mercado?" | Não procede: cai em `orcamento`, categoria Mercado |
+| "uber 30", "50 no posto" sem verbo | Não procede: já vira gasto (desde 14/11) |
+| Gírias cc, vr, va | Já existem. "cc" vira cartão e ele pergunta crédito ou débito, de propósito: "cc" também é "conta corrente" |
+| Ritmo alto falso no começo do mês | Não procede: o radar só avisa a partir do dia 5 e tira as contas fixas da média (sugestão do próprio Gemini em 06/11) |
+| Rosto de preocupado quando xinga no Suave | Não procede: sai calmo |
+| Piadas de começo e fim de mês | Já existem (baldes `inicioDoMes` e `fimDoMes` na piada) |
