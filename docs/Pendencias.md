@@ -166,7 +166,9 @@ pré-paga), selo de criador `jf` ✅, humores da IA ✅ (deploy de 13/11 à noit
 
 - **"Segura" do estabilizador:** o Code manda o número do Perfil (a emoção que manda cai mais devagar).
 
-- **Núcleo 1.4.1?** Marco "ganhei corpo (avatar), primeiro na Carteira" (ok do JF em 13/11) e a paciência:
+- **Núcleo 1.6.0 no Perfil** (16/11, ok do JF): na Carteira já está; o Code aplica no Perfil (PR rascunho
+  JFSouza77/Projeto_Perfil_JF#219, `docs/Da_Carteira/2026-11-16_nucleo_1.6.0.md`). Entrou o corpo (avatar) que esperava aqui embaixo.
+- ~~**Núcleo 1.4.1?**~~ (o corpo entrou no 1.6.0) Marco "ganhei corpo (avatar), primeiro na Carteira" (ok do JF em 13/11) e a paciência:
   o JF deixou com o Code decidir se entra no núcleo (13/11; no Perfil não há conversa digitada, então pode ficar só na Carteira). Recados: `correio/para_o_code/2026-11-13_nucleo_corpo_e_paciencia.md` e `..._paciencia_decisao_do_jf.md`.
 
 ## Servidor (no ar desde 14/11)
