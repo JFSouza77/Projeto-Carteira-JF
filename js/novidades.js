@@ -25,6 +25,7 @@ export const NOVIDADES = Object.freeze([
       '❓ Botão de ajuda: não sobe mais em cima do relógio.',
       '💱 Cotação do jogo: depois de falar de Robux, "qual a cotação?" segue no jogo.',
       '💵 Dólar sem dado: o C.A.O.S. avisa e pesquisa com a IA online.',
+      '🚪 Tela de entrar: abre direto, sem trocar de rosto nem piscar.',
     ],
   },
   {
