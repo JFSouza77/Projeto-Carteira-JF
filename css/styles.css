@@ -1395,3 +1395,24 @@ body.teclado .chat-anexo { bottom: 64px; }
 .recomecar-botoes .muted.small { margin: 0 0 8px; }
 button.perigo { color: var(--danger); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 55%, transparent); }
 .recomecar-link { display: block; margin: 8px auto 0; background: none; border: 0; color: var(--muted); text-decoration: underline; font: inherit; font-size: .85rem; cursor: pointer; }
+
+/* 16/11 (JF, como o GPT fez na imagem): Notícias do dia com neon roxo, pra chamar a atenção sem gritar */
+.noticias-card { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--violet) 70%, transparent), 0 0 18px -6px var(--violet);
+  background: color-mix(in srgb, var(--violet) 7%, var(--card)); }
+.noticias-card .bloco-tit, .noticias-card .bloco-topo > .ico { color: var(--violet); }
+
+/* 16/11 (JF): Transferir em azul (verde nas Entradas, laranja no Gasto, azul nas transferências); só semana e mês */
+#resumo-card[data-modo="transf"] .mini-stats { grid-template-columns: repeat(2, 1fr); }
+#resumo-card[data-modo="transf"] #stat-net-box { display: none; }
+#resumo-card[data-modo="transf"] .mini-stats > :is(:nth-child(1), :nth-child(2)) {
+  background: color-mix(in srgb, var(--cyan) 12%, var(--card-2)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cyan) 55%, transparent); }
+#resumo-card[data-modo="transf"] .mini-stats > :is(:nth-child(1), :nth-child(2)) :is(small, .ico, strong) { color: var(--cyan); }
+
+/* 16/11 (JF): o botão de Ajustes estava apagado demais; agora tem cor e um contorno leve */
+.ajustes-btn { color: var(--text); background: color-mix(in srgb, var(--accent) 10%, var(--card-2));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); font-weight: 600; }
+.ajustes-btn .ico { color: var(--accent); }
+
+/* 16/11: o menu do "?" cresceu (atalhos de começo); se não couber, rola */
+.ajuda-menu { max-height: calc(100dvh - 140px); overflow-y: auto; }
+#resumo-card[data-modo="transf"] .transf-lista li { border-color: color-mix(in srgb, var(--cyan) 55%, transparent); }

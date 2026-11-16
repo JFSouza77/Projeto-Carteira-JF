@@ -19,7 +19,7 @@ import { fraseDoPrint, resumoDoPrint } from './caos/ofertas.js';
 import { corCategoria, corFonte, corForma, temaBanco } from './cores.js';
 import { NUCLEO } from './caos/nucleo.js';
 import { NOVIDADES, VERSAO_APP, temNovidade, partesDoItem } from './novidades.js';
-import { falar, vozDisponivel, ditadoDisponivel, ouvir, pararDeOuvir, setVelocidade } from './voz.js';
+import { calar, falar, vozDisponivel, ditadoDisponivel, ouvir, pararDeOuvir, setVelocidade } from './voz.js';
 import * as imagens from './imagens.js';
 import * as ia from './ia.js';
 import * as lembretes from './notificacoes.js';
@@ -641,11 +641,17 @@ const AJUDAS = [
 // qualquer canto (o app lembra onde ficou) e o toque abre um menuzinho de ajuda rápida. Não vai pro cabeçalho: o pedido
 // do JF vem antes da sugestão do Code. No computador ele mora no menu lateral e não arrasta.
 // cada item com uma cor e um ícone (JF, 13/11 à noite: "cada um de uma cor, mais intuitivo, sem exagero")
+// 16/11 (JF): pra quem está começando, o "?" também leva direto pra adicionar conta, cartão, lançar e transferir
+// (guia leva até o lugar e explica num balão, igual o passo a passo). As perguntas vão pro Chat.
 const AJUDA_RAPIDA = [
-  { q: 'Como lanço um gasto?', ic: 'i-gasto', cor: 'var(--accent)' },
+  { guia: 'banco', t: 'Adicionar banco ou conta', ic: 'i-contas', cor: 'var(--ok)' },
+  { guia: 'cartao', t: 'Adicionar cartão de crédito', ic: 'a-cartao', cor: 'var(--violet)' },
+  { guia: 'gasto', t: 'Lançar um gasto', ic: 'i-gasto', cor: 'var(--warn)' },
+  { guia: 'entrada', t: 'Lançar uma entrada', ic: 'i-entrada', cor: 'var(--accent)' },
+  { guia: 'transferir', t: 'Transferir entre contas', ic: 'i-transf', cor: 'var(--cyan)' },
+  { guia: 'conta', t: 'Criar meu login no app', ic: 'i-ajustes', cor: 'var(--indigo)' },
   { q: 'Quanto gastei este mês?', ic: 'i-lupa', cor: 'var(--cyan)' },
   { q: 'Como ponho orçamento?', ic: 'i-meta', cor: 'var(--warn)' },
-  { q: 'Como registro meu cartão?', ic: 'a-cartao', cor: 'var(--violet)' },
   { q: 'O que você pode fazer?', ic: 'i-conversa', cor: 'var(--caos)' },
 ];
 const telaGrande = () => window.matchMedia('(min-width: 1024px)').matches;
@@ -683,7 +689,9 @@ function abrirAjudaMenu() {
 
 function ligarMeAjuda() {
   const b = $('#me-ajuda'), m = $('#ajuda-menu');
-  m.innerHTML = AJUDA_RAPIDA.map(a => `<button type="button" role="menuitem" data-q="${esc(a.q)}" style="--cor-item:${a.cor}">${ic(a.ic)}<span>${esc(a.q)}</span></button>`).join('')
+  m.innerHTML = AJUDA_RAPIDA.map(a => a.guia
+    ? `<button type="button" role="menuitem" data-guia="${a.guia}" data-ajuda style="--cor-item:${a.cor}">${ic(a.ic)}<span>${esc(a.t)}</span></button>`
+    : `<button type="button" role="menuitem" data-q="${esc(a.q)}" style="--cor-item:${a.cor}">${ic(a.ic)}<span>${esc(a.q)}</span></button>`).join('')
     + `<button type="button" role="menuitem" data-q="" class="ajuda-tudo">${ic('i-livro')}<span>Ver toda a ajuda</span></button>`;
   let ini = null, arrastou = false;
   b.addEventListener('pointerdown', e => {
@@ -715,6 +723,7 @@ function ligarMeAjuda() {
     if (m.hidden) abrirAjudaMenu(); else fecharAjudaMenu();
   });
   m.addEventListener('click', e => {
+    if (e.target.closest('[data-guia]')) { fecharAjudaMenu(); return; } // o guia abre pelo clique geral de [data-guia]
     const q = e.target.closest('button[data-q]');
     if (!q) return;
     fecharAjudaMenu();
@@ -1118,7 +1127,7 @@ function bind() {
   });
   // "do mês" abre o relatório: das entradas na aba Entradas, o normal na aba Gasto
   // passo a passo (15/11): qualquer [data-guia] leva até o lugar e abre o balão
-  document.addEventListener('click', e => { const g = e.target.closest('[data-guia]'); if (g) guiar(g.dataset.guia); });
+  document.addEventListener('click', e => { const g = e.target.closest('[data-guia]'); if (g) guiar(g.dataset.guia, { ajuda: 'ajuda' in g.dataset }); });
   $('#guia-ok').addEventListener('click', fecharGuia);
   $('#guia-pular').addEventListener('click', async () => { state.settings.pulouConta = true; await db.setMeta('settings', state.settings); fecharGuia(); location.hash = 'inicio'; renderComece(); });
   // "não entrou nada" e "não gastei nada" (Anne, 15/11): pro mês não passar batido e o C.A.O.S. não achar que você esqueceu
@@ -1359,6 +1368,7 @@ function bind() {
     state.settings.voice = e.target.checked;
     saveSettings();
     if (e.target.checked) falar('Voz ativada. Agora eu falo.');
+    else calar(); // 16/11 (limpeza): desligou a voz, ele para de falar na hora (o calar existia e ninguém chamava)
   });
   $('#remind-toggle').addEventListener('change', onRemindToggle);
   $('#remind-time').addEventListener('change', onRemindTime);

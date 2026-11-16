@@ -46,10 +46,6 @@ export const IDENTIDADE = Object.freeze({
 
 const lista = itens => (itens.length > 1 ? `${itens.slice(0, -1).join(', ')} e ${itens[itens.length - 1]}` : itens[0]);
 
-export function textoAnatomia() {
-  return IDENTIDADE.anatomia.map(a => `${a.parte}: ${a.faz}.`).join(' ');
-}
-
 // Falas curtas (JF, 13/11 à noite: "a mensagem é importante, mas é enorme; resumindo fica melhor explicado").
 // A versão completa continua indo pra IA online (resumoIdentidade), que precisa de tudo.
 export function textoPodeNaoPode() {

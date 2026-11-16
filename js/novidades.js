@@ -13,10 +13,15 @@ export const NOVIDADES = Object.freeze([
     t: 'Dá pra recomeçar sem apagar os bancos, e o cartão do Início ganhou as cores de cada aba.',
     itens: [
       '🔄 Recomeçar: em Ajustes, zere só os saldos dos bancos ou comece do zero (apaga os lançamentos). Bancos, cartões, pisos e contas fixas continuam. Ideia do JF.',
+      '🧭 Atalhos no botão ?: toque no ? e escolha adicionar banco, adicionar cartão, lançar gasto ou entrada, transferir ou criar login. O app leva até o lugar e explica.',
+      '💙 Transferir em azul: no Início, a aba Transferir mostra a semana e o mês em quadrinhos azuis, combinando com o verde e o laranja.',
       '🎨 Quadrinhos com cor: no cartão do Início, a aba Gasto tem semana e mês em laranja e a Sobra em verde; a aba Entradas, semana e mês em verde e o Déficit (o que já saiu) em laranja.',
     ],
     qol: [
       '🏦 Atalho em Contas: no fim da lista de Bancos tem o link pra zerar os saldos ou começar do zero.',
+      '🟣 Notícias em destaque: o cartão Notícias do dia, no Início, ganhou um neon roxo.',
+      '⚙️ Ajustes à vista: o botão de Ajustes, no alto do Início, agora tem cor e contorno.',
+      '🔇 Voz que obedece: desligou a voz em Ajustes, o C.A.O.S. para de falar na hora.',
     ],
   },
   {
