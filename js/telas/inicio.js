@@ -69,6 +69,7 @@ export function renderResumoEntradas() {
   $('#stat-mes').textContent = formatBRL(doMes);
   $('#stat-semana').className = `num ${cor}`;
   $('#stat-mes').className = `num ${cor}`;
+  pintarTerceiroQuadrinho(modo);
   const r = resumoEntradas(state.incomes, state.expenses, state.viewMonth);
   $('#entrada-total').textContent = formatBRL(r.totalCents);
   const semEntrada = (state.perfil?.mesesSemEntrada || []).includes(state.viewMonth);
@@ -348,4 +349,24 @@ export function renderComece() {
     <li class="${p.feito ? 'feito' : ''}">${p.feito
       ? `<span class="passo-n" aria-hidden="true">${ic('i-ok')}</span><span>${esc(p.txt)}</span>`
       : `<button type="button" data-guia="${p.ir}"><span class="passo-n" aria-hidden="true">${i + 1}</span><span>${esc(p.txt)}</span><span class="passo-seta" aria-hidden="true">›</span></button>`}</li>`).join('');
+}
+
+// 3º quadrinho do cartão (JF, 16/11, imagens do GPT): contraste com a aba. No Gasto, os dois primeiros são laranja e o
+// 3º é a Sobra do mês (verde: entradas − gastos). Nas Entradas, os dois primeiros são verdes e o 3º é o Déficit do mês
+// (laranja: o que já saiu das entradas, ou seja, os gastos do mês). Se saiu mais do que entrou, no Gasto ele vira
+// "Déficit do mês" em laranja, com a diferença (a cor não esconde número ruim).
+export function pintarTerceiroQuadrinho(modo = state.resumoModo || 'gasto') {
+  const mes = state.viewMonth;
+  const doMes = l => l.filter(x => (x.month || monthKey(x.date)) === mes).reduce((t, x) => t + x.amountCents, 0);
+  const entrou = doMes(state.incomes), saiu = doMes(state.expenses);
+  const box = $('#stat-net-box'); // na aba Transferir, fica a conta do Gasto (sobra ou déficit de verdade)
+  let tit, valor, tipo;
+  if (modo === 'entrada') { tit = 'Déficit do mês'; valor = saiu; tipo = 'deficit'; }
+  else if (saiu > entrou) { tit = 'Déficit do mês'; valor = saiu - entrou; tipo = 'deficit'; }
+  else { tit = 'Sobra do mês'; valor = entrou - saiu; tipo = 'sobra'; }
+  $('#stat-net-tit').textContent = tit;
+  $('#stat-net').textContent = formatBRL(valor);
+  $('#stat-net').className = `num ${tipo === 'deficit' ? 'warn' : 'ok'}`;
+  box.classList.toggle('deficit', tipo === 'deficit');
+  box.classList.toggle('sobra', tipo === 'sobra');
 }

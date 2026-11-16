@@ -319,16 +319,8 @@ export function render() {
   renderPodeGastar(isCurrent);
   renderResumoEntradas();
   const inc = incomeIn(state.incomes, state.viewMonth);
-  const net = inc - s.totalCents;
   $('#stat-in').textContent = formatBRL(inc);
-  // 15/11 (JF + GPT): entrou mais que saiu, é "Sobra do mês" (verde); saiu mais que entrou, vira "Déficit do mês"
-  // (laranja), com a diferença negativa entre gastos e entradas, e não o saldo das contas
-  const deficit = net < 0;
-  $('#stat-net-tit').textContent = deficit ? 'Déficit do mês' : 'Sobra do mês';
-  $('#stat-net').textContent = formatBRL(Math.abs(net));
-  $('#stat-net').className = `num ${deficit ? 'warn' : net > 0 ? 'ok' : ''}`;
-  $('#stat-net-box').classList.toggle('deficit', deficit);
-  $('#stat-net-box').classList.toggle('sobra', net > 0); // 15/11 (JF): a sobra também ganha o quadrinho, em verde
+  // o 3º quadrinho (Sobra/Déficit) agora depende da aba: fica no renderResumoEntradas (telas/inicio.js, 16/11)
   $('#stat-bank').textContent = state.accounts.length ? saldoTxt(totalBalance(state.accounts, state.expenses, state.incomes, state.transferencias)) : '—';
   renderComece();
 
