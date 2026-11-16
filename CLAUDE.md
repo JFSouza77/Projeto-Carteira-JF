@@ -68,7 +68,7 @@ que escuta, presta atenção, reage com emoção ao que acontece, incentiva, aco
 | Motor | `js/engine.js` | Regras, cálculos, alertas. Funções puras. |
 | Persistência | `js/db.js` | Único lugar que lê e grava no IndexedDB. |
 | Narrador | `js/caos/` | Espinha, emoções, gerador de falas, conversa. Funções puras. |
-| UI | `js/app.js` | Liga tudo. Só ele grava (via `db.js`). |
+| UI | `js/app.js`, `js/estado.js`, `js/telas/` | O `app.js` liga tudo (começo, navegação, botões); cada tela mora em `js/telas/` (início, lançar, mês, análise, chat, contas, ajustes) e o estado compartilhado em `js/estado.js` (as telas pedem o render pelo `renderizar()`). Só a UI grava (via `db.js`). |
 | Navegador | `js/voz.js`, `js/imagens.js`, `js/ia.js`, `js/notificacoes.js`, `js/conta.js` | Voz, fotos, IA online, lembretes, conta. |
 | Servidor (opcional) | `servidor/` | Cloudflare Worker: IA online, push dos lembretes, conta e sincronização. |
 
@@ -102,7 +102,9 @@ Mapa do cérebro: `docs/CAOS_Carteira.md`.
 - **Toda versão nova do app ganha sua entrada** em `js/novidades.js` (a mais nova em cima). Escrita pra quem usa:
   "emoji Título: explicação", título até 34 letras, nada de bastidores, o mais importante primeiro, no máximo 7 itens
   (e 7 ajustes no `qol`). O aviso "tem novidade" aparece no Início quando a versão muda. O teste `tests/novidades.test.js`
-  confere.
+  confere. Cada item diz o que é, onde fica e como usa; nada de título repetido nas 3 mais novas (Code, 16/11).
+  Leva de ajustes miúdos pode ir na versão aberta com o campo opcional `ate` (`{ v: '2.1.1 Alfa', ate: '2.1.1.2' }`: o app
+  mostra 2.1.1.2 Alfa); o que vai mudando antes de virar versão fica em `docs/Novidades_Rascunho.md`.
 
 ## Dinheiro
 

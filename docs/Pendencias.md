@@ -9,8 +9,8 @@ Atualizada pelo Wally a cada rodada.
 - Feito: itens das 3 Novidades mais novas reescritos explicando onde fica e como usa; teste que reprova item curto e título
   repetido nas 3 mais novas.
 - Combinado daqui pra frente: ajuste pequeno não abre versão (entra na aberta); versão nova só quando enche ou muda o assunto.
-- Rodada grande (quinta/sexta): dividir o `js/app.js` (4.058 linhas) em `telas/`, uma tela por PR; campo `ate` nas
-  Novidades e `docs/Novidades_Rascunho.md`.
+- Feito em 16/11 (o JF pediu já): `js/app.js` dividido em `js/estado.js` e `js/telas/`; campo `ate` nas Novidades e
+  `docs/Novidades_Rascunho.md`. Próximo passo possível: ajudantes de tela (`ic`, `toast`…) num `js/ui.js` (perguntei ao Code).
 
 ## Depois da 2.1.0 (15/11)
 

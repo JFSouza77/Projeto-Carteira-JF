@@ -33,6 +33,7 @@ import { guardarEmMeta, iniciarMeta, lancarCompromisso, marcarPlano, onAddCompro
 import { exportarCSV, exportarPDF, filtroDeBusca, grafico, lancamentosDoMes, marcarSeg, renderGraficos, renderMeses, renderRitmo, renderRosca } from './telas/analise.js';
 import { editar, lerFotoComIA, limparFoto, mostrarFoto, onDelete, onFoto, onSubmit, perguntarContaDoPix, previaParcelas, previaRacha, renderLancar, salvarEdicao, verFoto } from './telas/lancar.js';
 import { abrirLimiteDiario, atalho, fecharGuia, guiar, hojeNaoGastei, mostrarEntradas, recebi, renderAReceber, renderComece, renderHoje, renderOfensiva, renderPainel, renderPodeGastar, renderResumoEntradas, renderUltimos, salvarLimiteDiario } from './telas/inicio.js';
+import { ESTILO_DESC, abrirNovidades, alternarAntigas, alternarEstudio, exportBackup, importBackup, montarInfoCaos, onBudgetChange, onRemindTime, onRemindToggle, renderAvisoNovidade, renderBudgets, renderCalculadora, renderGlossario, renderSettings } from './telas/ajustes.js';
 
 definirRender(render);
 
@@ -251,86 +252,8 @@ function irPara(tela, { lado = null } = {}) {
 // Só leitura: os textos vêm do C.A.O.S. (glossário e núcleo); a conta vem do calcularJuros dele.
 // ======================================================================
 
-function alternarEstudio(ligar = $('#estudio').hidden) {
-  $('#estudio').hidden = !ligar;
-  $('#tela-conversa').classList.toggle('modo-estudio', ligar);
-  $('#estudio-btn').setAttribute('aria-pressed', String(ligar));
-  // dica do Code (13/11): deixar claro como voltar pra conversa
-  $('#estudio-btn').innerHTML = ligar ? '← Conversa' : '<svg class="ico" aria-hidden="true"><use href="#i-livro"/></svg> Glossário';
-  if (ligar) { renderEstudio(); window.scrollTo(0, 0); }
-}
 
-let estudioMontado = false;
-function renderEstudio() {
-  renderGlossario();
-}
-
-// 15/11 (Anne): leis e linha do tempo moram nos Ajustes ("Mais sobre o C.A.O.S."); a calculadora, em Contas
-function montarInfoCaos() {
-  if (!estudioMontado) {
-    estudioMontado = true;
-    // núcleo 1.3.0: cada lei tem o sentido geral e a frase de cada casa (aqui, a da Carteira)
-    $('#leis').innerHTML = NUCLEO.leis.map(l => `<li><strong>${esc(String(l.lei || l).replace(/^\d+ª:\s*/, ''))}</strong>${l.carteira ? `<small>${esc(l.carteira)}</small>` : ''}</li>`).join('');
-    const dataBR = iso => { const [a, m, d] = iso.split('-'); return `${d}/${m}/${a}`; };
-    $('#linha-tempo').innerHTML = NUCLEO.vida.map(v => `<li><small>${dataBR(v.data)}</small>${esc(v.fato)}</li>`).join('');
-  }
-  renderCalculadora();
-}
-
-const semAcento = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-
-let glosTema = ''; // tema escolhido nos chips do glossário ('' = todos)
-const GLOS_TEMA_DE = new Map(GLOSSARIO.map(g => [g, temaDoTermo(g)]));
-
-function renderGlossario() {
-  const q = semAcento($('#glos-busca').value.trim());
-  const chips = $('#glos-temas');
-  if (chips && !chips.childElementCount) {
-    // 14/11 (JF: "mais lúdico, com coresinhas"): um chip colorido por tema, que filtra a lista
-    chips.innerHTML = [{ id: '', nome: 'Todos', cor: 'outros' }, ...GLOS_TEMAS].map(t =>
-      `<button type="button" class="glos-chip" data-tema="${t.id}" style="--tema:var(--cat-${t.cor})" aria-pressed="${t.id === glosTema}">${esc(t.nome)}</button>`).join('');
-    chips.addEventListener('click', e => {
-      const b = e.target.closest('.glos-chip');
-      if (!b) return;
-      glosTema = b.dataset.tema;
-      chips.querySelectorAll('.glos-chip').forEach(c => c.setAttribute('aria-pressed', String(c === b)));
-      renderGlossario();
-    });
-  }
-  const achados = GLOSSARIO.filter(g => (!glosTema || GLOS_TEMA_DE.get(g) === glosTema)
-    && (!q || semAcento(g.termo).includes(q) || g.chaves.some(k => semAcento(k).includes(q)) || semAcento(g.adulto).includes(q)));
-  $('#glos-total').textContent = q || glosTema ? `${achados.length} de ${GLOSSARIO.length} termos.` : `${GLOSSARIO.length} termos.`;
-  const corDe = id => GLOS_TEMAS.find(t => t.id === id)?.cor || 'outros';
-  $('#glos-lista').innerHTML = achados.length ? achados.map(g => {
-    const tema = GLOS_TEMA_DE.get(g);
-    return `
-    <details style="--tema:var(--cat-${corDe(tema)})"><summary><span class="glos-bola" aria-hidden="true">${esc(g.termo[0])}</span>${esc(g.termo)}</summary>
-      <div class="glos-corpo">
-        <p>${esc(g.adulto)}</p>
-        ${g.crianca ? `<p class="glos-crianca"><b>Bem simples:</b> ${esc(g.crianca)}</p>` : ''}
-        <p class="mais">${esc(g.mais)}</p>
-        ${g.governo ? `<p class="mais">Regra de ${esc(ATUALIZADO_EM)}: confira no canal oficial, porque muda com o tempo.</p>` : ''}
-      </div>
-    </details>`;
-  }).join('') : '<p class="muted">Não achei esse termo. Tente outra palavra ou pergunte pro C.A.O.S. na conversa.</p>';
-}
-
-function renderCalculadora() {
-  const valor = parseAmount($('#calc-valor').value) || 0;
-  const pct = Math.max(0, Math.min(100, Number(String($('#calc-taxa').value).replace(',', '.')) || 0)) / 100;
-  const meses = Number($('#calc-meses').value);
-  const anual = $('#calc-periodo').value === 'ano';
-  $('#calc-meses-txt').textContent = meses % 12 === 0 && meses >= 12 ? `${meses} meses (${meses / 12} ${meses === 12 ? 'ano' : 'anos'})` : `${meses} ${meses === 1 ? 'mês' : 'meses'}`;
-  if (!valor) { $('#calc-res').innerHTML = '<p class="muted">Digite um valor.</p>'; return; }
-  // mesma regra da conversa: ao ano vira mensal equivalente no composto e ÷12 no simples
-  const s = calcularJuros({ tipo: 'simples', valor, taxa: anual ? pct / 12 : pct, meses });
-  const c = calcularJuros({ tipo: 'compostos', valor, taxa: anual ? Math.pow(1 + pct, 1 / 12) - 1 : pct, meses });
-  const dif = c.finalCents - s.finalCents;
-  $('#calc-res').innerHTML = `
-    <div><small>Juros simples</small><b>${formatBRL(s.finalCents)}</b><small>+ ${formatBRL(s.jurosCents)} de juros</small></div>
-    <div><small>Juros compostos</small><b>${formatBRL(c.finalCents)}</b><small>+ ${formatBRL(c.jurosCents)} de juros</small></div>
-    <p class="dif">${dif > 0 ? `A bola de neve dos compostos dá ${formatBRL(dif)} a mais. Ótimo quando você investe, perigoso quando você deve.` : 'Com esses números, as duas contas dão igual.'}</p>`;
-}
+ // tema escolhido nos chips do glossário ('' = todos)
 
 // ======================================================================
 // Início
@@ -636,65 +559,11 @@ document.addEventListener('toggle', e => {
 // Ajustes
 // ======================================================================
 
-function renderBudgets() {
-  $('#budget-list').innerHTML = state.categories.map(c => `
-    <li>
-      <label for="b-${esc(c.id)}">${icCat(c)} ${esc(c.name)}</label>
-      <span class="amount small"><span>R$</span>
-        <input id="b-${esc(c.id)}" data-budget="${esc(c.id)}" type="text" inputmode="decimal" placeholder="sem limite" value="${centsToInput(c.budgetCents)}">
-      </span>
-    </li>`).join('');
-}
-
-async function renderSettings() {
-  prepararFormCompromisso();
-  $('#mood-options').innerHTML = Object.entries(MOODS).map(([id, label]) => `
-    <label><input type="radio" name="mood" value="${id}" ${state.settings.mood === id ? 'checked' : ''}><span>${label}</span></label>`).join('');
-  $('#voice-toggle').checked = state.settings.voice;
-  for (const r of document.querySelectorAll('input[name="letra"]')) r.checked = r.value === (state.settings.letra || 'normal');
-  for (const r of document.querySelectorAll('input[name="tema"]')) r.checked = r.value === (state.settings.tema || 'auto');
-  for (const r of document.querySelectorAll('input[name="estilo"]')) r.checked = r.value === (state.settings.estilo || 'atual');
-  $('#estilo-desc').textContent = ESTILO_DESC[state.settings.estilo || 'atual'];
-  $('#voz-vel').value = state.settings.vozVel ?? 1;
-  $('#voz-vel-out').textContent = `${Number(state.settings.vozVel ?? 1).toFixed(1).replace('.', ',')}×`;
-  $('#menos-mov').checked = MENOS_MOVIMENTO.matches;
-  $('#voice-toggle').closest('label').hidden = !vozDisponivel();
-  $('#caos-version').textContent = `${IDENTIDADE.nome} ${CAOS_VERSAO} (núcleo ${IDENTIDADE.nucleo}) · ${IDENTIDADE.sigla}. ${IDENTIDADE.slogan} Criado por ${IDENTIDADE.criador}, veio do ${IDENTIDADE.origem}.`;
-  $('#ai-toggle').checked = state.settings.aiOn;
-  $('#ai-url').value = state.settings.aiUrl;
-  $('#chat-mic').hidden = !ditadoDisponivel();
-  const lem = await lembretes.config().catch(() => ({}));
-  $('#remind-toggle').checked = !!lem.ativo;
-  $('#remind-time').value = lem.hora || '20:30';
-  $('#remind-status').textContent = lem.ativo ? lembretes.descreverModo(lem.modo) : 'Desligado.';
-}
-
-async function onBudgetChange(input) {
-  const cat = catById(input.dataset.budget);
-  if (!cat) return;
-  const raw = input.value.trim();
-  const cents = raw === '' ? 0 : parseAmount(raw);
-  if (cents === null) { toast('Valor de orçamento inválido.'); input.value = ''; return; }
-  const updated = { ...cat, budgetCents: cents };
-  await db.put(db.STORES.categories, updated);
-  state.categories = state.categories.map(c => (c.id === cat.id ? updated : c));
-  input.value = centsToInput(cents);
-  render();
-  toast(cents ? `Orçamento de ${cat.name}: ${formatBRL(cents)}` : `${cat.name} sem limite.`);
-}
 
 const saveSettings = () => db.setMeta('settings', state.settings);
 
 // ---------- Blocos e privacidade (14/11, teste da Anne: "rola sem fim, não sei por onde começar, e qualquer um que
-// abrir vê meu saldo") ----------
-// Cada seção grande vira um bloco que abre e fecha (<details data-bloco>); o app lembra do jeito que a pessoa deixou.
-// Saldo das contas começa escondido (R$ ••••); o olhinho mostra.
-// Estilo do app (Anne, 14/11): Atual (a cara C.A.O.S.), Limpo (sem brilho neon, menos cor) e Direto (só o essencial)
-const ESTILO_DESC = {
-  atual: 'A cara do C.A.O.S.: neon, cores por categoria e tudo à mão.',
-  limpo: 'Sem brilho neon e com menos cor. Tudo continua lá, mais calmo.',
-  direto: 'Só o que você precisa: resumo, lançar e a lista. Gráficos e extras somem do Início e do Mês.',
-};
+
 export const saldoVisivel = () => !!state.settings.mostrarSaldos;
 export const saldoTxt = c => (saldoVisivel() ? formatBRL(c) : 'R$ ••••');
 export function pintarOlhos() {
@@ -744,74 +613,6 @@ function ligarBlocos() {
 
 /** "Comece por aqui" (Anne, 14/11 e 15/11): 5 passos; cada um leva até o lugar e explica num balão (o guia). */
 
-async function onRemindToggle(e) {
-  const box = e.target;
-  try {
-    const c = box.checked
-      ? await lembretes.ativar({ hora: $('#remind-time').value || '20:30', servidor: state.settings.aiOn ? state.settings.aiUrl : '' })
-      : await lembretes.desativar({ servidor: state.settings.aiUrl });
-    $('#remind-status').textContent = c.ativo ? lembretes.descreverModo(c.modo) : 'Desligado.';
-  } catch (err) {
-    box.checked = false;
-    $('#remind-status').textContent = err.message;
-  }
-}
-
-async function onRemindTime() {
-  const c = await lembretes.config();
-  if (!c.ativo) return db.setMeta('lembrete', { ...c, hora: $('#remind-time').value });
-  // inscreve de novo com o horário novo
-  try {
-    const n = await lembretes.ativar({ hora: $('#remind-time').value, servidor: state.settings.aiOn ? state.settings.aiUrl : '' });
-    $('#remind-status').textContent = lembretes.descreverModo(n.modo);
-    toast(`Lembrete às ${n.hora}.`);
-  } catch (err) {
-    $('#remind-status').textContent = err.message;
-  }
-}
-
-function exportBackup() {
-  const data = {
-    app: 'carteira-jf', version: 3, exportedAt: new Date().toISOString(),
-    categories: state.categories, expenses: state.expenses, incomes: state.incomes, accounts: state.accounts,
-    compromissos: state.compromissos, planos: state.planos, perfil: state.perfil, metas: state.metas, investimentos: state.investimentos, transferencias: state.transferencias,
-  };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `carteira-backup-${toISODate()}.json`;
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-}
-
-async function importBackup(file) {
-  try {
-    if (file.size > 20 * 1024 * 1024) throw new Error('Arquivo grande demais para ser um backup.');
-    let bruto;
-    try { bruto = JSON.parse(await file.text()); } catch { throw new Error('Esse arquivo não parece um backup do C.A.O.S. Finanças.'); }
-    // Valida TUDO antes de perguntar e antes de gravar: se algo estiver errado, nada muda.
-    const v = validarBackup(bruto);
-    if (!v.ok) throw new Error(`Não importei: ${v.erros[0]}`);
-    const d = v.dados;
-    if (!confirm(`Substituir os dados atuais por ${d.expenses.length} gastos, ${d.incomes.length} entradas, ${d.accounts.length} contas e ${d.compromissos.length} compromissos do backup?`)) return;
-    // tudo numa gravação só (achado do GPT, 13/11): ou entra o backup inteiro, ou nada muda; a tela só troca depois
-    await db.replaceAll({ expenses: d.expenses, categories: d.categories, incomes: d.incomes, accounts: d.accounts, compromissos: d.compromissos, planos: d.planos },
-      { perfil: d.perfil, metas: d.metas, investimentos: d.investimentos, transferencias: d.transferencias || [] });
-    Object.assign(state, { expenses: d.expenses, categories: d.categories, incomes: d.incomes, accounts: d.accounts, compromissos: d.compromissos, planos: d.planos,
-      metas: d.metas, investimentos: d.investimentos, transferencias: d.transferencias || [] });
-    // backup sem perfil (decisão do Wally, 13/11): mantém quem você é neste aparelho (nome, aniversário, selo)
-    if (d.perfil) { state.perfil = d.perfil; renderPerfil(); }
-    renderMetas(); renderInvestimentos();
-    renderLancar();
-    renderBudgets();
-    render();
-    toast('Backup restaurado.');
-  } catch (e) {
-    toast(e.message || 'Não deu para importar.');
-  }
-}
 
 // ======================================================================
 // Mês: compromissos e planejamento (1.3.0)
@@ -1058,57 +859,6 @@ async function marcarSelo(criador) {
 
 // ---------- Novidades (1.4) ----------
 
-function itemNovidade(item) {
-  const p = partesDoItem(item);
-  if (!p.titulo) return `<li class="nov-solto">${esc(p.texto)}</li>`;
-  const texto = p.texto.charAt(0).toUpperCase() + p.texto.slice(1);
-  return `<li><details class="nov-drop"><summary class="nov-tag">${esc(p.icone)} ${esc(p.titulo)}</summary>`
-    + `<div class="nov-drop-txt">${esc(texto)}</div></details></li>`;
-}
-
-function versaoNovidade(n, i) {
-  return `<details class="nov-item"${i === 0 ? ' open' : ''}><summary>`
-    + `<span class="nov-v">Versão ${esc(n.v)}</span>`
-    + (n.nome ? `<span class="nov-nome">${esc(n.nome)}</span>` : '')
-    + (n.data ? `<span class="nov-data">${esc(n.data)}</span>` : '')
-    + `<span class="nov-t">${esc(n.t)}</span></summary>`
-    + (n.itens.length ? `<ul>${n.itens.map(itemNovidade).join('')}</ul>` : '')
-    + (n.qol.length ? `<div class="nov-qol">Ajustes e correções</div><ul>${n.qol.map(itemNovidade).join('')}</ul>` : '')
-    + `</details>`;
-}
-
-const NOV_A_MOSTRA = 3;
-function renderNovidades() {
-  const antigas = NOVIDADES.length - NOV_A_MOSTRA;
-  $('#novidades-lista').innerHTML =
-    `<div class="nov-ic" aria-hidden="true">🆕</div><p class="nov-sub">O que mudou nas últimas versões. Toque num item pra ver a explicação.</p>`
-    + NOVIDADES.slice(0, NOV_A_MOSTRA).map(versaoNovidade).join('')
-    + (antigas > 0
-      ? `<button type="button" class="ghost nov-antigas" id="novidades-antigas" aria-expanded="false">Ver versões antigas (${antigas})</button>`
-        + `<div id="novidades-antigas-lista" class="nov-antigas-lista" hidden>${NOVIDADES.slice(NOV_A_MOSTRA).map((n, i) => versaoNovidade(n, i + NOV_A_MOSTRA)).join('')}</div>`
-      : '');
-}
-
-function alternarAntigas(b) {
-  const l = $('#novidades-antigas-lista'), abrir = l.hidden;
-  l.hidden = !abrir;
-  b.setAttribute('aria-expanded', String(abrir));
-  b.textContent = abrir ? 'Esconder versões antigas' : `Ver versões antigas (${NOVIDADES.length - NOV_A_MOSTRA})`;
-}
-
-async function abrirNovidades() {
-  renderNovidades();
-  const dlg = $('#novidades-dialog');
-  if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
-  state.novidadesVistas = VERSAO_APP;
-  $('#novidade-aviso').hidden = true;
-  await db.setMeta('novidadesVistas', VERSAO_APP).catch(() => {});
-}
-
-function renderAvisoNovidade() {
-  $('#novidade-aviso').hidden = !temNovidade(state.novidadesVistas);
-  $('#novidades-versao').textContent = `Versão ${VERSAO_APP} · o que mudou no app`;
-}
 
 /** Quem já tinha cadastro sem data de aniversário: ele pergunta UMA vez na conversa. */
 async function perguntarAniversarioUmaVez() {

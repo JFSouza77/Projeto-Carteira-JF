@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { NOVIDADES, VERSAO_APP, temNovidade, partesDoItem } from '../js/novidades.js';
+import { NOVIDADES, VERSAO_APP, temNovidade, partesDoItem, numeroDaVersao } from '../js/novidades.js';
 
 test('novidades seguem as regras do log (pra quem usa)', () => {
   const vistas = new Set();
@@ -16,7 +16,14 @@ test('novidades seguem as regras do log (pra quem usa)', () => {
       assert.doesNotMatch(item, /\bPR\b/, `bastidores: ${item}`);
     }
   }
-  assert.equal(VERSAO_APP, NOVIDADES[0].v);
+  assert.equal(VERSAO_APP, numeroDaVersao(NOVIDADES[0]));
+  for (const n of NOVIDADES) if (n.ate) assert.ok(n.ate.startsWith(n.v.split(' ')[0] + '.'), `${n.v}: o ate (${n.ate}) tem que ser um ajuste dela`);
+});
+
+test('campo ate: o app mostra o número do último ajuste', () => {
+  assert.equal(numeroDaVersao({ v: '2.1.1 Alfa' }), '2.1.1 Alfa');
+  assert.equal(numeroDaVersao({ v: '2.1.1 Alfa', ate: '2.1.1.2' }), '2.1.1.2 Alfa');
+  assert.equal(numeroDaVersao({ v: '2.2', ate: '2.2.1' }), '2.2.1');
 });
 
 // Code do Perfil, 16/11: cada item explica de verdade (o que é, onde fica, como usa) e nada de título repetido
