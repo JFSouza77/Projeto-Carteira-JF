@@ -350,11 +350,11 @@ test('pesquisa de compra (16/11): mais buscas e as regras de orientar, sem decid
     await worker.fetch(req('/ia/perguntar', { pergunta: 'Pesquisa de compra: geladeira. Orçamento: R$ 5.000,00.', modo: 'pesquisa' }), env);
     const corpo = api.chamadas.at(-1).body;
     assert.equal(corpo.tools[0].max_uses, 4);
-    assert.match(JSON.stringify(corpo.messages), /PESQUISA DE COMPRA/);
+    assert.match(JSON.stringify(corpo.messages), /PESQUISA OU PLANO GUIADO/);
     assert.match(JSON.stringify(corpo.messages), /nunca diga/);
     await worker.fetch(req('/ia/perguntar', { pergunta: 'oi tudo bem' }), env);
     assert.equal(api.chamadas.at(-1).body.tools[0].max_uses, 2);
-    assert.doesNotMatch(JSON.stringify(api.chamadas.at(-1).body.messages), /PESQUISA DE COMPRA/);
+    assert.doesNotMatch(JSON.stringify(api.chamadas.at(-1).body.messages), /PLANO GUIADO/);
   } finally {
     api.restaurar();
   }

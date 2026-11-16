@@ -299,12 +299,14 @@ export function lerPalavroes(t) {
 // Sobrou só "e aí", "fala", "oi"… depois de tirar o apelido? Então foi só um chamado de amigo.
 const SO_CHAMADO = /^(e ai|eai|fala|oi|ola|opa|salve|bom dia|boa tarde|boa noite|ei|ow|o|caos|meu|mano|ai|hein|ne)?( (caos|meu|mano|ai|hein|ne|ze))*$/;
 
-// Questionário da pesquisa (JF, 16/11): poucas perguntas, uma por vez, com "Pular". O orçamento é o último.
+// Planos guiados (JF, 16/11): compra, viagem, pet, moradia, transporte e economizar. "Ele não te dá a resposta: te
+// orienta a chegar nela." Antes da IA, um questionário rápido sem IA (5 perguntas, uma por vez, com Pular), pra uma
+// pesquisa só, certeira, sem inventar número. O orçamento é sempre o último.
+const PRIVACIDADE = 'Fica tranquilo: esta conversa fica só no seu celular. Pra IA vai só o necessário, sem seu nome, e o servidor do app não guarda sua pergunta. Quer apagar? A lixeira do Chat limpa a conversa e a minha memória dela. ';
 export const PASSOS_PESQUISA = Object.freeze({
   viagem: [
     { id: 'origem', rotulo: 'Saindo de', q: 'De onde você sai? (a cidade)' },
-    { id: 'quando', rotulo: 'Quando', q: 'Quando quer ir e por quantos dias? Tipo "janeiro, 7 dias".' },
-    { id: 'pessoas', rotulo: 'Pessoas', q: 'Quantas pessoas vão?', chips: ['Só eu', '2 pessoas', 'Família'] },
+    { id: 'quando', rotulo: 'Quando e quem', q: 'Quando quer ir, por quantos dias e quantas pessoas? Tipo "janeiro, 7 dias, 2 pessoas".' },
     { id: 'incluir', rotulo: 'Pesquisar', q: 'O que eu pesquiso: passagem, hotel ou os dois?', chips: ['Passagem', 'Hotel', 'Os dois'] },
     { id: 'regiao', rotulo: 'Região ou tipo de hotel', q: 'Tem região ou tipo de hospedagem preferido? Tipo "perto da praia", "no centro", "pousada simples".' },
     { id: 'orcamento', rotulo: 'Orçamento', q: 'E o orçamento total? Me fala tipo "até 5000". Se não tiver, diz "sem orçamento".', chips: ['Sem orçamento'] },
@@ -316,22 +318,60 @@ export const PASSOS_PESQUISA = Object.freeze({
     { id: 'quando', rotulo: 'Precisa pra', q: 'Precisa pra quando?', chips: ['Urgente', 'Este mês', 'Sem pressa'] },
     { id: 'orcamento', rotulo: 'Orçamento', q: 'E o orçamento? Me fala tipo "até 5000". Se não tiver, diz "sem orçamento".', chips: ['Sem orçamento'] },
   ],
+  pet: [
+    { id: 'animal', rotulo: 'Bicho e porte', q: 'Qual bicho e de que porte? Tipo "cachorro pequeno, pinscher" ou "gato".' },
+    { id: 'origem', rotulo: 'Adotar ou comprar', q: 'Vai adotar ou comprar?', chips: ['Adotar', 'Comprar'] },
+    { id: 'cuidados', rotulo: 'Entra na conta', q: 'O que entra na conta? Ração, banho e tosa, veterinário, vacinas, plano de saúde pet…', chips: ['Tudo', 'Só o básico'] },
+    { id: 'cidade', rotulo: 'Cidade', q: 'Em que cidade você mora? O preço muda bastante de lugar pra lugar.' },
+    { id: 'orcamento', rotulo: 'Dá pra separar por mês', q: 'Quanto dá pra separar por mês pro pet? Tipo "até 300". Se não souber, diz "sem orçamento".', chips: ['Sem orçamento'] },
+  ],
+  moradia: [
+    { id: 'atual', rotulo: 'Paga hoje', q: `${PRIVACIDADE}Quanto você paga hoje de moradia (aluguel com condomínio, ou parcela)?` },
+    { id: 'regiao', rotulo: 'Cidade e bairro', q: 'Em que cidade e bairro? Não precisa de endereço: só o bairro.' },
+    { id: 'trabalho', rotulo: 'Ida pro trabalho', q: 'Fica longe do trabalho ou do estudo? Como você vai: a pé, ônibus, carro, moto?' },
+    { id: 'objetivo', rotulo: 'Quer', q: 'O que você quer: ver se está caro, mudar pra algo mais barato, ou comprar?', chips: ['Ver se está caro', 'Mudar', 'Comprar'] },
+    { id: 'orcamento', rotulo: 'Teto por mês', q: 'Quanto dá pra pagar por mês de moradia, no máximo? Tipo "até 1500".', chips: ['Sem orçamento'] },
+  ],
+  transporte: [
+    { id: 'rotina', rotulo: 'Rotina', q: `${PRIVACIDADE}Como é seu dia a dia: de qual bairro sai, pra qual vai e quantas vezes? Só bairros, sem endereço.` },
+    { id: 'veiculo', rotulo: 'Vai de', q: 'Vai de quê hoje?', chips: ['Carro', 'Moto', 'Ônibus', 'App'] },
+    { id: 'gasto', rotulo: 'Gasta por mês', q: 'Quanto gasta por mês com isso, mais ou menos? (gasolina, passagem, estacionamento…)' },
+    { id: 'opcoes', rotulo: 'Topa outras opções', q: 'Topa outras opções? Bicicleta, a pé, carona, ônibus, juntar as saídas…', chips: ['Topo', 'Prefiro não'] },
+    { id: 'orcamento', rotulo: 'Quer gastar até', q: 'Quanto quer gastar por mês com transporte? Tipo "até 400".', chips: ['Sem orçamento'] },
+  ],
+  economizar: [
+    { id: 'meta', rotulo: 'Quer economizar', q: 'Quanto quer economizar por mês? Tipo "300".' },
+    { id: 'objetivo', rotulo: 'Pra quê', q: 'É pra algum objetivo? Reserva, viagem, sair de dívida…', chips: ['Reserva', 'Dívida', 'Um sonho'] },
+    { id: 'fixos', rotulo: 'Contas que pesam', q: 'Quais contas fixas pesam mais? Tipo aluguel, internet, celular, streaming.' },
+    { id: 'intocavel', rotulo: 'Não abre mão de', q: 'Tem algo que você não abre mão? Tipo academia ou um streaming.', chips: ['Nada'] },
+    { id: 'prazo', rotulo: 'Prazo', q: 'Em quanto tempo quer ver o resultado?', chips: ['1 mês', '3 meses', '6 meses'] },
+  ],
 });
+const NOME_DO_PLANO = { viagem: 'Pesquisa de viagem', produto: 'Pesquisa de compra', pet: 'Plano de pet', moradia: 'Plano de moradia', transporte: 'Plano de transporte', economizar: 'Plano pra economizar' };
 
-// Pesquisa de compra e viagem (16/11): o que a pessoa quer pesquisar e se já disse o orçamento
 const VIAGEM = /\b(viagem|viajar|passagem|passagens|voo|voos|hotel|hospedagem|pacote de viagem)\b/;
+const PET = /\b(pet|pets|cachorro|cachorrinho|cao|gato|gatinho|gata|filhote|pinscher|pincher|calopsita|passaro|hamster|coelho|peixe|aquario|vira lata)\b/;
+const MORADIA = /\b(aluguel|apartamento|ape|casa propria|me mudar|mudar de casa|mudar de apartamento|mudanca|morar sozinh[oa]|condominio|financiar (uma |a )?(casa|ape))\b/;
+const TRANSPORTE = /\b(gasolina|combustivel|etanol|uber|99|onibus|transporte|carro|moto|bicicleta|bike|deslocamento)\b/;
+const PEDE = /\b(quanto|custa|custaria|sai|sairia|fica|ficaria|pesquis|procur|planej|calcul|me ajuda|ajuda|me ajude|quero|pretendo|penso em|vale|compensa|caro|cara|economiz|gasto muito|gastando muito|gasto demais|reduzir|diminuir)/;
+/** Planos guiados (16/11): o que a pessoa quer planejar ou pesquisar, e se já disse o orçamento. */
 export function acharPesquisa(t, valor) {
-  if (/\b(juntar|guardar|economizar|poupar|meta|gastei|paguei|comprei|recebi|robux|v ?bucks|diamantes)\b/.test(t)) return null;
-  const viagem = VIAGEM.test(t);
-  const pedeViagem = viagem && /\b(quanto|custa|custaria|sai|sairia|fica|ficaria|pesquis|procur|planej|calcul|me ajuda|ajuda|quero|vale)/.test(t);
-  const pedeProduto = /\b(pesquisa|pesquisar|procura|procurar|acha|achar|encontra|encontrar|compara|comparar)\b.*\b(preco|precos|onde|loja|lojas|melhor|barato|mais barato|um|uma|o|a)\b/.test(t)
-    || /\b(onde (compro|comprar|acho)|melhor preco|mais barato|quero comprar (um|uma|o|a))\b/.test(t);
-  if (!pedeViagem && !pedeProduto) return null;
+  if (/\b(juntar|guardar|poupar|meta|gastei|paguei|comprei|recebi|robux|v ?bucks|diamantes|quanto gastei|quanto gasto com)\b/.test(t)) return null;
+  let tipo = null;
+  if (/(onde (posso|da pra|consigo|eu posso) economizar|como (posso |eu )?economizar|me ajuda a economizar|cortar gastos|reduzir (meus )?gastos|gastar menos)/.test(t)) tipo = 'economizar';
+  else if (PET.test(t) && PEDE.test(t) && !/\b(racao|petshop|pet shop)\b.*\b\d/.test(t)) tipo = 'pet';
+  else if (MORADIA.test(t) && PEDE.test(t)) tipo = 'moradia';
+  else if (TRANSPORTE.test(t) && /(economiz|gasto muito|gastando muito|gasto demais|caro|reduzir|diminuir|compensa|vale mais|ajuda)/.test(t)) tipo = 'transporte';
+  else if (VIAGEM.test(t) && PEDE.test(t)) tipo = 'viagem';
+  else if (/\b(pesquisa|pesquisar|procura|procurar|acha|achar|encontra|encontrar|compara|comparar)\b.*\b(preco|precos|onde|loja|lojas|melhor|barato|mais barato|um|uma|o|a)\b/.test(t)
+    || /\b(onde (compro|comprar|acho)|melhor preco|mais barato|quero comprar (um|uma|o|a))\b/.test(t)) tipo = 'produto';
+  if (!tipo) return null;
   const orc = t.match(/\b(orcamento|ate|teto|no maximo|maximo)\b[^0-9]{0,15}(\d[\d.,]*)/);
   const orcamento = orc ? Math.round(Number(orc[2].replace(/\./g, '').replace(',', '.')) * 100) : undefined;
-  const item = t.replace(/\b(me ajuda a|me ajude a|ajuda a|ajude a|caos|por favor|pesquisa|pesquisar|procura|procurar|acha|achar|encontra|encontrar|compara|comparar|quanto|custa|custaria|sai|sairia|fica|ficaria|o preco de|preco de|preco|onde (compro|comprar|acho)|quero comprar|quero fazer|quero|calcular|planejar|considerando)\b/g, ' ')
-    .replace(/\b(orcamento|ate|teto|no maximo|maximo)\b[^0-9]{0,15}\d[\d.,]*( reais| mil)?/g, ' ').replace(/[?!.,;]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^((qual|o|a|os|as|da|do|de|pra|para)\s+)+/, '');
-  return { item: item || (viagem ? 'essa viagem' : 'isso'), viagem, orcamento: orcamento && orcamento > 0 ? orcamento : (valor && /\b(orcamento|ate)\b/.test(t) ? valor : undefined) };
+  const item = t.replace(/\b(me ajuda a|me ajude a|ajuda a|ajude a|me ajuda|me ajude|caos|por favor|pesquisa|pesquisar|procura|procurar|acha|achar|encontra|encontrar|compara|comparar|quanto|custa|custaria|sai|sairia|fica|ficaria|o preco de|preco de|preco|onde (compro|comprar|acho)|quero comprar|quero fazer|quero|pretendo|penso em|calcular|planejar|considerando|pra eu|para eu|eu)\b/g, ' ')
+    .replace(/\b(orcamento|ate|teto|no maximo|maximo)\b[^0-9]{0,15}\d[\d.,]*( reais| mil)?/g, ' ').replace(/[?!.,;]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^((qual|o|a|os|as|da|do|de|pra|para|que|e)\s+)+/, '');
+  const padrao = { viagem: 'essa viagem', produto: 'isso', pet: 'seu pet', moradia: 'sua moradia', transporte: 'seu transporte', economizar: 'onde economizar' }[tipo];
+  return { tipo, viagem: tipo === 'viagem', item: item || padrao, orcamento: orcamento && orcamento > 0 ? orcamento : (valor && /\b(orcamento|ate)\b/.test(t) ? valor : undefined) };
 }
 
 export function entender(texto, { categories = [], anterior = null } = {}) {
@@ -1454,26 +1494,34 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
     case 'pesquisa_compra': {
       // JF, 16/11: "me ajuda a te ajudar". Antes de pesquisar, um questionário rápido, sem IA (não gasta crédito),
       // pra filtrar logo de cara e fazer UMA pesquisa certeira, sem inventar número nem procurar o que não serve.
-      const { item, viagem } = intencao;
-      const passos = PASSOS_PESQUISA[viagem ? 'viagem' : 'produto'];
+      const { item } = intencao;
+      const tipo = intencao.tipo || (intencao.viagem ? 'viagem' : 'produto');
+      const passos = PASSOS_PESQUISA[tipo];
       let respostas = { ...(intencao.respostas || {}) };
       if (intencao.orcamento !== undefined && respostas.orcamento === undefined) respostas.orcamento = intencao.orcamento;
       let passo = intencao.passo || 0;
       while (passo < passos.length && respostas[passos[passo].id] !== undefined) passo++;
       if (passo < passos.length) {
         const p = passos[passo];
-        const abre = !intencao.passo ? `Bora pesquisar ${item}! Me ajuda a te ajudar: umas perguntas rápidas antes, pra eu filtrar logo de cara e não sair procurando coisa que não te serve (nem inventar número). ` : '';
-        return { fato: `${abre}${p.q}`, cru: true, sugestoes: [...(p.chips || []), 'Pular', 'Cancelar'], aguardar: { tipo: 'pesquisa', item, viagem, passo, respostas } };
+        const abre = !intencao.passo
+          ? `${tipo === 'viagem' || tipo === 'produto' ? `Bora pesquisar ${item}!` : 'Bora planejar isso junto!'} Me ajuda a te ajudar: umas perguntas rápidas antes, pra eu filtrar logo de cara e não sair inventando número nem procurando o que não te serve. `
+          : '';
+        return { fato: `${abre}${p.q}`, cru: true, sugestoes: [...(p.chips || []), 'Pular', 'Cancelar'], aguardar: { tipo: 'pesquisa', plano: tipo, item, passo, respostas } };
       }
+      const temOrcamento = passos.some(p => p.id === 'orcamento');
       const linhas = passos.filter(p => respostas[p.id]).map(p => (p.id === 'orcamento' ? `${p.rotulo}: ${formatBRL(respostas.orcamento)}` : `${p.rotulo}: ${respostas[p.id]}`));
-      if (!respostas.orcamento) linhas.push('Orçamento: não informado');
-      const perguntaIA = `Pesquisa de ${viagem ? 'viagem' : 'compra'}: ${item}. ${linhas.join('. ')}.`.slice(0, 480);
+      if (temOrcamento && !respostas.orcamento) linhas.push('Orçamento: não informado');
+      const perguntaIA = `${NOME_DO_PLANO[tipo]}: ${item}. ${linhas.join('. ')}.`.slice(0, 480);
       // sem a IA online (ou sem internet), ele dá o caminho das pedras
-      const onde = viagem
-        ? 'Compare em 2 ou 3 lugares: o site das companhias (Azul, Gol, Latam) e um buscador (Google Voos, Decolar); pra hotel, Booking ou Airbnb filtrando a região. Confira se é ida e volta, bagagem, taxas, horário e escala.'
-        : 'Compare em 2 ou 3 lojas (Mercado Livre, Amazon, Magalu) ou num comparador (Buscapé, Zoom). Confira frete, prazo, garantia, parcelamento e a reputação do vendedor.';
-      const viagemTudo = viagem ? ' Numa viagem completa, some passagem, hospedagem, comida, transporte, seguro viagem e, se for pra fora, o câmbio.' : '';
-      return { fato: `Fechou, com isso eu filtro. ${onde}${viagemTudo}${respostas.orcamento ? ` Seu teto: ${formatBRL(respostas.orcamento)}.` : ''} Com a IA online ligada, eu pesquiso os preços de hoje pra você comparar.`, cru: true, perguntaIA, modoIA: 'pesquisa', sugestoes: ['Dá pra gastar quanto até o salário?'] };
+      const CAMINHO = {
+        viagem: 'Compare em 2 ou 3 lugares: o site das companhias (Azul, Gol, Latam) e um buscador (Google Voos, Decolar); pra hotel, Booking ou Airbnb filtrando a região. Confira se é ida e volta, bagagem, taxas, horário e escala. Numa viagem completa, some passagem, hospedagem, comida, transporte, seguro viagem e, se for pra fora, o câmbio.',
+        produto: 'Compare em 2 ou 3 lojas (Mercado Livre, Amazon, Magalu) ou num comparador (Buscapé, Zoom). Confira frete, prazo, garantia, parcelamento e a reputação do vendedor.',
+        pet: 'Some o fixo do mês (ração, areia ou tapete, antipulgas) e reserve pro que vem de vez em quando (vacinas, vermífugo, veterinário, banho e tosa). Uma reserva pra emergência do bicho evita susto. Adotar sai bem mais em conta que comprar.',
+        moradia: 'Uma regra de bolso: moradia até uns 30% do que entra. Compare com anúncios do mesmo bairro e de bairros vizinhos (QuintoAndar, OLX, Zap) e some o custo de ir pro trabalho: às vezes um aluguel um pouco maior perto do serviço sai mais barato no fim do mês.',
+        transporte: 'Anote quanto gasta por semana e veja se dá pra juntar saídas, rachar carona ou trocar alguns dias por ônibus, bicicleta ou a pé. No carro, calibrar o pneu e evitar arrancadas já economiza combustível. Compare o preço por km de cada jeito de ir.',
+        economizar: 'Comece pelo que mais pesa no mês e pelas assinaturas esquecidas. Corte primeiro o que você nem sente falta, e guarde a economia assim que o dinheiro entrar, antes de gastar.',
+      }[tipo];
+      return { fato: `Fechou, com isso eu filtro. ${CAMINHO}${respostas.orcamento ? ` Seu teto: ${formatBRL(respostas.orcamento)}.` : ''} Com a IA online ligada, eu faço a conta e pesquiso o que precisar pra você comparar.`, cru: true, perguntaIA, modoIA: 'pesquisa', sugestoes: ['Dá pra gastar quanto até o salário?'] };
     }
     case 'moeda_jogo': {
       const { jogo, pacote } = intencao;

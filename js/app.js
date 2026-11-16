@@ -1300,6 +1300,9 @@ function bind() {
     for (const m of state.chat) if (m.imagemId && !state.expenses.some(x => x.imageId === m.imagemId)) await imagens.apagar(m.imagemId).catch(() => {});
     state.chat = [];
     db.setMeta('chat', []).catch(() => {});
+    // 16/11 (JF: "tem a lixeira onde eu deleto tudo da minha memória"): além da conversa, ele esquece o que estava
+    // no meio (questionário aberto, a última pergunta e a que ficou sem resposta)
+    guardarMemoria({ ...state.caosMemory, aguardando: null, conversa: null, semResposta: null });
     renderChat();
   });
   // Microfone (bug do JF, 13/11): segundo toque para; falhou, explica o motivo e oferece o microfone do teclado
