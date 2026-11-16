@@ -16,6 +16,7 @@ Depois de cada correção, escreva no Registro: o que o JF viu, a causa, o que m
 | Conflito ao juntar com a `main` logo depois de um merge | o branch não foi recriado da `main` depois do squash (refazer: `checkout -B` da `main` + `cherry-pick` do commit novo) |
 | Botão que arrasta sai do lugar (relógio, cabeçalho) | limites do `posicionarMeAjuda` em `js/app.js` |
 | Pergunta curta cai no assunto errado ("qual a cotação?") | ordem dos `if` em `entenderSimples` e a memória `mem.conversa` (`anterior`) |
+| Abertura troca de rosto ou de layout sozinha | `comecarAbertura`/`mostrarAbertura` em `js/app.js` e o recarregar do service worker (`controllerchange`) |
 | Teste do C.A.O.S. falha de vez em quando | lista de falas sorteada: alguma fala sem a palavra que o teste procura |
 
 ## Registro
@@ -75,4 +76,5 @@ Depois de cada correção, escreva no Registro: o que o JF viu, a causa, o que m
 | 16/11 | Botão "?" arrastado foi parar em cima do relógio do iPhone | limite de cima era 8px da borda da tela | limite = fim do cabeçalho da tela (que já tem o espaço do relógio); reposiciona ao trocar de aba | print com iPhone (posição salva no topo) |
 | 16/11 | Depois do Robux, "qual a cotação?" respondeu o Ibovespa | `cotacao` puxava a intenção `mercado`, sem olhar a conversa | continuação do `moeda_jogo` (memória guarda o jogo) e `perguntaIA` leva o assunto pra IA | `tests/conversa_jf_16.test.js` |
 | 16/11 | "Como está o dólar?" → "Fiz as contas pra você: Esse dado não veio" | AwesomeAPI não mandou o dólar; a falta virava fato com prefixo | sem dado: frase honesta e `semDado` manda pra IA online; servidor busca USD/EUR/GBP no Banco Central quando falta | `tests/conversa_jf_16.test.js`, `servidor/tests/mercado.test.js` |
+| 16/11 | Tela de entrar: aparece a antiga (anjinho no meio), troca pra nova (confiante verde), dá um glitch e volta | a abertura começava no passeio e só trocava pra tela de entrar depois de ler os dados; o HTML ainda tinha o rostinho antigo; e a atualização automática recarregava o app no meio, repetindo a troca | o app lembra o modo (`carteira-abertura` no localStorage) e já abre nele; conteúdo só aparece com `.pronta`; rostinho do HTML removido | print + registro das trocas do avatar (2ª abertura: nenhuma troca) |
 

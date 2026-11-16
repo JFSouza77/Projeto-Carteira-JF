@@ -1011,6 +1011,10 @@ h1, h2 { font-weight: 700; letter-spacing: .005em; }
   background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) 10%, var(--bg)), var(--bg) 70%);
   transition: opacity .35s ease, visibility .35s; animation: abertura-socorro .3s 12s forwards; cursor: pointer; }
 .abertura.saindo { opacity: 0; visibility: hidden; pointer-events: none; }
+/* JF, 16/11 ("aparece a tela antiga, troca pra atualizada, dá um glitch"): o conteúdo só aparece depois que o app decide
+   qual tela de entrada mostrar (o fundo aparece na hora). Se o JS falhar, aparece sozinho em 1,5 s. */
+.abertura:not(.pronta) > * { visibility: hidden; animation: abertura-mostra 0s 1.5s forwards; }
+@keyframes abertura-mostra { to { visibility: visible; } }
 .abertura.esperando { animation: none; }
 @keyframes abertura-socorro { to { opacity: 0; visibility: hidden; pointer-events: none; } }
 .abertura-caixa { display: grid; justify-items: center; gap: 10px; text-align: center; max-width: 320px; }

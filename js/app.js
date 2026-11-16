@@ -1621,19 +1621,35 @@ function fecharAbertura() {
   ab.classList.add('saindo');
   setTimeout(() => { ab.remove(); avatares.abertura?.destruir(); }, 400);
 }
-function comecarAbertura() {
-  const ab = $('#abertura');
-  if (!ab) return;
-  try {
-    configurarAvatar({ menosMovimento: () => MENOS_MOVIMENTO.matches });
-    avatares.abertura = criarAvatar($('#abertura-avatar'), { tamanho: 'grande', forma: ABERTURA_PASSOS[0][0] });
-  } catch (e) { console.warn('avatar', e); }
+// JF, 16/11: "aparece a tela antiga (o anjinho no meio), troca pra atualizada (o verdinho), dá um glitch e volta".
+// Antes a abertura começava no passeio do avatar (anjinho no meio da tela) e só depois de ler os dados trocava pra tela
+// de entrar (confiante, cartão embaixo). Agora o app lembra qual foi a da última vez e já abre nela; o conteúdo só
+// aparece com o modo decidido (classe .pronta).
+const lerModoAbertura = () => { try { return localStorage.getItem('carteira-abertura'); } catch { return null; } };
+const gravarModoAbertura = m => { try { localStorage.setItem('carteira-abertura', m); } catch { /* sem storage: tudo bem */ } };
+let passeioLigado = false;
+function passeioDaAbertura(ab) {
+  if (passeioLigado) return;
+  passeioLigado = true;
   const dica = $('#abertura-dica');
   ABERTURA_PASSOS.forEach(([forma, frase], i) => setTimeout(() => {
     if (aberturaFechada || ab.classList.contains('esperando')) return;
     avatares.abertura?.mostrar(forma);
     if (dica) dica.textContent = frase;
   }, i * (ABERTURA_MS / ABERTURA_PASSOS.length)));
+}
+function comecarAbertura() {
+  const ab = $('#abertura');
+  if (!ab) return;
+  const entrar = lerModoAbertura() === 'entrar';
+  if (entrar) ab.classList.add('esperando');
+  try {
+    configurarAvatar({ menosMovimento: () => MENOS_MOVIMENTO.matches });
+    avatares.abertura = criarAvatar($('#abertura-avatar'), { tamanho: 'grande', forma: entrar ? 'confiante' : ABERTURA_PASSOS[0][0] });
+  } catch (e) { console.warn('avatar', e); }
+  if (!entrar) passeioDaAbertura(ab);
+  else $('.abertura-pula')?.remove();
+  ab.classList.add('pronta');
   ab.addEventListener('click', e => { if (!ab.classList.contains('esperando') && !e.target.closest('button')) fecharAbertura(); });
 }
 
@@ -1674,9 +1690,13 @@ async function mostrarAbertura() {
   $('#abertura-versao').textContent = `Versão ${VERSAO_APP}${n.nome ? ` · ${n.nome}` : ''}`;
   const temConta = await conta.contaAtual().catch(() => null);
   if (state.onboarding || (!temConta && !servidor())) {
+    gravarModoAbertura('passeio');
+    ab.classList.remove('esperando');
+    passeioDaAbertura(ab);
     setTimeout(fecharAbertura, Math.max(0, ABERTURA_MS - performance.now()));
     return;
   }
+  gravarModoAbertura('entrar');
   ab.classList.add('esperando');
   girarDicasDaAbertura(ab);
   avatares.abertura?.mostrar('confiante'); // JF, 14/11: "menos bobão" que o festeiro na tela de entrar
