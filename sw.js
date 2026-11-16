@@ -13,6 +13,7 @@ const APP_SHELL = [
   './js/app.js',
   './js/estado.js',
   './js/telas/chat.js',
+  './js/telas/contas.js',
   './js/engine.js',
   './js/db.js',
   './js/voz.js',
