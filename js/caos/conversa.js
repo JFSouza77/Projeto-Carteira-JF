@@ -540,6 +540,14 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
     || /\b(muda|mude|troca|corrige|arruma) (o |esse |este |aquele )?(ultimo |ultima )?(gasto|lancamento|valor)\b.*\b(pra|para) (r\$ ?)?\d/.test(t))) {
     return { ...r, intent: 'corrigir_valor' };
   }
+  // Dar baixa pela conversa (revisão do Gemini, 16/11; o JF pediu pra fazer já): fatura paga e amigo que pagou a parte
+  if (/\bfatura\b/.test(t) && /\b(paguei|quitei|ja paguei|ja pago|ja foi paga|esta paga|ta paga)\b/.test(t) && !pergunta) {
+    return { ...r, valor: null, categoria: null, intent: 'fatura_paga' };
+  }
+  if (/\b(me pagou|me pagaram|pagou a parte|pagou o que devia|devolveu|devolveram|acertou comigo|acertaram comigo|me mandou o pix|me fez o pix|me passou o pix|me pagou o pix|pagou)\b/.test(t)
+    && !/\b(eu|paguei|gastei|comprei)\b/.test(t) && !pergunta) {
+    return { ...r, categoria: null, intent: 'racha_pago' };
+  }
   // Transferência pela conversa (revisão do Gemini, 16/11): "transferi 200 do Inter pro C6" vira proposta (com Confirmar)
   if (r.valor && /\b(transferi|transfiro|mandei|passei|movi|joguei|botei)\b/.test(t) && /\b(do|da|de)\b.+\b(pro|pra|para|pro meu|pra minha)\b/.test(t)) {
     return { ...r, categoria: null, intent: 'registrar_transferencia' };
@@ -1119,7 +1127,34 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         aguardar: { tipo: 'esqueci' },
         sugestoes: ['Deixa pra depois'],
       };
+    case 'fatura_paga': {
+      const cartoes = (dados.accounts || []).filter(a => a.tipo === 'cartao');
+      const cartao = acharConta(intencao.t, cartoes) || (cartoes.length === 1 ? cartoes[0] : null);
+      if (!cartao) return { fato: cartoes.length ? `De qual cartão? ${cartoes.map(c => accountLabel(c)).join(', ')}.` : 'Você ainda não tem cartão cadastrado aqui. Dá pra cadastrar em Contas.', cru: true, sugestoes: cartoes.slice(0, 4).map(c => `Paguei a fatura do ${c.bank}`) };
+      const f = faturaDoCartao(comReforco(cartao, dados.accounts, expenses, dados.incomes || [], dados.transferencias || []), expenses, today);
+      if (!f.fechadaCents) return { fato: `A fatura do ${accountLabel(cartao)} ainda não fechou: tem ${formatBRL(f.abertaCents)} na aberta. Quando fechar, aí você me fala que pagou.`, cru: true, sugestoes: [] };
+      return { fato: `Marcar a fatura de ${formatBRL(f.fechadaCents)} do ${accountLabel(cartao)} como paga? O limite volta pra você.`, cru: true, sugestoes: [],
+        acao: { tipo: 'fatura_paga', cartaoId: cartao.id, ate: f.ultimoFechamento, valorCents: f.fechadaCents } };
+    }
+    case 'racha_pago': {
+      const lista = aReceber(expenses).itens;
+      if (!lista.length) return { fato: 'Não tem ninguém te devendo aqui no app. Quando dividir uma conta, eu anoto quem falta pagar.', cru: true, sugestoes: [] };
+      const achou = lista.filter(p => norm(p.nome).split(/\s+/).some(n => n.length >= 2 && new RegExp(`(^|\\s)${n}(\\s|$)`).test(intencao.t)));
+      if (!achou.length) return { fato: `Quem foi? Tá me devendo: ${[...new Set(lista.map(p => p.nome))].slice(0, 6).join(', ')}.`, cru: true, sugestoes: [...new Set(lista.map(p => `${p.nome} me pagou`))].slice(0, 4) };
+      // mais de uma conta da mesma pessoa: a do valor dito, ou a mais antiga
+      const p = (intencao.valor && achou.find(x => x.valorCents === intencao.valor)) || achou.sort((a, b) => a.date.localeCompare(b.date))[0];
+      return { fato: `Marcar que ${p.nome} te pagou ${formatBRL(p.valorCents)}${p.note ? ` (${p.note})` : ''}?`, cru: true, sugestoes: [],
+        acao: { tipo: 'racha_recebido', expenseId: p.expenseId, pessoaId: p.pessoaId, nome: p.nome, valorCents: p.valorCents } };
+    }
     case 'gasto_sem_valor': {
+      // "paguei o aluguel": se é uma conta fixa cadastrada e ainda não paga este mês, propõe lançar ela (16/11)
+      const fixa = situacaoCompromissos(dados.compromissos || [], expenses, today)
+        .find(c => c.noMes && c.status !== 'pago' && norm(c.nome).length >= 3 && intencao.t.includes(norm(c.nome)));
+      if (fixa && /\b(paguei|quitei|pago|ja paguei)\b/.test(intencao.t)) {
+        const comp = (dados.compromissos || []).find(c => c.id === fixa.id) || fixa;
+        return { fato: `Lançar ${fixa.nome} como pago: ${formatBRL(fixa.faltaCents)}? Se o valor foi outro, me fala tipo "paguei ${norm(fixa.nome)} 1350".`, cru: true, sugestoes: [],
+          acao: { tipo: 'registrar_gasto', amountCents: fixa.faltaCents, categoryId: comp.categoryId || 'contas', note: fixa.nome, date: today, accountId: comp.accountId || null, compromissoId: fixa.id } };
+      }
       const desc = descricaoDe(intencao.t);
       const doQue = desc ? ` de ${desc}` : intencao.categoria ? ` em ${intencao.categoria.name}` : '';
       return {

@@ -80,4 +80,5 @@ Depois de cada correção, escreva no Registro: o que o JF viu, a causa, o que m
 | 16/11 | (Gemini) "eu gosto de você" virou "gasto"; gato, mesa, maio, parar, home também | corretor trocava palavra comum de 4-5 letras | CONHECIDAS + 4 letras só ganha letra | `tests/revisao_gemini_16.test.js` |
 | 16/11 | (Gemini) Ácido sumia depois de umas falas | gerador repetia o geral em vez do contexto | 2ª volta na ordem, janela dos baldes ativos | idem |
 | 16/11 | (Wally) "já paguei a fatura do C6" anotava R$ 6 | acharValor lia o 6 do C6 | nome de banco com número fora do valor | idem |
+| 16/11 | (teste do Wally) "Teste, Você gastou" com V maiúsculo | `\b` do JS não vale depois de letra com acento | troca por lookahead de espaço/pontuação | `tests/baixas_e_baloes.test.js` |
 

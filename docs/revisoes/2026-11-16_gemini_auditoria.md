@@ -15,7 +15,7 @@ lendo a função) antes de mexer. Versão depois: app 2.1.2 · C.A.O.S. 2.3.6.
 | VP, UC, jades e fragmentos | **Confirmado** ("980 jades por 75" anotava R$ 980) | Chaves e regex |
 | Entrada prevista: dia de hoje, dia 31, "na sexta" | **Confirmado** | Hoje é hoje; último dia do mês; próxima sexta |
 | maluco/doido como adjetivo virava apelido | **Confirmado** | Só vocativo |
-| Emoção no Suave (intensidade) | Plausível, efeito pequeno (só o tamanho do rosto) | Fica pra depois |
+| Emoção no Suave (intensidade) | Plausível, efeito pequeno (só o tamanho do rosto) | **Feito** em 2.3.7 (a força da preocupação conta a raiva) |
 | Humor na IA (criança/formal recebiam Ácido; criador no Suave com prompt contraditório) | **Confirmado** | `humorParaIA` no app; servidor força Ácido pro criador |
 | `fluxoMeta` × `metaFlow` | **Confirmado** (atalhos apareciam no meio da meta) | Nome certo |
 | Cache e fila com o texto cru | **Confirmado** | Usam o texto que vai pra IA e o humor |
@@ -24,7 +24,7 @@ lendo a função) antes de mexer. Versão depois: app 2.1.2 · C.A.O.S. 2.3.6.
 | `image/jpeg` fixo | **Não procede** | O app sempre converte a foto pra JPEG antes de mandar |
 | Voz lendo `{nome}` e `**` | **Confirmado** | Troca o nome e tira os asteriscos antes de falar |
 | Dia vira às 21h no servidor | **Confirmado** pra data do comprovante | Data de Brasília no prompt da foto (limites continuam no dia UTC) |
-| Foto de comprovante sem conta/forma | Procede | Fica pra depois (precisa pensar o fluxo com o JF) |
+| Foto de comprovante sem conta/forma | Procede | **Feito** em 2.3.7 (pergunta como pagou e de qual conta; a legenda já pode dizer) |
 | Doc desatualizado / `pareceCriador` sem uso | Procede | Doc atualizado; `pareceCriador` fica (usado em teste, reservado) |
 | **Achado do Wally na conferência:** "já paguei a fatura do C6" anotava R$ 6 | **Bug** | Nome de banco com número (C6, 99, BS2, B3, N26) não vira valor |
 
@@ -35,7 +35,7 @@ lendo a função) antes de mexer. Versão depois: app 2.1.2 · C.A.O.S. 2.3.6.
 | "errei, foi 45, não 50" corrige o último gasto | **Entrou** (`corrigir_valor`, com Confirmar) |
 | "transferi 200 do Inter pro C6" | **Entrou** (`registrar_transferencia`, com Confirmar) |
 | "quanto gastei de Uber?" separa pela descrição | **Entrou** ("Só de uber: R$ X") |
-| "já paguei a fatura" / "o João me pagou" dá baixa | Depois (precisa mexer em compromisso e racha) |
+| "já paguei a fatura" / "o João me pagou" dá baixa | **Feito** em 2.3.7 (e "paguei o aluguel" lança a conta fixa) |
 | Aperto sem palavrão ("tô liso") fica no celular | **Entrou** (`aperto`: acolhe + números do mês, sem gastar IA) |
 
 ## Economia de crédito (sugestões)
@@ -49,7 +49,7 @@ lendo a função) antes de mexer. Versão depois: app 2.1.2 · C.A.O.S. 2.3.6.
 
 ## Personalidade (ideias do Gemini, pro JF decidir)
 
-Tangentes de "TDAH", dois balões seguidos, emoção do momento indo pra IA online, alerta do "efeito formiguinha",
+**Feitos com o ok do JF (2.3.7, núcleo 1.7.0):** dois balões seguidos e a emoção do momento indo pra IA online (e um jeito "meio TDAH" de leve no prompt da IA). Em aberto: tangentes de "TDAH" no cérebro do aparelho, alerta do "efeito formiguinha",
 pergunta curiosa depois do gasto, reação ao "hiperfoco". Jeito de ser é característica dele: o que entrar vai pro
 núcleo, com o ok do JF, nos dois projetos.
 

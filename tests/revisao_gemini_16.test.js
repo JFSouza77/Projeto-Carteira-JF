@@ -33,7 +33,7 @@ test('Ácido não some depois de umas falas (gerador)', () => {
   const acid = [...GERADORES.resposta.abre.humor_acido, ...GERADORES.resposta.fecho.humor_acido, ...Object.values(GERADORES.cutucada.zoa).flat()];
   let m, n = 0, x = 3;
   const rng = () => ((x = (x * 9301 + 49297) % 233280) / 233280);
-  for (let i = 0; i < 60; i++) { const r = conversar('quanto gastei este mês?', d, { memory: m, mood: 'acido', now: now + i * 60_000, rng }); m = r.memoria; if (acid.some(a => r.fala.texto.includes(a))) n++; }
+  for (let i = 0; i < 60; i++) { const r = conversar('quanto gastei este mês?', d, { memory: m, mood: 'acido', now: now + i * 60_000, rng }); m = r.memoria; if (acid.some(a => `${r.fala.texto} ${r.fala.posTexto || ''}`.includes(a))) n++; }
   assert.ok(n >= 45, `só ${n} de 60 com zoeira`);
 });
 

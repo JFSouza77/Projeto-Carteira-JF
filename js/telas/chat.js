@@ -5,8 +5,9 @@
 import { $, catById, dados, esc, renderizar, state } from '../estado.js';
 import { EMO_DA_FORMA, FORMAS, formaPara } from '../avatar.js';
 import { IDENTIDADE, SUGESTOES, conversar, humorParaIA, emocaoDoMomento, rostoAvulso, rostoDaEmo } from '../caos/index.js';
-import { accountLabel, createTransferencia, depoisDoSaldo, editarConta, editarLancamento, formatBRL, sugerirCategoria, toISODate } from '../engine.js';
+import { accountLabel, createTransferencia, depoisDoSaldo, marcarRecebido, editarConta, editarLancamento, formatBRL, sugerirCategoria, toISODate } from '../engine.js';
 import * as conta from '../conta.js';
+import { lerPagamento, seguirPagamento } from '../caos/conversa.js';
 import * as db from '../db.js';
 import { falar } from '../voz.js';
 import { fraseDoPrint, resumoDoPrint } from '../caos/ofertas.js';
@@ -115,7 +116,7 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
     pintarRosto(pensando);
     addMsg({ de: 'caos', texto: 'Deixa eu pensar com a IA…', temp: true, rosto: pensando });
     try {
-      const resposta = await ia.perguntar(state.settings.aiUrl, { pergunta: textoIA, humor: humorIA, dados: dados(), modo: fala.modoIA, semBusca: fala.intent === 'papo_pessoal' });
+      const resposta = await ia.perguntar(state.settings.aiUrl, { pergunta: textoIA, humor: humorIA, dados: dados(), modo: fala.modoIA, semBusca: fala.intent === 'papo_pessoal', emocao: fala.emocao });
       await db.setMeta('iaUso', { dia: toISODate(), n: usoIA.n + 1 });
       iaRecentes.set(chaveIA, { texto: resposta, em: Date.now() });
       state.chat = state.chat.filter(m => !m.temp);
@@ -140,6 +141,13 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
   pintarRosto(fala.rosto, fala.intent);
   avatarFala(Math.min(2600, 400 + fala.texto.length * 22));
   if (state.settings.voice) falar(fala.texto, fala.emocao);
+  // 2º balão (JF, 16/11): "digitando…" de novo e o "ah, e…" logo depois, como amigo no WhatsApp
+  if (fala.posTexto) {
+    await respiro(fala.posTexto);
+    addMsg({ de: 'caos', texto: fala.posTexto, rosto: fala.rosto, assunto: fala.intent });
+    avatarFala(Math.min(2000, 400 + fala.posTexto.length * 22));
+    if (state.settings.voice) falar(fala.posTexto, fala.emocao);
+  }
   if (fala.filaIA) await perguntaPraDepois(fala.filaIA);
   if (fala.fluxoMeta) iniciarMeta(fala.fluxoMeta.nome, { jaFalou: true });
   if (fala.modoFoto) state.modoFoto = { tipo: fala.modoFoto, duvida: t, ate: Date.now() + 10 * 60_000 };
@@ -294,6 +302,28 @@ export async function confirmarAcao(i, ok) {
       addMsg({ de: 'caos', texto: `Pronto: agora está ${formatBRL(a.amountCents)}.` });
       return;
     }
+    if (a.tipo === 'fatura_paga') {
+      // "já paguei a fatura do C6" (16/11): mesma baixa do botão em Contas
+      const cartao = state.accounts.find(x => x.id === a.cartaoId);
+      if (!cartao) { addMsg({ de: 'caos', texto: 'Não achei mais esse cartão.' }); return; }
+      const novo = { ...cartao, faturaPagaAte: a.ate };
+      await db.put(db.STORES.accounts, novo);
+      state.accounts = state.accounts.map(x => (x.id === novo.id ? novo : x));
+      renderizar();
+      addMsg({ de: 'caos', texto: `Fatura do ${accountLabel(novo)} paga. Limite de volta!` });
+      return;
+    }
+    if (a.tipo === 'racha_recebido') {
+      // "o João me pagou" (16/11): dá baixa na parte dele da rachadinha
+      const x = state.expenses.find(e => e.id === a.expenseId);
+      if (!x) { addMsg({ de: 'caos', texto: 'Não achei mais essa conta dividida.' }); return; }
+      const novo = marcarRecebido(x, a.pessoaId);
+      await db.put(db.STORES.expenses, novo);
+      state.expenses = state.expenses.map(e => (e.id === x.id ? novo : e));
+      renderizar();
+      addMsg({ de: 'caos', texto: `Anotado: ${a.nome} te pagou ${formatBRL(a.valorCents)}.` });
+      return;
+    }
     if (a.tipo === 'transferir') {
       // "transferi 200 do Inter pro C6" (revisão do Gemini, 16/11): mesma gravação da tela de Contas
       const t = createTransferencia({ deId: a.deId, paraId: a.paraId, amountCents: a.amountCents, date: a.date }, { accounts: state.accounts });
@@ -423,11 +453,18 @@ export async function fotoNoChat(arquivo, legenda = '') {
       return;
     }
     if (r.valor_centavos > 0) {
-      addMsg({
-        de: 'caos', ia: true,
-        texto: `${r.resumo || 'Li o comprovante.'} Anotar ${formatBRL(r.valor_centavos)} em ${cat.name}${r.estabelecimento ? ` (${r.estabelecimento})` : ''}?${r.confianca === 'baixa' ? ' Li com pouca certeza, confere o valor.' : ''}`,
-        acao: { tipo: 'registrar_gasto', amountCents: r.valor_centavos, categoryId: cat.id, date: /^\d{4}-\d{2}-\d{2}$/.test(r.data || '') ? r.data : toISODate(), note: (r.estabelecimento || '').slice(0, 120), imageId: img.id },
-      });
+      const leitura = `${r.resumo || 'Li o comprovante.'} ${formatBRL(r.valor_centavos)} em ${cat.name}${r.estabelecimento ? ` (${r.estabelecimento})` : ''}.${r.confianca === 'baixa' ? ' Li com pouca certeza, confere o valor.' : ''}`;
+      const base = { tipo: 'registrar_gasto', amountCents: r.valor_centavos, categoryId: cat.id, date: /^\d{4}-\d{2}-\d{2}$/.test(r.data || '') ? r.data : toISODate(), note: (r.estabelecimento || '').slice(0, 120), imageId: img.id };
+      // revisão do Gemini (16/11): com conta cadastrada, a foto também pergunta "pagou como?" e de qual conta (a legenda
+      // já pode dizer: "pix do inter"), senão o gasto entrava sem conta e não mexia no saldo nem na fatura
+      const acao = { ...base, ...lerPagamento(legenda || '', state.accounts) };
+      const segue = state.accounts.length ? seguirPagamento(acao, dados()) : { acao: base };
+      if (segue.aguardar) {
+        guardarMemoria({ ...state.caosMemory, aguardando: { ...segue.aguardar, em: Date.now() } });
+        addMsg({ de: 'caos', ia: true, texto: `${leitura} ${segue.fato}`, sugestoes: segue.sugestoes });
+      } else {
+        addMsg({ de: 'caos', ia: true, texto: `${leitura} Anoto?`, acao: segue.acao });
+      }
     } else {
       addMsg({ de: 'caos', ia: true, texto: r.resumo || 'Não achei um valor nessa imagem.' });
     }

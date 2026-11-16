@@ -700,6 +700,25 @@ export const GERADORES = {
     },
   },
 
+  // 2º balão de amigo (JF, 16/11, ideia do Gemini): no Suave e no Normal, às vezes ele "lembra de mais uma coisa"
+  emenda: {
+    moldes: ['{fala}'],
+    fala: {
+      geral: [
+        'Ah, e qualquer coisa é só chamar, tá?',
+        'Pera, esqueci: se quiser, eu separo por categoria.',
+        'Ah! Quer que eu compare com o mês passado?',
+        'E olha: anotar todo dia já é meio caminho andado.',
+        'Ah, e se quiser, eu te aviso antes de apertar.',
+        'Pera, mais uma: na Análise do mês dá pra ver tudo em gráfico.',
+        'E não esquece: guardar um pouquinho já conta.',
+        'Ah, só mais uma coisa: tô aqui torcendo por você.',
+        'Ops, esqueci de falar: as contas fixas eu lembro antes de vencer.',
+        'E se bater dúvida, pergunta sem vergonha.',
+      ],
+    },
+  },
+
   // Cutucada no fim da resposta (JF, 16/11): no Ácido ele não deixa passar. Só sai com humor Ácido ou com o criador.
   cutucada: {
     moldes: ['{zoa}'],
