@@ -82,3 +82,4 @@ Depois de cada correção, escreva no Registro: o que o JF viu, a causa, o que m
 | 16/11 | (Wally) "já paguei a fatura do C6" anotava R$ 6 | acharValor lia o 6 do C6 | nome de banco com número fora do valor | idem |
 | 16/11 | (teste do Wally) "Teste, Você gastou" com V maiúsculo | `\b` do JS não vale depois de letra com acento | troca por lookahead de espaço/pontuação | `tests/baixas_e_baloes.test.js` |
 
+| 16/11 | (GPT) Voz podia ler `**` e `{nome}` | só o caminho da IA limpava o texto; as falas do aparelho iam direto pra voz | limpeza no `textoParaVoz`, que vale pra toda fala | `tests/uso_ia.test.js` |
