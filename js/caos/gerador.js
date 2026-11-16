@@ -58,11 +58,17 @@ function escolherSlot(g, slot, def, ctx, usados, ja, memG, rng) {
         else if (b !== 'geral' && !repetir) continue;
       }
       const livres = lista.filter(x => !ms.includes(x.id));
-      if (!livres.length && b !== 'geral' && !repetir) continue;
+      // revisão do Gemini (16/11, o "bug do Rivotril"): antes o "geral" repetia mesmo sem frase livre, e o balde do
+      // contexto (Ácido, criador) nunca chegava na 2ª volta. Agora, sem frase livre em nenhum, a 2ª volta repete
+      // respeitando a ordem: contexto primeiro, geral depois.
+      if (!livres.length && !repetir) continue;
       const pool = livres.length ? livres : lista;
       const x = pool[Math.floor(rng() * pool.length)];
+      const pos = ms.indexOf(x.id);
+      if (pos >= 0) ms.splice(pos, 1); // sem repetir o mesmo id na fila
       ms.push(x.id);
-      const total = Object.values(def).reduce((s, l) => s + l.length, 0);
+      // janela só com os baldes que valem agora (antes somava todos, e o Ácido ficava preso numa janela enorme)
+      const total = ordem.reduce((s, k) => s + (def[k] || []).length, 0);
       const janela = Math.max(1, Math.min(40, Math.floor(total * 0.7)));
       while (ms.length > janela) ms.shift();
       if (b !== 'geral') usados.add(b);

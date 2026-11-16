@@ -1,4 +1,4 @@
-# Cérebro do C.A.O.S. na Carteira (C.A.O.S. 1.3.0)
+# Cérebro do C.A.O.S. na Carteira (C.A.O.S. 2.3.6, núcleo 1.6.0; histórico das versões no `CAOS_VERSAO` de js/caos/index.js)
 
 ## Quem ele é (1.1.0)
 

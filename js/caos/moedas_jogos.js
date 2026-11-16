@@ -9,7 +9,7 @@ const GIFT = 'ou com gift card oficial, vendido em lojas e sites confiáveis';
 
 // 15 jogos (quantidade terminando em 0 ou 5, como as falas)
 export const MOEDAS_JOGOS = Object.freeze([
-  { jogo: 'Valorant', moeda: 'Valorant Points (VP)', chaves: ['valorant'], onde: `${LOJA}, ${GIFT} (cartão da Riot)`, extra: 'A Radianita (RP) você ganha jogando ou no passe; skin é com VP.' },
+  { jogo: 'Valorant', moeda: 'Valorant Points (VP)', chaves: ['valorant', 'vp', 'valorant points'], onde: `${LOJA}, ${GIFT} (cartão da Riot)`, extra: 'A Radianita (RP) você ganha jogando ou no passe; skin é com VP.' },
   { jogo: 'League of Legends', moeda: 'Riot Points (RP)', chaves: ['league of legends', 'riot points'], onde: `${LOJA}, ${GIFT} (cartão da Riot)` },
   { jogo: 'Free Fire', moeda: 'Diamantes', chaves: ['free fire', 'freefire', 'ff'], onde: 'no site oficial de recarga da Garena, na loja do jogo ou com gift card da Garena', extra: 'Recarregando pelo site oficial costuma vir bônus de diamantes.' },
   { jogo: 'Roblox', moeda: 'Robux', chaves: ['roblox', 'robux'], onde: `${LOJA} ou no site da Roblox, ${GIFT} (gift card Roblox)`, extra: 'O Roblox Premium dá Robux todo mês, como assinatura.' },
@@ -20,7 +20,7 @@ export const MOEDAS_JOGOS = Object.freeze([
   { jogo: 'Clash Royale', moeda: 'Gemas', chaves: ['clash royale'], onde: `${LOJA} ou na loja oficial da Supercell (costuma ter bônus)` },
   { jogo: 'Clash of Clans', moeda: 'Gemas', chaves: ['clash of clans'], onde: `${LOJA} ou na loja oficial da Supercell (costuma ter bônus)` },
   { jogo: 'Brawl Stars', moeda: 'Gemas', chaves: ['brawl stars', 'brawl'], onde: `${LOJA} ou na loja oficial da Supercell (costuma ter bônus)` },
-  { jogo: 'PUBG Mobile', moeda: 'UC (Unknown Cash)', chaves: ['pubg'], onde: `${LOJA} ou em sites de recarga oficiais` },
+  { jogo: 'PUBG Mobile', moeda: 'UC (Unknown Cash)', chaves: ['pubg', 'uc', 'unknown cash'], onde: `${LOJA} ou em sites de recarga oficiais` },
   { jogo: 'Call of Duty', moeda: 'COD Points (CP)', chaves: ['call of duty', 'cod points', 'warzone', 'cod mobile'], onde: `${LOJA}, ${GIFT}` },
   { jogo: 'EA Sports FC', moeda: 'FC Points', chaves: ['ea fc', 'ea sports fc', 'fc points', 'fifa points'], onde: `${LOJA} ou na loja do console/PC, ${GIFT}` },
   { jogo: 'Steam', moeda: 'saldo da Carteira Steam (não é moeda de jogo, mas serve pra comprar jogos e itens)', chaves: ['steam'], onde: `no site ou app da Steam (Pix ou cartão), ${GIFT} (cartão Steam)` },
@@ -38,7 +38,7 @@ export function acharMoedaJogo(texto) {
 export function lerPacote(texto) {
   const t = norm(texto).replace(/(\d)\.(\d{3})/g, '$1$2');
   const reais = t.match(/(?:r\$\s*|por\s+)(\d+(?:,\d{1,2})?)\s*(?:reais|real|conto|pila)?/) || t.match(/(\d+(?:,\d{1,2})?)\s*(?:reais|real|conto|pila)\b/);
-  const qtd = t.match(/(\d+)\s*(?:robux|v ?-?bucks|vp|rp|diamantes?|minecoins?|gemas?|uc|cp|cristais|primogemas?|points?|pontos)/);
+  const qtd = t.match(/(\d+)\s*(?:robux|v ?-?bucks|vp|rp|diamantes?|minecoins?|gemas?|uc|cp|cristais|primogemas?|jades?|fragmentos?|points?|pontos)/);
   if (!reais || !qtd) return null;
   const reaisCents = Math.round(Number(reais[1].replace(',', '.')) * 100);
   const quantidade = Number(qtd[1]);
