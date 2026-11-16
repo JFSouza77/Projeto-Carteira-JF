@@ -50,6 +50,7 @@ const EFEITO = {
   orcamento_80: { ansiedade: 4 },
   categoria_estourada: { ansiedade: 4.5, raiva: 3, alegria: -1.5 },
   delivery_repetido: { raiva: 1.5, ansiedade: 1, nojo: 0.5 },
+  formiguinha: { ansiedade: 1, curiosidade: 0.5 }, // 16/11: gastinhos somando
   mes_verde: { alegria: 7.5, ansiedade: -2 },
   ritmo_alto: { ansiedade: 2 },
   mes_negativo: { ansiedade: 3, tristeza: 1.5, carinho: 1 },

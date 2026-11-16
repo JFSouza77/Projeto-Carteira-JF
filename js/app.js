@@ -1160,6 +1160,7 @@ function bind() {
   $('#conta-form').addEventListener('submit', ev => { salvarConta(ev).catch(er => toast(er.message)); });
   $('#cd-tipo').addEventListener('change', mostrarCamposConta);
   $('#cd-outro').addEventListener('change', mostrarCamposConta);
+  $('#cd-guarda').addEventListener('change', mostrarCamposConta); // 16/11: guardar a cada compra
   $('#estudio-btn').addEventListener('click', () => alternarEstudio());
   $('#glos-busca').addEventListener('input', renderGlossario);
   for (const id of ['#calc-valor', '#calc-taxa', '#calc-meses', '#calc-periodo']) $(id).addEventListener('input', renderCalculadora);

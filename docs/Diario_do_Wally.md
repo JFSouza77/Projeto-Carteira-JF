@@ -84,3 +84,4 @@ Depois de cada correção, escreva no Registro: o que o JF viu, a causa, o que m
 
 | 16/11 | (GPT) Voz podia ler `**` e `{nome}` | só o caminho da IA limpava o texto; as falas do aparelho iam direto pra voz | limpeza no `textoParaVoz`, que vale pra toda fala | `tests/uso_ia.test.js` |
 | 16/11 | (JF) Avatar pensador com rostinho de vergonha | o avatar seguia o assunto e o rostinho do topo seguia a emoção; e o "digitando…" do 2º balão deixava o topo no pensador | `rostoDaForma`: o avatar manda e cada forma tem rostinho que combina; repinta depois do 2º balão | `tests/rosto_da_forma.test.js` + vitrine dos 45 |
+| 16/11 | (JF) Raio-X aberto repetia cartão, limite e botões embaixo | as linhas do banco ficavam visíveis junto com o raio-X | com o raio-X aberto, só ele aparece (com o aviso "feche o raio-X pra mexer") | print (Playwright) |
