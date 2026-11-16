@@ -795,6 +795,16 @@
         <label class="field"><span>Apelido</span><input id="cd-apelido" type="text" maxlength="30" placeholder="ex.: Reserva, Viagem"></label>
         <label class="field"><span>O que é?</span><select id="cd-tipo"><option value="corrente">Conta corrente</option><option value="poupanca">Poupança</option><option value="cofrinho">Cofrinho / caixinha</option></select></label>
         <label class="field" id="cd-reforca-campo"><span>Esse cofrinho aumenta o limite de qual cartão?</span><select id="cd-reforca"></select></label>
+        <!-- 16/11 (JF): guardar a cada compra, como no Mercado Pago -->
+        <fieldset class="guarda-campo" id="cd-guarda-campo" hidden>
+          <label class="check"><input type="checkbox" id="cd-guarda"> Guardar um valor aqui a cada compra</label>
+          <div id="cd-guarda-det" hidden>
+            <label class="field"><span>Quanto a cada compra</span><input id="cd-guarda-valor" type="text" inputmode="decimal" placeholder="ex.: 5,00"></label>
+            <label class="field"><span>Sai de qual conta</span><select id="cd-guarda-origem"></select></label>
+            <label class="field"><span>Em quais compras</span><select id="cd-guarda-quando"><option value="todas">Todas (cartão, débito e Pix)</option><option value="credito">Só no cartão de crédito</option><option value="debito">Só no débito e no Pix</option></select></label>
+            <small class="muted">A cada compra, eu tiro esse valor da conta e guardo aqui, como o seu banco faz. Se o gasto for apagado, o guardado volta.</small>
+          </div>
+        </fieldset>
         <label class="field"><span>Quanto rende (% do CDI, opcional)</span><input id="cd-cdi" type="text" inputmode="decimal" placeholder="ex.: 102"></label>
         <label class="field"><span>Piso de segurança (opcional): o mínimo que você quer manter nessa conta</span><input id="cd-piso" type="text" inputmode="decimal" placeholder="ex.: 2.000,00"></label>
         <label class="check"><input type="checkbox" id="cd-outro"> Esse dinheiro é de outra pessoa (estou guardando pra alguém)</label>

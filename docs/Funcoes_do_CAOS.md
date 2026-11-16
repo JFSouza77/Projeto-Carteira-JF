@@ -1,7 +1,7 @@
 # Funções do C.A.O.S. (pra revisar)
 
 Lista feita pelo Wally em 16/11/2026, tirada do código (`js/caos/conversa.js`, função `entender()`).
-App 2.1.2 Alfa · C.A.O.S. 2.3.7 · núcleo 1.6.0. São **69 jeitos de entender** uma frase, em 7 grupos.
+App 2.1.4 Alfa · C.A.O.S. 2.3.8 · núcleo 1.7.0. São **69 jeitos de entender** uma frase, em 7 grupos.
 
 Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o que ele faz.
 - 🖥️ = responde sem internet (no próprio celular).
@@ -52,6 +52,7 @@ Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o q
 | A receber | "quem me deve?" | Rachadinhas e o que falta receber 🖥️ |
 | Metas | "como estão minhas metas?" | Progresso de cada meta 🖥️ |
 | Fato da semana | "minha ofensiva" | O que mudou da semana passada pra esta 🖥️ |
+| Gastinhos (formiguinha) | "quais meus gastinhos?" | Quantos gastos de até R$ 30 no mês, quanto somam e onde mais aparecem 🖥️ |
 
 ## 3. Decidir e calcular
 
@@ -119,6 +120,9 @@ Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o q
 - **Humor:** Suave (padrão), Normal ou Ácido. No Ácido, fecha 6 em 10 respostas com uma zoeira. Com o criador, sempre ácido.
 - **Nome:** chama pelo apelido uma resposta sim, outra não. Na IA também, sem mandar o nome pra fora.
 - **Dois balões:** quando empolga, manda um 2º balão curto ("ah, e…"); no Ácido, a zoeira vem nele.
+- **Cabeça aérea (TDAH):** de vez em quando (no máximo 1 a cada 30 min), num 2º balão, lembra de uma curiosidade de dinheiro e volta pro foco. Sem internet.
+- **Pergunta de amigo:** depois de um gasto anotado no Chat, às vezes pergunta "valeu a pena?" ou "foi planejado?". A resposta fica só na memória dele (conta os impulsos do mês).
+- **Formiguinha:** a cada 10 gastinhos de até R$ 30 no mês, avisa quanto já somam.
 - **Emoção:** a do rosto também muda o tom da IA online.
 - **Emoções e rosto:** cada resposta tem uma emoção e um rostinho, e o avatar troca de forma pelo assunto.
 - **Avisos:** alerta sempre com o número e um empurrão útil.

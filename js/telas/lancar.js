@@ -2,7 +2,7 @@
 // Mudou só de arquivo. Quem grava continua sendo a UI (via db.js).
 
 import { $, catById, centsToInput, esc, state, renderizar } from '../estado.js';
-import { FORMAS_PAGAMENTO, INCOME_SOURCES, accountBalance, accountLabel, comReforco, createExpense, createIncome, depoisDoSaldo, detectExpenseEvents, dividirIgual, editarLancamento, faturaDoCartao, formatBRL, juntarNomes, parseAmount, toISODate, valorForaDoComum, valorProprio } from '../engine.js';
+import { FORMAS_PAGAMENTO, INCOME_SOURCES, accountBalance, accountLabel, comReforco, createExpense, createIncome, createTransferencia, guardarACadaCompra, depoisDoSaldo, detectExpenseEvents, dividirIgual, editarLancamento, faturaDoCartao, formatBRL, juntarNomes, parseAmount, toISODate, valorForaDoComum, valorProprio } from '../engine.js';
 import * as conta from '../conta.js';
 import { corCategoria, corFonte, corForma } from '../cores.js';
 import * as db from '../db.js';
@@ -163,6 +163,17 @@ export async function registrarGasto({ amountCents, categoryId, note, date, acco
       quem: juntarNomes(nomes) });
   }
   events.push(...eventoOfensiva(ofAntes));
+  // guardar a cada compra (JF, 16/11, como no Mercado Pago): o cofrinho recebe o valor combinado, saindo da conta
+  // de origem. Fica ligado ao gasto (autoDe): apagar o gasto apaga o que foi guardado por causa dele.
+  const guardas = guardarACadaCompra(expense, state.accounts, state.expenses, state.incomes, state.transferencias);
+  if (guardas.length) {
+    const novas = guardas.map(gd => ({ ...createTransferencia({ deId: gd.deId, paraId: gd.cofrinhoId, amountCents: gd.amountCents, date: expense.date,
+      note: 'Guardado a cada compra' }, { accounts: state.accounts }), autoDe: expense.id }));
+    state.transferencias = [...state.transferencias, ...novas];
+    await db.setMeta('transferencias', state.transferencias);
+    const nomes = guardas.map(gd => `${formatBRL(gd.amountCents)} em ${accountLabel(state.accounts.find(a => a.id === gd.cofrinhoId))}`).join(' e ');
+    setTimeout(() => toast(`Guardei ${nomes}, como você combinou no banco.`), 1200);
+  }
   state.viewMonth = expense.month;
   renderizar();
   return events;
@@ -345,6 +356,11 @@ export async function onDelete(id, kind) {
   if (!x || !confirm(`Apagar ${formatBRL(x.amountCents)}${x.note ? ` (${x.note})` : ''}?`)) return;
   await db.remove(kind === 'entrada' ? db.STORES.incomes : db.STORES.expenses, id);
   if (x.imageId) await imagens.apagar(x.imageId).catch(() => {});
+  // o que foi guardado no cofrinho por causa deste gasto sai junto (16/11)
+  if (kind !== 'entrada' && state.transferencias.some(t => t.autoDe === id)) {
+    state.transferencias = state.transferencias.filter(t => t.autoDe !== id);
+    await db.setMeta('transferencias', state.transferencias);
+  }
   if (kind === 'entrada') state.incomes = state.incomes.filter(i => i.id !== id);
   else state.expenses = state.expenses.filter(i => i.id !== id);
   renderizar();

@@ -6,6 +6,7 @@ import {
   formatBRL, parseAmount, periodRange, ofensiva, aReceber, comReforco, sumInRange, topCategories, summarizeMonth, forecastMonth,
   incomeIn, monthKey, shiftMonth, monthLabel, accountBalance, accountLabel, totalBalance, analyze, folgaDoPiso, dividirEntrePisos, resumoPisos, sugerirTransferencias,
   spentIn, toISODate, INCOME_SOURCES, idadeDe, faixaEtaria, situacaoCompromissos, analisarPlanejamento, cabeNoMes, sugerirCategoria, palavrasDe, faturaDoCartao, progressoMeta, resumoInvestimentos,
+  formiguinhas, FORMIGA_LIMITE_CENTS,
 } from '../engine.js';
 import { IDENTIDADE, textoPodeNaoPode, textoVida, textoComoFunciona, textoPrivacidade } from './identidade.js';
 import { acharTermo, ATUALIZADO_EM, GLOSSARIO } from './glossario.js';
@@ -628,6 +629,8 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   if (!/^como\b/.test(t) && !querFazer && /(o que (eu )?planejei|meus planos|planejamento|planos? (do|deste|desse|pro|para o) mes|o que (eu )?vou comprar|planejad|programad|o que (mais )?(eu )?tenho (pra|para) (esse|este|o) mes|o que mais (eu )?(tenho|vou))/.test(t)) return { ...r, intent: 'planos' };
   // Ofensiva (07/11): "quantos dias seguidos?", "minha ofensiva", "meu foguinho"
   if (/(ofensiva|foguinho|dias seguidos|dias em sequencia|sequencia de dias|streak)/.test(t) && !r.valor) return { ...r, intent: 'ofensiva' };
+  // efeito formiguinha (JF, 16/11): "quais meus gastinhos?", "gastos pequenos", "efeito formiga"
+  if (/(formiguinha|efeito formiga|gastinhos?\b|gastos? (pequenos?|miudos?|de formiga)|pequenos gastos)/.test(t) && !r.valor) return { ...r, intent: 'formiguinha' };
   // Rachadinha (07/11): "quem me deve?", "quanto tenho a receber?", "quanto me devem?"
   if (/(quem (me|ta me|esta me) dev|quanto (me )?devem|me deve[mn]?\b|(tenho|falta|faltam) (a|pra|para) receber|a receber\b|rachadinha|conta rachada|quem (nao )?(me )?pagou)/.test(t) && !r.valor) return { ...r, intent: 'a_receber' };
   if (/(quanto (eu )?(tenho )?investido|meus investimentos|minha carteira de investimento|quanto (meus investimentos|meu investimento) (rende|rendeu|renderam)|como (estao|esta) (meus|o meu|os meus) investimentos?)/.test(t)) return { ...r, intent: 'meus_investimentos' };
@@ -1534,6 +1537,19 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       return {
         fato: `${o.dias === 1 ? '🔥 Ofensiva acesa: 1 dia anotando.' : `🔥 Ofensiva de ${o.dias} dias seguidos anotando.`}${o.hojeFeito ? ' Hoje já está garantido.' : ' Falta anotar hoje pra não perder!'} Seu recorde é ${dia(o.recorde)}.`,
         sugestoes: ['Quanto gastei este mês?', 'Quem me deve?'],
+      };
+    }
+    case 'formiguinha': {
+      // 16/11 (JF): os gastinhos de até R$ 30 do mês, somados, e onde mais aparecem
+      const f = formiguinhas(expenses, mes);
+      const lim = formatBRL(FORMIGA_LIMITE_CENTS);
+      if (!f.count) return { fato: `Nenhum gastinho de até ${lim} este mês. Formiga nenhuma na sua carteira!`, sugestoes: ['Quanto gastei este mês?'] };
+      const nomeCat = id => categories.find(c => c.id === id)?.name || id;
+      const top = f.porCategoria.slice(0, 3).map(c => `${nomeCat(c.categoryId)} (${c.count}×, ${formatBRL(c.totalCents)})`).join(', ');
+      const vezes = f.count === 1 ? '1 gastinho' : `${f.count} gastinhos`;
+      return {
+        fato: `Este mês foram ${vezes} de até ${lim}, somando ${formatBRL(f.totalCents)} (${f.pct}% de tudo que você gastou). Onde mais aparecem: ${top}.${f.count >= 10 ? ' Escolher um deles pra segurar na semana já faz diferença.' : ''}`,
+        sugestoes: ['Onde mais gastei?', 'Quanto gastei este mês?'],
       };
     }
     case 'a_receber': {

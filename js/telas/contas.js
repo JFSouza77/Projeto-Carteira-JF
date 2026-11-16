@@ -2,7 +2,7 @@
 // entre contas. Mudou só de arquivo, o jeito de funcionar é o mesmo.
 
 import { $, centsToInput, esc, state, renderizar } from '../estado.js';
-import { BANKS, TIPOS_CONTA, TIPOS_INVESTIMENTO, accountBalance, accountLabel, agruparPorBanco, atualizarInvestimento, comReforco, createAccount, createCartao, createExpense, createIncome, createInvestimento, createTransferencia, diferencaDoSaldo, editarConta, faturaDoCartao, folgaDoPiso, formatBRL, parseAmount, parseSignedAmount, raioXCartao, rendimentoEstimado, resumoInvestimentos, toISODate, totalBalance } from '../engine.js';
+import { BANKS, TIPOS_CONTA, TIPOS_INVESTIMENTO, accountBalance, accountLabel, agruparPorBanco, atualizarInvestimento, comReforco, createAccount, createCartao, createExpense, createIncome, createInvestimento, createTransferencia, diferencaDoSaldo, editarConta, faturaDoCartao, folgaDoPiso, formatBRL, parseAmount, parseSignedAmount, raioXCartao, rendimentoEstimado, QUANDO_GUARDA, resumoInvestimentos, toISODate, totalBalance } from '../engine.js';
 import * as db from '../db.js';
 import { temaBanco } from '../cores.js';
 import { ic, narrate, pintarOlhos, saldoTxt, saldoVisivel, toast } from '../app.js';
@@ -55,7 +55,7 @@ export function renderContas() {
       </button>
       ${bancosAbertos.has(g.bank) ? `<button type="button" class="ghost small raiox-btn" data-raiox="${esc(g.bank)}" aria-expanded="${raioXAberto.has(g.bank)}">${raioXAberto.has(g.bank) ? 'Fechar o raio-X' : 'Ver por dentro (raio-X)'}</button>` : ''}
       ${bancosAbertos.has(g.bank) && raioXAberto.has(g.bank) ? raioXDoBanco(g) : ''}
-      ${bancosAbertos.has(g.bank) ? `<ul class="banco-partes">${g.contas.map(a => (a.tipo === 'cartao' ? itemCartao(a) : itemConta(a))).join('')}</ul>` : ''}
+      ${bancosAbertos.has(g.bank) && !raioXAberto.has(g.bank) ? `<ul class="banco-partes">${g.contas.map(a => (a.tipo === 'cartao' ? itemCartao(a) : itemConta(a))).join('')}</ul>` : ''}
     </li>`;
   }).join('');
   if (!$('#bank-select').options.length) {
@@ -211,12 +211,15 @@ export function raioXDoBanco(g) {
         <dt>Saldo</dt><dd>${formatBRL(bal)}</dd>
         <dt>Rendimento</dt><dd>${a.rendeCdiPct ? `${String(a.rendeCdiPct).replace('.', ',')}% do CDI${rende ? ` · ~${formatBRL(rende.mesCents)} por mês` : ''}` : '<span class="muted">não informado</span>'}</dd>
         ${reforca ? `<dt>Aumenta o limite de</dt><dd>${esc(accountLabel(reforca))}</dd>` : ''}
+        ${a.guardaCompra ? `<dt>Guarda a cada compra</dt><dd>${formatBRL(a.guardaCompra.valorCents)} ${esc(QUANDO_GUARDA[a.guardaCompra.quando] || '')}</dd>` : ''}
         <dt>De quem é</dt><dd>${a.paraQuem ? `de ${esc(a.paraQuem)} (fora do seu saldo)` : 'seu'}</dd>
       </dl></li>`;
   }).join('');
   const temCdi = g.contas.some(a => a.rendeCdiPct);
+  // 16/11 (JF): com o raio-X aberto, as linhas de sempre (cartão, saldo, botões) somem pra não repetir; o aviso diz como voltar
   return `<div class="raio-x" id="rx-${esc(g.bank)}">
     <ul class="rx-lista">${linhas}</ul>
+    <p class="muted small rx-dica">Pra lançar, atualizar o saldo ou remover, feche o raio-X.</p>
     ${temCdi ? `<p class="rx-cdi muted${cdiVelho ? ' velho' : ''}">${cdi ? `Estimativa com o CDI de ${String(cdi).replace('.', ',')}% ao ano${cdiEm ? `, informado em ${new Date(cdiEm).toLocaleDateString('pt-BR')}` : ''}.${cdiVelho ? ' Faz mais de um mês: confira se mudou.' : ''}` : 'Pra eu estimar quanto rende, me diga o CDI de hoje.'} <button type="button" class="ghost small" data-cdi>${cdi ? 'Mudar o CDI' : 'Informar o CDI'}</button></p>` : ''}
   </div>`;
 }
@@ -232,6 +235,14 @@ export function abrirEditarConta(id) {
   const cartoes = state.accounts.filter(c => c.tipo === 'cartao');
   $('#cd-reforca').innerHTML = '<option value="">Não aumenta limite</option>' + cartoes.map(c => `<option value="${esc(c.id)}">${esc(accountLabel(c))}</option>`).join('');
   $('#cd-reforca').value = a.reforcaCartaoId || '';
+  // guardar a cada compra (16/11): a conta de origem é do mesmo banco primeiro
+  const origens = state.accounts.filter(c => c.tipo !== 'cartao' && c.id !== a.id && !c.paraQuem)
+    .sort((x, y) => (y.bank === a.bank) - (x.bank === a.bank));
+  $('#cd-guarda-origem').innerHTML = origens.map(c => `<option value="${esc(c.id)}">${esc(accountLabel(c))}</option>`).join('');
+  $('#cd-guarda').checked = !!a.guardaCompra;
+  $('#cd-guarda-valor').value = a.guardaCompra ? centsToInput(a.guardaCompra.valorCents) : '';
+  if (a.guardaCompra) $('#cd-guarda-origem').value = a.guardaCompra.origemId;
+  $('#cd-guarda-quando').value = a.guardaCompra?.quando || 'todas';
   $('#cd-cdi').value = a.rendeCdiPct ? String(a.rendeCdiPct).replace('.', ',') : '';
   $('#cd-piso').value = a.pisoCents ? centsToInput(a.pisoCents) : '';
   $('#cd-outro').checked = !!a.paraQuem;
@@ -244,6 +255,8 @@ export function abrirEditarConta(id) {
 
 export function mostrarCamposConta() {
   $('#cd-reforca-campo').hidden = $('#cd-tipo').value !== 'cofrinho' || !state.accounts.some(c => c.tipo === 'cartao');
+  $('#cd-guarda-campo').hidden = $('#cd-tipo').value !== 'cofrinho' || !$('#cd-guarda-origem').options.length;
+  $('#cd-guarda-det').hidden = !$('#cd-guarda').checked;
   $('#cd-quem-campo').hidden = !$('#cd-outro').checked;
 }
 
@@ -260,8 +273,14 @@ export async function salvarConta(ev) {
     const pisoTxt = $('#cd-piso').value.trim();
     const piso = pisoTxt ? parseAmount(pisoTxt) : null;
     if (pisoTxt && piso == null) throw new Error('Piso: digite um valor, ex.: 2.000,00.');
+    let guardaCompra = null;
+    if ($('#cd-tipo').value === 'cofrinho' && $('#cd-guarda').checked) {
+      const v = parseAmount($('#cd-guarda-valor').value.trim());
+      if (v == null || v <= 0) throw new Error('Quanto guardar a cada compra? Ex.: 5,00.');
+      guardaCompra = { valorCents: v, origemId: $('#cd-guarda-origem').value, quando: $('#cd-guarda-quando').value };
+    }
     const novo = editarConta(a, {
-      pisoCents: piso,
+      pisoCents: piso, guardaCompra,
       nickname: $('#cd-apelido').value, subtipo: $('#cd-tipo').value, reforcaCartaoId: $('#cd-reforca').value || null,
       rendeCdiPct: cdiTxt ? Number(cdiTxt) : null, paraQuem: $('#cd-outro').checked ? $('#cd-quem').value : '',
     }, { accounts: state.accounts });

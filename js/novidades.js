@@ -7,6 +7,21 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.1.4 Alfa',
+    data: '16/11/2026',
+    nome: 'Formiguinha',
+    t: 'O C.A.O.S. repara nos gastinhos, puxa papo depois de um gasto, e o banco pode guardar a cada compra.',
+    itens: [
+      '🐜 Efeito formiguinha: a cada 10 gastinhos de até R$ 30 no mês, o C.A.O.S. mostra quanto eles já somam. No Chat, pergunte "quais meus gastinhos?".',
+      '🐷 Guardar a cada compra: em Contas, edite um cofrinho e marque quanto guardar a cada compra. O valor sai da conta sozinho, como no Mercado Pago.',
+      '🤔 Pergunta de amigo: depois de anotar um gasto no Chat, às vezes ele pergunta "valeu a pena?". Toque numa resposta: ele lembra dos impulsos do mês.',
+      '💭 Cabeça aérea: de vez em quando, no Chat, ele lembra de uma curiosidade de dinheiro num 2º balão e volta pro foco.',
+    ],
+    qol: [
+      '🩻 Raio-X limpo: em Contas, com o raio-X aberto, só aparece o raio-X. Pra lançar ou mexer no saldo, feche ele.',
+    ],
+  },
+  {
     v: '2.1.3 Alfa',
     ate: '2.1.3.2',
     data: '16/11/2026',

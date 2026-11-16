@@ -33,7 +33,8 @@ test('2 balões: no Ácido a cutucada vem separada; no Suave às vezes um "ah, e
   m = undefined; let suave = 0;
   for (let i = 0; i < 40; i++) {
     const r = conversar('quanto gastei este mês?', d, { memory: m, mood: 'suave', now: now + i * 60_000 }); m = r.memoria;
-    if (r.fala.posTexto) { assert.ok(emenda.has(r.fala.posTexto), r.fala.posTexto); suave++; }
+    // 2.3.8: o 2º balão do Suave pode ser o "ah, e…" ou a tangente de TDAH (nunca zoeira)
+    if (r.fala.posTexto) { assert.ok(emenda.has(r.fala.posTexto) || /(Enfim, foco!|Voltando: tô aqui\.|Tá, voltei\.|Ok, cabeça de volta no lugar\.|Pronto, foco de novo\.)$/.test(r.fala.posTexto), r.fala.posTexto); assert.ok(!cut.has(r.fala.posTexto)); suave++; }
   }
   assert.ok(suave >= 3 && suave <= 25, `"ah, e…" no Suave: ${suave}`);
   assert.equal(GERADORES.emenda.fala.geral.length % 5, 0);

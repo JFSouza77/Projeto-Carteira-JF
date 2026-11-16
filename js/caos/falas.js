@@ -719,6 +719,89 @@ export const GERADORES = {
     },
   },
 
+  // Efeito formiguinha (JF, 16/11): a cada 10 gastinhos de até R$ 30 no mês, o aviso com o total (o número assusta mais
+  // que cada gasto). Alerta leve: traz o número e um empurrão útil.
+  formiguinha: {
+    moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+    abre: {
+      geral: [
+        'Efeito formiguinha detectado.',
+        'Reparei numa coisa.',
+        'Olha as formiguinhas.',
+        'Pequeno de um em um, grande no total:',
+        'Só pra você ver junto:',
+      ],
+      humor_acido: [
+        'As formiguinhas estão fazendo a festa na sua carteira.',
+        'Cafezinho aqui, lanchinho ali…',
+        'Ninguém quebra com um gasto de R$ 10. Com {qtd}, aí já é outra conversa.',
+        'Formiga não carrega muito, mas carrega todo dia.',
+        'Parabéns, você tem um formigueiro.',
+      ],
+    },
+    fato: {
+      geral: [
+        'Já são {qtd} gastinhos de até R$ 30 este mês, somando {total}.',
+        '{qtd} gastos pequenos este mês: juntos dão {total}.',
+        'Os gastinhos de até R$ 30 já são {qtd} e somam {total} ({pct}% do mês).',
+        '{total} em {qtd} gastos pequenos, só este mês.',
+        'Somando os {qtd} gastinhos do mês, dá {total}.',
+      ],
+    },
+    fecho: {
+      geral: [
+        'Não precisa cortar tudo: escolhe um pra segurar na semana.',
+        'Quer ver onde eles mais aparecem? Me pergunta "quais meus gastinhos?".',
+        'Um limite semanal pra esses ajuda muito.',
+        'Separar um valor só pra eles deixa o mês mais leve.',
+        'Vale olhar se algum vira hábito.',
+      ],
+    },
+  },
+
+  // Tangente de TDAH (JF, 16/11: "comunicativo, extrovertido, com leve TDAH"): de vez em quando, num 2º balão, ele
+  // lembra de uma curiosidade de dinheiro que não tem nada a ver e volta pro foco. Funciona sem internet.
+  tangente: {
+    moldes: ['{abre} {curiosidade} {volta}'],
+    abre: {
+      geral: [
+        'Pera, nada a ver, mas lembrei:',
+        'Aliás, isso me lembrou uma coisa:',
+        'Ó, minha cabeça foi longe agora:',
+        'Do nada, pensei nisso:',
+        'Rapidinho, antes que eu esqueça:',
+      ],
+    },
+    curiosidade: {
+      geral: [
+        'conta a história que o primeiro cartão de crédito surgiu porque um cara esqueceu a carteira num restaurante, em 1949.',
+        'a nota de R$ 200, a do lobo-guará, só chegou em 2020.',
+        'em poucos anos o Pix virou o jeito de pagar mais usado do Brasil. O cartão levou décadas.',
+        'o cofrinho tem cara de porco porque guardavam moedas em potes de um barro chamado "pygg".',
+        'dizem que a palavra "salário" vem do sal, que valia muito na Roma antiga.',
+        '"bancarrota" vem do italiano "banca rotta": quebravam a mesa do cambista que falia.',
+        'as moedas de R$ 1 das Olimpíadas de 2016 viraram coisa de colecionador.',
+        'o Real nasceu em 1994 e, antes dele, o Brasil trocou de moeda um monte de vezes em uns 50 anos.',
+        'a gente lembra mais de quanto pagou em dinheiro vivo do que no cartão. O cérebro sente menos o cartão.',
+        'o símbolo $ pode ter vindo do "ps" de peso, a moeda espanhola, escrito um em cima do outro.',
+        'o dinheiro de papel mais antigo é da China, de uns mil anos atrás.',
+        'tem gente que congela o cartão num bloco de gelo pra não comprar por impulso.',
+        'a "regra das 24 horas" diz: quis comprar, espera um dia. Muita vontade passa sozinha.',
+        'o Brasil já teve nota de 500 mil cruzeiros, e com a inflação ela perdia valor em semanas.',
+        'a palavra "dinheiro" vem do denário, uma moeda da Roma antiga.',
+      ],
+    },
+    volta: {
+      geral: [
+        'Enfim, foco!',
+        'Voltando: tô aqui.',
+        'Tá, voltei.',
+        'Ok, cabeça de volta no lugar.',
+        'Pronto, foco de novo.',
+      ],
+    },
+  },
+
   // Cutucada no fim da resposta (JF, 16/11): no Ácido ele não deixa passar. Só sai com humor Ácido ou com o criador.
   cutucada: {
     moldes: ['{zoa}'],

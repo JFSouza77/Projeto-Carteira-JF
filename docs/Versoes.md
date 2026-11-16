@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 2.1.4 Alfa | 16/11/2026 | Formiguinha (pedido do JF): efeito formiguinha (aviso a cada 10 gastinhos de até R$ 30 + pergunta "quais meus gastinhos?"), pergunta curiosa depois do gasto no Chat, tangentes de TDAH sem internet, guardar a cada compra no cofrinho (como no Mercado Pago) e raio-X sem as linhas repetidas. C.A.O.S. 2.3.8. |
 | 2.1.3.2 Alfa | 16/11/2026 | Rostinho segue o avatar (JF: "pensador com rostinho tímido não dá"): `rostoDaForma` em `js/avatar.js`, 35 formas com rostinho próprio, topo/Início/balões iguais; o 2º balão não deixa mais o topo preso no pensador. Vitrine: `docs/revisoes/img/2026-11-16_vitrine_rostinhos.png`. |
 | 2.1.3.1 Alfa | 16/11/2026 | Ajuste da auditoria do GPT: a voz não lê mais `**` nem `{nome}`; contador do mês em Ajustes → IA online (respostas do aparelho, da memória e da IA, com o motivo). O resto do relatório já estava corrigido (vereditos em `docs/revisoes/2026-11-16_gpt_auditoria_vereditos.md`). |
 | 2.1.3 Alfa | 16/11/2026 | Amigo de Verdade (ok do JF): 2 balões (cutucada do Ácido e um "ah, e…" no Suave/Normal vêm num 2º balão com "digitando…"); a emoção do rosto vai pro tom da IA online; dar baixa pela conversa (fatura paga, amigo que pagou a parte, conta fixa paga), sempre com Confirmar; foto de comprovante pergunta como pagou e de qual conta; ajuste da força do rosto no Suave; "Você" depois do nome sem maiúscula. Núcleo 1.7.0 (jeito de reagir). C.A.O.S. 2.3.7 |

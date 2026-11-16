@@ -4,7 +4,7 @@
 
 import { $, catById, dados, esc, renderizar, state } from '../estado.js';
 import { FORMAS, formaPara, rostoDaForma } from '../avatar.js';
-import { IDENTIDADE, SUGESTOES, conversar, humorParaIA, emocaoDoMomento, rostoAvulso } from '../caos/index.js';
+import { IDENTIDADE, SUGESTOES, conversar, curiosidadeDoGasto, humorParaIA, emocaoDoMomento, rostoAvulso } from '../caos/index.js';
 import { accountLabel, createTransferencia, depoisDoSaldo, marcarRecebido, editarConta, editarLancamento, formatBRL, sugerirCategoria, toISODate } from '../engine.js';
 import * as conta from '../conta.js';
 import { lerPagamento, seguirPagamento } from '../caos/conversa.js';
@@ -370,6 +370,18 @@ export async function confirmarAcao(i, ok) {
       addMsg({ de: 'caos', texto: `Só lembrando: como isso foi dia ${Number(a.date.slice(8, 10))}/${Number(a.date.slice(5, 7))}, antes do saldo de ${accountLabel(conta)} que você informou, o valor já está dentro dele. Anotei pra conta do mês, mas o saldo do banco não mudou.` });
     }
     if (state.settings.voice && fala) falar(fala.texto, fala.emocao);
+    // 2.1.4 (JF, 16/11): pergunta curiosa de amigo depois do gasto ("valeu a pena?"), às vezes e nunca junto de alerta
+    if (a.tipo === 'registrar_gasto' && !fala?.alerta) {
+      const c = curiosidadeDoGasto({ categoryId: a.categoryId, amountCents: a.amountCents, compromissoId: a.compromissoId || null },
+        { memory: state.caosMemory, now: Date.now() });
+      if (c.fala) {
+        guardarMemoria(c.memoria);
+        await respiro(c.fala.texto);
+        addMsg({ de: 'caos', texto: c.fala.texto, sugestoes: c.fala.sugestoes, assunto: 'curiosidade' });
+        pintarRosto(null, 'curiosidade');
+        if (state.settings.voice) falar(c.fala.texto);
+      }
+    }
   } catch (e) {
     m.acaoFeita = false;
     addMsg({ de: 'caos', texto: `Não consegui anotar: ${e.message}` });

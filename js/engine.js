@@ -20,6 +20,9 @@ export const DEFAULT_CATEGORIES = Object.freeze([
 export const ALERT_RATIO = 0.8;
 export const DELIVERY_WINDOW_DAYS = 7;
 export const DELIVERY_REPEAT_COUNT = 3;
+// Efeito formiguinha (JF, 16/11): gastinhos de até R$ 30 que, somados, pesam. A cada 10 no mês, o C.A.O.S. avisa.
+export const FORMIGA_LIMITE_CENTS = 3000;
+export const FORMIGA_PASSO = 10;
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -358,7 +361,83 @@ export function detectExpenseEvents({ expenses, categories, newExpense }) {
       });
     }
   }
+  // formiguinha (JF, 16/11): o 10º, 20º, 30º… gastinho do mês dispara o aviso (com o total, que é o que assusta)
+  const valorNovo = valorProprio(newExpense);
+  if (!newExpense.compromissoId && valorNovo > 0 && valorNovo <= FORMIGA_LIMITE_CENTS) {
+    const f = formiguinhas(expenses, newExpense.month);
+    if (f.count >= FORMIGA_PASSO && f.count % FORMIGA_PASSO === 0) {
+      const top = f.porCategoria[0];
+      const catTop = top && categories.find(c => c.id === top.categoryId);
+      events.push({ type: 'formiguinha', count: f.count, totalCents: f.totalCents, pct: f.pct, month: newExpense.month,
+        categoryId: top?.categoryId || null, categoryName: catTop?.name || null });
+    }
+  }
   return events;
+}
+
+// ---------- Guardar a cada compra (JF, 16/11) ----------
+// No Mercado Pago (e em outros bancos) dá pra guardar um valor fixo num cofrinho a cada compra. O cofrinho guarda a
+// regra: quanto, de qual conta sai e em que compras vale (no cartão de crédito, no débito/Pix da conta, ou nas duas).
+export const QUANDO_GUARDA = Object.freeze({ todas: 'em todas as compras do banco', credito: 'só no cartão de crédito', debito: 'só no débito e no Pix' });
+
+export function validarGuardaCompra(g, cofrinho, accounts = []) {
+  if (!g) return null;
+  if (!Number.isInteger(g.valorCents) || g.valorCents <= 0) throw new Error('Quanto guardar a cada compra? Ex.: 5,00.');
+  if (g.valorCents > 100_000) throw new Error('Guardar a cada compra: até R$ 1.000,00 por compra.');
+  const origem = accounts.find(a => a.id === g.origemId);
+  if (!origem || origem.tipo === 'cartao' || origem.id === cofrinho.id || origem.paraQuem) throw new Error('Escolha de qual conta sai o dinheiro guardado.');
+  const quando = QUANDO_GUARDA[g.quando] ? g.quando : 'todas';
+  return { valorCents: g.valorCents, origemId: origem.id, quando };
+}
+
+/**
+ * Quanto guardar por causa deste gasto (função pura). Vale pra compra no cartão de crédito do mesmo banco do
+ * cofrinho e pra compra no débito/Pix da conta de origem. Conta fixa não conta (não é compra).
+ * Não guarda se a conta de origem não tem o valor (o banco também não guarda).
+ * @returns {{ cofrinhoId, deId, amountCents }[]}
+ */
+export function guardarACadaCompra(expense, accounts = [], expenses = [], incomes = [], transferencias = []) {
+  if (!expense?.accountId || expense.compromissoId) return [];
+  const pagou = accounts.find(a => a.id === expense.accountId);
+  if (!pagou) return [];
+  const out = [];
+  const usado = new Map(); // duas regras saindo da mesma conta: uma não pode gastar o dinheiro da outra
+  for (const c of accounts) {
+    const g = c.subtipo === 'cofrinho' && c.tipo !== 'cartao' && c.guardaCompra;
+    if (!g) continue;
+    const credito = pagou.tipo === 'cartao' && pagou.bank === c.bank && g.quando !== 'debito';
+    const debito = pagou.tipo !== 'cartao' && pagou.id === g.origemId && expense.forma !== 'credito' && g.quando !== 'credito';
+    if (!credito && !debito) continue;
+    const origem = accounts.find(a => a.id === g.origemId && a.tipo !== 'cartao');
+    if (!origem) continue;
+    const saldo = accountBalance(origem, expenses, incomes, transferencias) - (usado.get(origem.id) || 0);
+    if (saldo < g.valorCents) continue;
+    usado.set(origem.id, (usado.get(origem.id) || 0) + g.valorCents);
+    out.push({ cofrinhoId: c.id, deId: origem.id, amountCents: g.valorCents });
+  }
+  return out;
+}
+
+/**
+ * Efeito formiguinha (JF, 16/11): os gastos pequenos do mês (até R$ 30, sem conta fixa), somados.
+ * @returns {{ count, totalCents, monthTotalCents, pct, porCategoria: {categoryId, count, totalCents}[] }}
+ */
+export function formiguinhas(expenses, month) {
+  const doMes = expenses.filter(e => e.month === month);
+  const pequenos = doMes.filter(e => !e.compromissoId && valorProprio(e) > 0 && valorProprio(e) <= FORMIGA_LIMITE_CENTS);
+  const totalCents = pequenos.reduce((t, e) => t + valorProprio(e), 0);
+  const monthTotalCents = doMes.reduce((t, e) => t + valorProprio(e), 0);
+  const mapa = new Map();
+  for (const e of pequenos) {
+    const c = mapa.get(e.categoryId) || { categoryId: e.categoryId, count: 0, totalCents: 0 };
+    c.count += 1; c.totalCents += valorProprio(e);
+    mapa.set(e.categoryId, c);
+  }
+  return {
+    count: pequenos.length, totalCents, monthTotalCents,
+    pct: monthTotalCents ? Math.round(totalCents * 100 / monthTotalCents) : 0,
+    porCategoria: [...mapa.values()].sort((a, b) => b.totalCents - a.totalCents || b.count - a.count),
+  };
 }
 
 /**
@@ -455,7 +534,7 @@ export function createAccount({ bank, nickname = '', balanceCents, subtipo = 'co
  * Editar conta (13/11): apelido, tipo, cartão que o cofrinho reforça, rendimento (% do CDI) e pra quem é o dinheiro.
  * Não mexe no saldo (isso é o "Atualizar saldo"). Devolve uma cópia nova.
  */
-export function editarConta(conta, { nickname, subtipo, reforcaCartaoId, rendeCdiPct, paraQuem, pisoCents }, { accounts = [] } = {}) {
+export function editarConta(conta, { nickname, subtipo, reforcaCartaoId, rendeCdiPct, paraQuem, pisoCents, guardaCompra }, { accounts = [] } = {}) {
   if (!conta || conta.tipo === 'cartao') throw new Error('Isso é um cartão: ele não tem esses campos.');
   const novo = { ...conta };
   if (nickname !== undefined) novo.nickname = String(nickname).trim().slice(0, 30);
@@ -468,6 +547,9 @@ export function editarConta(conta, { nickname, subtipo, reforcaCartaoId, rendeCd
     novo.reforcaCartaoId = reforcaCartaoId || null;
   }
   if (novo.subtipo !== 'cofrinho') novo.reforcaCartaoId = null; // só cofrinho aumenta limite
+  // guardar a cada compra (JF, 16/11, como no Mercado Pago): R$ X saem da conta de origem pro cofrinho a cada compra
+  if (guardaCompra !== undefined) novo.guardaCompra = validarGuardaCompra(guardaCompra, novo, accounts);
+  if (novo.subtipo !== 'cofrinho') novo.guardaCompra = null; // só cofrinho recebe
   if (rendeCdiPct !== undefined) {
     const pct = limparPctCdi(rendeCdiPct);
     if (!pctCdiOk(pct)) throw new Error('O rendimento vai de 1% a 300% do CDI (ex.: 102).');
@@ -1209,6 +1291,8 @@ export function validarBackup(bruto) {
       || !(a.subtipo == null || TIPOS_CONTA[a.subtipo]) || !(a.reforcaCartaoId == null || ID_RE.test(a.reforcaCartaoId))
       || !pctCdiOk(a.rendeCdiPct) || !textoOuNada(a.paraQuem, 40) || !(a.pisoCents == null || centavos(a.pisoCents, 0))
       || !(a.faturaPagaAte == null || isValidISODate(a.faturaPagaAte))
+      || !(a.guardaCompra == null || (obj(a.guardaCompra) && centavos(a.guardaCompra.valorCents, 1) && ID_RE.test(a.guardaCompra.origemId ?? '')
+        && (a.guardaCompra.quando == null || QUANDO_GUARDA[a.guardaCompra.quando])))
       || (a.tipo === 'cartao' && (!centavos(a.limiteCents, 1) || !centavos(a.usadoInicialCents ?? 0, 0)
         || ![a.fechamentoDia, a.vencimentoDia].every(d => Number.isInteger(d) && d >= 1 && d <= 31)))) erro(`Conta ${i + 1} do backup está com dado inválido.`);
   });

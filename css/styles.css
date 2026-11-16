@@ -1416,3 +1416,9 @@ button.perigo { color: var(--danger); box-shadow: inset 0 0 0 1px color-mix(in s
 /* 16/11: o menu do "?" cresceu (atalhos de começo); se não couber, rola */
 .ajuda-menu { max-height: calc(100dvh - 140px); overflow-y: auto; }
 #resumo-card[data-modo="transf"] .transf-lista li { border-color: color-mix(in srgb, var(--cyan) 55%, transparent); }
+
+/* 16/11 (JF): guardar a cada compra (no editar do cofrinho) e dica do raio-X */
+.guarda-campo { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 0; display: grid; gap: 8px; min-width: 0; }
+.guarda-campo #cd-guarda-det { display: grid; gap: 8px; }
+.guarda-campo #cd-guarda-det[hidden] { display: none; }
+.rx-dica { margin: 8px 0 0; }

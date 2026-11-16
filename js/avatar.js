@@ -33,6 +33,7 @@ const POR_ASSUNTO = Object.freeze({
   xingamento: 'parceiro', xingamento_2: 'desconfiado', xingamento_3: 'decepcionado', xingamento_3_forte: 'decepcionado',
   xingamento_fim: 'chocado', xingamento_fim_forte: 'vermelho', silencio: 'chocado', passou_raiva: 'anjinho', desculpa_aceita: 'parceiro',
   moeda_jogo: 'gamer', // 15/11 (JF): moedas de jogo
+  formiguinha: 'detetive', curiosidade: 'amigao', // 16/11 (JF): gastinhos somando; pergunta curiosa depois do gasto
   desabafo: 'parceiro', limite_investido: 'banqueiro', bancos: 'investidor', conta: 'contador', glossario: 'professor', privacidade: 'anjinho', como_esta: 'calmo',
 });
 
