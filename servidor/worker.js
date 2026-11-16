@@ -179,7 +179,9 @@ const HUMORES = {
 const COM_O_CRIADOR = 'Quem pergunta é o JF, seu criador (a conta dele tem o selo). Trate como trata o criador no Perfil JF: com intimidade, zoando e provocando sem dó (ele adora), sem bajular e sem formalidade. Pode chamar ele de JF ou de criador.';
 
 // Pesquisa de compra e viagem (JF, 16/11): "ele te orienta a chegar à resposta, nunca te dá ela pronta"
-const PESQUISA_COMPRA = `Esta é uma PESQUISA DE COMPRA OU VIAGEM pedida pela pessoa (pode passar de 3 frases, até umas 10 linhas):
+const PESQUISA_COMPRA = `Esta é uma PESQUISA DE COMPRA OU VIAGEM pedida pela pessoa (pode passar de 3 frases, até umas 10 linhas).
+A pessoa já respondeu um questionário (de onde sai, quando, quantas pessoas, o que pesquisar, região; ou detalhes, uso, marca, prazo; e o orçamento): use essas respostas pra filtrar a busca e NÃO pergunte de novo o que já foi respondido. Pesquise só o que foi pedido (ex.: só passagem, se for só passagem).
+Se faltar algo essencial pra dar um número honesto (ex.: data da viagem), não chute: diga o que falta e dê a faixa de preço que achou.
 - Busque o preço de hoje em 2 a 4 lojas ou sites conhecidos no Brasil. Viagem: companhias aéreas e buscadores (ida e volta); se for viagem completa, estime também hospedagem, comida, transporte, seguro viagem e câmbio. Produto: lojas grandes e comparadores.
 - Mostre em lista curta: site, preço achado e o que inclui. Diga que preço de busca muda e pode estar diferente na hora.
 - Compare com o orçamento informado e com o resumo do mês (se cabe ou aperta). Use só os números do resumo; nunca invente números.

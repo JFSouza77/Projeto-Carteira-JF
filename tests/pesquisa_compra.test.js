@@ -23,26 +23,37 @@ test('entende viagem e produto sem roubar outras intenções', () => {
   assert.equal(entender('quanto custa 1000 robux?').intent, 'moeda_jogo');
 });
 
-test('pede o orçamento antes e, com ele, manda pra IA em modo pesquisa', () => {
-  const [pergunta, pronta] = papo('me ajuda a achar uma geladeira de 300 litros', 'até 5000');
-  assert.match(pergunta.texto, /orçamento/);
-  assert.equal(pergunta.entendeu, true, 'perguntar o orçamento não gasta IA');
-  assert.equal(pronta.entendeu, false);
-  assert.equal(pronta.modoIA, 'pesquisa');
-  assert.match(pronta.perguntaIA, /^Pesquisa de compra: uma geladeira de 300 litros\. Orçamento: R\$\s5\.000,00\./);
+test('questionário sem IA, uma pergunta por vez; no fim vai pra IA com tudo junto', () => {
+  const f = papo('me ajuda a achar uma geladeira de 300 litros', 'frost free, inox', 'casa com 4 pessoas', 'tanto faz', 'este mês', 'até 5000');
+  assert.match(f[0].texto, /Me ajuda a te ajudar/);
+  for (const x of f.slice(0, 5)) { assert.equal(x.entendeu, true, 'pergunta do questionário não gasta IA'); assert.equal(x.modoIA, null); }
+  assert.ok(f[0].sugestoes.includes('Pular'));
+  const fim = f[5];
+  assert.equal(fim.entendeu, false);
+  assert.equal(fim.modoIA, 'pesquisa');
+  assert.match(fim.perguntaIA, /^Pesquisa de compra: uma geladeira de 300 litros\. Detalhes: frost free, inox\. Pra quê: casa com 4 pessoas\. Precisa pra: este mês\. Orçamento: R\$\s5\.000,00\.$/);
 });
 
-test('"sem orçamento" também segue; "deixa pra depois" cancela', () => {
-  const [, semOrc] = papo('quanto custaria uma viagem pros estados unidos?', 'sem orçamento');
-  assert.match(semOrc.perguntaIA, /^Pesquisa de viagem: .*Orçamento: não informado\./);
-  const [, cancelou] = papo('quero comprar um tenis', 'deixa pra depois');
-  assert.equal(cancelou.modoIA, null);
-  assert.match(cancelou.texto, /fica pra depois/);
+test('viagem: pergunta de onde, quando, quantos, o que pesquisar e região; "Pular" deixa de fora', () => {
+  const f = papo('quanto custaria uma viagem pra porto seguro?', 'vitoria', 'janeiro, 7 dias', '2 pessoas', 'Os dois', 'perto de coroa vermelha', 'sem orçamento');
+  assert.match(f[1].texto, /Quando/);
+  assert.match(f[6].perguntaIA, /^Pesquisa de viagem: .*porto seguro\. Saindo de: vitoria\. Quando: janeiro, 7 dias\. Pessoas: 2 pessoas\. Pesquisar: Os dois\. Região ou tipo de hotel: perto de coroa vermelha\. Orçamento: não informado\.$/);
+  const g = papo('quanto custaria uma viagem pra porto seguro?', 'Pular', 'Pular', 'Pular', 'Pular', 'Pular', 'até 3000');
+  assert.match(g[6].perguntaIA, /^Pesquisa de viagem: .*\. Orçamento: R\$\s3\.000,00\.$/);
 });
 
-test('orçamento já na frase vai direto; sem IA, ele dá o caminho (lojas e o que conferir)', () => {
-  const [f] = papo('pesquisa o preço da geladeira, orçamento até 5000');
-  assert.equal(f.modoIA, 'pesquisa');
-  assert.match(f.texto, /frete/);
-  assert.match(f.texto, /IA online/);
+test('"não" responde a pergunta (marca) sem cancelar; "cancelar" cancela; pergunta nova sai do questionário', () => {
+  const f = papo('quero comprar um tenis', 'corrida', 'treino', 'não');
+  assert.match(f[3].texto, /Precisa pra quando/);
+  const c = papo('quero comprar um tenis', 'Cancelar');
+  assert.match(c[1].texto, /fica pra depois/);
+  const s = papo('quero comprar um tenis', 'quanto gastei este mês?');
+  assert.match(s[1].texto, /gastou|gasto/i);
+});
+
+test('orçamento já na frase não é perguntado de novo; sem IA, ele dá o caminho (lojas e o que conferir)', () => {
+  const f = papo('pesquisa o preço da geladeira, orçamento até 5000', 'Pular', 'Pular', 'Pular', 'Pular');
+  assert.equal(f[4].modoIA, 'pesquisa', 'pulou o orçamento, que já veio na frase');
+  assert.match(f[4].texto, /frete/);
+  assert.match(f[4].texto, /IA online/);
 });

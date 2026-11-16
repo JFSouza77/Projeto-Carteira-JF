@@ -299,6 +299,25 @@ export function lerPalavroes(t) {
 // Sobrou só "e aí", "fala", "oi"… depois de tirar o apelido? Então foi só um chamado de amigo.
 const SO_CHAMADO = /^(e ai|eai|fala|oi|ola|opa|salve|bom dia|boa tarde|boa noite|ei|ow|o|caos|meu|mano|ai|hein|ne)?( (caos|meu|mano|ai|hein|ne|ze))*$/;
 
+// Questionário da pesquisa (JF, 16/11): poucas perguntas, uma por vez, com "Pular". O orçamento é o último.
+export const PASSOS_PESQUISA = Object.freeze({
+  viagem: [
+    { id: 'origem', rotulo: 'Saindo de', q: 'De onde você sai? (a cidade)' },
+    { id: 'quando', rotulo: 'Quando', q: 'Quando quer ir e por quantos dias? Tipo "janeiro, 7 dias".' },
+    { id: 'pessoas', rotulo: 'Pessoas', q: 'Quantas pessoas vão?', chips: ['Só eu', '2 pessoas', 'Família'] },
+    { id: 'incluir', rotulo: 'Pesquisar', q: 'O que eu pesquiso: passagem, hotel ou os dois?', chips: ['Passagem', 'Hotel', 'Os dois'] },
+    { id: 'regiao', rotulo: 'Região ou tipo de hotel', q: 'Tem região ou tipo de hospedagem preferido? Tipo "perto da praia", "no centro", "pousada simples".' },
+    { id: 'orcamento', rotulo: 'Orçamento', q: 'E o orçamento total? Me fala tipo "até 5000". Se não tiver, diz "sem orçamento".', chips: ['Sem orçamento'] },
+  ],
+  produto: [
+    { id: 'detalhe', rotulo: 'Detalhes', q: 'Me descreve melhor: modelo, tamanho ou o que precisa ter? Tipo "300 litros, frost free".' },
+    { id: 'uso', rotulo: 'Pra quê', q: 'É pra quê? Tipo "casa com 4 pessoas", "trabalho", "presente".' },
+    { id: 'marca', rotulo: 'Marca', q: 'Tem marca preferida, ou alguma que você não quer?', chips: ['Tanto faz'] },
+    { id: 'quando', rotulo: 'Precisa pra', q: 'Precisa pra quando?', chips: ['Urgente', 'Este mês', 'Sem pressa'] },
+    { id: 'orcamento', rotulo: 'Orçamento', q: 'E o orçamento? Me fala tipo "até 5000". Se não tiver, diz "sem orçamento".', chips: ['Sem orçamento'] },
+  ],
+});
+
 // Pesquisa de compra e viagem (16/11): o que a pessoa quer pesquisar e se já disse o orçamento
 const VIAGEM = /\b(viagem|viajar|passagem|passagens|voo|voos|hotel|hospedagem|pacote de viagem)\b/;
 export function acharPesquisa(t, valor) {
@@ -1433,19 +1452,28 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       return { fato: `Você tem ${formatBRL(tot)} pra receber: ${lista}. Quando cair, toca em "Recebi" na aba Entradas do Início.`, cru: true, sugestoes: ['Dá pra gastar quanto até o salário?'] };
     }
     case 'pesquisa_compra': {
-      const { item, viagem, orcamento } = intencao;
-      if (orcamento === undefined) {
-        return {
-          fato: `Bora pesquisar ${item}! Antes, qual o seu orçamento pra ${viagem ? 'essa viagem' : 'isso'}? Me fala tipo "até 5000". Se não tiver um, diz "sem orçamento".`,
-          cru: true, sugestoes: ['Sem orçamento', 'Deixa pra depois'], aguardar: { tipo: 'pesquisa', item, viagem },
-        };
+      // JF, 16/11: "me ajuda a te ajudar". Antes de pesquisar, um questionário rápido, sem IA (não gasta crédito),
+      // pra filtrar logo de cara e fazer UMA pesquisa certeira, sem inventar número nem procurar o que não serve.
+      const { item, viagem } = intencao;
+      const passos = PASSOS_PESQUISA[viagem ? 'viagem' : 'produto'];
+      let respostas = { ...(intencao.respostas || {}) };
+      if (intencao.orcamento !== undefined && respostas.orcamento === undefined) respostas.orcamento = intencao.orcamento;
+      let passo = intencao.passo || 0;
+      while (passo < passos.length && respostas[passos[passo].id] !== undefined) passo++;
+      if (passo < passos.length) {
+        const p = passos[passo];
+        const abre = !intencao.passo ? `Bora pesquisar ${item}! Me ajuda a te ajudar: umas perguntas rápidas antes, pra eu filtrar logo de cara e não sair procurando coisa que não te serve (nem inventar número). ` : '';
+        return { fato: `${abre}${p.q}`, cru: true, sugestoes: [...(p.chips || []), 'Pular', 'Cancelar'], aguardar: { tipo: 'pesquisa', item, viagem, passo, respostas } };
       }
+      const linhas = passos.filter(p => respostas[p.id]).map(p => (p.id === 'orcamento' ? `${p.rotulo}: ${formatBRL(respostas.orcamento)}` : `${p.rotulo}: ${respostas[p.id]}`));
+      if (!respostas.orcamento) linhas.push('Orçamento: não informado');
+      const perguntaIA = `Pesquisa de ${viagem ? 'viagem' : 'compra'}: ${item}. ${linhas.join('. ')}.`.slice(0, 480);
       // sem a IA online (ou sem internet), ele dá o caminho das pedras
       const onde = viagem
-        ? 'Compare em 2 ou 3 lugares: o site das companhias (Azul, Gol, Latam) e um buscador (Google Voos, Decolar). Confira se é ida e volta, bagagem, taxas, horário e escala.'
+        ? 'Compare em 2 ou 3 lugares: o site das companhias (Azul, Gol, Latam) e um buscador (Google Voos, Decolar); pra hotel, Booking ou Airbnb filtrando a região. Confira se é ida e volta, bagagem, taxas, horário e escala.'
         : 'Compare em 2 ou 3 lojas (Mercado Livre, Amazon, Magalu) ou num comparador (Buscapé, Zoom). Confira frete, prazo, garantia, parcelamento e a reputação do vendedor.';
       const viagemTudo = viagem ? ' Numa viagem completa, some passagem, hospedagem, comida, transporte, seguro viagem e, se for pra fora, o câmbio.' : '';
-      return { fato: `${onde}${viagemTudo}${orcamento ? ` Seu teto: ${formatBRL(orcamento)}.` : ''} Com a IA online ligada, eu pesquiso os preços de hoje pra você comparar.`, cru: true, sugestoes: ['Dá pra gastar quanto até o salário?'] };
+      return { fato: `Fechou, com isso eu filtro. ${onde}${viagemTudo}${respostas.orcamento ? ` Seu teto: ${formatBRL(respostas.orcamento)}.` : ''} Com a IA online ligada, eu pesquiso os preços de hoje pra você comparar.`, cru: true, perguntaIA, modoIA: 'pesquisa', sugestoes: ['Dá pra gastar quanto até o salário?'] };
     }
     case 'moeda_jogo': {
       const { jogo, pacote } = intencao;
