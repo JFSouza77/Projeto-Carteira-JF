@@ -23,6 +23,7 @@ function fetchFalso(falhar = []) {
     if (u.includes('finance.yahoo.com')) {
       return ok({ chart: { result: [{ meta: { regularMarketPrice: 132000 }, indicators: { quote: [{ close: Array.from({ length: 30 }, (_, i) => 140000 - i * 300) }] } }] } });
     }
+    if (/sgs\.(1|21619|21623)\//.test(u)) return ok(serieAlta.map((v, i) => ({ data: `${String(i + 1).padStart(2, '0')}/10/2026`, valor: v.toFixed(4) })));
     if (u.includes('sgs.432')) return ok([{ data: '05/11/2026', valor: '10,75' }]);
     if (u.includes('sgs.4389')) return ok([{ data: '05/11/2026', valor: '10,65' }]);
     if (u.includes('sgs.13522')) return ok([{ data: '01/10/2026', valor: '4,20' }]);
@@ -57,6 +58,18 @@ test('buscarMercado monta o resumo e segue mesmo se uma fonte cair', async () =>
   const caiu = await buscarMercado(fetchFalso(['finance.yahoo.com']).f);
   assert.ok(caiu.moedas.USD && !caiu.ibov);
   assert.match(caiu.falhas.join(), /ibovespa/);
+});
+
+// JF, 16/11: "Como está o dólar?" e o dólar não tinha vindo. Sem a AwesomeAPI, o dólar vem do Banco Central.
+test('sem a AwesomeAPI, dólar, euro e libra vêm do Banco Central', async () => {
+  const r = await buscarMercado(fetchFalso(['awesomeapi']).f);
+  assert.equal(r.moedas.USD.atual, 5.4);
+  assert.equal(r.moedas.USD.tendencia, 'alta');
+  assert.equal(r.moedas.USD.fonte, 'Banco Central (PTAX)');
+  assert.ok(r.moedas.EUR && r.moedas.GBP && !r.moedas.BTC);
+  const nada = await buscarMercado(fetchFalso(['awesomeapi', 'sgs.1/']).f);
+  assert.ok(!nada.moedas.USD && nada.moedas.EUR);
+  assert.match(nada.falhas.join(), /USD do Banco Central/);
 });
 
 test('atualiza só em dia útil depois das 10h05 (Brasília) e uma vez por dia', async () => {

@@ -15,6 +15,7 @@ Depois de cada correção, escreva no Registro: o que o JF viu, a causa, o que m
 | Fatura ou limite do cartão estranho | `faturaDoCartao` (parcelas, cofrinho `comReforco`, "já usado" inicial) |
 | Conflito ao juntar com a `main` logo depois de um merge | o branch não foi recriado da `main` depois do squash (refazer: `checkout -B` da `main` + `cherry-pick` do commit novo) |
 | Botão que arrasta sai do lugar (relógio, cabeçalho) | limites do `posicionarMeAjuda` em `js/app.js` |
+| Pergunta curta cai no assunto errado ("qual a cotação?") | ordem dos `if` em `entenderSimples` e a memória `mem.conversa` (`anterior`) |
 | Teste do C.A.O.S. falha de vez em quando | lista de falas sorteada: alguma fala sem a palavra que o teste procura |
 
 ## Registro
@@ -72,3 +73,6 @@ Depois de cada correção, escreva no Registro: o que o JF viu, a causa, o que m
 | 15/11 | (JF) Não dava pra quebrar linha no chat | o campo era `input` de uma linha | `textarea` que cresce até 5 linhas; no celular o Enter quebra a linha e o botão envia; no computador Enter envia e Shift+Enter quebra | `ta.cjs` (Playwright: 3 linhas digitadas e enviadas) |
 | 15/11 | (JF) A IA online dizia "não consigo pesquisar na internet" | a rota `/ia/perguntar` não tinha a ferramenta de busca (só as notícias tinham) | `BUSCA_WEB` (até 2 buscas) na conversa, com volta automática se a IA pausar; regra no prompt: busca só o assunto, nunca dados da pessoa | `servidor/tests/worker.test.js` (precisa publicar o servidor) |
 | 16/11 | Botão "?" arrastado foi parar em cima do relógio do iPhone | limite de cima era 8px da borda da tela | limite = fim do cabeçalho da tela (que já tem o espaço do relógio); reposiciona ao trocar de aba | print com iPhone (posição salva no topo) |
+| 16/11 | Depois do Robux, "qual a cotação?" respondeu o Ibovespa | `cotacao` puxava a intenção `mercado`, sem olhar a conversa | continuação do `moeda_jogo` (memória guarda o jogo) e `perguntaIA` leva o assunto pra IA | `tests/conversa_jf_16.test.js` |
+| 16/11 | "Como está o dólar?" → "Fiz as contas pra você: Esse dado não veio" | AwesomeAPI não mandou o dólar; a falta virava fato com prefixo | sem dado: frase honesta e `semDado` manda pra IA online; servidor busca USD/EUR/GBP no Banco Central quando falta | `tests/conversa_jf_16.test.js`, `servidor/tests/mercado.test.js` |
+
