@@ -93,8 +93,9 @@ test('núcleo 1.6.0: marcos da Carteira na vida (cérebro online) e a vida fecha
 });
 
 // Núcleo 1.7.0 (JF, 16/11): jeito de falar com 2 balões, emoção no tom (também online) e chamar pelo nome
-test('núcleo 1.7.0: jeito de reagir fecha em 5 e tem o 2º balão e a emoção no tom', () => {
-  assert.equal(NUCLEO.versao, '1.7.0');
+test('núcleo 1.8.0: jeito de reagir fecha em 5 e tem o 2º balão, a emoção no tom e a cabeça meio TDAH', () => {
+  assert.equal(NUCLEO.versao, '1.8.0');
+  assert.ok(NUCLEO.jeitoDeReagir.some(x => /TDAH/.test(x) && /tangente/.test(x)));
   assert.equal(NUCLEO.jeitoDeReagir.length % 5, 0);
   assert.ok(NUCLEO.jeitoDeReagir.some(x => /segundo balão/.test(x)));
   assert.ok(NUCLEO.jeitoDeReagir.some(x => /emoção do momento/.test(x)));

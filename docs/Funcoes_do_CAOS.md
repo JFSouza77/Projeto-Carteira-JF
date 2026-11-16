@@ -1,7 +1,7 @@
 # Funções do C.A.O.S. (pra revisar)
 
 Lista feita pelo Wally em 16/11/2026, tirada do código (`js/caos/conversa.js`, função `entender()`).
-App 2.1.5 Alfa · C.A.O.S. 2.3.9 · núcleo 1.7.0. São **69 jeitos de entender** uma frase, em 7 grupos.
+App 2.1.5 Alfa · C.A.O.S. 2.4.0 · núcleo 1.8.0. São **69 jeitos de entender** uma frase, em 7 grupos.
 
 Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o que ele faz.
 - 🖥️ = responde sem internet (no próprio celular).
