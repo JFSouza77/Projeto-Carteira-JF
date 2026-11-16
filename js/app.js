@@ -27,6 +27,7 @@ import * as conta from './conta.js';
 import { criarAvatar, formaPara, configurarAvatar, FORMAS, EMO_DA_FORMA } from './avatar.js';
 
 import { $, esc, cap, centsToInput, SERVIDOR_PADRAO, state, dados, catById, srcById, definirRender } from './estado.js';
+import { addMsg, confirmarAcao, enviarPergunta, fotoNoChat, ligarTeclado, processarFila, renderChat, tirarAnexo } from './telas/chat.js';
 
 definirRender(render);
 
@@ -34,14 +35,14 @@ definirRender(render);
 // Narrador
 // ======================================================================
 
-function guardarMemoria(memoria) {
+export function guardarMemoria(memoria) {
   state.caosMemory = memoria;
   db.setMeta('caosMemory', memoria).catch(console.error);
 }
 
 // ---------- Rosto animado (sistema do Perfil JF) ----------
 
-function setRosto(el, r) {
+export function setRosto(el, r) {
   if (!el || !r) return;
   el._rosto = r;
   el.dataset.emo = r.emo;
@@ -122,7 +123,7 @@ function ligarPalco() {
 
 /** Mexe a boca dos avatares por um tempinho (enquanto ele "fala"). */
 let falaTimer = null;
-function avatarFala(ms) {
+export function avatarFala(ms) {
   clearTimeout(falaTimer);
   for (const k of ['caos', 'chat', 'painel']) avatares[k]?.falando(true);
   falaTimer = setTimeout(() => { for (const k of ['caos', 'chat', 'painel']) avatares[k]?.falando(false); }, ms);
@@ -131,9 +132,9 @@ function avatarFala(ms) {
 // Bug do JF (13/11 à noite): o rostinho roxo do balão e o nome no topo ("deboche") não batiam com o avatar
 // (humorista). Agora tudo segue a FORMA do avatar: o nome no topo, a etiqueta e a cor do balão.
 const nomeForma = f => (FORMAS[f]?.nome || 'calmo').replace(/^[^A-Za-zÀ-ú]+/, '').toLowerCase();
-const formaDaMsg = m => (FORMAS[m.forma] ? m.forma : m.digitando ? 'pensando' : formaPara({ rosto: m.rosto, assunto: m.assunto }));
+export const formaDaMsg = m => (FORMAS[m.forma] ? m.forma : m.digitando ? 'pensando' : formaPara({ rosto: m.rosto, assunto: m.assunto }));
 
-function pintarRosto(rosto, assunto = null) {
+export function pintarRosto(rosto, assunto = null) {
   const r = rosto || emocaoDoMomento(state.caosMemory, state.settings.mood).rosto
     || rostoAvulso(undefined, { mood: state.settings.mood, memory: state.caosMemory });
   const forma = formaPara({ rosto: r, assunto });
@@ -150,7 +151,7 @@ function pintarRosto(rosto, assunto = null) {
 // Anima todos os rostos na tela: troca os quadros, balança de leve, treme quando bravo (como no Perfil)
 const MOV_APARELHO = matchMedia('(prefers-reduced-motion: reduce)');
 // "Menos movimento": o que a pessoa escolheu em Ajustes; se nunca escolheu, segue o aparelho
-const MENOS_MOVIMENTO = { get matches() { return state.settings.menosMov ?? MOV_APARELHO.matches; } };
+export const MENOS_MOVIMENTO = { get matches() { return state.settings.menosMov ?? MOV_APARELHO.matches; } };
 
 /** Aplica letra, cores, velocidade da voz e menos movimento (Ajustes → Acessibilidade). */
 function aplicarAcessibilidade() {
@@ -184,7 +185,7 @@ function pintarOlho() {
   pintarRosto();
 }
 
-function narrate(events, { ignoreCooldown = false } = {}) {
+export function narrate(events, { ignoreCooldown = false } = {}) {
   const memory = ignoreCooldown ? { ...state.caosMemory, lastAt: {} } : state.caosMemory;
   const { fala, memoria } = reagir(events, { mood: state.settings.mood, memory, now: Date.now(), perfil: state.perfil });
   // ignorar cooldown nesta fala não pode apagar os cooldowns dos outros eventos
@@ -337,7 +338,7 @@ function barStyle(ratio) {
 }
 
 // Ícones de traço no lugar dos emojis (JF, 12/11: "mais limpo"). Os símbolos ficam no <svg> do index.html.
-const ic = id => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
+export const ic = id => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
 const CAT_COM_ICONE = new Set(['mercado', 'delivery', 'restaurante', 'transporte', 'moradia', 'contas', 'saude', 'lazer', 'jogos', 'streaming', 'compras', 'educacao', 'outros']);
 const FONTE_COM_ICONE = new Set(['salario', 'freela', 'rendimento', 'presente', 'outros']);
 /** Ícone da categoria: as que vêm com o app têm desenho próprio; a criada pela pessoa mantém o emoji dela. */
@@ -556,7 +557,7 @@ function renderUltimos() {
   }).join('');
 }
 
-function render() {
+export function render() {
   renderHoje();
   renderUltimos();
   const s = summarizeMonth(state.expenses, state.categories, state.viewMonth);
@@ -1224,7 +1225,7 @@ async function limparFoto({ apagar }) {
 }
 
 /** Grava um gasto (do formulário ou de uma proposta do C.A.O.S. confirmada). Devolve os eventos. */
-async function registrarGasto({ amountCents, categoryId, note, date, accountId, imageId, compromissoId, rachaNomes = null, forma = null, parcelas = 1, limiteModo = 'total' }) {
+export async function registrarGasto({ amountCents, categoryId, note, date, accountId, imageId, compromissoId, rachaNomes = null, forma = null, parcelas = 1, limiteModo = 'total' }) {
   const ofAntes = ofensivaAgora();
   // escolheu um cartão sem dizer a forma: é crédito
   if (!forma && accountId && state.accounts.find(a => a.id === accountId)?.tipo === 'cartao') forma = 'credito';
@@ -1266,7 +1267,7 @@ function avisarAntesDoSaldo(item) {
   setTimeout(() => toast(`Anotado com a data certa. O saldo de ${accountLabel(conta)} que você informou em ${dia} já inclui esse valor, então o saldo não mudou.`), 900);
 }
 
-async function registrarEntrada({ amountCents, sourceId, note, date, accountId, prevista = false }) {
+export async function registrarEntrada({ amountCents, sourceId, note, date, accountId, prevista = false }) {
   const ofAntes = ofensivaAgora();
   const income = createIncome({ amountCents, sourceId, note, date, accountId, prevista });
   await db.put(db.STORES.incomes, income);
@@ -1458,123 +1459,13 @@ async function verFoto(id) {
 // Conversa com o C.A.O.S.
 // ======================================================================
 
-function addMsg(msg) {
-  if (msg.de === 'caos' && !msg.rosto) {
-    msg.rosto = msg.temp
-      ? rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory })
-      : emocaoDoMomento(state.caosMemory, state.settings.mood).rosto
-        || rostoAvulso(undefined, { mood: state.settings.mood, memory: state.caosMemory });
-  }
-  state.chat.push(msg);
-  if (state.chat.length > 60) state.chat.splice(0, state.chat.length - 60);
-  db.setMeta('chat', state.chat.filter(m => !m.temp).map(({ url, ...m }) => m)).catch(() => {});
-  renderChat();
-}
 
-function renderChat() {
-  const log = $('#chat-log');
-  if (!state.chat.length) {
-    log.innerHTML = `<li class="msg caos-msg"><span class="who">C.A.O.S.</span>Oi! Sou o C.A.O.S. ${esc(IDENTIDADE.slogan)} Me pergunta dos seus gastos, manda "gastei 30 no mercado" ou a foto de um comprovante.</li>`;
-  } else {
-    log.innerHTML = state.chat.map((m, i) => {
-      if (m.de === 'eu') {
-        return `<li class="msg eu">${m.url ? `<img src="${esc(m.url)}" alt="Foto enviada">` : ''}${esc(m.texto || '')}</li>`;
-      }
-      const acao = m.acao && !m.acaoFeita
-        ? `<div class="acao"><button class="sim" data-acao="${i}" data-ok="1">${ic('i-ok')} Confirmar</button><button class="nao" data-acao="${i}" data-ok="0">Cancelar</button></div>`
-        : '';
-      const f = formaDaMsg(m), fcor = FORMAS[f]?.cor || 'var(--caos)';
-      if (m.digitando) return `<li class="msg caos-msg pensando digitando" style="--msg-cor:${fcor}" aria-label="C.A.O.S. está digitando"><span class="who" aria-hidden="true"><span class="caos-face mini" data-msg="${i}"></span></span><span class="pontos" aria-hidden="true"><i></i><i></i><i></i></span> digitando</li>`;
-      return `<li class="msg caos-msg ${m.temp ? 'pensando' : ''}" style="--msg-cor:${fcor}"><span class="who" aria-label="C.A.O.S.${m.ia ? ' com IA' : ''}"><span class="caos-face mini" data-msg="${i}" aria-hidden="true"></span>${m.ia ? '<span class="tag-ia">IA</span>' : ''}</span>${textoDaMsg(m.texto)}${acao}</li>`;
-    }).join('');
-    // rostinho no balão (JF, 13/11 à noite: "emoji quebra a lógica; os rostinhos é que dão a característica dele").
-    // Combina com o avatar: o rosto da própria fala, se já bate com a forma; senão, o rostinho da forma. Mesma cor.
-    for (const el of log.querySelectorAll('[data-msg]')) {
-      const i = Number(el.dataset.msg), m = state.chat[i];
-      if (!m) continue;
-      const f = formaDaMsg(m);
-      const r = m.rosto?.quadros && formaPara({ rosto: m.rosto }) === f ? m.rosto : rostoDaEmo(EMO_DA_FORMA[f] || 'calmo', i);
-      setRosto(el, r);
-      if (FORMAS[f]) el.style.setProperty('--emo-cor', FORMAS[f].cor);
-    }
-  }
-  const ult = [...state.chat].reverse().find(m => m.de === 'caos');
-  const sug = ult?.sugestoes?.length ? ult.sugestoes : SUGESTOES.slice(0, 6);
-  // atalhos pras outras abas (ideia do AI Studio, 13/11): só levam até lá, nunca fazem nada sozinhos
-  const ATALHOS = [['#lancar', 'i-lancar', 'Lançar'], ['#contas', 'i-contas', 'Contas'], ['#mes', 'i-mes', 'Mês']];
-  $('#chat-suggestions').innerHTML = sug.map(s => `<button type="button" class="chip" data-sug="${esc(s)}">${esc(s)}</button>`).join('')
-    + (state.onboarding || state.fluxoMeta ? [] : ATALHOS).map(([h, i, t]) => `<button type="button" class="chip atalho" data-ir="${h}" aria-label="Ir para ${t}">${ic(i)} ${t}</button>`).join('');
-  if (!$('#tela-conversa').hidden) window.scrollTo(0, document.body.scrollHeight);
-}
-
-const IA_POR_DIA = 20;
-const iaRecentes = new Map(); // pergunta → { texto, em }: some quando o app fecha
-async function usoDaIAHoje() {
-  const u = await db.getMeta('iaUso', null).catch(() => null);
-  return u && u.dia === toISODate() ? u : { dia: toISODate(), n: 0 };
-}
-
-async function enviarPergunta(texto, { doPrint = false } = {}) {
-  const t = String(texto || '').trim();
-  if (!t) return;
-  if (state.onboarding) return onboardingResposta(t);
-  if (state.metaFlow) return metaResposta(t);
-  if (!doPrint) addMsg({ de: 'eu', texto: t });
-  const { fala, memoria } = conversar(t, dados(), { mood: state.settings.mood, memory: state.caosMemory, now: Date.now(), perfil: state.perfil });
-  guardarMemoria(memoria);
-  pintarRosto(fala.rosto, fala.intent);
-
-  // Travas de crédito no aparelho (15/11, JF: "IA de bolso, sem abusar"): a mesma pergunta na última meia hora usa a
-  // resposta guardada; e cada aparelho manda no máximo IA_POR_DIA perguntas por dia pra IA (o servidor tem os dele).
-  const chaveIA = t.toLowerCase().replace(/\s+/g, ' ').trim();
-  const repetida = iaRecentes.get(chaveIA);
-  if (!fala.entendeu && repetida && Date.now() - repetida.em < 30 * 60_000) {
-    addMsg({ de: 'caos', texto: repetida.texto, ia: true, sugestoes: SUGESTOES.slice(0, 5), rosto: fala.rosto });
-    return;
-  }
-  const usoIA = await usoDaIAHoje();
-  const iaCansada = !fala.entendeu && state.settings.aiOn && state.settings.aiUrl && usoIA.n >= IA_POR_DIA;
-  if (iaCansada) {
-    fala.texto = `Por hoje a minha IA online já respondeu ${IA_POR_DIA} perguntas: sou uma IA de bolso e economizo pra não pesar no bolso de ninguém. Amanhã eu volto com tudo! Enquanto isso, pergunta dos seus gastos que eu respondo aqui mesmo.`;
-  } else if (!fala.entendeu && state.settings.aiOn && state.settings.aiUrl) {
-    const pensando = rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory });
-    pintarRosto(pensando);
-    addMsg({ de: 'caos', texto: 'Deixa eu pensar com a IA…', temp: true, rosto: pensando });
-    try {
-      const resposta = await ia.perguntar(state.settings.aiUrl, { pergunta: t, humor: state.settings.mood, dados: dados() });
-      await db.setMeta('iaUso', { dia: toISODate(), n: usoIA.n + 1 });
-      iaRecentes.set(chaveIA, { texto: resposta, em: Date.now() });
-      state.chat = state.chat.filter(m => !m.temp);
-      addMsg({ de: 'caos', texto: resposta, ia: true, sugestoes: SUGESTOES.slice(0, 5), rosto: fala.rosto });
-      pintarRosto(fala.rosto);
-      if (state.settings.voice) falar(resposta);
-      return;
-    } catch (e) {
-      state.chat = state.chat.filter(m => !m.temp);
-      const guardou = fala.palpite ? false : await guardarPergunta(t);
-      addMsg({ de: 'caos', texto: `${fala.texto}${guardou ? ' A IA online não respondeu agora, mas guardei sua pergunta e trago a resposta depois.' : ` (A IA online não respondeu: ${e.message})`}`, sugestoes: fala.sugestoes, rosto: fala.rosto });
-      pintarRosto(fala.rosto);
-      return;
-    }
-  }
-  if (!iaCansada && !fala.entendeu && !fala.palpite && await guardarPergunta(t)) {
-    // Fila geral (1.6.0): o que ele não sabe vai pro servidor quando der; a resposta volta na conversa.
-    fala.texto = 'Ainda não sei responder isso, mas guardei sua pergunta. Quando eu tiver conexão com o servidor do C.A.O.S. Finanças, eu trago a resposta aqui.';
-  }
-  await respiro(fala.texto);
-  addMsg({ de: 'caos', texto: fala.texto, sugestoes: fala.sugestoes, acao: fala.acao, rosto: fala.rosto, assunto: fala.intent });
-  pintarRosto(fala.rosto, fala.intent);
-  avatarFala(Math.min(2600, 400 + fala.texto.length * 22));
-  if (state.settings.voice) falar(fala.texto, fala.emocao);
-  if (fala.filaIA) await perguntaPraDepois(fala.filaIA);
-  if (fala.fluxoMeta) iniciarMeta(fala.fluxoMeta.nome, { jaFalou: true });
-  if (fala.modoFoto) state.modoFoto = { tipo: fala.modoFoto, duvida: t, ate: Date.now() + 10 * 60_000 };
-}
+ // pergunta → { texto, em }: some quando o app fecha
 
 // ---------- Metas montadas junto (1.8.0) ----------
 // O C.A.O.S. pergunta (pra quê, quanto, quanto já tem, até quando) e PROPÕE; a meta só é gravada no Confirmar (1ª lei).
 
-function iniciarMeta(nome = null, { jaFalou = false } = {}) {
+export function iniciarMeta(nome = null, { jaFalou = false } = {}) {
   state.metaFlow = { passo: nome ? 'quanto' : 'pra_que', dados: { nome } };
   if (location.hash.slice(1) !== 'conversa') location.hash = 'conversa';
   if (nome) caosDiz('meta_quanto', { meta: nome }, ['Cancelar']);
@@ -1585,7 +1476,7 @@ function iniciarMeta(nome = null, { jaFalou = false } = {}) {
   }
 }
 
-async function metaResposta(t) {
+export async function metaResposta(t) {
   const f = state.metaFlow;
   const d = f.dados;
   addMsg({ de: 'eu', texto: t });
@@ -1626,7 +1517,7 @@ async function metaResposta(t) {
   }
 }
 
-async function salvarMetas(lista) {
+export async function salvarMetas(lista) {
   state.metas = lista;
   await db.setMeta('metas', lista);
   renderMetas();
@@ -1670,7 +1561,7 @@ function renderMetas() {
   }));
 }
 
-async function guardarEmMeta(id, valorCents) {
+export async function guardarEmMeta(id, valorCents) {
   const m = state.metas.find(x => x.id === id);
   if (!m) return;
   const { meta, batidaAgora } = guardarNaMeta(m, valorCents);
@@ -1684,307 +1575,23 @@ async function guardarEmMeta(id, valorCents) {
   }
 }
 
-// Respiro antes da resposta (pedido do JF, 06/11): instantâneo demais "dá medo e quebra a imersão".
-// 0,6 a 1,8 s conforme o tamanho da resposta; com "menos movimento", espera curta e sem animação. Não trava nada.
-const tempoDePensar = (texto, menosMovimento = false) =>
-  menosMovimento ? 300 : Math.round(Math.min(1800, Math.max(600, 450 + String(texto || '').length * 9)));
-
-async function respiro(texto) {
-  const id = `d${Date.now()}${Math.random()}`;
-  const pensando = rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory });
-  pintarRosto(pensando);
-  addMsg({ de: 'caos', texto: 'digitando…', temp: id, digitando: true, rosto: pensando });
-  const espera = tempoDePensar(texto, MENOS_MOVIMENTO.matches);
-  avatarFala(espera);
-  await new Promise(r => setTimeout(r, espera));
-  state.chat = state.chat.filter(m => m.temp !== id);
-}
 
 // ---------- "Amanhã eu trago": perguntas que precisam do servidor ----------
 
-async function perguntaPraDepois(item) {
-  const pronto = state.settings.aiOn && state.settings.aiUrl && navigator.onLine;
-  if (pronto) {
-    const pensando = rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory });
-    addMsg({ de: 'caos', texto: 'Vou buscar a comparação com a IA…', temp: true, rosto: pensando });
-    try {
-      const texto = await ia.perguntarBancos(state.settings.aiUrl, { bancos: item.bancos, cdi: state.mercado?.cdi?.valor });
-      state.chat = state.chat.filter(m => !m.temp);
-      addMsg({ de: 'caos', ia: true, texto });
-      return;
-    } catch {
-      state.chat = state.chat.filter(m => !m.temp);
-    }
-  }
-  const fila = (await db.getMeta('fila', [])).filter(x => x.tipo !== item.tipo);
-  fila.push({ ...item, id: crypto.randomUUID?.() || String(Date.now()), criadoEm: Date.now() });
-  await db.setMeta('fila', fila);
-  addMsg({ de: 'caos', texto: 'Hoje eu não consigo trazer a comparação certinha, mas guardei sua pergunta. Assim que eu tiver conexão com o servidor do C.A.O.S. Finanças, eu trago a resposta aqui. 😉' });
-}
 
 /** Guarda uma pergunta que ele não soube responder (até 10, sem repetir). Devolve true se guardou. */
-async function guardarPergunta(pergunta) {
-  try {
-    const fila = await db.getMeta('fila', []);
-    const p = String(pergunta).trim().slice(0, 300);
-    if (!p || fila.some(x => x.tipo === 'pergunta' && x.pergunta.toLowerCase() === p.toLowerCase())) return true;
-    const perguntas = fila.filter(x => x.tipo === 'pergunta');
-    if (perguntas.length >= 10) return false;
-    fila.push({ tipo: 'pergunta', pergunta: p, id: crypto.randomUUID?.() || String(Date.now()), criadoEm: Date.now() });
-    await db.setMeta('fila', fila);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 /** Responde o que ficou na fila, quando o servidor estiver ao alcance; entrega na conversa e no balão. */
-async function processarFila() {
-  if (!(state.settings.aiOn && state.settings.aiUrl && navigator.onLine)) return;
-  const fila = await db.getMeta('fila', []);
-  if (!fila.length) return;
-  const resta = [];
-  for (const item of fila) {
-    try {
-      if (item.tipo === 'pergunta') {
-        const texto = await ia.perguntar(state.settings.aiUrl, { pergunta: item.pergunta, humor: state.settings.mood, dados: dados() });
-        const nome = state.perfil?.apelido;
-        addMsg({ de: 'caos', ia: true, texto: `Ei${nome ? `, ${nome}` : ''}, sabe aquela sua pergunta? "${item.pergunta}" Agora eu consigo responder: ${texto}` });
-        $('#caos-line').textContent = 'Lembra daquela pergunta? Agora eu sei responder. Toca aqui pra ver.';
-        continue;
-      }
-      if (item.tipo === 'explicar') {
-        const img = await imagens.pegar(item.imagemId);
-        if (!img) continue; // a foto foi apagada: tira da fila
-        const texto = await ia.explicarImagem(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob), duvida: item.duvida, humor: state.settings.mood });
-        const nome = state.perfil?.apelido;
-        addMsg({ de: 'caos', ia: true, texto: `Ei${nome ? `, ${nome}` : ''}, sabe aquele print do banco que você me mandou? Agora eu consigo explicar: ${texto}` });
-        $('#caos-line').textContent = 'Expliquei aquele print do banco. Toca aqui pra ver.';
-        continue;
-      }
-      if (item.tipo !== 'bancos') continue;
-      const texto = await ia.perguntarBancos(state.settings.aiUrl, { bancos: item.bancos, cdi: state.mercado?.cdi?.valor });
-      addMsg({ de: 'caos', ia: true, texto: `Lembra que você perguntou qual banco rende mais? Trouxe: ${texto}` });
-      $('#caos-line').textContent = 'Trouxe a resposta que eu fiquei devendo. Toca aqui pra ver.';
-    } catch {
-      resta.push(item);
-    }
-  }
-  await db.setMeta('fila', resta);
-}
-
-async function confirmarAcao(i, ok) {
-  const m = state.chat[i];
-  if (!m?.acao || m.acaoFeita) return;
-  m.acaoFeita = true;
-  if (!ok) {
-    addMsg({ de: 'caos', texto: 'Cancelado. Nada foi anotado.' });
-    return;
-  }
-  try {
-    const a = m.acao;
-    // sem conta cadastrada, gasto e entrada esperam (Anne, 15/11): primeiro a conta
-    if (['registrar_gasto', 'registrar_entrada', 'registrar_varios'].includes(a.tipo) && !state.accounts.some(x => x.tipo !== 'cartao')) {
-      m.acaoFeita = false;
-      addMsg({ de: 'caos', texto: 'Antes de anotar, cadastra uma conta (o banco e o saldo, nada de senha). Toca em Contas aqui embaixo, ou no passo 2 do "Comece por aqui", que eu te levo.' });
-      return;
-    }
-    if (a.tipo === 'criar_meta') {
-      await salvarMetas([...state.metas, a.meta]);
-      addMsg({ de: 'caos', texto: `Meta ${a.meta.nome} salva! Ela fica na aba 📅 Mês. Quando guardar dinheiro, me fala "guardei 50 na meta ${a.meta.nome}" que eu somo.` });
-      return;
-    }
-    if (a.tipo === 'meta_guardar') {
-      await guardarEmMeta(a.metaId, a.valorCents);
-      return;
-    }
-    if (a.tipo === 'mudar_apelido') {
-      state.perfil = { ...(state.perfil || {}), apelido: a.apelido, nome: state.perfil?.nome || a.apelido };
-      await db.setMeta('perfil', state.perfil);
-      renderPerfil();
-      addMsg({ de: 'caos', texto: `Fechado! A partir de agora te chamo de ${a.apelido}.` });
-      return;
-    }
-    if (a.tipo === 'definir_piso') {
-      const conta = state.accounts.find(x => x.id === a.accountId);
-      if (!conta) { addMsg({ de: 'caos', texto: 'Não achei mais essa conta.' }); return; }
-      const novo = editarConta(conta, { pisoCents: a.pisoCents }, { accounts: state.accounts });
-      await db.put(db.STORES.accounts, novo);
-      state.accounts = state.accounts.map(x => (x.id === novo.id ? novo : x));
-      renderContas(); render();
-      addMsg({ de: 'caos', texto: `Piso de ${accountLabel(novo)} salvo: ${formatBRL(a.pisoCents)}. Quando o saldo chegar perto, eu aviso.` });
-      return;
-    }
-    if (a.tipo === 'editar_data') {
-      // "esse gasto foi na quarta" (14/11): o C.A.O.S. propõe, a pessoa confirma, o app grava
-      const x = state.expenses.find(e => e.id === a.expenseId);
-      if (!x) { addMsg({ de: 'caos', texto: 'Não achei mais esse gasto. Ele foi apagado?' }); return; }
-      const novo = editarLancamento(x, { amountCents: x.amountCents, note: x.note, date: a.date, categoryId: x.categoryId }, { kind: 'gasto', categories: state.categories });
-      await db.put(db.STORES.expenses, novo);
-      state.expenses = state.expenses.map(e => (e.id === x.id ? novo : e));
-      render();
-      addMsg({ de: 'caos', texto: `Pronto: agora está no dia ${Number(a.date.slice(8, 10))}/${Number(a.date.slice(5, 7))}.` });
-      return;
-    }
-    if (a.tipo === 'registrar_varios') {
-      let eventos = [];
-      for (const x of a.itens) eventos = await registrarGasto({ ...x, imageId: a.imageId });
-      const total = a.itens.reduce((t, x) => t + x.amountCents, 0);
-      const fala = narrate(eventos, { ignoreCooldown: true });
-      addMsg({ de: 'caos', texto: `Anotei os ${a.itens.length} pagamentos (${formatBRL(total)}).${fala ? ` ${fala.texto}` : ''}`, rosto: fala?.rosto });
-      return;
-    }
-    const events = a.tipo === 'registrar_entrada'
-      ? await registrarEntrada({ amountCents: a.amountCents, sourceId: a.sourceId, note: a.note, date: a.date, accountId: a.accountId || null, prevista: !!a.prevista })
-      : await registrarGasto({ amountCents: a.amountCents, categoryId: a.categoryId, note: a.note, date: a.date, imageId: a.imageId, compromissoId: a.compromissoId, accountId: a.accountId,
-          forma: a.forma || null, parcelas: a.parcelas || 1, limiteModo: a.limiteModo || 'total' });
-    if (a.compromissoId) renderMes();
-    const fala = narrate(events, { ignoreCooldown: true });
-    addMsg({ de: 'caos', texto: fala ? fala.texto : 'Anotado!', rosto: fala?.rosto });
-    // JF, 14/11: lançamento com data de antes do saldo informado já está dentro dele; o C.A.O.S. explica
-    const conta = a.accountId && state.accounts.find(x => x.id === a.accountId && x.tipo !== 'cartao');
-    if (conta && a.date && !depoisDoSaldo({ date: a.date, createdAt: Date.now() }, conta)) {
-      addMsg({ de: 'caos', texto: `Só lembrando: como isso foi dia ${Number(a.date.slice(8, 10))}/${Number(a.date.slice(5, 7))}, antes do saldo de ${accountLabel(conta)} que você informou, o valor já está dentro dele. Anotei pra conta do mês, mas o saldo do banco não mudou.` });
-    }
-    if (state.settings.voice && fala) falar(fala.texto, fala.emocao);
-  } catch (e) {
-    m.acaoFeita = false;
-    addMsg({ de: 'caos', texto: `Não consegui anotar: ${e.message}` });
-  }
-}
 
 /** "Explica esse print": a pessoa pediu, então a imagem vai pro servidor; sem conexão, fica na fila (a foto fica no aparelho). */
-async function explicarPrint(img, duvida) {
-  const pronto = state.settings.aiOn && state.settings.aiUrl && navigator.onLine;
-  if (pronto) {
-    await respiro('Deixa eu olhar com calma o que o banco quis dizer.');
-    addMsg({ de: 'caos', texto: 'Olhando o print com a IA…', temp: true, rosto: rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory }) });
-    try {
-      const texto = await ia.explicarImagem(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob), duvida, humor: state.settings.mood });
-      state.chat = state.chat.filter(m => !m.temp);
-      addMsg({ de: 'caos', ia: true, texto });
-      if (state.settings.voice) falar(texto);
-      return;
-    } catch {
-      state.chat = state.chat.filter(m => !m.temp);
-    }
-  }
-  const fila = await db.getMeta('fila', []);
-  fila.push({ tipo: 'explicar', imagemId: img.id, duvida: String(duvida || '').slice(0, 300), id: crypto.randomUUID?.() || String(Date.now()), criadoEm: Date.now() });
-  await db.setMeta('fila', fila);
-  addMsg({ de: 'caos', texto: 'Agora eu não consigo falar com o servidor do C.A.O.S. Finanças, mas guardei o print aqui no aparelho. Assim que tiver conexão, eu explico e te aviso.' });
-}
-
-// Negrito simples (14/11: a IA às vezes manda **R$ 238,58** e os asteriscos apareciam). Escapa antes, então é seguro.
-const textoDaMsg = t => esc(t || '').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*\*/g, '');
-
-// Teclado do iPhone (14/11, JF: "as barras descem junto com a tela"): quando o teclado fecha, o iPhone às vezes deixa
-// as barras de baixo no meio da tela. O app percebe o teclado, esconde a barra de abas enquanto ele está aberto e,
-// quando fecha, dá um "empurrãozinho" na rolagem pra ele recalcular o lugar das barras.
-function ligarTeclado() {
-  const vv = window.visualViewport;
-  if (!vv) return;
-  let aberto = false;
-  const conferir = () => {
-    const agora = innerHeight - vv.height > 140;
-    if (agora === aberto) return;
-    aberto = agora;
-    document.body.classList.toggle('teclado', aberto);
-    if (!aberto) requestAnimationFrame(() => { window.scrollTo(window.scrollX, window.scrollY + 1); window.scrollTo(window.scrollX, window.scrollY - 1); });
-  };
-  vv.addEventListener('resize', conferir);
-  document.addEventListener('focusout', () => setTimeout(() => {
-    conferir();
-    if (!document.activeElement?.matches?.('input, textarea, select')) window.scrollTo(window.scrollX, window.scrollY);
-  }, 60));
-}
-
-function tirarAnexo() {
-  state.fotoPendente = null;
-  $('#chat-anexo').hidden = true;
-  const img = $('#chat-anexo-img');
-  if (img.src) { URL.revokeObjectURL(img.src); img.removeAttribute('src'); }
-  $('#chat-input').placeholder = 'Pergunte ao C.A.O.S.…';
-}
-
-async function fotoNoChat(arquivo, legenda = '') {
-  try {
-    const img = await imagens.guardar(arquivo, 'chat');
-    addMsg({ de: 'eu', texto: legenda, url: URL.createObjectURL(img.blob), imagemId: img.id });
-    // a legenda também diz o que fazer (14/11): "explica esse print", "qual oferta é melhor?"
-    const pedeExplicar = /\b(explica|explique|o que (e|é|significa)|nao entendi|não entendi|que cobranca|que cobrança)\b/i.test(legenda);
-    const pedeOferta = /\b(oferta|ofertas|compar|qual (e |é )?(melhor|mais barat)|vale a pena)\b/i.test(legenda);
-    const explicar = pedeExplicar ? { duvida: legenda } : state.modoFoto?.tipo === 'explicar' && state.modoFoto.ate > Date.now() ? state.modoFoto : null;
-    // print de oferta (13/11): quando o C.A.O.S. pediu o print ou tem uma comparação aberta
-    const ofertas = pedeOferta || (state.modoFoto?.tipo === 'ofertas' && state.modoFoto.ate > Date.now()) || state.caosMemory?.aguardando?.tipo === 'ofertas';
-    state.modoFoto = null;
-    if (explicar) return explicarPrint(img, explicar.duvida);
-    if (ofertas) return lerPrintDeOferta(img);
-    if (!(state.settings.aiOn && state.settings.aiUrl)) {
-      addMsg({ de: 'caos', texto: 'Guardei a foto. Pra eu ler o valor sozinho, ative a IA online em Ajustes. Ou me diz: "gastei 30 no mercado".' });
-      return;
-    }
-    addMsg({ de: 'caos', texto: 'Lendo a foto com a IA…', temp: true });
-    const r = await ia.lerImagem(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob), categorias: state.categories, legenda });
-    state.chat = state.chat.filter(m => !m.temp);
-    const cat = catById(r.categoria) || catById('outros');
-    // vários pagamentos no mesmo print (14/11, JF: "leu os 5 e só lançou 1"): um Confirmar lança todos
-    const itens = Array.isArray(r.itens) ? r.itens.filter(x => x.valor_centavos > 0) : [];
-    if (itens.length > 1) {
-      const hoje = toISODate();
-      const lista = itens.map(x => {
-        const c = catById(x.categoria) || catById(sugerirCategoria(x.estabelecimento, state.expenses)?.categoryId) || catById('outros');
-        return { amountCents: x.valor_centavos, categoryId: c.id, date: /^\d{4}-\d{2}-\d{2}$/.test(x.data || '') ? x.data : hoje, note: (x.estabelecimento || '').slice(0, 120) };
-      });
-      const total = lista.reduce((t, x) => t + x.amountCents, 0);
-      const linhas = lista.map((x, i) => `${i + 1}. ${x.note || 'Sem nome'}: ${formatBRL(x.amountCents)} em ${catById(x.categoryId).name} (${x.date.slice(8)}/${x.date.slice(5, 7)})`).join('\n');
-      addMsg({
-        de: 'caos', ia: true,
-        texto: `Achei ${lista.length} pagamentos, total ${formatBRL(total)}:\n${linhas}\nAnoto todos?${r.confianca === 'baixa' ? ' Li com pouca certeza, confere os valores.' : ''} Se algum sair errado, dá pra corrigir no lápis depois.`,
-        acao: { tipo: 'registrar_varios', itens: lista, imageId: img.id },
-      });
-      return;
-    }
-    if (r.valor_centavos > 0) {
-      addMsg({
-        de: 'caos', ia: true,
-        texto: `${r.resumo || 'Li o comprovante.'} Anotar ${formatBRL(r.valor_centavos)} em ${cat.name}${r.estabelecimento ? ` (${r.estabelecimento})` : ''}?${r.confianca === 'baixa' ? ' Li com pouca certeza, confere o valor.' : ''}`,
-        acao: { tipo: 'registrar_gasto', amountCents: r.valor_centavos, categoryId: cat.id, date: /^\d{4}-\d{2}-\d{2}$/.test(r.data || '') ? r.data : toISODate(), note: (r.estabelecimento || '').slice(0, 120), imageId: img.id },
-      });
-    } else {
-      addMsg({ de: 'caos', ia: true, texto: r.resumo || 'Não achei um valor nessa imagem.' });
-    }
-  } catch (e) {
-    state.chat = state.chat.filter(m => !m.temp);
-    addMsg({ de: 'caos', texto: e.message || 'Não consegui ler a foto.' });
-  }
-}
 
 /** Print de oferta (13/11): a IA lê loja, preço, parcelas e frete; vira a mesma frase que a pessoa escreveria. */
-async function lerPrintDeOferta(img) {
-  if (!(state.settings.aiOn && state.settings.aiUrl)) {
-    addMsg({ de: 'caos', texto: 'Pra eu ler o print sozinho, preciso da IA online (Ajustes → IA online). Enquanto isso, me escreve: "geladeira 3500 no mercado livre e 3400 na amazon".' });
-    return;
-  }
-  addMsg({ de: 'caos', texto: 'Lendo a oferta do print…', temp: true, rosto: rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory }) });
-  try {
-    const lido = await ia.lerOfertas(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob) });
-    state.chat = state.chat.filter(m => !m.temp);
-    const frase = fraseDoPrint(lido);
-    if (!frase) return addMsg({ de: 'caos', ia: true, texto: 'Não achei preço de loja nesse print. Manda um print que mostre o preço e o nome da loja, ou me escreve os valores.' });
-    addMsg({ de: 'caos', ia: true, texto: resumoDoPrint(lido) });
-    await enviarPergunta(frase, { doPrint: true });
-  } catch (e) {
-    state.chat = state.chat.filter(m => !m.temp);
-    addMsg({ de: 'caos', texto: e.message || 'Não consegui ler o print.' });
-  }
-}
 
 // ======================================================================
 // Contas
 // ======================================================================
 
-function renderContas() {
+export function renderContas() {
   renderInvestimentos();
   renderTransf();
   $('#bank-total').textContent = saldoTxt(totalBalance(state.accounts, state.expenses, state.incomes, state.transferencias));
@@ -2676,7 +2283,7 @@ function textoStatus(c) {
   return c.diasParaVencer === 0 ? 'vence hoje' : c.diasParaVencer === 1 ? 'vence amanhã' : `vence dia ${c.diaNoMes} (em ${c.diasParaVencer} dias)`;
 }
 
-function renderMes() {
+export function renderMes() {
   renderMetas();
   const hoje = toISODate();
   const a = analisarPlanejamento(dados(), hoje);
@@ -2865,7 +2472,7 @@ async function removerPlano(id) {
 
 const FOCOS = ['Controlar o dia a dia', 'Sair do vermelho', 'Juntar dinheiro', 'Organizar contas e planos', 'Entender investimentos'];
 
-function renderPerfil() {
+export function renderPerfil() {
   const p = state.perfil;
   const idade = idadeDe(p?.aniversario, toISODate());
   $('#perfil-resumo').textContent = p?.apelido
@@ -3191,7 +2798,7 @@ function sugestoesFoco() {
   return [...FOCOS.map(x => (f.includes(x) ? `✓ ${x}` : x)), 'Pronto'];
 }
 
-async function onboardingResposta(t) {
+export async function onboardingResposta(t) {
   const o = state.onboarding;
   const d = o.dados;
   if (/^j[aá] tenho conta/i.test(t)) {
