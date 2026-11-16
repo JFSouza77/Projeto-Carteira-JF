@@ -41,6 +41,7 @@ test('2 balões: no Ácido a cutucada vem separada; no Suave às vezes um "ah, e
 
 test('nome na frente: "Você" vira "você" (acento no fim da palavra)', () => {
   let m, achou = false;
-  for (let i = 0; i < 4; i++) { const r = conversar('quanto gastei este mês?', d, { memory: m, mood: 'suave', now: now + i * 60_000, perfil: { apelido: 'Teste' } }); m = r.memoria; if (/^Teste, você gastou/.test(r.fala.texto)) achou = true; assert.doesNotMatch(r.fala.texto, /Teste, Você/); }
+  // 2.1.3.2: 20 voltas e qualquer frase depois do nome (com 4 voltas dependia da sorte do sorteio e falhava às vezes)
+  for (let i = 0; i < 20; i++) { const r = conversar('quanto gastei este mês?', d, { memory: m, mood: 'suave', now: now + i * 60_000, perfil: { apelido: 'Teste' } }); m = r.memoria; if (/^Teste, [a-zà-ú]/.test(r.fala.texto)) achou = true; assert.doesNotMatch(r.fala.texto, /Teste, Você/); }
   assert.ok(achou);
 });

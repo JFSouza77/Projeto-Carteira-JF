@@ -8,7 +8,7 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.1.3 Alfa',
-    ate: '2.1.3.1',
+    ate: '2.1.3.2',
     data: '16/11/2026',
     nome: 'Amigo de Verdade',
     t: 'O C.A.O.S. fala como amigo no WhatsApp, sente junto e dá baixa nas contas pela conversa.',
@@ -20,6 +20,7 @@ export const NOVIDADES = Object.freeze([
     ],
     qol: [
       '🔤 Nome na frente: quando ele te chama pelo nome, a frase continua certinha, sem letra maiúscula fora do lugar.',
+      '🎭 Rostinho combina: no Chat e no Início, o rostinho do C.A.O.S. agora é sempre o do avatar que aparece.',
       '📊 Uso da IA: em Ajustes, no quadro IA online, veja quantas respostas do mês saíram do aparelho e quantas da IA.',
       '🔊 Voz mais limpa: com a voz ligada, o C.A.O.S. não lê mais símbolos de formatação no meio da frase.',
     ],
