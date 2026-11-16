@@ -1352,6 +1352,16 @@ export function lerAniversario(texto, today = toISODate()) {
 // O cartão fica junto das contas (tipo "cartao"): limite, dia de fechamento e de vencimento. O gasto lançado "no
 // cartão" (accountId) entra na fatura aberta. O app não acessa o cartão: o que já estava usado a pessoa informa.
 
+/**
+ * Recomeçar (JF, 16/11: "zerar os valores dos bancos sem apagar os bancos, pra começar dezembro certinho").
+ * Devolve cópias novas: conta com saldo 0 a partir de agora (o que foi lançado antes deixa de contar), cartão com
+ * "já usado" 0 a partir de agora. Banco, apelido, tipo, piso, limite e datas do cartão continuam iguais.
+ */
+export function zerarSaldos(accounts, { now = new Date() } = {}) {
+  const em = now.getTime();
+  return accounts.map(a => (a.tipo === 'cartao' ? { ...a, usadoInicialCents: 0, balanceAt: em } : { ...a, balanceCents: 0, balanceAt: em }));
+}
+
 export function createCartao({ bank, nickname = '', limiteCents, fechamentoDia, vencimentoDia, usadoCents = 0 }, { now = new Date(), id } = {}) {
   const b = String(bank || '').trim();
   if (!b) throw new Error('Escolha o banco do cartão.');

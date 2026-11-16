@@ -9,7 +9,7 @@ import { NUCLEO } from '../caos/nucleo.js';
 import { calcularJuros } from '../caos/conversa.js';
 import * as db from '../db.js';
 import { ditadoDisponivel, vozDisponivel } from '../voz.js';
-import { formatBRL, parseAmount, toISODate, validarBackup } from '../engine.js';
+import { formatBRL, parseAmount, toISODate, validarBackup, zerarSaldos } from '../engine.js';
 import * as lembretes from '../notificacoes.js';
 import { prepararFormCompromisso, renderMetas } from './mes.js';
 import { renderInvestimentos } from './contas.js';
@@ -276,4 +276,29 @@ export async function abrirNovidades() {
 export function renderAvisoNovidade() {
   $('#novidade-aviso').hidden = !temNovidade(state.novidadesVistas);
   $('#novidades-versao').textContent = `Versão ${VERSAO_APP} · o que mudou no app`;
+}
+
+// ---------- Recomeçar (JF, 16/11: "zerar os valores dos bancos sem apagar os bancos; vou começar de verdade em dezembro") ----------
+// Duas opções. As duas mantêm bancos, cartões, pisos, contas fixas, planos, metas, categorias e ajustes.
+// Quem grava é a UI (via db.js); cada mudança é marcada pra sincronizar com a conta, se tiver.
+export async function zerarSaldosDosBancos({ perguntar = true } = {}) {
+  if (!state.accounts.length) { toast('Ainda não tem banco cadastrado.'); return false; }
+  if (perguntar && !confirm('Zerar os saldos de todos os bancos e o "já usado" dos cartões? Os bancos continuam; os lançamentos ficam no histórico. Depois é só atualizar o saldo de cada um.')) return false;
+  const novos = zerarSaldos(state.accounts);
+  await db.putMany(db.STORES.accounts, novos);
+  state.accounts = novos;
+  return true;
+}
+
+export async function comecarDoZero() {
+  if (!confirm('Começar do zero? Os saldos zeram e TODOS os gastos, entradas (inclusive as previstas) e transferências são apagados. Bancos, cartões, contas fixas, planos e metas continuam.')) return false;
+  if (!confirm('Tem certeza? Isso não dá pra desfazer (a não ser com um backup).')) return false;
+  const [gastos, entradas] = await Promise.all([db.getAll(db.STORES.expenses), db.getAll(db.STORES.incomes)]);
+  for (const g of gastos) await db.remove(db.STORES.expenses, g.id);
+  for (const e of entradas) await db.remove(db.STORES.incomes, e.id);
+  await db.setMeta('transferencias', []);
+  if (state.perfil) { state.perfil = { ...state.perfil, diasSemGasto: [], mesesSemEntrada: [] }; await db.setMeta('perfil', state.perfil); }
+  Object.assign(state, { expenses: [], incomes: [], previstas: [], transferencias: [] });
+  await zerarSaldosDosBancos({ perguntar: false });
+  return true;
 }

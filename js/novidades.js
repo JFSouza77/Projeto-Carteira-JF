@@ -7,6 +7,19 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.1.2 Alfa',
+    data: '16/11/2026',
+    nome: 'Recomeço',
+    t: 'Dá pra recomeçar sem apagar os bancos, e o cartão do Início ganhou as cores de cada aba.',
+    itens: [
+      '🔄 Recomeçar: em Ajustes, zere só os saldos dos bancos ou comece do zero (apaga os lançamentos). Bancos, cartões, pisos e contas fixas continuam. Ideia do JF.',
+      '🎨 Quadrinhos com cor: no cartão do Início, os números da semana e do mês ficam laranja na aba Gasto e verdes na aba Entradas.',
+    ],
+    qol: [
+      '🏦 Atalho em Contas: no fim da lista de Bancos tem o link pra zerar os saldos ou começar do zero.',
+    ],
+  },
+  {
     v: '2.1.1 Alfa',
     data: '15/11/2026',
     nome: 'Pega na Mão',
