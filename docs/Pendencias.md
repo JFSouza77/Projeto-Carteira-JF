@@ -16,7 +16,7 @@ Atualizada pelo Wally a cada rodada.
 
 - Entrada prevista: ainda não dá pra editar ou apagar (só "Recebi"). Próxima rodada.
 - Gasto de jogo: fazer a pergunta "foi no crédito?" funcionar de verdade depois do registro.
-- Opinião da Anne sobre o design (ela ainda não viu).
+- Opinião da Anne: o JF manda quando tiver (sem previsão). **Não perguntar de novo** (JF, 16/11).
 
 ## IA online: travas de crédito (15/11)
 
