@@ -17,6 +17,8 @@ export const NOVIDADES = Object.freeze([
       '🤖 IA online já ligada: pergunte o que quiser no Chat, sem ir em Ajustes antes. Se preferir sem ela, é só desligar em Ajustes.',
       '🫙 Mês sem entrada: no Lançar, toque em Este mês não entrou nada. O C.A.O.S. para de cobrar a entrada e você não precisa lançar zero.',
       '🙌 Hoje não gastei: no Lançar, toque em Hoje não gastei nada. Assim o C.A.O.S. sabe que o dia foi limpo e não acha que você esqueceu de anotar.',
+      '📛 Pelo seu nome: no Chat, o C.A.O.S. chama você pelo apelido que você deu no primeiro acesso, inclusive nas respostas da IA online.',
+      '🌶️ Ácido sem dó: escolha o humor Ácido em Ajustes e o C.A.O.S. fecha as respostas com uma zoeira de verdade. Ideia do JF.',
     ],
     qol: [
       '🔒 Primeiro a conta: gasto e entrada pedem uma conta antes.',

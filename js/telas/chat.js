@@ -17,7 +17,16 @@ import { registrarEntrada, registrarGasto } from './lancar.js';
 import { guardarEmMeta, iniciarMeta, metaResposta, renderMes, salvarMetas } from './mes.js';
 import { renderContas } from './contas.js';
 
+// A IA online não recebe o nome da pessoa (privacidade): ela escreve {nome} e o app troca aqui, no aparelho (JF, 16/11)
+export function trocarNome(texto, nome) {
+  const t = String(texto ?? '');
+  if (!t.includes('{nome}')) return t;
+  if (nome) return t.replaceAll('{nome}', nome);
+  return t.replace(/,\s*\{nome\}/g, '').replace(/\{nome\}\s*,\s*/g, '').replace(/\{nome\}/g, '').replace(/\s{2,}/g, ' ').trim();
+}
+
 export function addMsg(msg) {
+  if (msg.texto) msg.texto = trocarNome(msg.texto, state.perfil?.apelido);
   if (msg.de === 'caos' && !msg.rosto) {
     msg.rosto = msg.temp
       ? rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory })
@@ -94,7 +103,8 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
     return;
   }
   const usoIA = await usoDaIAHoje();
-  const iaCansada = !fala.entendeu && state.settings.aiOn && state.settings.aiUrl && usoIA.n >= IA_POR_DIA;
+  // o criador não tem limite no aparelho (JF, 16/11: "quem tá pagando sou eu"); o servidor também libera pelo selo da conta
+  const iaCansada = !fala.entendeu && state.settings.aiOn && state.settings.aiUrl && usoIA.n >= IA_POR_DIA && !state.perfil?.seloCriador;
   if (iaCansada) {
     fala.texto = `Por hoje a minha IA online já respondeu ${IA_POR_DIA} perguntas: sou uma IA de bolso e economizo pra não pesar no bolso de ninguém. Amanhã eu volto com tudo! Enquanto isso, pergunta dos seus gastos que eu respondo aqui mesmo.`;
   } else if (!fala.entendeu && state.settings.aiOn && state.settings.aiUrl) {
@@ -108,7 +118,7 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
       state.chat = state.chat.filter(m => !m.temp);
       addMsg({ de: 'caos', texto: resposta, ia: true, sugestoes: SUGESTOES.slice(0, 5), rosto: fala.rosto });
       pintarRosto(fala.rosto);
-      if (state.settings.voice) falar(resposta);
+      if (state.settings.voice) falar(trocarNome(resposta, state.perfil?.apelido));
       return;
     } catch (e) {
       state.chat = state.chat.filter(m => !m.temp);

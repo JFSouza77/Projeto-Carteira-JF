@@ -7,6 +7,11 @@ import { summarizeMonth, incomeIn, totalBalance, analyze, monthKey, toISODate, f
 
 const TEMPO_MS = 45_000;
 
+// Criador (JF, 16/11): com o selo de criador, o app manda o token da conta e o servidor libera o uso sem limite.
+// Pra quem não é criador, nada de token: a pergunta segue sem dizer de quem é.
+let tokenCriador = null;
+export function definirCriador(token) { tokenCriador = token || null; }
+
 async function chamar(base, rota, corpo) {
   if (!base) throw new Error('Configure o endereço do servidor em Ajustes → IA online.');
   const ctrl = new AbortController();
@@ -14,7 +19,7 @@ async function chamar(base, rota, corpo) {
   try {
     const r = await fetch(base.replace(/\/+$/, '') + rota, {
       method: corpo ? 'POST' : 'GET',
-      headers: corpo ? { 'content-type': 'application/json' } : {},
+      headers: { ...(corpo ? { 'content-type': 'application/json' } : {}), ...(tokenCriador && rota.startsWith('/ia/') ? { authorization: `Bearer ${tokenCriador}` } : {}) },
       body: corpo ? JSON.stringify(corpo) : undefined,
       signal: ctrl.signal,
     });
