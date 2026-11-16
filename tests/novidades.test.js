@@ -19,6 +19,23 @@ test('novidades seguem as regras do log (pra quem usa)', () => {
   assert.equal(VERSAO_APP, NOVIDADES[0].v);
 });
 
+// Code do Perfil, 16/11: cada item explica de verdade (o que é, onde fica, como usa) e nada de título repetido
+// nas 3 versões mais novas (se a mesma coisa volta melhorada, o título diz o que mudou)
+test('novidades recentes explicam e não repetem título', () => {
+  const titulos = new Map();
+  for (const n of NOVIDADES.slice(0, 3)) {
+    for (const item of n.itens) {
+      const p = partesDoItem(item);
+      assert.ok((p.texto || '').length >= 40, `item curto demais (explique onde fica e como usa): ${item}`);
+    }
+    for (const item of [...n.itens, ...n.qol]) {
+      const t = partesDoItem(item).titulo.toLowerCase();
+      assert.ok(!titulos.has(t), `título repetido "${t}" em ${titulos.get(t)} e ${n.v}`);
+      titulos.set(t, n.v);
+    }
+  }
+});
+
 test('aviso de novidade só quando a versão mudou', () => {
   assert.equal(temNovidade(null), true);
   assert.equal(temNovidade('1.3'), true);
