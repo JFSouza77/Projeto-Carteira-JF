@@ -178,6 +178,15 @@ const HUMORES = {
 // Com o criador (JF, 16/11): sem bajular, mas sabendo quem ele é. É o JF, que gosta de ser zoado.
 const COM_O_CRIADOR = 'Quem pergunta é o JF, seu criador (a conta dele tem o selo). Trate como trata o criador no Perfil JF: com intimidade, zoando e provocando sem dó (ele adora), sem bajular e sem formalidade. Pode chamar ele de JF ou de criador.';
 
+// Pesquisa de compra e viagem (JF, 16/11): "ele te orienta a chegar à resposta, nunca te dá ela pronta"
+const PESQUISA_COMPRA = `Esta é uma PESQUISA DE COMPRA OU VIAGEM pedida pela pessoa (pode passar de 3 frases, até umas 10 linhas):
+- Busque o preço de hoje em 2 a 4 lojas ou sites conhecidos no Brasil. Viagem: companhias aéreas e buscadores (ida e volta); se for viagem completa, estime também hospedagem, comida, transporte, seguro viagem e câmbio. Produto: lojas grandes e comparadores.
+- Mostre em lista curta: site, preço achado e o que inclui. Diga que preço de busca muda e pode estar diferente na hora.
+- Compare com o orçamento informado e com o resumo do mês (se cabe ou aperta). Use só os números do resumo; nunca invente números.
+- Você ORIENTA, não decide: nunca diga "compre aqui". Aponte o que conferir (frete, prazo, garantia, bagagem, taxas, parcelamento com ou sem juros, reputação do vendedor).
+- Termine com o próximo passo ou uma pergunta (ex.: "quer que eu compare só os com frete grátis?").`;
+const BUSCA_PESQUISA = { type: 'web_search_20250305', name: 'web_search', max_uses: 4, user_location: { type: 'approximate', country: 'BR', timezone: 'America/Sao_Paulo' } };
+
 const BUSCA_WEB = { type: 'web_search_20250305', name: 'web_search', max_uses: 2, user_location: { type: 'approximate', country: 'BR', timezone: 'America/Sao_Paulo' } };
 
 export const SISTEMA_CONVERSA = `Você é o C.A.O.S., o narrador de um app pessoal de controle de gastos (Carteira JF), em português do Brasil.
@@ -203,6 +212,7 @@ async function iaPerguntar(req, env) {
   const pergunta = String(corpo.pergunta || '').trim().slice(0, 300); // IA de bolso: pergunta curta (15/11)
   if (!pergunta) throw new ErroHttp(400, 'Faltou a pergunta.');
   const humor = HUMORES[corpo.humor] ? corpo.humor : 'suave';
+  const pesquisa = corpo.modo === 'pesquisa'; // 16/11: pesquisa de compra/viagem (mais buscas, resposta em lista)
   const resumo = corpo.resumo && typeof corpo.resumo === 'object' ? corpo.resumo : {};
   const resumoTxt = JSON.stringify(resumo).slice(0, 3000);
   // mesma pergunta, com os mesmos números, na última hora: devolve a resposta guardada (não gasta crédito)
@@ -219,16 +229,16 @@ async function iaPerguntar(req, env) {
   // pergunta, só pra assunto de dinheiro (JF: "senão a IA gasta os créditos à toa"; a regra está no SISTEMA_CONVERSA). A busca é feita pelo servidor da IA; o que vai nela é só o assunto da pergunta, nunca os dados da pessoa.
   const messages = [{
     role: 'user',
-    content: `Humor escolhido: ${humor}. ${HUMORES[humor]}${criador ? `\n\n${COM_O_CRIADOR}` : ''}\n\nResumo do mês (só totais, em centavos):\n${resumoTxt}\n\nPergunta: ${pergunta}`,
+    content: `Humor escolhido: ${humor}. ${HUMORES[humor]}${criador ? `\n\n${COM_O_CRIADOR}` : ''}${pesquisa ? `\n\n${PESQUISA_COMPRA}` : ''}\n\nResumo do mês (só totais, em centavos):\n${resumoTxt}\n\nPergunta: ${pergunta}`,
   }];
   let r;
   for (let volta = 0; volta < 3; volta++) {
     r = await client.beta.messages.create({
       model: env.IA_MODELO_CONVERSA || modelo(env), // a conversa pode usar um modelo mais em conta que a leitura de fotos
-      max_tokens: 2500, // resposta de até 3 frases: não precisa de mais
+      max_tokens: pesquisa ? 3500 : 2500, // resposta curta; a pesquisa de compra tem lista de lojas
       output_config: { effort: 'low' },
       system: SISTEMA_CONVERSA,
-      ...(podeBuscar ? { tools: [BUSCA_WEB] } : {}),
+      ...(podeBuscar ? { tools: [pesquisa ? BUSCA_PESQUISA : BUSCA_WEB] } : {}),
       messages,
       ...extras(env),
     });

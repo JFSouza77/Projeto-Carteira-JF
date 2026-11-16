@@ -299,6 +299,22 @@ export function lerPalavroes(t) {
 // Sobrou só "e aí", "fala", "oi"… depois de tirar o apelido? Então foi só um chamado de amigo.
 const SO_CHAMADO = /^(e ai|eai|fala|oi|ola|opa|salve|bom dia|boa tarde|boa noite|ei|ow|o|caos|meu|mano|ai|hein|ne)?( (caos|meu|mano|ai|hein|ne|ze))*$/;
 
+// Pesquisa de compra e viagem (16/11): o que a pessoa quer pesquisar e se já disse o orçamento
+const VIAGEM = /\b(viagem|viajar|passagem|passagens|voo|voos|hotel|hospedagem|pacote de viagem)\b/;
+export function acharPesquisa(t, valor) {
+  if (/\b(juntar|guardar|economizar|poupar|meta|gastei|paguei|comprei|recebi|robux|v ?bucks|diamantes)\b/.test(t)) return null;
+  const viagem = VIAGEM.test(t);
+  const pedeViagem = viagem && /\b(quanto|custa|custaria|sai|sairia|fica|ficaria|pesquis|procur|planej|calcul|me ajuda|ajuda|quero|vale)/.test(t);
+  const pedeProduto = /\b(pesquisa|pesquisar|procura|procurar|acha|achar|encontra|encontrar|compara|comparar)\b.*\b(preco|precos|onde|loja|lojas|melhor|barato|mais barato|um|uma|o|a)\b/.test(t)
+    || /\b(onde (compro|comprar|acho)|melhor preco|mais barato|quero comprar (um|uma|o|a))\b/.test(t);
+  if (!pedeViagem && !pedeProduto) return null;
+  const orc = t.match(/\b(orcamento|ate|teto|no maximo|maximo)\b[^0-9]{0,15}(\d[\d.,]*)/);
+  const orcamento = orc ? Math.round(Number(orc[2].replace(/\./g, '').replace(',', '.')) * 100) : undefined;
+  const item = t.replace(/\b(me ajuda a|me ajude a|ajuda a|ajude a|caos|por favor|pesquisa|pesquisar|procura|procurar|acha|achar|encontra|encontrar|compara|comparar|quanto|custa|custaria|sai|sairia|fica|ficaria|o preco de|preco de|preco|onde (compro|comprar|acho)|quero comprar|quero fazer|quero|calcular|planejar|considerando)\b/g, ' ')
+    .replace(/\b(orcamento|ate|teto|no maximo|maximo)\b[^0-9]{0,15}\d[\d.,]*( reais| mil)?/g, ' ').replace(/[?!.,;]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^((qual|o|a|os|as|da|do|de|pra|para)\s+)+/, '');
+  return { item: item || (viagem ? 'essa viagem' : 'isso'), viagem, orcamento: orcamento && orcamento > 0 ? orcamento : (valor && /\b(orcamento|ate)\b/.test(t) ? valor : undefined) };
+}
+
 export function entender(texto, { categories = [], anterior = null } = {}) {
   const base = corrigirDigitacao(expandirGirias(norm(texto)), categories.map(c => norm(c.name)));
   const pv = lerPalavroes(base);
@@ -503,6 +519,10 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   if (apelido) return { ...r, intent: 'mudar_apelido', apelido: apelido[1].trim() };
   // "quanto sobra do orçamento de mercado?" é orçamento, não "cabe no mês" (achado do Gemini, 06/11)
   if (/(orcamento|limite)/.test(t) && /(sobra|resta|falta|quanto (ainda )?posso)/.test(t) && !/cabe no/.test(t)) return { ...r, intent: 'orcamento' };
+  // Pesquisa de compra e viagem (JF, 16/11): "quanto custaria uma viagem pros EUA?", "me ajuda a achar uma geladeira".
+  // Ele pede o orçamento e a IA online pesquisa 2 a 4 sites; ele orienta, não entrega a resposta pronta.
+  const pesquisa = acharPesquisa(t, r.valor);
+  if (pesquisa) return { ...r, categoria: null, intent: 'pesquisa_compra', ...pesquisa };
   if (/(cabe no (mes|meu bolso|orcamento|bolso)|da pra comprar|posso comprar|consigo comprar|tenho dinheiro pra|vai sobrar|quanto (vai )?sobra)/.test(t)) return { ...r, intent: 'cabe' };
   // "Explica o print do banco" (06/11): a pessoa manda o print e ele explica pelo servidor
   if (/(explica|explicar|nao entendi|o que (significa|quer dizer)|me ajuda a entender).*(print|tela|banco|fatura|extrato|app do banco|imagem|foto)|(print|tela) do banco/.test(t)) return { ...r, intent: 'explicar_print' };
@@ -1411,6 +1431,21 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       const tot = prev.reduce((t, p) => t + p.amountCents, 0);
       const lista = prev.slice(0, 5).map(p => `${formatBRL(p.amountCents)} dia ${p.date.slice(8, 10)}/${p.date.slice(5, 7)}${p.note ? ` (${p.note})` : ''}`).join('; ');
       return { fato: `Você tem ${formatBRL(tot)} pra receber: ${lista}. Quando cair, toca em "Recebi" na aba Entradas do Início.`, cru: true, sugestoes: ['Dá pra gastar quanto até o salário?'] };
+    }
+    case 'pesquisa_compra': {
+      const { item, viagem, orcamento } = intencao;
+      if (orcamento === undefined) {
+        return {
+          fato: `Bora pesquisar ${item}! Antes, qual o seu orçamento pra ${viagem ? 'essa viagem' : 'isso'}? Me fala tipo "até 5000". Se não tiver um, diz "sem orçamento".`,
+          cru: true, sugestoes: ['Sem orçamento', 'Deixa pra depois'], aguardar: { tipo: 'pesquisa', item, viagem },
+        };
+      }
+      // sem a IA online (ou sem internet), ele dá o caminho das pedras
+      const onde = viagem
+        ? 'Compare em 2 ou 3 lugares: o site das companhias (Azul, Gol, Latam) e um buscador (Google Voos, Decolar). Confira se é ida e volta, bagagem, taxas, horário e escala.'
+        : 'Compare em 2 ou 3 lojas (Mercado Livre, Amazon, Magalu) ou num comparador (Buscapé, Zoom). Confira frete, prazo, garantia, parcelamento e a reputação do vendedor.';
+      const viagemTudo = viagem ? ' Numa viagem completa, some passagem, hospedagem, comida, transporte, seguro viagem e, se for pra fora, o câmbio.' : '';
+      return { fato: `${onde}${viagemTudo}${orcamento ? ` Seu teto: ${formatBRL(orcamento)}.` : ''} Com a IA online ligada, eu pesquiso os preços de hoje pra você comparar.`, cru: true, sugestoes: ['Dá pra gastar quanto até o salário?'] };
     }
     case 'moeda_jogo': {
       const { jogo, pacote } = intencao;

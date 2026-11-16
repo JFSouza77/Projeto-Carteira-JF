@@ -112,7 +112,7 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
     pintarRosto(pensando);
     addMsg({ de: 'caos', texto: 'Deixa eu pensar com a IA…', temp: true, rosto: pensando });
     try {
-      const resposta = await ia.perguntar(state.settings.aiUrl, { pergunta: fala.perguntaIA || t, humor: state.settings.mood, dados: dados() });
+      const resposta = await ia.perguntar(state.settings.aiUrl, { pergunta: fala.perguntaIA || t, humor: state.settings.mood, dados: dados(), modo: fala.modoIA });
       await db.setMeta('iaUso', { dia: toISODate(), n: usoIA.n + 1 });
       iaRecentes.set(chaveIA, { texto: resposta, em: Date.now() });
       state.chat = state.chat.filter(m => !m.temp);
