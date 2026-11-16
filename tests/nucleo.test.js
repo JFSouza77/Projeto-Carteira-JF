@@ -81,3 +81,13 @@ test('núcleo 1.3.0: toda lei tem o sentido geral e a frase da Carteira', async 
     assert.ok(typeof l.carteira === 'string' && l.carteira.length > 5, `falta a frase da Carteira em: ${l.lei}`);
   }
 });
+
+// Núcleo 1.6.0 (JF, 16/11): o cérebro online é marco da vida dele, e a vida fecha em 0 ou 5 (regra das quantidades)
+test('núcleo 1.6.0: marcos da Carteira na vida (cérebro online) e a vida fecha em 0 ou 5', () => {
+  assert.equal(NUCLEO.versao, '1.6.0');
+  assert.ok(NUCLEO.vida.some(v => v.data === '2026-11-13' && /cérebro.*online/.test(v.fato)));
+  assert.ok(NUCLEO.vida.some(v => v.data === '2026-11-13' && /online pra todo mundo/.test(v.fato)));
+  assert.equal(NUCLEO.vida.length % 5, 0);
+  const datas = NUCLEO.vida.map(v => v.data);
+  assert.deepEqual(datas, [...datas].sort(), 'vida em ordem de data');
+});

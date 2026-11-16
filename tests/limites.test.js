@@ -67,7 +67,7 @@ test('estabilizador: o rosto fica 3 falas, só troca com 2 pontos de vantagem e 
 });
 
 test('núcleo 1.5.0: jeito de reagir e o "segura" das emoções', async () => {
-  assert.equal(NUCLEO.versao, '1.5.0');
+  assert.ok(NUCLEO.versao >= '1.5.0');
   assert.equal(NUCLEO.jeitoDeReagir.length, 2);
   assert.equal(NUCLEO.emocoes.estabilizador.segura, 0.75);
   const { decair } = await import('../js/caos/emocoes.js');
