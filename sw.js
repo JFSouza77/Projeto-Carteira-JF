@@ -17,6 +17,7 @@ const APP_SHELL = [
   './js/telas/mes.js',
   './js/telas/analise.js',
   './js/telas/lancar.js',
+  './js/telas/inicio.js',
   './js/engine.js',
   './js/db.js',
   './js/voz.js',
