@@ -33,7 +33,7 @@ import { guardarEmMeta, iniciarMeta, lancarCompromisso, marcarPlano, onAddCompro
 import { exportarCSV, exportarPDF, filtroDeBusca, grafico, lancamentosDoMes, marcarSeg, renderGraficos, renderMeses, renderRitmo, renderRosca } from './telas/analise.js';
 import { editar, lerFotoComIA, limparFoto, mostrarFoto, onDelete, onFoto, onSubmit, perguntarContaDoPix, previaParcelas, previaRacha, renderLancar, salvarEdicao, verFoto } from './telas/lancar.js';
 import { abrirLimiteDiario, atalho, fecharGuia, guiar, hojeNaoGastei, mostrarEntradas, recebi, renderAReceber, renderComece, renderHoje, renderOfensiva, renderPainel, renderPodeGastar, renderResumoEntradas, renderUltimos, salvarLimiteDiario } from './telas/inicio.js';
-import { ESTILO_DESC, abrirNovidades, alternarAntigas, alternarEstudio, exportBackup, importBackup, montarInfoCaos, onBudgetChange, onRemindTime, onRemindToggle, renderAvisoNovidade, renderBudgets, renderCalculadora, renderGlossario, renderSettings } from './telas/ajustes.js';
+import { ESTILO_DESC, abrirNovidades, alternarAntigas, alternarEstudio, comecarDoZero, exportBackup, importBackup, montarInfoCaos, onBudgetChange, onRemindTime, onRemindToggle, renderAvisoNovidade, renderBudgets, renderCalculadora, renderGlossario, renderSettings, zerarSaldosDosBancos } from './telas/ajustes.js';
 
 definirRender(render);
 
@@ -1456,6 +1456,23 @@ function bind() {
   $('#note').addEventListener('input', sugerirPelaDescricao);
 
   $('#export-btn').addEventListener('click', exportBackup);
+  // Recomeçar (JF, 16/11): zera os saldos (mantém os bancos) ou começa do zero (apaga lançamentos)
+  $('#zerar-saldos').addEventListener('click', async () => {
+    if (!(await zerarSaldosDosBancos())) return;
+    render();
+    toast('Saldos zerados. Agora é só atualizar o saldo de cada banco em Contas.');
+    location.hash = 'contas';
+  });
+  $('#recomecar-tudo').addEventListener('click', async () => {
+    if (!(await comecarDoZero())) return;
+    render();
+    toast('Pronto: começou do zero. Atualize o saldo de cada banco em Contas.');
+    location.hash = 'contas';
+  });
+  $('#ir-recomecar').addEventListener('click', () => {
+    location.hash = 'ajustes';
+    setTimeout(() => { const c = $('#recomecar-card'); if (c) { c.open = true; c.scrollIntoView({ block: 'start' }); } }, 350);
+  });
   $('#import-input').addEventListener('change', e => {
     const f = e.target.files?.[0];
     if (f) importBackup(f);

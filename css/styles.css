@@ -1377,3 +1377,21 @@ body.teclado .chat-anexo { bottom: 64px; }
 .guia-foco { outline: 3px solid var(--accent); outline-offset: 4px; border-radius: 16px; animation: guia-pisca 1.4s ease-in-out 3; }
 @keyframes guia-pisca { 50% { outline-color: transparent; } }
 @media (prefers-reduced-motion: reduce) { .guia-foco { animation: none; } }
+
+/* 16/11 (JF, imagem do GPT): os dois primeiros quadrinhos ganham a cor da aba: laranja no Gasto, verde nas Entradas.
+   O terceiro continua dizendo Sobra (verde) ou Déficit (laranja). */
+#resumo-card[data-modo="gasto"] .mini-stats > :is(:nth-child(1), :nth-child(2)) {
+  background: color-mix(in srgb, var(--warn) 12%, var(--card-2)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 55%, transparent); }
+#resumo-card[data-modo="gasto"] .mini-stats > :is(:nth-child(1), :nth-child(2)) small,
+#resumo-card[data-modo="gasto"] .mini-stats > :is(:nth-child(1), :nth-child(2)) .ico { color: var(--warn); }
+#resumo-card[data-modo="entrada"] .mini-stats > :is(:nth-child(1), :nth-child(2)) {
+  background: color-mix(in srgb, var(--ok) 12%, var(--card-2)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok) 55%, transparent); }
+#resumo-card[data-modo="entrada"] .mini-stats > :nth-child(1) small, #resumo-card[data-modo="entrada"] .mini-stats > :nth-child(1) .ico { color: var(--accent); }
+#resumo-card[data-modo="entrada"] .mini-stats > :nth-child(2) .ico { color: var(--ok); }
+#resumo-card[data-modo="entrada"] .mini-stats > :nth-child(2) small { color: var(--text); }
+
+/* 16/11 (JF): Recomeçar (Ajustes) */
+.recomecar-botoes { display: grid; gap: 6px; }
+.recomecar-botoes .muted.small { margin: 0 0 8px; }
+button.perigo { color: var(--danger); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 55%, transparent); }
+.recomecar-link { display: block; margin: 8px auto 0; background: none; border: 0; color: var(--muted); text-decoration: underline; font: inherit; font-size: .85rem; cursor: pointer; }

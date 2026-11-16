@@ -508,6 +508,7 @@
       <details class="card bloco tile-bloco bancos-bloco" id="bancos-card" data-bloco="bancos">
         <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#i-contas"/></svg><span class="bloco-tit">Bancos</span><span class="bloco-res" id="res-bancos"></span></summary>
         <ul class="account-list" id="account-list"></ul>
+        <button type="button" class="link-btn recomecar-link" id="ir-recomecar">Zerar os saldos ou começar do zero</button>
       </details>
       <details class="card bloco tile-bloco" id="add-conta-card" data-bloco="add-conta">
         <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#i-contas"/></svg><span class="bloco-tit">Adicionar conta</span></summary>
@@ -708,6 +709,18 @@
         <div class="backup">
           <button type="button" class="ghost" id="ai-test">Testar conexão</button>
           <span class="muted small" id="ai-status"></span>
+        </div>
+      </details>
+
+      <!-- 16/11 (JF): recomeçar sem apagar os bancos (ex.: começar dezembro do zero) -->
+      <details class="card" id="recomecar-card">
+        <summary><h2>Recomeçar</h2></summary>
+        <p class="muted">Pra começar do zero sem cadastrar banco por banco de novo. Os bancos, cartões, pisos, contas fixas, planos, metas e ajustes continuam. Antes, se quiser, faça um backup (aqui embaixo).</p>
+        <div class="recomecar-botoes">
+          <button type="button" class="ghost" id="zerar-saldos">Zerar só os saldos dos bancos</button>
+          <p class="muted small">Todos os saldos e o "já usado" dos cartões viram R$ 0,00 a partir de agora. Os lançamentos continuam no histórico. Depois é só atualizar o saldo de cada banco.</p>
+          <button type="button" class="ghost perigo" id="recomecar-tudo">Começar do zero</button>
+          <p class="muted small">Zera os saldos e apaga todos os gastos, entradas (inclusive as previstas) e transferências.</p>
         </div>
       </details>
 
