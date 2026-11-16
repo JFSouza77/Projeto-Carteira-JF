@@ -3,8 +3,8 @@
 // Quem grava continua sendo a UI (via db.js), depois do Confirmar da pessoa.
 
 import { $, catById, dados, esc, renderizar, state } from '../estado.js';
-import { EMO_DA_FORMA, FORMAS, formaPara } from '../avatar.js';
-import { IDENTIDADE, SUGESTOES, conversar, humorParaIA, emocaoDoMomento, rostoAvulso, rostoDaEmo } from '../caos/index.js';
+import { FORMAS, formaPara, rostoDaForma } from '../avatar.js';
+import { IDENTIDADE, SUGESTOES, conversar, humorParaIA, emocaoDoMomento, rostoAvulso } from '../caos/index.js';
 import { accountLabel, createTransferencia, depoisDoSaldo, marcarRecebido, editarConta, editarLancamento, formatBRL, sugerirCategoria, toISODate } from '../engine.js';
 import * as conta from '../conta.js';
 import { lerPagamento, seguirPagamento } from '../caos/conversa.js';
@@ -62,7 +62,7 @@ export function renderChat() {
       const i = Number(el.dataset.msg), m = state.chat[i];
       if (!m) continue;
       const f = formaDaMsg(m);
-      const r = m.rosto?.quadros && formaPara({ rosto: m.rosto }) === f ? m.rosto : rostoDaEmo(EMO_DA_FORMA[f] || 'calmo', i);
+      const r = rostoDaForma(f, m.rosto, i); // 2.1.3.2: o mesmo rostinho do avatar
       setRosto(el, r);
       if (FORMAS[f]) el.style.setProperty('--emo-cor', FORMAS[f].cor);
     }
@@ -159,6 +159,7 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
   if (fala.posTexto) {
     await respiro(fala.posTexto);
     addMsg({ de: 'caos', texto: fala.posTexto, rosto: fala.rosto, assunto: fala.intent });
+    pintarRosto(fala.rosto, fala.intent); // 2.1.3.2: o "digitando…" deixava o topo preso no pensador
     avatarFala(Math.min(2000, 400 + fala.posTexto.length * 22));
     if (state.settings.voice) falar(fala.posTexto, fala.emocao);
   }

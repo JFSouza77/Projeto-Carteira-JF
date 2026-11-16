@@ -7,7 +7,7 @@ import * as conta from '../conta.js';
 import { corCategoria } from '../cores.js';
 import * as db from '../db.js';
 import { emocaoDoMomento, nomeAlerta } from '../caos/index.js';
-import { formaPara } from '../avatar.js';
+import { formaPara, rostoDaForma } from '../avatar.js';
 import { intensidade } from '../caos/emocoes.js';
 import { perguntarContaDoPix, renderLancar } from './lancar.js';
 import { MENOS_MOVIMENTO, barStyle, ic, icCat, icFonte, narrate, nomeForma, setRosto, toast } from '../app.js';
@@ -21,8 +21,9 @@ export function renderPainel() {
   $('#painel-mostrar').hidden = !oculto;
   const m = emocaoDoMomento(state.caosMemory, state.settings.mood);
   const r = m.rosto || m.aparencia;
-  if (r?.quadros) setRosto($('#painel-face'), r);
-  $('#painel-mood').textContent = nomeForma(formaPara({ rosto: r }));
+  const forma = formaPara({ rosto: r });
+  if (r?.quadros) setRosto($('#painel-face'), rostoDaForma(forma, r)); // 2.1.3.2: segue o avatar
+  $('#painel-mood').textContent = nomeForma(forma);
   const pct = Math.round(intensidade(state.caosMemory?.emocoes, m.emocao) * 100);
   $('#painel-int').style.width = `${pct}%`;
   $('#painel-int-barra').setAttribute('aria-label', `Intensidade da emoção: ${pct}%`);

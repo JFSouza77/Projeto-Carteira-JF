@@ -12,7 +12,7 @@ import {
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
   valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, depoisDoSaldo, folgaDoPiso, diferencaDoSaldo, fatoDaSemana, podeGastar, resumoEntradas, progressoOrcamentoDiario, mascaraCentavos, valorForaDoComum, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
-import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, rostoEspantado, rostoDaEmo, nomeAlerta, diaEspecial } from './caos/index.js';
+import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, rostoEspantado, nomeAlerta, diaEspecial } from './caos/index.js';
 import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
 import { GLOSSARIO, ATUALIZADO_EM, GLOS_TEMAS, temaDoTermo } from './caos/glossario.js';
 import { fraseDoPrint, resumoDoPrint } from './caos/ofertas.js';
@@ -24,7 +24,7 @@ import * as imagens from './imagens.js';
 import * as ia from './ia.js';
 import * as lembretes from './notificacoes.js';
 import * as conta from './conta.js';
-import { criarAvatar, formaPara, configurarAvatar, FORMAS, EMO_DA_FORMA } from './avatar.js';
+import { criarAvatar, formaPara, configurarAvatar, FORMAS, rostoDaForma } from './avatar.js';
 
 import { $, esc, cap, centsToInput, SERVIDOR_PADRAO, state, dados, catById, srcById, definirRender } from './estado.js';
 import { addMsg, confirmarAcao, enviarPergunta, fotoNoChat, ligarTeclado, processarFila, renderChat, tirarAnexo } from './telas/chat.js';
@@ -145,10 +145,12 @@ export function pintarRosto(rosto, assunto = null) {
     || rostoAvulso(undefined, { mood: state.settings.mood, memory: state.caosMemory });
   const forma = formaPara({ rosto: r, assunto });
   for (const k of ['caos', 'chat', 'painel']) avatares[k]?.mostrar(forma);
-  setRosto($('#caos-face'), r);
-  setRosto($('#chat-face'), r);
-  setRosto($('#painel-face'), r);
-  $('#caos').style.setProperty('--emo-cor', r.cor);
+  // 2.1.3.2 (JF, 16/11): o rostinho segue o avatar (antes seguia a emoção e o avatar seguia o assunto: pensador + tímido)
+  const rf = rostoDaForma(forma, r);
+  setRosto($('#caos-face'), rf);
+  setRosto($('#chat-face'), rf);
+  setRosto($('#painel-face'), rf);
+  $('#caos').style.setProperty('--emo-cor', rf.cor);
   if ($('#painel-mood')) $('#painel-mood').textContent = nomeForma(forma);
   $('#caos-mood').textContent = `· ${nomeForma(forma)}`;
   $('#chat-mood').textContent = nomeForma(forma);

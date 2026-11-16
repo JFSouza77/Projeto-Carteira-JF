@@ -83,3 +83,4 @@ Depois de cada correção, escreva no Registro: o que o JF viu, a causa, o que m
 | 16/11 | (teste do Wally) "Teste, Você gastou" com V maiúsculo | `\b` do JS não vale depois de letra com acento | troca por lookahead de espaço/pontuação | `tests/baixas_e_baloes.test.js` |
 
 | 16/11 | (GPT) Voz podia ler `**` e `{nome}` | só o caminho da IA limpava o texto; as falas do aparelho iam direto pra voz | limpeza no `textoParaVoz`, que vale pra toda fala | `tests/uso_ia.test.js` |
+| 16/11 | (JF) Avatar pensador com rostinho de vergonha | o avatar seguia o assunto e o rostinho do topo seguia a emoção; e o "digitando…" do 2º balão deixava o topo no pensador | `rostoDaForma`: o avatar manda e cada forma tem rostinho que combina; repinta depois do 2º balão | `tests/rosto_da_forma.test.js` + vitrine dos 45 |

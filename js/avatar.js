@@ -7,6 +7,8 @@
 // Cuidados do Code (13/11): um SVG só por lugar, trocando classes (não recria a cada fala); pausa quando a tela
 // está escondida ou o avatar não aparece (bateria); "menos movimento" = parado. Um laço de animação só pra todos.
 
+import { rostoDaEmo } from './caos/rostos.js';
+
 // ---------- Que forma combina com o momento (função pura) ----------
 // rosto do C.A.O.S. (emo dos rostinhos) → forma do avatar
 const POR_ROSTO = Object.freeze({
@@ -45,6 +47,61 @@ export const EMO_DA_FORMA = Object.freeze({
   ferias: 'alivio', simulador: 'analista', auditor: 'julgando', cobrador: 'julgando', surpreso: 'espantado', confiante: 'orgulho',
   vermelho: 'raiva', treinador: 'festa', vovo: 'ombros', gamer: 'festa',
 });
+
+// 2.1.3.2 (JF, 16/11: "os rostinhos não acompanham os avatares; avatar pensador com rostinho tímido não dá"):
+// o AVATAR manda. Cada forma que não tinha um rostinho que combinasse ganhou o seu (2 quadros, que se alternam).
+// As formas que ficam fora daqui usam o rostinho da emoção de EMO_DA_FORMA, que já combina com elas.
+export const KAOMOJI_DA_FORMA = Object.freeze({
+  anjinho: ['(◕‿◕✿)', '(◕ᴗ◕✿) ♡'],
+  alerta: ['(⊙_⊙)!!', '(⊙△⊙)!!'],
+  professor: ['(•_•)☝', '(•ᴗ•)☝ ✎'],
+  parceiro: ['(っ◕‿◕)っ', '(っ◕ᴗ◕)っ♡'],
+  bronca: ['(¬_¬)ノ▮', '(¬_¬)ノ▮ !'],
+  lembrete: ['(•o•)⏰', '(•ᴗ•)⏰ !'],
+  chocado: ['(・_・)', '( ・_・)'],
+  economista: ['(•‿•)📈', '(•ᴗ•)📈 ✧'],
+  rico: ['($‿$)', '($ᴗ$) ✧'],
+  decepcionado: ['(-_-;)', '(-_-;) ...'],
+  nojinho: ['(¬﹏¬)', '(¬﹏¬) ~'],
+  medo: ['(((ﾟДﾟ;)))', '(((;ﾟДﾟ)))'],
+  desconfiado: ['(¬_¬)', '(¬_¬ ) ?'],
+  amigao: ['(•‿•)ゞ', '(•ᴗ•)👍'],
+  humorista: ['(≧▽≦)', '(≧▽≦)ノ🎤'],
+  gerente: ['(•_•)📋', '(•ᴗ•)📋'],
+  investidor: ['(•‿•)💡', '(•ᴗ•)💡 ✧'],
+  vidente: ['(☆_☆)🔮', '(✧_✧)🔮'],
+  zen: ['(︶‿︶)', '(︶ᴗ︶) ~'],
+  sobrevivente: ['(×_×)', '(×_×) ...'],
+  desnorteado: ['(@_@)', '(@_@) ?!'],
+  recalculando: ['(•_•)🧭', '(•_•) ↻'],
+  sonolento: ['(－_－) zzZ', '(－.－) zZ'],
+  envergonhado: ['(*/ω＼*)', '(⁄•⁄ω⁄•⁄)'],
+  contador: ['(•_•)🧮', '(•ᴗ•)🧮'],
+  banqueiro: ['(•‿•)🏦', '(•ᴗ•)💳'],
+  ferias: ['(˘ᴗ˘)🏖', '(˘‿˘)🍹'],
+  simulador: ['(・_・)🛒', '(・ᴗ・)🛒 ?'],
+  auditor: ['(¬_¬)✂', '(¬_¬)✂ !'],
+  cobrador: ['(¬‿¬)🧾', '(¬ᴗ¬)🧾 ~'],
+  confiante: ['(⌐■‿■)', '(⌐■ᴗ■) ✧'],
+  vermelho: ['(-_-メ)▮', '(-_-#)▮ !'],
+  treinador: ['(ง •̀_•́)ง', '(ง •̀ᴗ•́)ง'],
+  gamer: ['(•‿•)🎮', '(•ᴗ•)🎮 ✧'],
+  vovo: ['(ᵔ_ᵔ)', '(ᵔᴗᵔ) ~'],
+});
+
+/**
+ * Rostinho de texto que combina com a forma do avatar (função pura).
+ * Forma com rostinho próprio: usa o dele. Senão, mantém o rosto da fala se for da mesma emoção (guarda a intensidade);
+ * senão, o rostinho da emoção da forma. A emoção (cor, tremida) vem de EMO_DA_FORMA.
+ */
+export function rostoDaForma(forma, rosto = null, semente = 0) {
+  const f = FORMAS[forma] ? forma : 'calmo';
+  const emo = EMO_DA_FORMA[f] || 'calmo';
+  const proprio = KAOMOJI_DA_FORMA[f];
+  if (!proprio && rosto?.quadros && rosto.emo === emo) return rosto;
+  const base = rostoDaEmo(emo, semente);
+  return proprio ? { ...base, quadros: [...proprio], forma: f } : { ...base, forma: f };
+}
 
 /** Forma do avatar pro momento: o assunto (intenção ou evento) manda; senão, o rosto/emoção. */
 export function formaPara({ rosto = null, assunto = null } = {}) {
