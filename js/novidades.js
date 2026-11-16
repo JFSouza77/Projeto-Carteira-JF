@@ -21,6 +21,8 @@ export const NOVIDADES = Object.freeze([
     qol: [
       '🔒 Primeiro a conta: gasto e entrada pedem uma conta antes.',
       '❓ Botão de ajuda: não sobe mais em cima do relógio.',
+      '💱 Cotação do jogo: depois de falar de Robux, "qual a cotação?" segue no jogo.',
+      '💵 Dólar sem dado: o C.A.O.S. avisa e pesquisa com a IA online.',
     ],
   },
   {

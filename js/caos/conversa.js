@@ -9,7 +9,7 @@ import {
 } from '../engine.js';
 import { IDENTIDADE, textoPodeNaoPode, textoVida, textoComoFunciona, textoPrivacidade } from './identidade.js';
 import { acharTermo, ATUALIZADO_EM, GLOSSARIO } from './glossario.js';
-import { acharMoedaJogo, lerPacote, DICA_SEGURANCA } from './moedas_jogos.js';
+import { acharMoedaJogo, lerPacote, DICA_SEGURANCA, MOEDAS_JOGOS } from './moedas_jogos.js';
 import { lerPorcentagem, textoPorcentagem, lerOfertas, analisarOfertas, textoOfertas, lerOfertaUnica, textoOfertaUnica } from './ofertas.js';
 
 const GLOSSARIO_POR_TERMO = new Map(GLOSSARIO.map(g => [g.termo, g]));
@@ -319,7 +319,7 @@ export function entender(texto, { categories = [], anterior = null } = {}) {
     if (!pv.limpo || (r.intent === 'nao_entendi' && !r.palpite)) return { ...r, t: base, intent: 'desabafo', palavrao: true };
     return { ...r, palavrao: true };
   }
-  const r0 = entenderSimples(base, { categories });
+  const r0 = entenderSimples(base, { categories, anterior });
   const t = r0.t;
   const curta = t.split(' ').length <= 6;
   const continua = anterior && REUSAVEIS.has(anterior.intent) && curta
@@ -395,7 +395,7 @@ const FORA_DO_PAPEL = /\b(quem (venceu|ganhou|foi campeao|e o artilheiro)|campeo
 const FORA_DO_TEMA = /\b(series?|filmes?|novelas?|livros?|jogos? de|games?|animes?|desenhos?|temporadas?|episodios?|ator|atriz|atores|cantor|cantora|bandas?|albuns?|album|time de|campeonato|copa do mundo|marvel|dc comics|estreias?|estreou|bilheteria|personagens?|elenco|trailer|diretor|roteiro|oscar|hbo|disney|pixar)\b/;
 const PAPO_PESSOAL = /\b(como (voce )?(se sente|esta se sentindo|ta se sentindo|se sentiu|tem se sentido)|voce se sente|o que (voce )?(acha|achou|tem achado|pensa|pensou) (da|do|de|sobre) (sua|seu|voce|mim|ser|ter)|o que (voce )?(tem achado|acha) da (sua )?evolucao|voce (gosta|curte|prefere|sonha|tem medo|tem saudade|fica feliz|fica triste|se diverte)|(seu|sua) (filme|musica|serie|comida|cor|time|jogo|livro|desenho) (favorit|preferid)|qual (e )?(o |a )?(seu|sua) (filme|musica|serie|comida|cor|time|jogo|livro|desenho)|se voce fosse|voce (ja )?(sonhou|imaginou))/;
 
-function entenderSimples(t, { categories = [] } = {}) {
+function entenderSimples(t, { categories = [], anterior = null } = {}) {
   // "dia 10" é data, não valor (P9, "esqueci de lançar": "gastei 50 no mercado dia 10")
   const r = { t, categoria: acharCategoria(t, categories), periodo: acharPeriodo(t), valor: acharValor(t.replace(/\bdia \d{1,2}\b/g, ' ').replace(MOEDA_QTD, ' ')), fonte: acharFonte(t) };
   const pergunta = /\b(quanto|qual|quais|onde|como|tive|teve|tenho|vai|posso|consigo|algum|alguma)\b|\?/.test(t);
@@ -412,6 +412,13 @@ function entenderSimples(t, { categories = [] } = {}) {
     && /\b(moeda|moedas|quanto|quantos|preco|precos|vale|valendo|valor|cotacao|converter|convert|em reais|reais|real|comprar|compro|recarga|recarregar|gift|card|cartao|onde|qual|quais|como|pacote|barato|caro|compensa|pena)\b|\?/.test(t)) {
     const precoDeHoje = /\b(quanto|quantos|preco|precos|vale|valendo|valor|cotacao|converter|convert|em reais|barato|caro|compensa)\b/.test(t);
     return { ...r, categoria: null, intent: 'moeda_jogo', jogo, pacote: lerPacote(t), precoDeHoje };
+  }
+  // Continuação do assunto do jogo (JF, 16/11: "quanto tá valendo 100 robux?" e depois "mas quanto tá valendo em relação
+  // ao real? qual a cotação" virava Ibovespa por causa de "cotação"). Sem outra moeda ou índice na frase, segue no jogo.
+  const jogoAntes = !jogo && anterior?.intent === 'moeda_jogo' && anterior.jogo ? MOEDAS_JOGOS.find(j => j.jogo === anterior.jogo) : null;
+  if (jogoAntes && !/\b(dolar|dolares|usd|euros?|libras?|bitcoin|btc|bolsa|ibovespa|ibov|b3|acoes|selic|cdi|ipca|inflacao)\b/.test(t)
+    && /\b(cotacao|valendo|vale|valor|preco|precos|quanto|real|reais|converter|convert|cambio)\b/.test(t)) {
+    return { ...r, categoria: null, intent: 'moeda_jogo', jogo: jogoAntes, pacote: lerPacote(t), precoDeHoje: true, seguimento: true };
   }
   // Fora do papel (JF, 15/11: "quem venceu o Brasileirão de 19xx? aí foge muito; a IA gastaria crédito à toa"):
   // esporte, horóscopo, receita de comida, letra de música, clima… sem dinheiro no meio, ele responde aqui mesmo,
@@ -638,6 +645,8 @@ const sinal = v => (v == null ? '' : `${v > 0 ? '+' : ''}${fmtPct(v)}`);
 const fmtReal = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: v >= 1000 ? 0 : 2 });
 
 /** Uma linha com o número, a variação e a tendência, mostrando a conta (base de cálculo). */
+const NOME_ATIVO = { USD: 'dólar', EUR: 'euro', GBP: 'valor da libra', BTC: 'bitcoin', ARS: 'peso argentino', IBOV: 'Ibovespa', SELIC: 'valor da Selic', CDI: 'CDI', IPCA: 'IPCA' };
+
 function textoAtivo(m, a) {
   if (a === 'SELIC') return m.selic ? `Selic: ${fmtPct(m.selic.valor)} ao ano${m.ipca12 ? `; com a inflação em 12 meses em ${fmtPct(m.ipca12.valor)}, o juro real fica perto de ${fmtPct(m.selic.valor - m.ipca12.valor)}` : ''}.` : '';
   if (a === 'CDI') return m.cdi ? `CDI: ${fmtPct(m.cdi.valor)} ao ano. É a referência da renda fixa (um CDB "100% do CDI" rende isso, antes do imposto).` : '';
@@ -1385,7 +1394,12 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         const alvo = intencao.ativo || 'IBOV';
         fato = `${linhaAtivo(alvo) || 'Não tenho esse dado agora.'}${m.cdi ? ` Pra comparar: o CDI está em ${fmtPct(m.cdi.valor)} ao ano, que é quanto a renda fixa paga com pouco sobe e desce.` : ''} Se for investir, pensa no prazo e não coloca o dinheiro da reserva de emergência em algo que oscila.`;
       } else if (intencao.ativo) {
-        fato = linhaAtivo(intencao.ativo) || 'Esse dado não veio na última atualização.';
+        fato = linhaAtivo(intencao.ativo);
+        // JF, 16/11: "Como está o dólar?" respondia "Fiz as contas pra você: Esse dado não veio". Sem o dado, ele diz
+        // a verdade e a pergunta vai pra IA online (que pode pesquisar), quando ela está ligada.
+        if (!fato) {
+          return { fato: `O ${NOME_ATIVO[intencao.ativo] || 'dado'} não veio na última atualização do mercado (${quando}). Com a IA online ligada, eu pesquiso o valor de hoje.`, cru: true, semDado: true, sugestoes: ['A bolsa tende a subir?', 'Qual a Selic?'] };
+        }
       } else {
         fato = ['USD', 'EUR', 'IBOV', 'SELIC'].map(linhaAtivo).filter(Boolean).join(' ');
       }

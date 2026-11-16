@@ -534,6 +534,8 @@ const FONTES = {
   sgs: (serie, n = 1) => `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${serie}/dados/ultimos/${n}?formato=json`,
 };
 const SERIES_BC = { selic: 432, cdi: 4389, ipca12: 13522 };
+// Plano B das moedas (JF, 16/11: "Como está o dólar?" e o dólar não tinha vindo): cotação PTAX de venda do Banco Central
+const MOEDAS_BC = { USD: 1, EUR: 21619, GBP: 21623 };
 
 async function baixarJson(url, f) {
   const r = await f(url, { headers: { accept: 'application/json', 'user-agent': 'CarteiraJF/1.0 (app pessoal de finanças)' } });
@@ -558,6 +560,15 @@ export async function buscarMercado(f = fetch, agora = new Date()) {
       if (a) resumo.moedas[m] = { ...MOEDAS[m], ...a, varDia: Number(q.pctChange) || a.varDia, em: q.create_date };
     }));
   } catch (e) { resumo.falhas.push(`moedas (${e.message})`); }
+  // o que faltou (a AwesomeAPI caiu, limitou ou não mandou) vem do Banco Central, com os últimos 21 dias úteis
+  await Promise.all(Object.entries(MOEDAS_BC).filter(([m]) => !resumo.moedas[m]).map(async ([m, serie]) => {
+    try {
+      const lista = await baixarJson(FONTES.sgs(serie, 21), f);
+      const valores = lista.map(x => Number(String(x.valor).replace(',', '.'))).filter(Number.isFinite);
+      const a = analisarSerie(valores, { atual: valores[valores.length - 1] });
+      if (a) resumo.moedas[m] = { ...MOEDAS[m], ...a, em: lista[lista.length - 1]?.data, fonte: 'Banco Central (PTAX)' };
+    } catch (e) { resumo.falhas.push(`${m} do Banco Central (${e.message})`); }
+  }));
   try {
     const y = await baixarJson(FONTES.ibov, f);
     const closes = (y.chart?.result?.[0]?.indicators?.quote?.[0]?.close || []).filter(Number.isFinite);
