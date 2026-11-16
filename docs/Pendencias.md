@@ -20,7 +20,7 @@ Atualizada pelo Wally a cada rodada.
 
 ## IA online: travas de crédito (15/11)
 
-No ar no app; no servidor, falta o JF publicar (`git pull` e `npx.cmd wrangler deploy` dentro de `servidor`). Pra afrouxar ou
+No ar no app e no servidor (o JF publicou em 16/11). Pra afrouxar ou
 apertar, é só mudar os números no `servidor/wrangler.toml` (IA_LIMITE_DIA, IA_TETO_DIA, IA_TETO_MES, BUSCA_TETO_DIA,
 IA_MODELO_CONVERSA) e no app (`IA_POR_DIA` em `js/app.js`).
 
@@ -38,8 +38,7 @@ Entrou na 2.0.5 Mais Simples: blocos que abrem e fecham (Início, Mês, Contas),
 o olhinho, banco → contas → conta por dentro, Estilo do app (Atual, Limpo, Direto), letra maior e menos cor.
 
 Falta:
-1. **Notícias do dia:** prontas no app e no servidor (2.0.6). Falta o JF publicar o servidor de novo
-   (`git pull` e `npx.cmd wrangler deploy` dentro de `servidor`). Custo estimado: modelo barato, 2 buscas por vez,
+1. **Notícias do dia:** no ar no app e no servidor (o JF publicou em 16/11). Custo estimado: modelo barato, 2 buscas por vez,
    2 vezes por dia, teto de 62 rodadas por mês: uns US$ 1,30 a 2 por mês. Desligar: `NOTICIAS_LIGADAS = "0"`.
 2. **Estilo "Atual" repaginado:** o JF e a Anne veem a 2.0.5 e dizem o que ainda acham fliperama.
 3. **Lançar e Ajustes em blocos:** mesmo jeito do Início, se a Anne aprovar.
