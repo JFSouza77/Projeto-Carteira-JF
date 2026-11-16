@@ -1422,3 +1422,19 @@ button.perigo { color: var(--danger); box-shadow: inset 0 0 0 1px color-mix(in s
 .guarda-campo #cd-guarda-det { display: grid; gap: 8px; }
 .guarda-campo #cd-guarda-det[hidden] { display: none; }
 .rx-dica { margin: 8px 0 0; }
+
+/* 2.1.5 (JF, 16/11: "quero melhorar essas telas"): Ajustes em grupos, cada item com ícone e o que tem dentro */
+.aj-grupo { margin: 18px 4px 6px; font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.aj-tit { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.aj-sub { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: .82rem; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); }
+
+/* 2.1.5 (JF, 16/11): resumo do mês no topo da Análise. Cor com sentido: gasto laranja, entrada e sobra verde, déficit laranja */
+.analise-resumo { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 6px; }
+.ar-item { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 9px 8px 7px; min-width: 0;
+  border-top: 3px solid var(--ar-cor, var(--line)); }
+.ar-item small { display: block; color: var(--muted); font-size: .78rem; }
+.ar-item strong { display: block; font-size: clamp(.78rem, 3.3vw, 1.1rem); color: var(--ar-cor, var(--text)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ar-item.gasto { --ar-cor: var(--coral); }
+.ar-item.entrada, .ar-item.sobra { --ar-cor: var(--ok); }
+.analise-resumo.negativo .ar-item.sobra { --ar-cor: var(--coral); }
+.ar-dica { margin: 0 4px 10px; }

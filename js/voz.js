@@ -55,10 +55,16 @@ export function setVelocidade(v) {
   VELOCIDADE = Number.isFinite(n) ? Math.min(1.6, Math.max(0.6, n)) : 1;
 }
 
-export function falar(texto, emocao = 'calmo') {
-  if (!vozDisponivel()) return;
+// 2.1.5 (JF, 16/11: "ele não espera acabar a primeira fala antes de falar a segunda; tem que dar esse respiro"):
+// falar() devolve uma promessa que termina quando a fala acaba (ou num tempo máximo, se o aparelho não avisar).
+// O 2º balão espera ela. Com { emenda: true }, a fala entra na fila em vez de cortar a anterior.
+let falaAtual = Promise.resolve();
+export const falaTerminou = () => falaAtual;
+
+export function falar(texto, emocao = 'calmo', { emenda = false } = {}) {
+  if (!vozDisponivel()) return Promise.resolve();
   try {
-    speechSynthesis.cancel();
+    if (!emenda) speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(textoParaVoz(texto));
     u.lang = 'pt-BR';
     const v = melhorVoz();
@@ -67,8 +73,14 @@ export function falar(texto, emocao = 'calmo') {
     // sem voz masculina no aparelho, ele fala um pouco mais grave (como no Perfil)
     u.pitch = Math.max(0.4, Math.min(2, (v && !MASC.test(v.name || '') ? 0.8 : 1) * tom));
     u.rate = Math.min(2, Math.max(0.5, vel * VELOCIDADE));
+    const limite = Math.min(30_000, 1500 + textoParaVoz(texto).length * 90 / u.rate);
+    falaAtual = new Promise(fim => {
+      const t = setTimeout(fim, limite);
+      u.onend = u.onerror = () => { clearTimeout(t); fim(); };
+    });
     speechSynthesis.speak(u);
-  } catch {}
+    return falaAtual;
+  } catch { return Promise.resolve(); }
 }
 
 export function calar() {

@@ -241,6 +241,13 @@
       <h1><span id="analise-nome">Análise</span> · <span id="analise-mes"></span></h1>
     </header>
     <main>
+      <!-- 2.1.5 (JF, 16/11: "quero melhorar essas telas"): o resumo do mês fica sempre à vista, mesmo com os quadros fechados -->
+      <div class="analise-resumo" id="analise-resumo" aria-label="Resumo do mês">
+        <div class="ar-item gasto"><small>Gastos</small><strong class="num" id="ar-gastos">R$ 0,00</strong></div>
+        <div class="ar-item entrada"><small>Entradas</small><strong class="num" id="ar-entradas">R$ 0,00</strong></div>
+        <div class="ar-item sobra"><small id="ar-sobra-rot">Sobra</small><strong class="num" id="ar-sobra">R$ 0,00</strong></div>
+      </div>
+      <p class="muted small ar-dica" id="ar-dica"></p>
       <details class="card bloco graficos" id="graficos-card" data-bloco="graficos" open>
         <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#e-rendimento"/></svg><span class="bloco-tit">Como anda o seu dinheiro</span></summary>
         <figure class="grafico" id="ritmo-fig">
@@ -596,8 +603,9 @@
     <header class="topbar"><a href="#inicio" class="icon-btn voltar" aria-label="Voltar pro Início">‹</a><h1>Ajustes</h1><span class="topbar-espaco" aria-hidden="true"></span></header>
     <main>
       <button type="button" class="card novidades-btn" id="novidades-abrir">🆕 <span><strong>Novidades</strong><small class="muted" id="novidades-versao"></small></span><span aria-hidden="true">›</span></button>
+      <p class="aj-grupo">Você</p>
       <details class="card" id="conta-card">
-        <summary><h2><svg class="ico" aria-hidden="true"><use href="#i-nuvem"/></svg> Sua conta (usar em vários aparelhos)</h2></summary>
+        <summary><h2><svg class="ico" aria-hidden="true"><use href="#i-nuvem"/></svg> <span class="aj-tit">Sua conta<small class="aj-sub">Usar em vários aparelhos, com senha</small></span></h2></summary>
         <div id="conta-fora">
           <p class="muted small">Crie uma conta pra ver seus gastos no celular, no tablet e no computador. O que você anota num aparelho aparece nos outros sozinho. Sem internet, ele guarda e manda depois.</p>
           <label class="field-label" for="conta-apelido">Apelido da conta</label>
@@ -625,15 +633,16 @@
       </details>
 
       <details class="card">
-        <summary><h2>Seu perfil</h2></summary>
+        <summary><h2><svg class="ico" aria-hidden="true"><use href="#i-meta"/></svg> <span class="aj-tit">Seu perfil<small class="aj-sub">Nome, apelido e aniversário</small></span></h2></summary>
         <p class="muted small" id="perfil-resumo">O C.A.O.S. ainda não te conhece.</p>
         <label class="field-label" for="perfil-aniversario">Data de nascimento <small class="muted">(fica só no seu aparelho)</small></label>
         <input type="date" id="perfil-aniversario" min="1900-01-01">
         <button type="button" class="ghost" id="perfil-refazer">Refazer apresentação com o C.A.O.S.</button>
       </details>
 
+      <p class="aj-grupo">C.A.O.S.</p>
       <details class="card" open>
-        <summary><h2>C.A.O.S.</h2></summary>
+        <summary><h2><svg class="ico" aria-hidden="true"><use href="#i-conversa"/></svg> <span class="aj-tit">C.A.O.S.<small class="aj-sub">Humor, voz e jeito de falar</small></span></h2></summary>
         <fieldset class="mood">
           <legend>Humor</legend>
           <div class="segmented" id="mood-options"></div>
@@ -644,15 +653,16 @@
 
       <!-- 15/11 (Anne): as leis e a linha do tempo saíram do Glossário e ficam aqui -->
       <details class="card" id="caos-info-card">
-        <summary><h2>Mais sobre o C.A.O.S.</h2></summary>
+        <summary><h2><svg class="ico" aria-hidden="true"><use href="#i-livro"/></svg> <span class="aj-tit">Mais sobre o C.A.O.S.<small class="aj-sub">Leis, história e quem ele é</small></span></h2></summary>
         <h3>As 3 leis do C.A.O.S.</h3>
         <ol class="leis" id="leis"></ol>
         <h3>Linha do tempo</h3>
         <ol class="linha-tempo" id="linha-tempo"></ol>
       </details>
 
+      <p class="aj-grupo">App</p>
       <details class="card">
-        <summary><h2>Acessibilidade</h2></summary>
+        <summary><h2><svg class="ico" aria-hidden="true"><use href="#i-olho"/></svg> <span class="aj-tit">Acessibilidade<small class="aj-sub">Letra, cores, tema e movimento</small></span></h2></summary>
         <fieldset class="a11y-grupo">
           <legend>Tamanho da letra</legend>
           <div class="segmented" id="letra-options">
@@ -686,13 +696,13 @@
       </details>
 
       <details class="card">
-        <summary><h2>Orçamentos</h2></summary>
+        <summary><h2><svg class="ico" aria-hidden="true"><use href="#c-compras"/></svg> <span class="aj-tit">Orçamentos<small class="aj-sub">Limite de cada categoria</small></span></h2></summary>
         <p class="muted">Limite mensal por categoria. Deixe vazio para não ter limite.</p>
         <ul class="budget-list" id="budget-list"></ul>
       </details>
 
       <details class="card">
-        <summary><h2>Lembretes</h2></summary>
+        <summary><h2><svg class="ico" aria-hidden="true"><use href="#i-relogio"/></svg> <span class="aj-tit">Lembretes<small class="aj-sub">Aviso diário pra anotar</small></span></h2></summary>
         <div class="lembretes">
           <label class="switch"><input type="checkbox" id="remind-toggle"><span>Lembrar de anotar os gastos</span></label>
           <label class="lembrete-hora"><span>Horário</span><input type="time" id="remind-time" value="20:30"></label>
@@ -702,7 +712,7 @@
       </details>
 
       <details class="card">
-        <summary><h2>IA online e servidor</h2></summary>
+        <summary><h2><svg class="ico" aria-hidden="true"><use href="#i-ia"/></svg> <span class="aj-tit">IA online e servidor<small class="aj-sub">Liga a IA e mostra o uso do mês</small></span></h2></summary>
         <p class="muted small">Já vem ligada. Com ela, o C.A.O.S. lê fotos de comprovante e responde perguntas livres. Na conversa vão só totais por categoria (nunca a lista de gastos). A foto só vai quando você toca em "Ler com IA". O servidor também envia os lembretes do iPhone.</p>
         <label class="switch"><input type="checkbox" id="ai-toggle"><span>Usar IA online</span></label>
         <input id="ai-url" type="url" inputmode="url" placeholder="https://carteira-jf.SEU-USUARIO.workers.dev" aria-label="Endereço do servidor">
@@ -715,8 +725,9 @@
       </details>
 
       <!-- 16/11 (JF): recomeçar sem apagar os bancos (ex.: começar dezembro do zero) -->
+      <p class="aj-grupo">Seus dados</p>
       <details class="card" id="recomecar-card">
-        <summary><h2>Recomeçar</h2></summary>
+        <summary><h2><svg class="ico" aria-hidden="true"><use href="#i-limpar"/></svg> <span class="aj-tit">Recomeçar<small class="aj-sub">Zerar saldos ou começar do zero</small></span></h2></summary>
         <p class="muted">Pra começar do zero sem cadastrar banco por banco de novo. Os bancos, cartões, pisos, contas fixas, planos, metas e ajustes continuam. Antes, se quiser, faça um backup (aqui embaixo).</p>
         <div class="recomecar-botoes">
           <button type="button" class="ghost" id="zerar-saldos">Zerar só os saldos dos bancos</button>
@@ -727,7 +738,7 @@
       </details>
 
       <details class="card">
-        <summary><h2>Backup</h2></summary>
+        <summary><h2><svg class="ico" aria-hidden="true"><use href="#i-cadeado"/></svg> <span class="aj-tit">Backup<small class="aj-sub">Guardar e trazer seus dados</small></span></h2></summary>
         <div class="backup">
           <p class="muted">Seus dados ficam só neste aparelho. Faça backup de vez em quando (as fotos não entram no backup).</p>
           <button type="button" id="export-btn">Exportar backup</button>

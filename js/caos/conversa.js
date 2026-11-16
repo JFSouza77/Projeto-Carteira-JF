@@ -183,6 +183,7 @@ const CONHECIDAS = [
   'investimento', 'investimentos', 'aplicado', 'aplicacao', 'aplicacoes', 'rendeu', 'renderam', 'semanas', 'meses', 'dias', 'ano', 'anos', 'contar', 'contei', 'conte',
   // revisão do Gemini (16/11, conferida): "gosto" virava "gasto", "gato" virava "gasto", "mesa" virava "mes",
   // "maio" virava "maior", "parar" virava "pagar", "home" virava "hoje"
+  'cinemark', 'cinepolis', 'kinoplex', 'pipoca', 'ingresso', 'ingressos', 'shopping', 'shoppings', // 2.3.9: cinema não vira outra palavra
   'gosto', 'gosta', 'gostou', 'gato', 'gatos', 'gata', 'mesa', 'mesas', 'maio', 'marco', 'abril', 'junho', 'julho', 'agosto',
   'parar', 'parei', 'home', 'meta', 'metas', 'jogo', 'jogos', 'game', 'games', 'pasta', 'gesto', 'menos', 'massa',
 ];
@@ -353,6 +354,14 @@ export const PASSOS_PESQUISA = Object.freeze({
     { id: 'opcoes', rotulo: 'Topa outras opções', q: 'Topa outras opções? Bicicleta, a pé, carona, ônibus, juntar as saídas…', chips: ['Topo', 'Prefiro não'] },
     { id: 'orcamento', rotulo: 'Quer gastar até', q: 'Quanto quer gastar por mês com transporte? Tipo "até 400".', chips: ['Sem orçamento'] },
   ],
+  // 2.3.9 (JF, 16/11: "quero ir ao cinema esse mês… dá pra ir? compro pipoca?"): passeio e lazer
+  lazer: [
+    { id: 'regiao', rotulo: 'Cidade ou região', q: 'Em que cidade ou região? Tipo "Grande Vitória", "centro de BH".' },
+    { id: 'quando', rotulo: 'Quando', q: 'Quando você quer ir?', chips: ['Este fim de semana', 'Este mês'] },
+    { id: 'quem', rotulo: 'Quantas pessoas', q: 'Vai sozinho ou com mais gente?', chips: ['Só eu', '2 pessoas', 'Família'] },
+    { id: 'extras', rotulo: 'Além do ingresso', q: 'Entra o quê além do ingresso? Pipoca, estacionamento, lanche, Uber…', chips: ['Pipoca', 'Estacionamento', 'Só o ingresso'] },
+    { id: 'orcamento', rotulo: 'Quer gastar até', q: 'Quanto quer gastar no total? Tipo "até 100". Se não tiver, diz "sem orçamento".', chips: ['Sem orçamento'] },
+  ],
   economizar: [
     { id: 'meta', rotulo: 'Quer economizar', q: 'Quanto quer economizar por mês? Tipo "300".' },
     { id: 'objetivo', rotulo: 'Pra quê', q: 'É pra algum objetivo? Reserva, viagem, sair de dívida…', chips: ['Reserva', 'Dívida', 'Um sonho'] },
@@ -361,8 +370,13 @@ export const PASSOS_PESQUISA = Object.freeze({
     { id: 'prazo', rotulo: 'Prazo', q: 'Em quanto tempo quer ver o resultado?', chips: ['1 mês', '3 meses', '6 meses'] },
   ],
 });
-const NOME_DO_PLANO = { viagem: 'Pesquisa de viagem', produto: 'Pesquisa de compra', pet: 'Plano de pet', moradia: 'Plano de moradia', transporte: 'Plano de transporte', economizar: 'Plano pra economizar' };
+const NOME_DO_PLANO = { lazer: 'Plano de passeio', viagem: 'Pesquisa de viagem', produto: 'Pesquisa de compra', pet: 'Plano de pet', moradia: 'Plano de moradia', transporte: 'Plano de transporte', economizar: 'Plano pra economizar' };
 
+const LAZER = /\b(cinema|cinemark|cinepolis|kinoplex|filme no cinema|ingresso|ingressos|show|teatro|parque de diversao|balada|barzinho|rodizio|passeio|role|festival|estadio|boliche|escape room)\b/;
+// pergunta de preço de algo de fora ("quanto tá um ingresso no cinemark?"): não é "quanto gastei" (2.3.9, JF)
+const PRECO_DE_FORA = /\b(quanto (ta|esta|custa|custam|sai|fica|anda|e|eh|ta custando|esta custando)|qual (o )?(preco|valor)|preco d[eoa]s?|valor d[eoa]s?|valores d[eoa]s?)\b/;
+// pesquisa pedida com todas as letras: vai direto pra IA, sem questionário (JF: "sou seu criador, me respeita")
+const PESQUISA_DIRETA = /\b(pesquisa|pesquisar|busca|buscar|procura|procurar|ve|ver|olha|olhar)( (pra|para) mim)?( (na|no) (internet|google|web))\b/;
 const VIAGEM = /\b(viagem|viajar|passagem|passagens|voo|voos|hotel|hospedagem|pacote de viagem)\b/;
 const PET = /\b(pet|pets|cachorro|cachorrinho|cao|gato|gatinho|gata|filhote|pinscher|pincher|calopsita|passaro|hamster|coelho|peixe|aquario|vira lata)\b/;
 const MORADIA = /\b(aluguel|apartamento|ape|casa propria|me mudar|mudar de casa|mudar de apartamento|mudanca|morar sozinh[oa]|condominio|financiar (uma |a )?(casa|ape))\b/;
@@ -370,22 +384,48 @@ const TRANSPORTE = /\b(gasolina|combustivel|etanol|uber|99|onibus|transporte|car
 const PEDE = /\b(quanto|custa|custaria|sai|sairia|fica|ficaria|pesquis|procur|planej|calcul|me ajuda|ajuda|me ajude|quero|pretendo|penso em|vale|compensa|caro|cara|economiz|gasto muito|gastando muito|gasto demais|reduzir|diminuir)/;
 /** Planos guiados (16/11): o que a pessoa quer planejar ou pesquisar, e se já disse o orçamento. */
 export function acharPesquisa(t, valor) {
-  if (/\b(juntar|guardar|poupar|meta|gastei|paguei|comprei|recebi|robux|v ?bucks|diamantes|quanto gastei|quanto gasto com)\b/.test(t)) return null;
+  if (/\b(juntar|guardar|poupar|meta|gastei|paguei|comprei|recebi|robux|v ?bucks|diamantes|quanto gastei|quanto gasto com|gasto com|gastando com)\b/.test(t)) return null;
   let tipo = null;
-  if (/(onde (posso|da pra|consigo|eu posso) economizar|como (posso |eu )?economizar|me ajuda a economizar|cortar gastos|reduzir (meus )?gastos|gastar menos)/.test(t)) tipo = 'economizar';
+  const precoDeFora = PRECO_DE_FORA.test(t) && /\b(um|uma|o|a|os|as|no|na|do|da)\b/.test(t);
+  if (LAZER.test(t) && (PEDE.test(t) || precoDeFora || /\b(da pra (eu )?ir|posso ir|vale ir|recomenda|pesquis|valores?|precos?)\b/.test(t))) tipo = 'lazer';
+  else if (/(onde (posso|da pra|consigo|eu posso) economizar|como (posso |eu )?economizar|me ajuda a economizar|cortar gastos|reduzir (meus )?gastos|gastar menos)/.test(t)) tipo = 'economizar';
   else if (PET.test(t) && PEDE.test(t) && !/\b(racao|petshop|pet shop)\b.*\b\d/.test(t)) tipo = 'pet';
   else if (MORADIA.test(t) && PEDE.test(t)) tipo = 'moradia';
   else if (TRANSPORTE.test(t) && /(economiz|gasto muito|gastando muito|gasto demais|caro|reduzir|diminuir|compensa|vale mais|ajuda)/.test(t)) tipo = 'transporte';
   else if (VIAGEM.test(t) && PEDE.test(t)) tipo = 'viagem';
   else if (/\b(pesquisa|pesquisar|procura|procurar|acha|achar|encontra|encontrar|compara|comparar)\b.*\b(preco|precos|onde|loja|lojas|melhor|barato|mais barato|um|uma|o|a)\b/.test(t)
-    || /\b(onde (compro|comprar|acho)|melhor preco|mais barato|quero comprar (um|uma|o|a))\b/.test(t)) tipo = 'produto';
+    || /\b(onde (compro|comprar|acho)|melhor preco|mais barato|quero comprar (um|uma|o|a))\b/.test(t)
+    || PESQUISA_DIRETA.test(t)) tipo = 'produto';
   if (!tipo) return null;
+  // vai direto pra IA, sem questionário (2.3.9, JF): pesquisa pedida com todas as letras ("pesquisa na internet…"),
+  // pergunta de preço curta ("quanto tá um ingresso no cinemark?") ou pedido já detalhado (o questionário só atrapalha)
+  const palavras = t.split(/\s+/).filter(Boolean).length;
+  // (pergunta de preço curta só pula no passeio: compra, pet e casa ainda ganham as perguntas, que poupam crédito)
+  const direto = PESQUISA_DIRETA.test(t) || (tipo === 'lazer' && precoDeFora && palavras <= 12) || palavras >= 18;
   const orc = t.match(/\b(orcamento|ate|teto|no maximo|maximo)\b[^0-9]{0,15}(\d[\d.,]*)/);
   const orcamento = orc ? Math.round(Number(orc[2].replace(/\./g, '').replace(',', '.')) * 100) : undefined;
-  const item = t.replace(/\b(me ajuda a|me ajude a|ajuda a|ajude a|me ajuda|me ajude|caos|por favor|pesquisa|pesquisar|procura|procurar|acha|achar|encontra|encontrar|compara|comparar|quanto|custa|custaria|sai|sairia|fica|ficaria|o preco de|preco de|preco|onde (compro|comprar|acho)|quero comprar|quero fazer|quero|pretendo|penso em|calcular|planejar|considerando|pra eu|para eu|eu)\b/g, ' ')
+  const item = t.replace(/\b(pra mim|para mim|na internet|no google|na web|quais sao|qual e|qual|quanto (ta|esta|anda)|os valores|o valor|valores|valor|ve|ver|olha|olhar|busca|buscar)\b/g, ' ').replace(/\b(me ajuda a|me ajude a|ajuda a|ajude a|me ajuda|me ajude|caos|por favor|pesquisa|pesquisar|procura|procurar|acha|achar|encontra|encontrar|compara|comparar|quanto|custa|custaria|sai|sairia|fica|ficaria|o preco de|preco de|preco|onde (compro|comprar|acho)|quero comprar|quero fazer|quero|pretendo|penso em|calcular|planejar|considerando|pra eu|para eu|eu)\b/g, ' ')
     .replace(/\b(orcamento|ate|teto|no maximo|maximo)\b[^0-9]{0,15}\d[\d.,]*( reais| mil)?/g, ' ').replace(/[?!.,;]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^((qual|o|a|os|as|da|do|de|pra|para|que|e)\s+)+/, '');
-  const padrao = { viagem: 'essa viagem', produto: 'isso', pet: 'seu pet', moradia: 'sua moradia', transporte: 'seu transporte', economizar: 'onde economizar' }[tipo];
-  return { tipo, viagem: tipo === 'viagem', item: item || padrao, orcamento: orcamento && orcamento > 0 ? orcamento : (valor && /\b(orcamento|ate)\b/.test(t) ? valor : undefined) };
+  // lazer: o que a pessoa já disse não vira pergunta de novo
+  const respostas = tipo === 'lazer' ? respostasDoLazer(t) : {};
+  const padrao = { lazer: 'esse passeio', viagem: 'essa viagem', produto: 'isso', pet: 'seu pet', moradia: 'sua moradia', transporte: 'seu transporte', economizar: 'onde economizar' }[tipo];
+  return { tipo, viagem: tipo === 'viagem', item: (item || padrao).slice(0, 80), direto, respostas,
+    orcamento: orcamento && orcamento > 0 ? orcamento : (valor && /\b(orcamento|ate)\b/.test(t) ? valor : undefined) };
+}
+
+// 2.3.9: tira do pedido de passeio o que já foi dito (região, quando, quem, extras)
+function respostasDoLazer(t) {
+  const r = {};
+  const reg = t.match(/\b(grande vitoria|vitoria|vila velha|serra|cariacica|viana|guarapari|sao paulo|rio de janeiro|belo horizonte|bh|curitiba|salvador|recife|fortaleza|brasilia|porto alegre)\b/)
+    || t.match(/\b(?:aqui (?:na|no|em)|perto (?:de|da|do)|em) ([a-z]+(?: [a-z]+)?)\b(?= |$)/);
+  if (reg && !/\b(casa|mim|um|uma|o|a)$/.test(reg[1])) r.regiao = reg[1];
+  const q = t.match(/\b(esse mes|este mes|essa semana|esta semana|esse fim de semana|este fim de semana|fim de semana|hoje|amanha|sabado|domingo|sexta)\b/);
+  if (q) r.quando = q[1];
+  const quem = t.match(/\b(sozinho|sozinha|so eu|eu e (?:minha|meu) [a-z]+|com (?:a |o )?(?:minha|meu) [a-z]+|com amigos|em familia|familia|\d+ pessoas)\b/);
+  if (quem) r.quem = quem[1];
+  const ex = ['pipoca', 'estacionamento', 'lanche', 'uber', 'combo', 'refrigerante'].filter(x => t.includes(x));
+  if (ex.length) r.extras = ex.join(', ');
+  return r;
 }
 
 export function entender(texto, { categories = [], anterior = null } = {}) {
@@ -1629,17 +1669,26 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       if (intencao.orcamento !== undefined && respostas.orcamento === undefined) respostas.orcamento = intencao.orcamento;
       let passo = intencao.passo || 0;
       while (passo < passos.length && respostas[passos[passo].id] !== undefined) passo++;
+      // 2.3.9 (JF): pedido direto ou já detalhado vai pra IA na hora, com o texto inteiro e o que deu pra ler dele
+      if (intencao.direto && !intencao.passo) {
+        const lidas = passos.filter(p => respostas[p.id]).map(p => (p.id === 'orcamento' ? `${p.rotulo}: ${formatBRL(respostas.orcamento)}` : `${p.rotulo}: ${respostas[p.id]}`));
+        const perguntaIA = `${NOME_DO_PLANO[tipo]}. Pedido da pessoa: "${intencao.t}".${lidas.length ? ` ${lidas.join('. ')}.` : ''}`
+          + `${tipo === 'lazer' ? ' Diga se cabe no mês pelo resumo e se os extras (pipoca etc.) valem a pena.' : ''}`;
+        const oQue = item.length > 40 ? { lazer: 'os preços desse passeio', viagem: 'essa viagem' }[tipo] || 'isso' : item;
+        return { fato: `Bora! Vou pesquisar ${oQue} pra você${tipo === 'lazer' ? ' e ver se cabe no seu mês' : ''}.`, cru: true, perguntaIA: perguntaIA.slice(0, 600), modoIA: 'pesquisa',
+          sugestoes: ['Dá pra gastar quanto até o salário?'] };
+      }
       if (passo < passos.length) {
         const p = passos[passo];
         const abre = !intencao.passo
-          ? `${tipo === 'viagem' || tipo === 'produto' ? `Bora pesquisar ${item}!` : 'Bora planejar isso junto!'} Me ajuda a te ajudar: umas perguntas rápidas antes, pra eu filtrar logo de cara e não sair inventando número nem procurando o que não te serve. `
+          ? `${tipo === 'viagem' || tipo === 'produto' ? `Bora pesquisar ${item}!` : tipo === 'lazer' ? `Bora planejar ${item}!` : 'Bora planejar isso junto!'} Me ajuda a te ajudar: umas perguntas rápidas antes, pra eu filtrar logo de cara e não sair inventando número nem procurando o que não te serve. `
           : '';
         return { fato: `${abre}${p.q}`, cru: true, sugestoes: [...(p.chips || []), 'Pular', 'Cancelar'], aguardar: { tipo: 'pesquisa', plano: tipo, item, passo, respostas } };
       }
       const temOrcamento = passos.some(p => p.id === 'orcamento');
       const linhas = passos.filter(p => respostas[p.id]).map(p => (p.id === 'orcamento' ? `${p.rotulo}: ${formatBRL(respostas.orcamento)}` : `${p.rotulo}: ${respostas[p.id]}`));
       if (temOrcamento && !respostas.orcamento) linhas.push('Orçamento: não informado');
-      const perguntaIA = `${NOME_DO_PLANO[tipo]}: ${item}. ${linhas.join('. ')}.`.slice(0, 480);
+      const perguntaIA = `${NOME_DO_PLANO[tipo]}: ${item}. ${linhas.join('. ')}.${tipo === 'lazer' ? ' Diga se cabe no mês pelo resumo e se os extras valem a pena.' : ''}`.slice(0, 520);
       // sem a IA online (ou sem internet), ele dá o caminho das pedras
       const CAMINHO = {
         viagem: 'Compare em 2 ou 3 lugares: o site das companhias (Azul, Gol, Latam) e um buscador (Google Voos, Decolar); pra hotel, Booking ou Airbnb filtrando a região. Confira se é ida e volta, bagagem, taxas, horário e escala. Numa viagem completa, some passagem, hospedagem, comida, transporte, seguro viagem e, se for pra fora, o câmbio.',
@@ -1647,6 +1696,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         pet: 'Some o fixo do mês (ração, areia ou tapete, antipulgas) e reserve pro que vem de vez em quando (vacinas, vermífugo, veterinário, banho e tosa). Uma reserva pra emergência do bicho evita susto. Adotar sai bem mais em conta que comprar.',
         moradia: 'Uma regra de bolso: moradia até uns 30% do que entra. Compare com anúncios do mesmo bairro e de bairros vizinhos (QuintoAndar, OLX, Zap) e some o custo de ir pro trabalho: às vezes um aluguel um pouco maior perto do serviço sai mais barato no fim do mês.',
         transporte: 'Anote quanto gasta por semana e veja se dá pra juntar saídas, rachar carona ou trocar alguns dias por ônibus, bicicleta ou a pé. No carro, calibrar o pneu e evitar arrancadas já economiza combustível. Compare o preço por km de cada jeito de ir.',
+        lazer: 'Pra um passeio mais barato: dia de promoção (no cinema, geralmente no começo da semana), meia-entrada se tiver direito, pipoca e bebida de casa quando o lugar deixa, e estacionamento conta: às vezes um app de transporte sai igual. Veja o que sobra no mês antes de ir.',
         economizar: 'Comece pelo que mais pesa no mês e pelas assinaturas esquecidas. Corte primeiro o que você nem sente falta, e guarde a economia assim que o dinheiro entrar, antes de gastar.',
       }[tipo];
       return { fato: `Fechou, com isso eu filtro. ${CAMINHO}${respostas.orcamento ? ` Seu teto: ${formatBRL(respostas.orcamento)}.` : ''} Com a IA online ligada, eu faço a conta e pesquiso o que precisar pra você comparar.`, cru: true, perguntaIA, modoIA: 'pesquisa', sugestoes: ['Dá pra gastar quanto até o salário?'] };
