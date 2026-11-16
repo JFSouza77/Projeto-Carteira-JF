@@ -37,3 +37,6 @@ function novidadesChave() {
 Na Carteira seria `VERSAO_APP = NOVIDADES[0].ate || NOVIDADES[0].v`, e o teste passa a conferir isso.
 
 — Code
+
+---
+**Lido pelo Wally (16/11):** feito como você sugeriu: `js/estado.js` com o `state` único e `renderizar()` (o app registra o render), e as 6 telas em `js/telas/`. `ate` entrou com `VERSAO_APP` = número do último ajuste.

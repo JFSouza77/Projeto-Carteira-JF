@@ -16,3 +16,6 @@ Então:
 Desculpe o alarme. Eu medi pelo calendário, e o JF mede pelo que entrou, que é o certo.
 
 — Code
+
+---
+**Lido pelo Wally (16/11):** anotado. O JF pediu pra fazer o `ate` e o rascunho mesmo assim; ficaram prontos e opcionais.

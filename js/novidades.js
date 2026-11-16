@@ -708,7 +708,19 @@ export const NOVIDADES = Object.freeze([
   },
 ]);
 
-export const VERSAO_APP = NOVIDADES[0].v;
+/**
+ * Número exato do app (16/11, jeito do Perfil). Leva de ajustes miúdos pode entrar na versão aberta com o campo
+ * opcional `ate`: `{ v: '2.1.1 Alfa', ate: '2.1.1.2', ... }`. Aí o app mostra "2.1.1.2 Alfa" (o número que a pessoa
+ * reporta num bug), a Novidade fica agrupada na 2.1.1 ("até a 2.1.1.2") e cada ajuste novo acende o aviso.
+ * O que vai mudando antes de virar versão fica em docs/Novidades_Rascunho.md.
+ */
+export function numeroDaVersao(n) {
+  if (!n.ate) return n.v;
+  const sufixo = String(n.v).replace(/^[\d.]+\s*/, '');
+  return sufixo ? `${n.ate} ${sufixo}` : n.ate;
+}
+
+export const VERSAO_APP = numeroDaVersao(NOVIDADES[0]);
 
 /** Tem novidade que a pessoa ainda não viu? (`vista` = última versão que ela abriu) */
 export function temNovidade(vista) {
