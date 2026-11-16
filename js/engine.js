@@ -966,10 +966,16 @@ export function analyze({ expenses, incomes = [], categories, accounts = [], com
   }
 
   // "Confere seu banco": saldo informado há 7 dias ou mais (eu não consigo ver o banco, só lembrar)
-  const velha = accounts.filter(a => (Date.parse(`${today}T12:00:00`) - a.balanceAt) / 86_400_000 >= 7);
+  // 2.1.5 (JF, 16/11: "ou seja, conferir os saldos dos meus bancos kkkk"): cartão fica fora (não tem saldo pra
+  // conferir) e, com mais de 2 contas, vai o nome dos bancos, não a lista de toda conta e cofrinho
+  const velha = accounts.filter(a => a.tipo !== 'cartao' && (Date.parse(`${today}T12:00:00`) - a.balanceAt) / 86_400_000 >= 7);
   if (velha.length) {
     const dias = Math.floor(Math.max(...velha.map(a => (Date.parse(`${today}T12:00:00`) - a.balanceAt) / 86_400_000)));
-    out.push({ type: 'confira_banco', severity: 'baixa', accountName: velha.map(accountLabel).join(', '), days: dias });
+    const bancos = [...new Set(velha.map(a => a.bank))];
+    const lista = xs => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} e ${xs[xs.length - 1]}` : xs[0]);
+    const nome = velha.length <= 2 ? lista(velha.map(accountLabel))
+      : bancos.length === 1 ? `todas as contas do ${bancos[0]}` : `${velha.length} contas (${lista(bancos)})`;
+    out.push({ type: 'confira_banco', severity: 'baixa', accountName: nome, count: velha.length, days: dias });
   }
 
   // Auditor de assinaturas (P9, 12/11): na primeira semana do mês, pergunta se UMA assinatura ainda vale a pena
@@ -1207,7 +1213,7 @@ export const PALAVRAS_CATEGORIA = Object.freeze({
   mercado: ['mercado', 'supermercado', 'feira', 'hortifruti', 'acougue', 'padaria', 'pao', 'leite', 'arroz', 'feijao', 'carne', 'frango',
     'cerveja', 'cervejas', 'bebida', 'bebidas', 'refrigerante', 'refri', 'agua', 'fruta', 'frutas', 'verdura', 'ovos', 'cafe'],
   restaurante: ['restaurante', 'almoco', 'jantar', 'lanche', 'lanchonete', 'sorvete', 'casquinha', 'sorveteria', 'acai', 'pastel', 'salgado',
-    'coxinha', 'hamburguer', 'pizzaria', 'bar', 'churrascaria', 'cafeteria', 'mcdonalds', 'mcdonald', 'subway', 'bobs'],
+    'coxinha', 'hamburguer', 'pizzaria', 'bar', 'boteco', 'chopp', 'choperia', 'churrascaria', 'cafeteria', 'mcdonalds', 'mcdonald', 'subway', 'bobs'],
   delivery: ['ifood', 'delivery', 'rappi'],
   transporte: ['uber', 'gasolina', 'combustivel', 'onibus', 'metro', 'taxi', 'estacionamento', 'pedagio', 'etanol'],
   saude: ['academia', 'farmacia', 'remedio', 'remedios', 'medico', 'consulta', 'dentista', 'exame', 'drogaria'],
@@ -1215,7 +1221,8 @@ export const PALAVRAS_CATEGORIA = Object.freeze({
   moradia: ['aluguel', 'condominio', 'iptu'],
   lazer: ['cinema', 'show', 'festa', 'viagem', 'passeio', 'ingresso'],
   jogos: ['jogo', 'jogos', 'game', 'games', 'robux', 'vbucks', 'diamantes', 'skin', 'skins', 'gemas', 'minecoins', 'steam', 'roblox', 'fortnite', 'valorant', 'psn', 'playstation', 'xbox', 'nintendo', 'passe'],
-  streaming: ['netflix', 'spotify', 'disney', 'hbo', 'globoplay', 'deezer', 'youtube'],
+  // 2.1.5 (JF, 16/11: Anthropic caiu em Outros): assinatura de IA e de app também é Streaming/assinatura
+  streaming: ['netflix', 'spotify', 'disney', 'hbo', 'globoplay', 'deezer', 'youtube', 'anthropic', 'claude', 'chatgpt', 'openai', 'gemini', 'copilot', 'midjourney', 'icloud', 'assinatura', 'prime', 'crunchyroll', 'canva'],
   compras: ['roupa', 'roupas', 'tenis', 'sapato', 'shopping', 'presente', 'shopee', 'shein', 'amazon'],
   educacao: ['faculdade', 'escola', 'curso', 'livro', 'livros', 'apostila', 'material'],
 });

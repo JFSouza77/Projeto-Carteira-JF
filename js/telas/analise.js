@@ -15,7 +15,24 @@ export function marcarSeg(attr, valor) {
   for (const b of document.querySelectorAll(`[data-${attr}]`)) b.setAttribute('aria-pressed', String(b.dataset[attr] === valor));
 }
 
+// 2.1.5 (JF, 16/11): resumo do mês no topo da Análise (gastos, entradas, sobra) e a categoria que mais pesa
+export function renderResumoAnalise() {
+  if (!$('#analise-resumo')) return;
+  const s = summarizeMonth(state.expenses, state.categories, state.viewMonth);
+  const entradas = incomeIn(state.incomes, state.viewMonth);
+  const sobra = entradas - s.totalCents;
+  $('#ar-gastos').textContent = formatBRL(s.totalCents);
+  $('#ar-entradas').textContent = formatBRL(entradas);
+  $('#ar-sobra-rot').textContent = sobra < 0 ? 'Déficit' : 'Sobra';
+  $('#ar-sobra').textContent = formatBRL(Math.abs(sobra));
+  $('#analise-resumo').classList.toggle('negativo', sobra < 0);
+  const top = s.rows.filter(r => r.spentCents > 0).sort((a, b) => b.spentCents - a.spentCents)[0];
+  $('#ar-dica').textContent = !s.count ? 'Nenhum gasto anotado neste mês ainda.'
+    : `${s.count} ${s.count === 1 ? 'gasto' : 'gastos'} no mês. Quem mais pesa: ${top.name} (${formatBRL(top.spentCents)}, ${Math.round(top.spentCents * 100 / s.totalCents)}%). Toque nos quadros pra ver os detalhes.`;
+}
+
 export function renderGraficos() {
+  renderResumoAnalise();
   const card = $('#graficos-card');
   if (!card) return;
   const temAlgo = state.expenses.length + state.incomes.length > 0;

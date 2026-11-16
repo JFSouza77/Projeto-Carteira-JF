@@ -9,7 +9,7 @@ import { accountLabel, createTransferencia, depoisDoSaldo, marcarRecebido, edita
 import * as conta from '../conta.js';
 import { lerPagamento, seguirPagamento } from '../caos/conversa.js';
 import * as db from '../db.js';
-import { falar } from '../voz.js';
+import { falar, falaTerminou } from '../voz.js';
 import { fraseDoPrint, resumoDoPrint } from '../caos/ofertas.js';
 import * as ia from '../ia.js';
 import * as imagens from '../imagens.js';
@@ -157,11 +157,14 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
   if (state.settings.voice) falar(fala.texto, fala.emocao);
   // 2º balão (JF, 16/11): "digitando…" de novo e o "ah, e…" logo depois, como amigo no WhatsApp
   if (fala.posTexto) {
+    // 2.1.5 (JF): respiro de verdade. Com voz, espera a 1ª fala acabar; sem voz, dá tempo de ler o 1º balão
+    if (state.settings.voice) await falaTerminou();
+    else await new Promise(r => setTimeout(r, MENOS_MOVIMENTO.matches ? 300 : Math.min(2500, 700 + fala.texto.length * 12)));
     await respiro(fala.posTexto);
     addMsg({ de: 'caos', texto: fala.posTexto, rosto: fala.rosto, assunto: fala.intent });
     pintarRosto(fala.rosto, fala.intent); // 2.1.3.2: o "digitando…" deixava o topo preso no pensador
     avatarFala(Math.min(2000, 400 + fala.posTexto.length * 22));
-    if (state.settings.voice) falar(fala.posTexto, fala.emocao);
+    if (state.settings.voice) falar(fala.posTexto, fala.emocao, { emenda: true });
   }
   if (fala.filaIA) await perguntaPraDepois(fala.filaIA);
   if (fala.fluxoMeta) iniciarMeta(fala.fluxoMeta.nome, { jaFalou: true });
@@ -376,6 +379,7 @@ export async function confirmarAcao(i, ok) {
         { memory: state.caosMemory, now: Date.now() });
       if (c.fala) {
         guardarMemoria(c.memoria);
+        if (state.settings.voice) await falaTerminou(); // a pergunta espera o "Anotado" acabar de ser falado
         await respiro(c.fala.texto);
         addMsg({ de: 'caos', texto: c.fala.texto, sugestoes: c.fala.sugestoes, assunto: 'curiosidade' });
         pintarRosto(null, 'curiosidade');

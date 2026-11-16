@@ -3,7 +3,10 @@
 //  · na conversa: a pergunta e um RESUMO AGREGADO (totais por categoria), nunca a lista de gastos;
 //  · na foto: a imagem, só quando a pessoa toca em "Ler com IA".
 
-import { summarizeMonth, incomeIn, totalBalance, analyze, monthKey, toISODate, forecastMonth } from './engine.js';
+import { summarizeMonth, incomeIn, totalBalance, analyze, monthKey, toISODate, forecastMonth, situacaoCompromissos } from './engine.js';
+
+// 2.3.9: total das contas fixas que ainda faltam pagar no mês (só o número vai pra IA)
+const aPagarNoMes = (dados, today) => situacaoCompromissos(dados.compromissos || [], dados.expenses || [], today).reduce((t, c) => t + (c.faltaCents || 0), 0);
 
 const TEMPO_MS = 45_000;
 
@@ -50,6 +53,9 @@ export function resumoAgregado(dados, today = toISODate()) {
     categorias: s.rows.filter(r => r.spentCents || r.budgetCents)
       .map(r => ({ nome: r.name, gastoCentavos: r.spentCents, orcamentoCentavos: r.budgetCents })),
     alertas: analyze(dados, today).map(a => a.type),
+    // 2.3.9 (JF: "dá pra eu ir ao cinema este mês?"): o que ainda sai e entra no mês, só o total
+    contasAPagarNoMesCentavos: aPagarNoMes(dados, today),
+    entradasPrevistasCentavos: (dados.previstas || []).filter(p => String(p.date || '').slice(0, 7) === mes).reduce((t, p) => t + (p.amountCents || 0), 0),
   };
 }
 
@@ -59,7 +65,7 @@ export function saude(base) {
 
 export async function perguntar(base, { pergunta, humor, dados, modo = null, semBusca = false, emocao = null }) {
   // modo 'pesquisa' (16/11): pesquisa de compra ou viagem, com mais buscas e resposta em lista
-  const j = await chamar(base, '/ia/perguntar', { pergunta: String(pergunta).slice(0, 500), humor, resumo: resumoAgregado(dados), ...(modo ? { modo } : {}), ...(semBusca ? { semBusca: true } : {}), ...(emocao ? { emocao } : {}) });
+  const j = await chamar(base, '/ia/perguntar', { pergunta: String(pergunta).slice(0, modo === 'pesquisa' ? 800 : 500), humor, resumo: resumoAgregado(dados), ...(modo ? { modo } : {}), ...(semBusca ? { semBusca: true } : {}), ...(emocao ? { emocao } : {}) });
   return j.texto;
 }
 

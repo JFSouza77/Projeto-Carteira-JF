@@ -7,6 +7,23 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.1.5 Alfa',
+    data: '16/11/2026',
+    nome: 'Cineminha',
+    t: 'O C.A.O.S. planeja o passeio com você e respira entre os balões. Ajustes e Análise mais claros.',
+    itens: [
+      '🎬 Plano de passeio: no Chat, peça "quanto tá um ingresso no cinema?" ou "dá pra ir ao cinema esse mês?". Ele pesquisa e diz se cabe no seu mês.',
+      '🔎 Pesquisa direta: no Chat, diga "pesquisa na internet…" ou já mande os detalhes, e ele pesquisa na hora, sem as perguntinhas.',
+      '🗣️ Respiro entre balões: com a voz ligada, o 2º balão espera a primeira fala acabar. Sem voz, dá tempo de ler o 1º balão.',
+      '📊 Resumo na Análise: no topo da Análise, os gastos, as entradas e a sobra do mês, e a categoria que mais pesa.',
+      '⚙️ Ajustes organizado: em Ajustes, os itens ficam em grupos (Você, C.A.O.S., App e Seus dados), com ícone e o que tem dentro.',
+    ],
+    qol: [
+      '🏦 Alerta mais curto: no Chat, "algum alerta?" junta os bancos com saldo pra conferir, em vez de listar conta por conta.',
+      '🏷️ Categoria certa: assinatura de app de IA vai pra Streaming, e bar e chopp pra Restaurante.',
+    ],
+  },
+  {
     v: '2.1.4 Alfa',
     data: '16/11/2026',
     nome: 'Formiguinha',

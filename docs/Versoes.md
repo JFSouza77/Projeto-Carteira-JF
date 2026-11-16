@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 2.1.5 Alfa | 16/11/2026 | Cineminha (testes do JF): plano de passeio que diz se cabe no mês, pesquisa direta sem questionário, pedido novo sai do questionário, respiro da voz entre os balões, resumo no topo da Análise, Ajustes em grupos com ícone, alerta de conferir saldo por banco, categorias de assinatura de IA e bar. Servidor: pesquisa aceita até 800 letras e regra do passeio (precisa publicar). C.A.O.S. 2.3.9. |
 | 2.1.4 Alfa | 16/11/2026 | Formiguinha (pedido do JF): efeito formiguinha (aviso a cada 10 gastinhos de até R$ 30 + pergunta "quais meus gastinhos?"), pergunta curiosa depois do gasto no Chat, tangentes de TDAH sem internet, guardar a cada compra no cofrinho (como no Mercado Pago) e raio-X sem as linhas repetidas. C.A.O.S. 2.3.8. |
 | 2.1.3.2 Alfa | 16/11/2026 | Rostinho segue o avatar (JF: "pensador com rostinho tímido não dá"): `rostoDaForma` em `js/avatar.js`, 35 formas com rostinho próprio, topo/Início/balões iguais; o 2º balão não deixa mais o topo preso no pensador. Vitrine: `docs/revisoes/img/2026-11-16_vitrine_rostinhos.png`. |
 | 2.1.3.1 Alfa | 16/11/2026 | Ajuste da auditoria do GPT: a voz não lê mais `**` nem `{nome}`; contador do mês em Ajustes → IA online (respostas do aparelho, da memória e da IA, com o motivo). O resto do relatório já estava corrigido (vereditos em `docs/revisoes/2026-11-16_gpt_auditoria_vereditos.md`). |

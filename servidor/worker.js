@@ -190,7 +190,8 @@ Se faltar algo essencial pra dar um número honesto (ex.: data da viagem), não 
 - Mostre em lista curta: site, preço achado e o que inclui. Diga que preço de busca muda e pode estar diferente na hora.
 - Compare com o orçamento informado e com o resumo do mês (se cabe ou aperta). Use só os números do resumo; nunca invente números.
 - Você ORIENTA, não decide: nunca diga "compre aqui". Aponte o que conferir (frete, prazo, garantia, bagagem, taxas, parcelamento com ou sem juros, reputação do vendedor).
-- Termine com o próximo passo ou uma pergunta (ex.: "quer que eu compare só os com frete grátis?").`;
+- Termine com o próximo passo ou uma pergunta (ex.: "quer que eu compare só os com frete grátis?").
+- Plano de passeio (cinema, show, restaurante, rolê) (JF, 16/11): pesquise o preço de hoje do que foi pedido na região (ingresso, meia-entrada, dia de promoção, estacionamento, pipoca ou combo) e mostre em lista curta. Depois, como amigo, diga com franqueza se cabe no mês olhando o resumo (saldo das contas, gasto do mês, previsão, contas a pagar e entradas que ainda vão cair): "tranquilo, vai e aproveita", "dá, mas com cuidado" ou "melhor segurar este mês", sempre com o porquê em números do resumo. Sobre extras como a pipoca: diga se vale pelo momento do mês (ex.: "pipoca de cinema é cara; se o mês está apertado, come antes"). Feche leve, tipo "depois me conta se o filme foi bom".`;
 const BUSCA_PESQUISA = { type: 'web_search_20250305', name: 'web_search', max_uses: 4, user_location: { type: 'approximate', country: 'BR', timezone: 'America/Sao_Paulo' } };
 
 const BUSCA_WEB = { type: 'web_search_20250305', name: 'web_search', max_uses: 2, user_location: { type: 'approximate', country: 'BR', timezone: 'America/Sao_Paulo' } };
@@ -215,10 +216,12 @@ Regras:
 
 async function iaPerguntar(req, env) {
   const corpo = await lerCorpo(req);
-  const pergunta = String(corpo.pergunta || '').trim().slice(0, 300); // IA de bolso: pergunta curta (15/11)
+  const pesquisa = corpo.modo === 'pesquisa'; // 16/11: pesquisa de compra/viagem (mais buscas, resposta em lista)
+  // IA de bolso: pergunta curta (15/11). A pesquisa leva as respostas do questionário junto, então cabe mais
+  // (2.3.9: com 300 letras, o fim do pedido e o orçamento eram cortados)
+  const pergunta = String(corpo.pergunta || '').trim().slice(0, pesquisa ? 800 : 300);
   if (!pergunta) throw new ErroHttp(400, 'Faltou a pergunta.');
   const humor = HUMORES[corpo.humor] ? corpo.humor : 'suave';
-  const pesquisa = corpo.modo === 'pesquisa'; // 16/11: pesquisa de compra/viagem (mais buscas, resposta em lista)
   // 16/11 (revisão do Gemini): papo pessoal não precisa de internet; sem a ferramenta de busca, a pergunta sai mais barata
   const semBusca = corpo.semBusca === true && !pesquisa;
   // emoção do momento (JF, 16/11, ideia do Gemini): o rosto dele no app já está assim; a IA deixa transparecer no tom
