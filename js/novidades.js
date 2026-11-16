@@ -13,7 +13,7 @@ export const NOVIDADES = Object.freeze([
     t: 'Dá pra recomeçar sem apagar os bancos, e o cartão do Início ganhou as cores de cada aba.',
     itens: [
       '🔄 Recomeçar: em Ajustes, zere só os saldos dos bancos ou comece do zero (apaga os lançamentos). Bancos, cartões, pisos e contas fixas continuam. Ideia do JF.',
-      '🎨 Quadrinhos com cor: no cartão do Início, os números da semana e do mês ficam laranja na aba Gasto e verdes na aba Entradas.',
+      '🎨 Quadrinhos com cor: no cartão do Início, a aba Gasto tem semana e mês em laranja e a Sobra em verde; a aba Entradas, semana e mês em verde e o Déficit (o que já saiu) em laranja.',
     ],
     qol: [
       '🏦 Atalho em Contas: no fim da lista de Bancos tem o link pra zerar os saldos ou começar do zero.',
