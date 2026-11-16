@@ -269,6 +269,7 @@ function irPara(tela, { lado = null } = {}) {
   }
   $('#me-ajuda').hidden = t === 'conversa';
   fecharAjudaMenu();
+  posicionarMeAjuda();
   if (t === 'conversa') {
     renderChat();
     setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 0);
@@ -2937,7 +2938,7 @@ const telaGrande = () => window.matchMedia('(min-width: 1024px)').matches;
 
 function posicionarMeAjuda() {
   const b = $('#me-ajuda');
-  const p = state.settings.meAjudaPos;
+  const p = state.settings?.meAjudaPos;
   if (!p || telaGrande()) { b.style.left = b.style.top = b.style.right = b.style.bottom = ''; return; }
   // guarda em fração da tela, pra continuar no mesmo canto se o celular girar
   const w = b.offsetWidth || 120, h = b.offsetHeight || 44;
@@ -2945,7 +2946,10 @@ function posicionarMeAjuda() {
   // JF, 14/11: pode ir pra qualquer canto, mas nunca em cima da barra de baixo (Lançar, abas)
   const barra = $('.tabbar')?.getBoundingClientRect();
   const fundo = barra && barra.height ? Math.min(innerHeight, barra.top) : innerHeight;
-  const y = Math.min(Math.max(8, p.y * innerHeight), fundo - h - 8);
+  // JF, 16/11: nem em cima do cabeçalho e da barra do relógio (o limite era 8px da borda e ele foi parar no relógio)
+  const cabecalho = [...document.querySelectorAll('.topbar')].map(t => t.getBoundingClientRect()).find(r => r.height > 0);
+  const topo = Math.max(8, cabecalho ? cabecalho.bottom + 8 : 0, 56);
+  const y = Math.min(Math.max(topo, p.y * innerHeight), fundo - h - 8);
   Object.assign(b.style, { left: `${x}px`, top: `${y}px`, right: 'auto', bottom: 'auto' });
 }
 
