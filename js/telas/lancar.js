@@ -10,7 +10,8 @@ import * as ia from '../ia.js';
 import * as imagens from '../imagens.js';
 import { opcoesDeConta, renderContas } from './contas.js';
 import { rostoEspantado } from '../caos/index.js';
-import { ICONE_FORMA, avatares, eventoOfensiva, ic, icCat, icFonte, narrate, ofensivaAgora, setRosto, toast } from '../app.js';
+import { ICONE_FORMA, avatares, ic, icCat, icFonte, narrate, setRosto, toast } from '../app.js';
+import { eventoOfensiva, ofensivaAgora } from './inicio.js';
 
 // Valor fora do comum (13/11): o C.A.O.S. leva um susto (rosto espantado) e pergunta antes de gravar.
 // Era um confirm() do navegador; o JF pediu o C.A.O.S. reagindo ("R$ 17 mil na Cacau Show?!").
