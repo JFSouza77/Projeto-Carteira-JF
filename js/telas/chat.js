@@ -85,6 +85,17 @@ export async function usoDaIAHoje() {
   return u && u.dia === toISODate() ? u : { dia: toISODate(), n: 0 };
 }
 
+// 2.1.3.1 (GPT, 16/11): conta o uso do mês (aparelho × IA online × memória) pra ver onde vai o crédito
+async function anotarUso(tipo) {
+  try {
+    const mes = toISODate().slice(0, 7);
+    const uso = ia.contarUsoIA(await db.getMeta('iaMes', null), mes, tipo);
+    await db.setMeta('iaMes', uso);
+    const el = $('#ai-uso');
+    if (el) el.textContent = ia.descreverUsoIA(uso, mes); // Ajustes já mostra o número novo, sem reabrir o app
+  } catch { /* contador é só informação: se falhar, a conversa segue */ }
+}
+
 export async function enviarPergunta(texto, { doPrint = false } = {}) {
   const t = String(texto || '').trim();
   if (!t) return;
@@ -104,6 +115,7 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
   const repetida = iaRecentes.get(chaveIA);
   if (!fala.entendeu && repetida && Date.now() - repetida.em < 30 * 60_000) {
     addMsg({ de: 'caos', texto: repetida.texto, ia: true, sugestoes: SUGESTOES.slice(0, 5), rosto: fala.rosto });
+    await anotarUso('memoria');
     return;
   }
   const usoIA = await usoDaIAHoje();
@@ -118,6 +130,7 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
     try {
       const resposta = await ia.perguntar(state.settings.aiUrl, { pergunta: textoIA, humor: humorIA, dados: dados(), modo: fala.modoIA, semBusca: fala.intent === 'papo_pessoal', emocao: fala.emocao });
       await db.setMeta('iaUso', { dia: toISODate(), n: usoIA.n + 1 });
+      await anotarUso(ia.motivoDaIA(fala));
       iaRecentes.set(chaveIA, { texto: resposta, em: Date.now() });
       state.chat = state.chat.filter(m => !m.temp);
       addMsg({ de: 'caos', texto: resposta, ia: true, sugestoes: SUGESTOES.slice(0, 5), rosto: fala.rosto });
@@ -136,6 +149,7 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
     // Fila geral (1.6.0): o que ele não sabe vai pro servidor quando der; a resposta volta na conversa.
     fala.texto = 'Ainda não sei responder isso, mas guardei sua pergunta. Quando eu tiver conexão com o servidor do C.A.O.S. Finanças, eu trago a resposta aqui.';
   }
+  if (fala.entendeu) await anotarUso('local');
   await respiro(fala.texto);
   addMsg({ de: 'caos', texto: fala.texto, sugestoes: fala.sugestoes, acao: fala.acao, rosto: fala.rosto, assunto: fala.intent });
   pintarRosto(fala.rosto, fala.intent);

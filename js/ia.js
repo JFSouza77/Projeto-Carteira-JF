@@ -98,3 +98,40 @@ export async function perguntarBancos(base, { bancos, cdi }) {
   const j = await chamar(base, '/ia/bancos', { bancos, cdi });
   return j.texto;
 }
+
+// 2.1.3.1 (GPT, 16/11: "medir antes de cortar crédito"): conta no aparelho quantas respostas o cérebro local deu e por
+// que a IA online foi chamada. Fica só no aparelho (meta/iaMes) e zera no mês novo. Funções puras.
+export const MOTIVOS_IA = Object.freeze({
+  papo: 'papo',
+  pesquisa: 'pesquisa e planos',
+  assunto: 'pergunta com assunto (mercado, moedas…)',
+  duvida: 'frase que eu não entendi',
+});
+
+export function motivoDaIA(fala) {
+  if (fala?.modoIA === 'pesquisa') return 'pesquisa';
+  if (fala?.intent === 'papo_pessoal') return 'papo';
+  if (fala?.perguntaIA) return 'assunto';
+  return 'duvida';
+}
+
+// tipo: 'local' (o cérebro do aparelho respondeu), 'memoria' (resposta da IA reaproveitada, sem gastar) ou um motivo
+export function contarUsoIA(uso, mes, tipo) {
+  const u = uso && uso.mes === mes
+    ? { ...uso, motivos: { ...(uso.motivos || {}) } }
+    : { mes, local: 0, memoria: 0, ia: 0, motivos: {} };
+  if (tipo === 'local') u.local += 1;
+  else if (tipo === 'memoria') u.memoria += 1;
+  else { u.ia += 1; u.motivos[tipo] = (u.motivos[tipo] || 0) + 1; }
+  return u;
+}
+
+export function descreverUsoIA(uso, mes) {
+  if (!uso || uso.mes !== mes || !(uso.local + uso.ia + uso.memoria)) return 'Este mês ainda não teve conversa.';
+  const total = uso.local + uso.ia + uso.memoria;
+  const pct = Math.round((uso.local + uso.memoria) * 100 / total);
+  const motivos = Object.entries(uso.motivos || {}).sort((a, b) => b[1] - a[1])
+    .map(([k, n]) => `${n} ${MOTIVOS_IA[k] || k}`).join(', ');
+  return `Este mês: ${uso.local} ${uso.local === 1 ? 'resposta' : 'respostas'} aqui no aparelho, sem gastar crédito, e ${uso.ia} com a IA online${motivos ? ` (${motivos})` : ''}.`
+    + `${uso.memoria ? ` ${uso.memoria} ${uso.memoria === 1 ? 'veio' : 'vieram'} da memória, sem gastar.` : ''} ${pct}% sem gastar crédito.`;
+}

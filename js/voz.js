@@ -38,6 +38,8 @@ const JEITO = {
 export function textoParaVoz(t) {
   return String(t || '')
     .replace(/[\p{Extended_Pictographic}️‍]/gu, '')
+    // 2.1.3.1 (GPT, 16/11): o negrito (**) e o {nome} que sobrar não podem ser lidos em voz alta
+    .replace(/\*\*/g, '').replace(/\{nome\},?\s*/g, '')
     .replace(/C\.A\.O\.S\./g, 'Caos')
     .replace(/R\$\s?(\d[\d.]*)(?:,(\d{2}))?/g, (m, r, c) => `${r.replace(/\./g, '')} reais${c && c !== '00' ? ` e ${Number(c)} centavos` : ''}`)
     .replace(/(\d+)%/g, '$1 por cento')

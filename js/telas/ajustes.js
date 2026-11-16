@@ -11,6 +11,7 @@ import * as db from '../db.js';
 import { ditadoDisponivel, vozDisponivel } from '../voz.js';
 import { formatBRL, parseAmount, toISODate, validarBackup, zerarSaldos } from '../engine.js';
 import * as lembretes from '../notificacoes.js';
+import { descreverUsoIA } from '../ia.js';
 import { prepararFormCompromisso, renderMetas } from './mes.js';
 import { renderInvestimentos } from './contas.js';
 import { renderLancar } from './lancar.js';
@@ -125,6 +126,8 @@ export async function renderSettings() {
   $('#caos-version').textContent = `${IDENTIDADE.nome} ${CAOS_VERSAO} (núcleo ${IDENTIDADE.nucleo}) · ${IDENTIDADE.sigla}. ${IDENTIDADE.slogan} Criado por ${IDENTIDADE.criador}, veio do ${IDENTIDADE.origem}.`;
   $('#ai-toggle').checked = state.settings.aiOn;
   $('#ai-url').value = state.settings.aiUrl;
+  const usoMes = await db.getMeta('iaMes', null).catch(() => null);
+  $('#ai-uso').textContent = descreverUsoIA(usoMes, toISODate().slice(0, 7));
   $('#chat-mic').hidden = !ditadoDisponivel();
   const lem = await lembretes.config().catch(() => ({}));
   $('#remind-toggle').checked = !!lem.ativo;
