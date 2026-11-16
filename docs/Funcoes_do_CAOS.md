@@ -1,7 +1,7 @@
 # Funções do C.A.O.S. (pra revisar)
 
 Lista feita pelo Wally em 16/11/2026, tirada do código (`js/caos/conversa.js`, função `entender()`).
-App 2.1.2 Alfa · C.A.O.S. 2.3.5 · núcleo 1.6.0. São **69 jeitos de entender** uma frase, em 7 grupos.
+App 2.1.2 Alfa · C.A.O.S. 2.3.6 · núcleo 1.6.0. São **69 jeitos de entender** uma frase, em 7 grupos.
 
 Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o que ele faz.
 - 🖥️ = responde sem internet (no próprio celular).
@@ -19,6 +19,8 @@ Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o q
 | Entrada prevista | "vou receber 500 dia 20" | Guarda como "a receber" até você tocar em Recebi ✅ 🖥️ |
 | Esqueci de lançar | "esqueci de lançar ontem" | Ajuda a anotar com a data certa 🖥️ |
 | Corrigir a data | "esse gasto foi na quarta" | Muda a data do último gasto ✅ 🖥️ |
+| Corrigir o valor | "errei, foi 45, não 50" | Muda o valor do último gasto ✅ 🖥️ |
+| Transferência | "transferi 200 do Inter pro C6" | Anota a transferência entre suas contas ✅ 🖥️ |
 | Meta nova | "quero juntar pra uma viagem" | Faz as perguntas e propõe a meta ✅ 🖥️ |
 | Guardar na meta | "guardei 100 na viagem" | Propõe guardar ✅ 🖥️ |
 | Mudar o apelido | "me chama de JF" | Troca como ele te chama ✅ 🖥️ |
@@ -105,6 +107,7 @@ Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o q
 | Apelido de amigo | "fala, corno" | Entende como carinho 🖥️ |
 | Xingamento | "burro" | Reage, com paciência em escada; se tiver pergunta junto, responde 🖥️ |
 | Desabafo | "krlh, tô sem grana" | Acolhe 🖥️ |
+| Aperto | "tô liso", "esse mês tá osso" | Acolhe com os números do mês e um caminho (sem gastar IA) 🖥️ |
 | Papo pessoal | "como você se sente?" | Vai pra IA 🌐 |
 | Fora do papel | "quem ganhou o Brasileirão de 98?" | Manda pro Google (sem gastar IA) 🖥️ |
 | Retomar | "e agora, sabe aquela?" | Volta na pergunta que ficou sem resposta 🖥️ |

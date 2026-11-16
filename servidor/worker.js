@@ -217,6 +217,8 @@ async function iaPerguntar(req, env) {
   if (!pergunta) throw new ErroHttp(400, 'Faltou a pergunta.');
   const humor = HUMORES[corpo.humor] ? corpo.humor : 'suave';
   const pesquisa = corpo.modo === 'pesquisa'; // 16/11: pesquisa de compra/viagem (mais buscas, resposta em lista)
+  // 16/11 (revisão do Gemini): papo pessoal não precisa de internet; sem a ferramenta de busca, a pergunta sai mais barata
+  const semBusca = corpo.semBusca === true && !pesquisa;
   const resumo = corpo.resumo && typeof corpo.resumo === 'object' ? corpo.resumo : {};
   const resumoTxt = JSON.stringify(resumo).slice(0, 3000);
   // mesma pergunta, com os mesmos números, na última hora: devolve a resposta guardada (não gasta crédito)
@@ -225,6 +227,8 @@ async function iaPerguntar(req, env) {
   if (guardada) return { texto: guardada, guardada: true };
   const client = clienteIA(env);
   const { criador } = await conferirLimite(req, env);
+  // com o criador é sempre Ácido (antes, no Suave, o prompt mandava "proibido deboche" e "zoe sem dó" juntos)
+  const humorIA = criador ? 'acido' : humor;
   // busca na web com teto do dia (15/11): passou do teto, a IA responde sem buscar (o criador não tem teto)
   const kBusca = `busca:${hojeUTC()}`;
   const buscasHoje = Number((await env.CARTEIRA_KV.get(kBusca)) || 0);
@@ -233,7 +237,7 @@ async function iaPerguntar(req, env) {
   // pergunta, só pra assunto de dinheiro (JF: "senão a IA gasta os créditos à toa"; a regra está no SISTEMA_CONVERSA). A busca é feita pelo servidor da IA; o que vai nela é só o assunto da pergunta, nunca os dados da pessoa.
   const messages = [{
     role: 'user',
-    content: `Humor escolhido: ${humor}. ${HUMORES[humor]}${criador ? `\n\n${COM_O_CRIADOR}` : ''}${pesquisa ? `\n\n${PESQUISA_COMPRA}` : ''}\n\nResumo do mês (só totais, em centavos):\n${resumoTxt}\n\nPergunta: ${pergunta}`,
+    content: `Humor escolhido: ${humorIA}. ${HUMORES[humorIA]}${criador ? `\n\n${COM_O_CRIADOR}` : ''}${pesquisa ? `\n\n${PESQUISA_COMPRA}` : ''}\n\nResumo do mês (só totais, em centavos):\n${resumoTxt}\n\nPergunta: ${pergunta}`,
   }];
   let r;
   for (let volta = 0; volta < 3; volta++) {
@@ -242,7 +246,7 @@ async function iaPerguntar(req, env) {
       max_tokens: pesquisa ? 3500 : 2500, // resposta curta; a pesquisa de compra tem lista de lojas
       output_config: { effort: 'low' },
       system: SISTEMA_CONVERSA,
-      ...(podeBuscar ? { tools: [pesquisa ? BUSCA_PESQUISA : BUSCA_WEB] } : {}),
+      ...(podeBuscar && !semBusca ? { tools: [pesquisa ? BUSCA_PESQUISA : BUSCA_WEB] } : {}),
       messages,
       ...extras(env),
     });
@@ -435,7 +439,7 @@ async function iaImagem(req, env) {
       role: 'user',
       content: [
         { type: 'image', source: { type: 'base64', media_type: tipo, data: imagem } },
-        { type: 'text', text: `Categorias do app (use o id): ${cats.map(c => `${c.id} = ${c.nome}`).join('; ')}. Hoje é ${hojeUTC()}.${legenda ? ` Legenda da pessoa: "${legenda}"` : ''}` },
+        { type: 'text', text: `Categorias do app (use o id): ${cats.map(c => `${c.id} = ${c.nome}`).join('; ')}. Hoje é ${agoraNoFuso('America/Sao_Paulo').dia}.${legenda ? ` Legenda da pessoa: "${legenda}"` : ''}` },
       ],
     }],
     ...extras(env),
@@ -701,16 +705,24 @@ async function atualizarNoticiasSeHora(env, agora = new Date(), criarCliente = c
   await env.CARTEIRA_KV.put(chave, '1', { expirationTtl: 172800 });
   await env.CARTEIRA_KV.put(kMes, String(feitas + 1), { expirationTtl: 40 * 86400 });
   const client = criarCliente(env);
-  const r = await client.messages.create({
-    model: env.NOTICIAS_MODELO || NOTICIAS_MODELO_PADRAO,
-    max_tokens: 4000,
-    output_config: { effort: 'low' },
-    system: SISTEMA_NOTICIAS,
-    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 2, user_location: { type: 'approximate', country: 'BR', timezone: 'America/Sao_Paulo' } }],
-    messages: [{ role: 'user', content: `Hoje é ${quando.dia}. Quais são as notícias de dinheiro do dia?` }],
-  });
+  // revisão do Gemini (16/11): a busca pode pausar no meio (pause_turn); manda continuar, como na conversa
+  const messages = [{ role: 'user', content: `Hoje é ${quando.dia}. Quais são as notícias de dinheiro do dia?` }];
+  let r;
+  for (let volta = 0; volta < 3; volta++) {
+    r = await client.messages.create({
+      model: env.NOTICIAS_MODELO || NOTICIAS_MODELO_PADRAO,
+      max_tokens: 4000,
+      output_config: { effort: 'low' },
+      system: SISTEMA_NOTICIAS,
+      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 2, user_location: { type: 'approximate', country: 'BR', timezone: 'America/Sao_Paulo' } }],
+      messages,
+    });
+    if (r.stop_reason !== 'pause_turn') break;
+    messages.push({ role: 'assistant', content: r.content });
+  }
   const itens = r.stop_reason === 'refusal' ? [] : lerNoticias(textoDa(r));
-  if (!itens.length) return null;
+  // não veio nada: libera o turno pra tentar de novo daqui a 1 h (o teto do mês continua valendo)
+  if (!itens.length) { await env.CARTEIRA_KV.put(chave, '1', { expirationTtl: 3600 }); return null; }
   const pacote = { itens, atualizadoEm: agora.toISOString() };
   await env.CARTEIRA_KV.put('noticias:atual', JSON.stringify(pacote));
   return pacote;

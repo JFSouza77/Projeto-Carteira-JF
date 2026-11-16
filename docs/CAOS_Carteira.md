@@ -1,4 +1,4 @@
-# Cérebro do C.A.O.S. na Carteira (C.A.O.S. 1.3.0)
+# Cérebro do C.A.O.S. na Carteira (C.A.O.S. 2.3.6, núcleo 1.6.0; histórico das versões no `CAOS_VERSAO` de js/caos/index.js)
 
 ## Quem ele é (1.1.0)
 
@@ -138,8 +138,9 @@ orçamento ("quanto ainda posso gastar?"), alertas, previsão do mês, comparaç
 
 - Piadas: 30 gerais + 15 ácidas (os estilos "piada esquecida", "técnico de TI", "narrador esportivo", "malandro" e
   "autoconsciência" vieram das amostras do Perfil, na caixa de correio, adaptados pro dinheiro).
-- `ehCriador(perfil)`: o JF (João Fernando, JF, TGP, JF77, TGP77) ganha o balde `criador` (carinhoso, sem zoeira) na
-  saudação e no gasto anotado. Nome de criança nunca entra aqui.
+- `ehCriador(perfil)`: só com o selo da conta (`seloCriador`, vem do login; lista `CRIADOR_CONTAS` no servidor), nunca
+  pelo nome digitado. Com o criador ele é sempre Ácido (balde `humor_acido` + `criador`, com cutucada) e a IA online não
+  tem limite. Nome de criança nunca entra aqui.
 
 ## Gírias, o criador e papo demais (1.10.0, 06/11)
 

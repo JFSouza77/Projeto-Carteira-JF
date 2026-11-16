@@ -23,6 +23,8 @@ export const NOVIDADES = Object.freeze([
       '🟣 Notícias em destaque: o cartão Notícias do dia, no Início, ganhou um neon roxo.',
       '⚙️ Ajustes à vista: o botão de Ajustes, no alto do Início, agora tem cor e contorno.',
       '🔇 Voz que obedece: desligou a voz em Ajustes, o C.A.O.S. para de falar na hora.',
+      '✏️ Corrigir pela conversa: no Chat, "errei, foi 45" corrige o último gasto e "transferi 200 do Inter pro C6" anota a transferência.',
+      '🧠 C.A.O.S. mais esperto: entende melhor gosto, mesa, maio, Jogos e moedas de jogo, e não confunde o C6 com R$ 6.',
     ],
   },
   {

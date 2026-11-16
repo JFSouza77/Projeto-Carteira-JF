@@ -4,8 +4,8 @@
 
 import { $, catById, dados, esc, renderizar, state } from '../estado.js';
 import { EMO_DA_FORMA, FORMAS, formaPara } from '../avatar.js';
-import { IDENTIDADE, SUGESTOES, conversar, emocaoDoMomento, rostoAvulso, rostoDaEmo } from '../caos/index.js';
-import { accountLabel, depoisDoSaldo, editarConta, editarLancamento, formatBRL, sugerirCategoria, toISODate } from '../engine.js';
+import { IDENTIDADE, SUGESTOES, conversar, humorParaIA, emocaoDoMomento, rostoAvulso, rostoDaEmo } from '../caos/index.js';
+import { accountLabel, createTransferencia, depoisDoSaldo, editarConta, editarLancamento, formatBRL, sugerirCategoria, toISODate } from '../engine.js';
 import * as conta from '../conta.js';
 import * as db from '../db.js';
 import { falar } from '../voz.js';
@@ -71,7 +71,7 @@ export function renderChat() {
   // atalhos pras outras abas (ideia do AI Studio, 13/11): só levam até lá, nunca fazem nada sozinhos
   const ATALHOS = [['#lancar', 'i-lancar', 'Lançar'], ['#contas', 'i-contas', 'Contas'], ['#mes', 'i-mes', 'Mês']];
   $('#chat-suggestions').innerHTML = sug.map(s => `<button type="button" class="chip" data-sug="${esc(s)}">${esc(s)}</button>`).join('')
-    + (state.onboarding || state.fluxoMeta ? [] : ATALHOS).map(([h, i, t]) => `<button type="button" class="chip atalho" data-ir="${h}" aria-label="Ir para ${t}">${ic(i)} ${t}</button>`).join('');
+    + (state.onboarding || state.metaFlow ? [] : ATALHOS).map(([h, i, t]) => `<button type="button" class="chip atalho" data-ir="${h}" aria-label="Ir para ${t}">${ic(i)} ${t}</button>`).join('');
   if (!$('#tela-conversa').hidden) window.scrollTo(0, document.body.scrollHeight);
 }
 
@@ -96,7 +96,10 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
 
   // Travas de crédito no aparelho (15/11, JF: "IA de bolso, sem abusar"): a mesma pergunta na última meia hora usa a
   // resposta guardada; e cada aparelho manda no máximo IA_POR_DIA perguntas por dia pra IA (o servidor tem os dele).
-  const chaveIA = t.toLowerCase().replace(/\s+/g, ' ').trim();
+  // revisão do Gemini (16/11): a chave do cache e a fila usam o texto que vai pra IA (com o assunto junto) e o humor
+  const textoIA = fala.perguntaIA || t;
+  const humorIA = humorParaIA(state.settings.mood, state.perfil);
+  const chaveIA = `${humorIA}|${textoIA.toLowerCase().replace(/\s+/g, ' ').trim()}`;
   const repetida = iaRecentes.get(chaveIA);
   if (!fala.entendeu && repetida && Date.now() - repetida.em < 30 * 60_000) {
     addMsg({ de: 'caos', texto: repetida.texto, ia: true, sugestoes: SUGESTOES.slice(0, 5), rosto: fala.rosto });
@@ -112,23 +115,23 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
     pintarRosto(pensando);
     addMsg({ de: 'caos', texto: 'Deixa eu pensar com a IA…', temp: true, rosto: pensando });
     try {
-      const resposta = await ia.perguntar(state.settings.aiUrl, { pergunta: fala.perguntaIA || t, humor: state.settings.mood, dados: dados(), modo: fala.modoIA });
+      const resposta = await ia.perguntar(state.settings.aiUrl, { pergunta: textoIA, humor: humorIA, dados: dados(), modo: fala.modoIA, semBusca: fala.intent === 'papo_pessoal' });
       await db.setMeta('iaUso', { dia: toISODate(), n: usoIA.n + 1 });
       iaRecentes.set(chaveIA, { texto: resposta, em: Date.now() });
       state.chat = state.chat.filter(m => !m.temp);
       addMsg({ de: 'caos', texto: resposta, ia: true, sugestoes: SUGESTOES.slice(0, 5), rosto: fala.rosto });
       pintarRosto(fala.rosto);
-      if (state.settings.voice) falar(trocarNome(resposta, state.perfil?.apelido));
+      if (state.settings.voice) falar(trocarNome(resposta, state.perfil?.apelido).replace(/\*\*/g, ''));
       return;
     } catch (e) {
       state.chat = state.chat.filter(m => !m.temp);
-      const guardou = fala.palpite ? false : await guardarPergunta(t);
+      const guardou = fala.palpite ? false : await guardarPergunta(textoIA);
       addMsg({ de: 'caos', texto: `${fala.texto}${guardou ? ' A IA online não respondeu agora, mas guardei sua pergunta e trago a resposta depois.' : ` (A IA online não respondeu: ${e.message})`}`, sugestoes: fala.sugestoes, rosto: fala.rosto });
       pintarRosto(fala.rosto);
       return;
     }
   }
-  if (!iaCansada && !fala.entendeu && !fala.palpite && await guardarPergunta(t)) {
+  if (!iaCansada && !fala.entendeu && !fala.palpite && await guardarPergunta(textoIA)) {
     // Fila geral (1.6.0): o que ele não sabe vai pro servidor quando der; a resposta volta na conversa.
     fala.texto = 'Ainda não sei responder isso, mas guardei sua pergunta. Quando eu tiver conexão com o servidor do C.A.O.S. Finanças, eu trago a resposta aqui.';
   }
@@ -201,7 +204,7 @@ export async function processarFila() {
   for (const item of fila) {
     try {
       if (item.tipo === 'pergunta') {
-        const texto = await ia.perguntar(state.settings.aiUrl, { pergunta: item.pergunta, humor: state.settings.mood, dados: dados() });
+        const texto = await ia.perguntar(state.settings.aiUrl, { pergunta: item.pergunta, humor: humorParaIA(state.settings.mood, state.perfil), dados: dados() });
         const nome = state.perfil?.apelido;
         addMsg({ de: 'caos', ia: true, texto: `Ei${nome ? `, ${nome}` : ''}, sabe aquela sua pergunta? "${item.pergunta}" Agora eu consigo responder: ${texto}` });
         $('#caos-line').textContent = 'Lembra daquela pergunta? Agora eu sei responder. Toca aqui pra ver.';
@@ -210,7 +213,7 @@ export async function processarFila() {
       if (item.tipo === 'explicar') {
         const img = await imagens.pegar(item.imagemId);
         if (!img) continue; // a foto foi apagada: tira da fila
-        const texto = await ia.explicarImagem(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob), duvida: item.duvida, humor: state.settings.mood });
+        const texto = await ia.explicarImagem(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob), duvida: item.duvida, humor: humorParaIA(state.settings.mood, state.perfil) });
         const nome = state.perfil?.apelido;
         addMsg({ de: 'caos', ia: true, texto: `Ei${nome ? `, ${nome}` : ''}, sabe aquele print do banco que você me mandou? Agora eu consigo explicar: ${texto}` });
         $('#caos-line').textContent = 'Expliquei aquele print do banco. Toca aqui pra ver.';
@@ -280,9 +283,30 @@ export async function confirmarAcao(i, ok) {
       addMsg({ de: 'caos', texto: `Pronto: agora está no dia ${Number(a.date.slice(8, 10))}/${Number(a.date.slice(5, 7))}.` });
       return;
     }
+    if (a.tipo === 'editar_valor') {
+      // "errei, foi 45, não 50" (revisão do Gemini, 16/11): o C.A.O.S. propõe, a pessoa confirma, o app grava
+      const x = state.expenses.find(e => e.id === a.expenseId);
+      if (!x) { addMsg({ de: 'caos', texto: 'Não achei mais esse gasto. Ele foi apagado?' }); return; }
+      const novo = editarLancamento(x, { amountCents: a.amountCents, note: x.note, date: x.date, categoryId: x.categoryId }, { kind: 'gasto', categories: state.categories });
+      await db.put(db.STORES.expenses, novo);
+      state.expenses = state.expenses.map(e => (e.id === x.id ? novo : e));
+      renderizar();
+      addMsg({ de: 'caos', texto: `Pronto: agora está ${formatBRL(a.amountCents)}.` });
+      return;
+    }
+    if (a.tipo === 'transferir') {
+      // "transferi 200 do Inter pro C6" (revisão do Gemini, 16/11): mesma gravação da tela de Contas
+      const t = createTransferencia({ deId: a.deId, paraId: a.paraId, amountCents: a.amountCents, date: a.date }, { accounts: state.accounts });
+      state.transferencias = [...state.transferencias, t];
+      await db.setMeta('transferencias', state.transferencias);
+      renderizar();
+      addMsg({ de: 'caos', texto: `Transferência anotada: ${formatBRL(a.amountCents)}. Os saldos das duas contas já mudaram.` });
+      return;
+    }
     if (a.tipo === 'registrar_varios') {
       let eventos = [];
-      for (const x of a.itens) eventos = await registrarGasto({ ...x, imageId: a.imageId });
+      // revisão do Gemini (16/11): junta os eventos de todos (antes só o último contava e um estouro do 1º sumia)
+      for (const x of a.itens) eventos.push(...(await registrarGasto({ ...x, imageId: a.imageId })));
       const total = a.itens.reduce((t, x) => t + x.amountCents, 0);
       const fala = narrate(eventos, { ignoreCooldown: true });
       addMsg({ de: 'caos', texto: `Anotei os ${a.itens.length} pagamentos (${formatBRL(total)}).${fala ? ` ${fala.texto}` : ''}`, rosto: fala?.rosto });
@@ -313,10 +337,10 @@ export async function explicarPrint(img, duvida) {
     await respiro('Deixa eu olhar com calma o que o banco quis dizer.');
     addMsg({ de: 'caos', texto: 'Olhando o print com a IA…', temp: true, rosto: rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory }) });
     try {
-      const texto = await ia.explicarImagem(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob), duvida, humor: state.settings.mood });
+      const texto = await ia.explicarImagem(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob), duvida, humor: humorParaIA(state.settings.mood, state.perfil) });
       state.chat = state.chat.filter(m => !m.temp);
       addMsg({ de: 'caos', ia: true, texto });
-      if (state.settings.voice) falar(texto);
+      if (state.settings.voice) falar(trocarNome(texto, state.perfil?.apelido).replace(/\*\*/g, ''));
       return;
     } catch {
       state.chat = state.chat.filter(m => !m.temp);
