@@ -16,7 +16,7 @@ o resto no botão. O que falta é **o jeito de escrever** e **o ritmo das versõ
 Hoje os itens parecem etiqueta. Quem lê não sabe **onde fica** nem **como usa**. No Perfil, cada item responde 3 perguntas,
 em 1 ou 2 frases: **o que é · onde fica ou quando aparece · como usa (com um exemplo)**.
 
-Exemplos com itens seus (2.1.1 e 2.1.0):
+Exemplos com itens seus (2.1.1 e 2.1.0): (os lugares que eu citei são chute meu: troque pelo lugar certo no app)
 
 | Hoje | No jeito do Perfil |
 |---|---|
