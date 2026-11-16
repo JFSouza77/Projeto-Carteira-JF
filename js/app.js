@@ -31,6 +31,7 @@ import { addMsg, confirmarAcao, enviarPergunta, fotoNoChat, ligarTeclado, proces
 import { abrirEditarConta, acaoInvestimento, bancosAbertos, compraNoCartao, contasAbertas, informarCdi, marcarFaturaPaga, mostrarCamposConta, onAddAccount, onAddCartao, onAddInvestimento, onRemoveAccount, onTransferir, onUpdateAccount, opcoesDeConta, raioXAberto, renderContas, renderFormConta, renderInvestimentos, salvarConta } from './telas/contas.js';
 import { guardarEmMeta, iniciarMeta, lancarCompromisso, marcarPlano, onAddCompromisso, onAddPlano, onSimular, prepararFormCompromisso, removerCompromisso, removerPlano, renderMes, renderMetas, salvarMetas } from './telas/mes.js';
 import { exportarCSV, exportarPDF, filtroDeBusca, grafico, lancamentosDoMes, marcarSeg, renderGraficos, renderMeses, renderRitmo, renderRosca } from './telas/analise.js';
+import { editar, lerFotoComIA, limparFoto, mostrarFoto, onDelete, onFoto, onSubmit, perguntarContaDoPix, previaParcelas, previaRacha, renderLancar, salvarEdicao, verFoto } from './telas/lancar.js';
 
 definirRender(render);
 
@@ -59,7 +60,7 @@ export function setRosto(el, r) {
 // ---------- Avatares (JF, 13/11: "cadê os avatares?") ----------
 // Um avatar por lugar (Início, topo da conversa, painel do computador, susto do valor). Se der erro, os rostinhos de
 // texto continuam (3ª lei: problema no C.A.O.S. nunca trava o app).
-const avatares = {};
+export const avatares = {};
 function ligarAvatares() {
   try {
     configurarAvatar({ menosMovimento: () => MENOS_MOVIMENTO.matches });
@@ -346,8 +347,8 @@ const CAT_COM_ICONE = new Set(['mercado', 'delivery', 'restaurante', 'transporte
 const FONTE_COM_ICONE = new Set(['salario', 'freela', 'rendimento', 'presente', 'outros']);
 /** Ícone da categoria: as que vêm com o app têm desenho próprio; a criada pela pessoa mantém o emoji dela. */
 export const icCat = c => (c && CAT_COM_ICONE.has(c.id) ? ic(`c-${c.id}`) : esc(c?.emoji ?? '') || ic('c-outros'));
-const icFonte = f => (f && FONTE_COM_ICONE.has(f.id) ? ic(`e-${f.id}`) : ic('e-outros'));
-const ICONE_FORMA = { dinheiro: 'f-dinheiro', pix: 'f-pix', debito: 'a-cartao', credito: 'a-cartao' };
+export const icFonte = f => (f && FONTE_COM_ICONE.has(f.id) ? ic(`e-${f.id}`) : ic('e-outros'));
+export const ICONE_FORMA = { dinheiro: 'f-dinheiro', pix: 'f-pix', debito: 'a-cartao', credito: 'a-cartao' };
 
 const ICONE_ALERTA = {
   categoria_estourada: 'i-alerta', orcamento_80: 'i-alerta', ritmo_alto: 'e-rendimento', mes_negativo: 'i-alerta', conta_negativa: 'i-contas',
@@ -739,7 +740,7 @@ function ligarArrastar() {
 
 // ---------- Ofensiva e A receber (07/11) ----------
 
-function ofensivaAgora() {
+export function ofensivaAgora() {
   return ofensiva({ expenses: state.expenses, incomes: state.incomes, diasSemGasto: state.perfil?.diasSemGasto || [] }, toISODate());
 }
 
@@ -765,7 +766,7 @@ function renderOfensiva() {
 
 const OFENSIVA_DESLIGADA = true;
 /** Se o lançamento de agora acendeu o dia e bateu um marco (3, 7, 14, 30…), o C.A.O.S. comemora. */
-function eventoOfensiva(antes) {
+export function eventoOfensiva(antes) {
   if (OFENSIVA_DESLIGADA) return []; // 15/11 (Anne): sem comemoração vazia até a ofensiva ser repensada
   const depois = ofensivaAgora();
   if (!antes.hojeFeito && depois.hojeFeito && MARCOS_OFENSIVA.includes(depois.dias)) return [{ type: 'ofensiva_marco', days: depois.dias }];
@@ -798,34 +799,6 @@ function renderAReceber() {
 }
 
 /** Pergunta em qual conta o Pix do amigo caiu. Devolve o id, '' (sem conta) ou null (cancelou). */
-// Valor fora do comum (13/11): o C.A.O.S. leva um susto (rosto espantado) e pergunta antes de gravar.
-// Era um confirm() do navegador; o JF pediu o C.A.O.S. reagindo ("R$ 17 mil na Cacau Show?!").
-function confirmarEspanto(valorCents, ehGasto) {
-  const dlg = $('#espanto-dialog');
-  const nota = $('#note').value.trim();
-  $('#espanto-titulo').textContent = `${formatBRL(valorCents)}?!`;
-  $('#espanto-texto').textContent = `${ehGasto ? 'De gasto' : 'De entrada'}${nota ? ` em "${nota}"` : ''}? É bem mais que o seu normal. Confere se não faltou a vírgula dos centavos.`;
-  setRosto($('#espanto-face'), rostoEspantado());
-  avatares.espanto?.mostrar('surpreso', { imediato: true });
-  return new Promise(resolve => {
-    dlg.addEventListener('close', () => resolve(dlg.returnValue === 'ok'), { once: true });
-    dlg.returnValue = '';
-    dlg.showModal();
-  });
-}
-
-function perguntarContaDoPix(nome, valorCents) {
-  const contas = state.accounts.filter(a => a.tipo !== 'cartao');
-  const dlg = $('#pix-dialog');
-  $('#pix-texto').textContent = `${nome} te pagou ${formatBRL(valorCents)}. Em qual conta o dinheiro caiu?`;
-  $('#pix-conta').innerHTML = opcoesDeConta(a => a.tipo !== 'cartao').replace('Sem conta', 'Não sei / dinheiro vivo');
-  if (contas.length) $('#pix-conta').value = contas[0].id;
-  return new Promise(resolve => {
-    dlg.addEventListener('close', () => resolve(dlg.returnValue === 'ok' ? $('#pix-conta').value : null), { once: true });
-    dlg.returnValue = '';
-    dlg.showModal();
-  });
-}
 
 async function recebi(expenseId, pessoaId) {
   const e = state.expenses.find(x => x.id === expenseId);
@@ -851,84 +824,11 @@ async function recebi(expenseId, pessoaId) {
 
 // ---------- Transferência entre contas (13/11, repaginada) ----------
 
-function nomesDoRacha() {
-  return $('#racha-nomes').value.split(/[,;\n]| e /).map(n => n.trim()).filter(Boolean);
-}
-
-function previaRacha() {
-  const nomes = nomesDoRacha();
-  const total = parseAmount($('#amount').value);
-  if (!nomes.length || !total) { $('#racha-previa').textContent = 'Digite o valor total que você pagou e os nomes. A conta é dividida por igual.'; return; }
-  try {
-    const partes = dividirIgual(total, nomes);
-    const minha = total - partes.reduce((t, p) => t + p.valorCents, 0);
-    $('#racha-previa').textContent = `${partes.length + 1} pessoas: cada amigo te paga ${formatBRL(partes[0].valorCents)}. No seu orçamento entra só a sua parte, ${formatBRL(minha)}.`;
-  } catch (er) {
-    $('#racha-previa').textContent = er.message;
-  }
-}
 
 // ======================================================================
 // Lançar (gasto ou entrada)
 // ======================================================================
 
-export function renderLancar() {
-  const gasto = state.kind === 'gasto';
-  const semConta = !state.accounts.some(a => a.tipo !== 'cartao');
-  $('#lancar-trava').hidden = !semConta;
-  $('#entry-form').closest('.card').hidden = semConta;
-  $('#mes-sem-entrada').hidden = gasto;
-  $('#dia-sem-gasto').hidden = !gasto;
-  const opcoes = gasto ? state.categories : INCOME_SOURCES;
-  const sel = gasto ? state.selectedCategory : state.selectedSource;
-  $('#category-chips').setAttribute('aria-label', gasto ? 'Categoria' : 'De onde veio');
-  $('#racha-box').hidden = !gasto;
-  $('#prevista-field').hidden = gasto;
-  $('#category-chips').innerHTML = opcoes.map(c => `
-    <button type="button" class="chip colorido" style="--cor-chip:${gasto ? corCategoria(c.id) : corFonte(c.id)}" role="radio" aria-checked="${c.id === sel}" data-cat="${esc(c.id)}">${gasto ? icCat(c) : icFonte(c)} ${esc(c.name)}</button>`).join('');
-  $('#cat-label').textContent = gasto ? 'Categoria' : 'De onde veio';
-  $('#category-select').innerHTML = `<option value="">${gasto ? 'Escolha a categoria' : 'Escolha de onde veio'}</option>`
-    + opcoes.map(c => `<option value="${esc(c.id)}"${c.id === sel ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
-  $('#entry-form').dataset.kind = gasto ? 'gasto' : 'entrada';
-  $('#submit-btn').textContent = gasto ? 'Adicionar gasto' : 'Adicionar entrada';
-  // Pagou como? (P8): a forma escolhe que contas aparecem e o que mais perguntar
-  const forma = gasto ? state.forma : null;
-  $('#forma-field').hidden = !gasto;
-  $('#forma-chips').innerHTML = Object.entries(FORMAS_PAGAMENTO).map(([id, nome]) =>
-    `<button type="button" class="chip colorido" style="--cor-chip:${corForma(id)}" role="radio" aria-checked="${id === forma}" data-forma="${id}">${ic(ICONE_FORMA[id])} ${esc(nome.replace(/^\S+\s/, ''))}</button>`).join('');
-  $('#forma-select').innerHTML = '<option value="">Escolha (opcional)</option>' + Object.entries(FORMAS_PAGAMENTO).map(([id, nome]) =>
-    `<option value="${id}"${id === forma ? ' selected' : ''}>${esc(nome.replace(/^\S+\s/, ''))}</option>`).join('');
-  const filtro = !gasto ? a => a.tipo !== 'cartao' // entrada não cai no cartão de crédito
-    : forma === 'credito' ? a => a.tipo === 'cartao'
-    : forma ? a => a.tipo !== 'cartao' : () => true;
-  const cabem = state.accounts.filter(filtro);
-  $('#account-field').hidden = cabem.length === 0;
-  $('#account-label').textContent = forma === 'credito' ? 'Qual cartão?' : forma === 'pix' || forma === 'debito' ? 'De qual banco saiu?'
-    : forma === 'dinheiro' ? 'Saiu de onde? (se quiser)' : 'Conta';
-  const atual = $('#account-select').value;
-  $('#account-select').innerHTML = opcoesDeConta(filtro);
-  if (cabem.some(a => a.id === atual)) $('#account-select').value = atual;
-  else if (forma === 'credito' && cabem.length === 1) $('#account-select').value = cabem[0].id;
-  $('#parcelas-box').hidden = forma !== 'credito';
-  if (!$('#parcelas-select').options.length) {
-    $('#parcelas-select').innerHTML = '<option value="1">À vista (1x)</option>' +
-      Array.from({ length: 23 }, (_, i) => `<option value="${i + 2}">Parcelado em ${i + 2}x</option>`).join('');
-  }
-  previaParcelas();
-  $('#photo-ai').hidden = !(state.photo && state.settings.aiOn);
-}
-
-function previaParcelas() {
-  const n = Number($('#parcelas-select').value) || 1;
-  $('#limite-modo-field').hidden = n < 2;
-  const v = parseAmount($('#amount').value);
-  if (n < 2 || !v) { $('#parcelas-previa').textContent = ''; return; }
-  const parcela = Math.floor(v / n);
-  const total = document.querySelector('input[name="limite-modo"]:checked')?.value !== 'parcela';
-  $('#parcelas-previa').textContent = `${n}x de ${formatBRL(parcela)}. ` + (total
-    ? `Agora o limite fica ${formatBRL(v)} menor e volta ${formatBRL(parcela)} a cada fatura paga.`
-    : `Só ${formatBRL(parcela)} por mês ocupa o limite.`);
-}
 
 // ---------- Gráficos (13/11): SVG feito à mão, sem biblioteca e sem internet ----------
 
@@ -945,253 +845,14 @@ function previaParcelas() {
 
 /** Filtro da busca: palavra no nome/categoria/fonte/conta, ou valor ("49,90", "50" acha 50,00 e 50,xx). */
 
-function mostrarFoto() {
-  const p = state.photo;
-  $('#photo-preview').hidden = !p;
-  if (p) $('#photo-img').src = p.url;
-  $('#photo-ai').hidden = !(p && state.settings.aiOn);
-}
-
-async function limparFoto({ apagar }) {
-  if (state.photo) {
-    URL.revokeObjectURL(state.photo.url);
-    if (apagar) await imagens.apagar(state.photo.id).catch(() => {});
-  }
-  state.photo = null;
-  $('#photo-input').value = '';
-  mostrarFoto();
-}
 
 /** Grava um gasto (do formulário ou de uma proposta do C.A.O.S. confirmada). Devolve os eventos. */
-export async function registrarGasto({ amountCents, categoryId, note, date, accountId, imageId, compromissoId, rachaNomes = null, forma = null, parcelas = 1, limiteModo = 'total' }) {
-  const ofAntes = ofensivaAgora();
-  // escolheu um cartão sem dizer a forma: é crédito
-  if (!forma && accountId && state.accounts.find(a => a.id === accountId)?.tipo === 'cartao') forma = 'credito';
-  const expense = createExpense({ amountCents, categoryId, note, date, accountId, imageId, compromissoId, forma, parcelas, limiteModo }, { categories: state.categories });
-  if (rachaNomes?.length) expense.racha = dividirIgual(amountCents, rachaNomes);
-  const conta = accountId && state.accounts.find(a => a.id === accountId);
-  const cartao = conta?.tipo === 'cartao';
-  const antes = conta ? (cartao ? faturaDoCartao(comReforco(conta, state.accounts, state.expenses, state.incomes, state.transferencias), state.expenses, toISODate()).pct : accountBalance(conta, state.expenses, state.incomes, state.transferencias)) : null;
-  await db.put(db.STORES.expenses, expense);
-  avisarAntesDoSaldo(expense);
-  state.expenses.push(expense);
-  const events = detectExpenseEvents({ expenses: state.expenses, categories: state.categories, newExpense: expense });
-  if (conta && cartao) {
-    // passou de 80% ou de 100% do limite com esta compra: o C.A.O.S. avisa na hora
-    const f = faturaDoCartao(comReforco(conta, state.accounts, state.expenses, state.incomes, state.transferencias), state.expenses, toISODate());
-    if ((antes < 80 && f.pct >= 80) || (antes < 100 && f.pct >= 100)) {
-      events.push({ type: 'cartao_limite', accountName: f.nome, pct: f.pct, amountCents: f.usadoCents, leftCents: f.disponivelCents, budgetCents: f.limiteCents });
-    }
-  } else if (conta) {
-    const depois = accountBalance(conta, state.expenses, state.incomes, state.transferencias);
-    if (antes >= 0 && depois < 0) events.push({ type: 'conta_negativa', accountName: accountLabel(conta), balanceCents: depois });
-  }
-  if (expense.racha) {
-    const nomes = expense.racha.map(p => p.nome);
-    events.push({ type: 'racha_cadastrada', amountCents: valorProprio(expense), totalCents: expense.amountCents - valorProprio(expense), count: nomes.length,
-      quem: juntarNomes(nomes) });
-  }
-  events.push(...eventoOfensiva(ofAntes));
-  state.viewMonth = expense.month;
-  render();
-  return events;
-}
 
 /** JF, 14/11: lançamento com data de antes do saldo informado já está dentro dele; avisa que o saldo não mudou. */
-function avisarAntesDoSaldo(item) {
-  const conta = item.accountId && state.accounts.find(a => a.id === item.accountId && a.tipo !== 'cartao');
-  if (!conta || depoisDoSaldo(item, conta) || location.hash === '#conversa') return; // na conversa, o C.A.O.S. explica
-  const dia = new Date(conta.balanceAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-  setTimeout(() => toast(`Anotado com a data certa. O saldo de ${accountLabel(conta)} que você informou em ${dia} já inclui esse valor, então o saldo não mudou.`), 900);
-}
-
-export async function registrarEntrada({ amountCents, sourceId, note, date, accountId, prevista = false }) {
-  const ofAntes = ofensivaAgora();
-  const income = createIncome({ amountCents, sourceId, note, date, accountId, prevista });
-  await db.put(db.STORES.incomes, income);
-  if (prevista) { // 15/11 (JF): fica na lista do "a receber" até a pessoa tocar em Recebi
-    state.previstas.push(income);
-    render();
-    toast(`Anotado como previsto: ${formatBRL(amountCents)} pra ${date.slice(8, 10)}/${date.slice(5, 7)}. Quando cair, toca em "Recebi" na aba Entradas.`);
-    return [];
-  }
-  state.incomes.push(income);
-  avisarAntesDoSaldo(income);
-  state.viewMonth = income.month;
-  render();
-  return [{ type: 'entrada_cadastrada', amountCents, sourceId }, ...eventoOfensiva(ofAntes)];
-}
-
-async function onSubmit(ev) {
-  ev.preventDefault();
-  const err = $('#form-error');
-  err.hidden = true;
-  try {
-    const amountCents = parseAmount($('#amount').value);
-    if (!amountCents) throw new Error('Digite um valor, tipo 25,90.');
-    // valor muito acima do normal (13/11): pergunta antes, pra um 124,50 não virar 12.450,00
-    const ehGasto = state.kind === 'gasto';
-    if (valorForaDoComum(amountCents, ehGasto ? state.expenses : state.incomes, { tipo: ehGasto ? 'gasto' : 'entrada' })
-      && !(await confirmarEspanto(amountCents, ehGasto))) { $('#amount').focus(); return; }
-    const base = { amountCents, note: $('#note').value, date: $('#date').value, accountId: $('#account-select').value || null };
-    let events;
-    if (state.kind === 'gasto') {
-      if (!state.selectedCategory) throw new Error('Escolha uma categoria.');
-      const rachaNomes = $('#racha-box').open ? nomesDoRacha() : null;
-      if ($('#racha-box').open && !rachaNomes.length) throw new Error('Escreva o nome de quem vai te pagar, ou feche o "Dividir com amigos".');
-      const forma = state.forma;
-      const parcelas = forma === 'credito' ? Number($('#parcelas-select').value) || 1 : 1;
-      const limiteModo = document.querySelector('input[name="limite-modo"]:checked')?.value || 'total';
-      if (forma === 'credito' && !base.accountId && state.accounts.some(a => a.tipo === 'cartao')) throw new Error('Qual cartão? Escolha ali em cima.');
-      events = await registrarGasto({ ...base, categoryId: state.selectedCategory, imageId: state.photo?.id, rachaNomes, forma, parcelas, limiteModo });
-      $('#parcelas-select').value = '1';
-      await limparFoto({ apagar: false });
-      $('#racha-nomes').value = '';
-      $('#racha-box').open = false;
-      previaRacha();
-    } else {
-      if (!state.selectedSource) throw new Error('Escolha de onde veio o dinheiro.');
-      const prevista = $('#entrada-prevista').checked;
-      if (prevista && base.date < toISODate()) throw new Error('Entrada prevista é pra uma data que ainda vai chegar.');
-      events = await registrarEntrada({ ...base, sourceId: state.selectedSource, prevista });
-      $('#entrada-prevista').checked = false;
-      await limparFoto({ apagar: true });
-    }
-    $('#amount').value = '';
-    $('#note').value = '';
-    state.catSugerida = false;
-    state.selectedCategory = null; // o próximo lançamento começa livre pra o C.A.O.S. sugerir pela descrição
-    $('#cat-sugestao').hidden = true;
-    renderLancar();
-    const fala = narrate(events);
-    toast(fala ? fala.texto : 'Salvo!');
-  } catch (e) {
-    err.textContent = e.message || 'Não deu para salvar.';
-    err.hidden = false;
-  }
-}
-
-async function onFoto(arquivo) {
-  try {
-    await limparFoto({ apagar: true });
-    const img = await imagens.guardar(arquivo, 'comprovante');
-    state.photo = { id: img.id, url: URL.createObjectURL(img.blob) };
-    mostrarFoto();
-    if (state.settings.aiOn) toast('Foto anexada. Toque em "Ler com IA" para preencher sozinho.');
-  } catch (e) {
-    toast(e.message || 'Não deu para anexar a foto.');
-  }
-}
 
 /** A IA lê a foto e PREENCHE o formulário. Nada é salvo até a pessoa tocar em Adicionar. */
-async function lerFotoComIA() {
-  const btn = $('#photo-ai');
-  try {
-    btn.disabled = true;
-    btn.textContent = 'Lendo…';
-    const img = await imagens.pegar(state.photo.id);
-    const r = await ia.lerImagem(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob), categorias: state.categories });
-    if (r.valor_centavos > 0) $('#amount').value = centsToInput(r.valor_centavos);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(r.data || '')) $('#date').value = r.data;
-    if (r.estabelecimento && !$('#note').value) $('#note').value = r.estabelecimento.slice(0, 120);
-    if (r.categoria && catById(r.categoria)) {
-      state.kind = 'gasto';
-      document.querySelector('input[name="kind"][value="gasto"]').checked = true;
-      state.selectedCategory = r.categoria;
-    }
-    renderLancar();
-    toast(r.confianca === 'baixa' ? 'Li, mas com pouca certeza. Confere os campos!' : 'Pronto! Confere e toca em Adicionar.');
-  } catch (e) {
-    toast(e.message || 'Não consegui ler a foto.');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = `${ic('i-ia')} Ler com IA`;
-  }
-}
 
 /** Editar lançamento (13/11): janelinha com valor, data, descrição e categoria (ou fonte). */
-async function editar(id, kind) {
-  const entrada = kind === 'entrada';
-  const x = (entrada ? state.incomes : state.expenses).find(i => i.id === id);
-  if (!x) return;
-  const dlg = $('#editar-dialog');
-  $('#editar-titulo').textContent = entrada ? 'Editar entrada' : 'Editar gasto';
-  $('#ed-valor').value = centsToInput(x.amountCents);
-  const rachada = Array.isArray(x.racha) && x.racha.length > 0;
-  $('#ed-valor').disabled = rachada;
-  $('#ed-data').value = x.date;
-  $('#ed-nota').value = x.note || '';
-  $('#ed-cat-rotulo').textContent = entrada ? 'De onde veio' : 'Categoria';
-  $('#ed-cat').innerHTML = (entrada ? INCOME_SOURCES : state.categories).map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
-  $('#ed-cat').value = entrada ? x.sourceId : x.categoryId;
-  const avisos = [];
-  if (rachada) avisos.push('Essa conta foi dividida com amigos: o valor fica travado (pra mudar, apague e lance de novo).');
-  if (x.parcelas > 1) avisos.push(`Parcelado em ${x.parcelas}x: o valor é o total da compra.`);
-  $('#ed-aviso').hidden = !avisos.length;
-  $('#ed-aviso').textContent = avisos.join(' ');
-  $('#ed-erro').hidden = true;
-  dlg.dataset.id = id;
-  dlg.dataset.kind = kind;
-  dlg.returnValue = '';
-  dlg.showModal();
-}
-
-async function salvarEdicao(ev) {
-  const dlg = $('#editar-dialog');
-  if (ev.submitter?.value !== 'ok') return; // Cancelar fecha sozinho
-  ev.preventDefault();
-  const kind = dlg.dataset.kind === 'entrada' ? 'entrada' : 'gasto';
-  const lista = kind === 'entrada' ? state.incomes : state.expenses;
-  const id = dlg.dataset.id;
-  const x = lista.find(i => i.id === id);
-  if (!x) return dlg.close();
-  try {
-    const valor = $('#ed-valor').disabled ? x.amountCents : parseAmount($('#ed-valor').value);
-    const novo = editarLancamento(x, {
-      amountCents: valor ?? 0, note: $('#ed-nota').value, date: $('#ed-data').value,
-      ...(kind === 'entrada' ? { sourceId: $('#ed-cat').value } : { categoryId: $('#ed-cat').value }),
-    }, { kind, categories: state.categories });
-    await db.put(kind === 'entrada' ? db.STORES.incomes : db.STORES.expenses, novo);
-    if (kind === 'entrada') state.incomes = state.incomes.map(i => (i.id === id ? novo : i));
-    else state.expenses = state.expenses.map(i => (i.id === id ? novo : i));
-    dlg.close();
-    render();
-    toast(kind === 'entrada' ? 'Entrada atualizada.' : 'Gasto atualizado.');
-  } catch (e) {
-    $('#ed-erro').textContent = e.message || 'Não deu para salvar.';
-    $('#ed-erro').hidden = false;
-  }
-}
-
-async function onDelete(id, kind) {
-  if (kind === 'transf') {
-    const t = state.transferencias.find(x => x.id === id);
-    if (!t || !confirm(`Apagar a transferência de ${formatBRL(t.amountCents)}?`)) return;
-    state.transferencias = state.transferencias.filter(x => x.id !== id);
-    await db.setMeta('transferencias', state.transferencias);
-    render(); renderContas();
-    return toast('Transferência apagada.');
-  }
-  const lista = kind === 'entrada' ? state.incomes : state.expenses;
-  const x = lista.find(i => i.id === id);
-  if (!x || !confirm(`Apagar ${formatBRL(x.amountCents)}${x.note ? ` (${x.note})` : ''}?`)) return;
-  await db.remove(kind === 'entrada' ? db.STORES.incomes : db.STORES.expenses, id);
-  if (x.imageId) await imagens.apagar(x.imageId).catch(() => {});
-  if (kind === 'entrada') state.incomes = state.incomes.filter(i => i.id !== id);
-  else state.expenses = state.expenses.filter(i => i.id !== id);
-  render();
-  toast(kind === 'entrada' ? 'Entrada apagada.' : 'Gasto apagado.');
-}
-
-async function verFoto(id) {
-  const img = await imagens.pegar(id);
-  if (!img) return toast('Foto não encontrada.');
-  const url = URL.createObjectURL(img.blob);
-  $('#photo-dialog-img').src = url;
-  const dlg = $('#photo-dialog');
-  dlg.showModal();
-  dlg.addEventListener('close', () => URL.revokeObjectURL(url), { once: true });
-}
 
 // ======================================================================
 // Conversa com o C.A.O.S.
