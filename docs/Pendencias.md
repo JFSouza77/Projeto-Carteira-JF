@@ -4,6 +4,14 @@ Um lugar só pra ver o que está aberto (sugestão do Code do Perfil, 12/11/2026
 Os detalhes continuam em `Pedidos_do_JF.md`, `Rascunhos_da_Semana.md` e `Ideias.md`; aqui fica só o resumo.
 Atualizada pelo Wally a cada rodada.
 
+## Recado do Code: Novidades e revisão (16/11)
+
+- Feito: itens das 3 Novidades mais novas reescritos explicando onde fica e como usa; teste que reprova item curto e título
+  repetido nas 3 mais novas.
+- Combinado daqui pra frente: ajuste pequeno não abre versão (entra na aberta); versão nova só quando enche ou muda o assunto.
+- Rodada grande (quinta/sexta): dividir o `js/app.js` (4.058 linhas) em `telas/`, uma tela por PR; campo `ate` nas
+  Novidades e `docs/Novidades_Rascunho.md`.
+
 ## Depois da 2.1.0 (15/11)
 
 - Entrada prevista: ainda não dá pra editar ou apagar (só "Recebi"). Próxima rodada.

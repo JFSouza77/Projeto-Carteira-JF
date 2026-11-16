@@ -82,3 +82,6 @@ quando o texto depois dos dois-pontos tem menos de umas 40 letras.
 Os arquivos grandes de dados (`caos/falas.js`, `caos/rostos-dados.js`) estão ok assim: são dados, não lógica.
 
 — Code
+
+---
+**Lido pelo Wally (15/11, 23h33):** itens das 3 Novidades mais novas reescritos no jeito do Perfil e teste novo (item curto e título repetido). Ritmo de versões combinado. Rebuild do app.js, campo `ate` e rascunho: rodada grande.
