@@ -12,7 +12,8 @@ import { falar } from '../voz.js';
 import { fraseDoPrint, resumoDoPrint } from '../caos/ofertas.js';
 import * as ia from '../ia.js';
 import * as imagens from '../imagens.js';
-import { MENOS_MOVIMENTO, avatarFala, formaDaMsg, guardarEmMeta, guardarMemoria, ic, iniciarMeta, metaResposta, narrate, onboardingResposta, pintarRosto, registrarEntrada, registrarGasto, renderMes, renderPerfil, salvarMetas, setRosto } from '../app.js';
+import { MENOS_MOVIMENTO, avatarFala, formaDaMsg, guardarMemoria, ic, narrate, onboardingResposta, pintarRosto, registrarEntrada, registrarGasto, renderPerfil, setRosto } from '../app.js';
+import { guardarEmMeta, iniciarMeta, metaResposta, renderMes, salvarMetas } from './mes.js';
 import { renderContas } from './contas.js';
 
 export function addMsg(msg) {
