@@ -300,13 +300,22 @@ export const GUIAS = {
     texto: 'Coloque quanto entrou (salário, freela, Pix) e em qual conta caiu. Se o dinheiro ainda vai cair, marque "Ainda vou receber". Se este mês não entrou nada, toque em "Este mês não entrou nada".' },
   gasto: { passo: 'Passo 4 de 5 · seu primeiro gasto', kind: 'gasto', foco: '#entry-form',
     texto: 'Valor, o que foi e como pagou. Mais rápido ainda: no Chat, escreva "gastei 30 no mercado" ou mande a foto do comprovante. Hoje não gastou nada? Toque em "Hoje não gastei nada".' },
+  // 16/11 (JF): guias só da ajuda rápida (o "?"), fora do passo a passo
+  cartao: { passo: 'Ajuda rápida · seu cartão de crédito', hash: 'contas', abre: '#add-cartao-card', foco: '#add-cartao-card',
+    texto: 'Escolha o banco do cartão, o limite e os dias de fechamento e vencimento. Se já usou parte do limite, coloque quanto. Nada de número do cartão: só os valores. Depois, gasto no crédito vai direto pra fatura dele.' },
+  transferir: { passo: 'Ajuda rápida · transferir entre contas', hash: 'contas', abre: '#transf-card', foco: '#transf-card',
+    texto: 'Escolha de qual conta sai, pra qual vai e o valor. Transferência não é gasto nem entrada: o dinheiro só muda de lugar. Só aparece quando você tem 2 contas ou mais.' },
   chat: { passo: 'Passo 5 de 5 · converse comigo', hash: 'conversa', foco: '#chat-form',
     texto: 'Aqui você fala comigo: "quanto gastei este mês?", "dá pra gastar quanto até o salário?", "vou receber 500 dia 20". A IA online já vem ligada pra perguntas mais livres. Se travar, toca no "?" que eu ajudo.' },
 };
 
-export function guiar(id) {
-  const g = GUIAS[id];
+export function guiar(id, { ajuda = false } = {}) {
+  let g = GUIAS[id];
   if (!g) return;
+  // pela ajuda rápida, o título diz "Ajuda rápida" em vez de "Passo 2 de 5" (16/11)
+  if (ajuda && /^Passo/.test(g.passo)) g = { ...g, passo: `Ajuda rápida · ${g.passo.split(' · ')[1]}` };
+  // transferir só existe com 2 contas ou mais: sem isso, leva pra cadastrar o banco
+  if (id === 'transferir' && $('#transf-card')?.hidden) g = { ...GUIAS.banco, passo: 'Ajuda rápida · primeiro, 2 contas', texto: 'Pra transferir, você precisa de pelo menos 2 contas. Cadastre aqui a que falta (só o banco, o tipo e o saldo).' };
   if (g.kind) atalhoLancar(g.kind); else location.hash = g.hash;
   setTimeout(() => {
     const d = g.abre && $(g.abre);
