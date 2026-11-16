@@ -8,6 +8,7 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.1.5 Alfa',
+    ate: '2.1.5.1',
     data: '16/11/2026',
     nome: 'Cineminha',
     t: 'O C.A.O.S. planeja o passeio com você e respira entre os balões. Ajustes e Análise mais claros.',
