@@ -7,6 +7,21 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.1.3 Alfa',
+    data: '16/11/2026',
+    nome: 'Amigo de Verdade',
+    t: 'O C.A.O.S. fala como amigo no WhatsApp, sente junto e dá baixa nas contas pela conversa.',
+    itens: [
+      '💬 Dois balões: no Chat, quando empolga, o C.A.O.S. manda um segundo balão curto logo depois, tipo "ah, e…". No Ácido, é ali que vem a zoeira.',
+      '❤️ Sente de verdade: a emoção do rosto dele agora também muda o tom das respostas da IA online. Animado responde elétrico; preocupado, com cuidado.',
+      '✅ Dar baixa falando: no Chat, diga "já paguei a fatura do C6", "o João me pagou" ou "paguei o aluguel" e ele propõe a baixa; você confirma.',
+      '📸 Foto que pergunta: mandou o comprovante no Chat, ele lê o valor e pergunta como você pagou e de qual conta, pra o saldo e a fatura ficarem certos.',
+    ],
+    qol: [
+      '🔤 Nome na frente: quando ele te chama pelo nome, a frase continua certinha, sem letra maiúscula fora do lugar.',
+    ],
+  },
+  {
     v: '2.1.2 Alfa',
     data: '16/11/2026',
     nome: 'Recomeço',

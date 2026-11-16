@@ -1,7 +1,7 @@
 # Funções do C.A.O.S. (pra revisar)
 
 Lista feita pelo Wally em 16/11/2026, tirada do código (`js/caos/conversa.js`, função `entender()`).
-App 2.1.2 Alfa · C.A.O.S. 2.3.6 · núcleo 1.6.0. São **69 jeitos de entender** uma frase, em 7 grupos.
+App 2.1.2 Alfa · C.A.O.S. 2.3.7 · núcleo 1.6.0. São **69 jeitos de entender** uma frase, em 7 grupos.
 
 Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o que ele faz.
 - 🖥️ = responde sem internet (no próprio celular).
@@ -19,6 +19,7 @@ Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o q
 | Entrada prevista | "vou receber 500 dia 20" | Guarda como "a receber" até você tocar em Recebi ✅ 🖥️ |
 | Esqueci de lançar | "esqueci de lançar ontem" | Ajuda a anotar com a data certa 🖥️ |
 | Corrigir a data | "esse gasto foi na quarta" | Muda a data do último gasto ✅ 🖥️ |
+| Dar baixa | "já paguei a fatura do C6" / "o João me pagou" / "paguei o aluguel" | Fatura paga, parte do amigo recebida, conta fixa lançada ✅ 🖥️ |
 | Corrigir o valor | "errei, foi 45, não 50" | Muda o valor do último gasto ✅ 🖥️ |
 | Transferência | "transferi 200 do Inter pro C6" | Anota a transferência entre suas contas ✅ 🖥️ |
 | Meta nova | "quero juntar pra uma viagem" | Faz as perguntas e propõe a meta ✅ 🖥️ |
@@ -117,6 +118,8 @@ Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o q
 
 - **Humor:** Suave (padrão), Normal ou Ácido. No Ácido, fecha 6 em 10 respostas com uma zoeira. Com o criador, sempre ácido.
 - **Nome:** chama pelo apelido uma resposta sim, outra não. Na IA também, sem mandar o nome pra fora.
+- **Dois balões:** quando empolga, manda um 2º balão curto ("ah, e…"); no Ácido, a zoeira vem nele.
+- **Emoção:** a do rosto também muda o tom da IA online.
 - **Emoções e rosto:** cada resposta tem uma emoção e um rostinho, e o avatar troca de forma pelo assunto.
 - **Avisos:** alerta sempre com o número e um empurrão útil.
 - **IA online:** recebe só totais, nunca a lista de gastos. Pesquisa na internet só assunto de dinheiro. Tem limite por dia, menos pro criador.

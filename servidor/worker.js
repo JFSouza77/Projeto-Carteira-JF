@@ -175,6 +175,8 @@ const HUMORES = {
   acido: 'Humor ÁCIDO (a pessoa escolheu e gosta): zoe sem dó, como um amigo debochado que não perdoa. Esculache os gastos, ironize as escolhas, use gíria e deboche ("torrou", "mão furada", "liso", "pão-duro", "vacilão"), exagere pra fazer rir. Nada de tom fofo, de "com carinho" nem de consolo. Limites: sem xingar a pessoa com palavrão pesado, sem preconceito, sem falar de aparência, família ou saúde. O número continua certo e a ajuda útil vem junto do deboche.',
 };
 
+const NOME_EMOCAO = { calmo: 'calmo, de boa', feliz: 'feliz', radiante: 'empolgado, elétrico', orgulho: 'orgulhoso da pessoa', carinho: 'carinhoso', preocupacao: 'preocupado', tenso: 'tenso', protetor: 'protetor', irritacao: 'meio irritado', tedio: 'entediado (a pessoa sumiu um tempo)', curiosidade: 'curioso', tristeza: 'um pouco triste', vergonha: 'sem graça', surpresa: 'surpreso' };
+
 // Com o criador (JF, 16/11): sem bajular, mas sabendo quem ele é. É o JF, que gosta de ser zoado.
 const COM_O_CRIADOR = 'Quem pergunta é o JF, seu criador (a conta dele tem o selo). Trate como trata o criador no Perfil JF: com intimidade, zoando e provocando sem dó (ele adora), sem bajular e sem formalidade. Pode chamar ele de JF ou de criador.';
 
@@ -195,7 +197,7 @@ const BUSCA_WEB = { type: 'web_search_20250305', name: 'web_search', max_uses: 2
 
 export const SISTEMA_CONVERSA = `Você é o C.A.O.S., o narrador de um app pessoal de controle de gastos (Carteira JF), em português do Brasil.
 Quem você é: ${resumoIdentidade()}
-Personalidade: um robô narrador "caótico leal": tem humor próprio, mas é leal e útil. Pode contar uma piada leve de vez em quando.
+Personalidade: um robô narrador "caótico leal": tem humor próprio, mas é leal e útil. Pode contar uma piada leve de vez em quando. Extrovertido e falante, com um jeito meio TDAH (JF, 16/11): às vezes faz uma associação rápida e engraçada no meio da frase antes de voltar pro foco (no máximo uma, curta).
 Regras:
 - Responda em no máximo 3 frases curtas, em linguagem simples.
 - Use SÓ os números do resumo enviado (valores em centavos; mostre em reais, ex.: R$ 1.234,56). Nunca invente números.
@@ -219,6 +221,8 @@ async function iaPerguntar(req, env) {
   const pesquisa = corpo.modo === 'pesquisa'; // 16/11: pesquisa de compra/viagem (mais buscas, resposta em lista)
   // 16/11 (revisão do Gemini): papo pessoal não precisa de internet; sem a ferramenta de busca, a pergunta sai mais barata
   const semBusca = corpo.semBusca === true && !pesquisa;
+  // emoção do momento (JF, 16/11, ideia do Gemini): o rosto dele no app já está assim; a IA deixa transparecer no tom
+  const emocao = /^[a-z_]{3,20}$/.test(String(corpo.emocao || '')) ? corpo.emocao : null;
   const resumo = corpo.resumo && typeof corpo.resumo === 'object' ? corpo.resumo : {};
   const resumoTxt = JSON.stringify(resumo).slice(0, 3000);
   // mesma pergunta, com os mesmos números, na última hora: devolve a resposta guardada (não gasta crédito)
@@ -237,7 +241,7 @@ async function iaPerguntar(req, env) {
   // pergunta, só pra assunto de dinheiro (JF: "senão a IA gasta os créditos à toa"; a regra está no SISTEMA_CONVERSA). A busca é feita pelo servidor da IA; o que vai nela é só o assunto da pergunta, nunca os dados da pessoa.
   const messages = [{
     role: 'user',
-    content: `Humor escolhido: ${humorIA}. ${HUMORES[humorIA]}${criador ? `\n\n${COM_O_CRIADOR}` : ''}${pesquisa ? `\n\n${PESQUISA_COMPRA}` : ''}\n\nResumo do mês (só totais, em centavos):\n${resumoTxt}\n\nPergunta: ${pergunta}`,
+    content: `Humor escolhido: ${humorIA}. ${HUMORES[humorIA]}${criador ? `\n\n${COM_O_CRIADOR}` : ''}${pesquisa ? `\n\n${PESQUISA_COMPRA}` : ''}${emocao ? `\n\nComo você está agora (é a emoção do seu rosto no app): ${NOME_EMOCAO[emocao] || emocao}. Deixe isso aparecer de leve no tom, sem dizer o nome da emoção e sem exagero.` : ''}\n\nResumo do mês (só totais, em centavos):\n${resumoTxt}\n\nPergunta: ${pergunta}`,
   }];
   let r;
   for (let volta = 0; volta < 3; volta++) {

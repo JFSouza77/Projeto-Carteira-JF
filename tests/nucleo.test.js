@@ -84,10 +84,18 @@ test('núcleo 1.3.0: toda lei tem o sentido geral e a frase da Carteira', async 
 
 // Núcleo 1.6.0 (JF, 16/11): o cérebro online é marco da vida dele, e a vida fecha em 0 ou 5 (regra das quantidades)
 test('núcleo 1.6.0: marcos da Carteira na vida (cérebro online) e a vida fecha em 0 ou 5', () => {
-  assert.equal(NUCLEO.versao, '1.6.0');
+  assert.ok(NUCLEO.versao >= '1.6.0');
   assert.ok(NUCLEO.vida.some(v => v.data === '2026-11-13' && /cérebro.*online/.test(v.fato)));
   assert.ok(NUCLEO.vida.some(v => v.data === '2026-11-13' && /online pra todo mundo/.test(v.fato)));
   assert.equal(NUCLEO.vida.length % 5, 0);
   const datas = NUCLEO.vida.map(v => v.data);
   assert.deepEqual(datas, [...datas].sort(), 'vida em ordem de data');
+});
+
+// Núcleo 1.7.0 (JF, 16/11): jeito de falar com 2 balões, emoção no tom (também online) e chamar pelo nome
+test('núcleo 1.7.0: jeito de reagir fecha em 5 e tem o 2º balão e a emoção no tom', () => {
+  assert.equal(NUCLEO.versao, '1.7.0');
+  assert.equal(NUCLEO.jeitoDeReagir.length % 5, 0);
+  assert.ok(NUCLEO.jeitoDeReagir.some(x => /segundo balão/.test(x)));
+  assert.ok(NUCLEO.jeitoDeReagir.some(x => /emoção do momento/.test(x)));
 });

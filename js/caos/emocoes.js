@@ -147,7 +147,8 @@ export function emocaoAtual(estado, humor = 'suave', now = Date.now()) {
 
 // Quanto a emoção do momento está forte (0 a 1): escolhe o nível do rosto.
 const BASE_DA = { radiante: ['alegria'], protetor: ['ansiedade', 'carinho'], tenso: ['ansiedade', 'raiva'],
-  preocupacao: ['ansiedade'], irritacao: ['raiva'], carinho: ['carinho', 'tristeza'], orgulho: ['alegria'] };
+  // revisão do Gemini (16/11): no Suave a raiva aparece como preocupação; a força do rosto também conta a raiva
+  preocupacao: ['ansiedade', 'raiva'], irritacao: ['raiva'], carinho: ['carinho', 'tristeza'], orgulho: ['alegria'] };
 export function intensidade(estado, emocao, now = Date.now()) {
   if (emocao === 'calmo') return 0.2;
   const e = decair(estado, now);

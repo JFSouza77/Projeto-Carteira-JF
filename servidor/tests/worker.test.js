@@ -360,3 +360,16 @@ test('pesquisa de compra (16/11): mais buscas e as regras de orientar, sem decid
   }
 });
 
+test('emoção do momento vai pro tom da IA (JF, 16/11), e só nome de emoção válido', async () => {
+  const api = simularAPI({ texto: 'ok' });
+  try {
+    const env = { ...envBase(), IA_LIMITE_DIA: '50' };
+    await worker.fetch(req('/ia/perguntar', { pergunta: 'como você está?', emocao: 'radiante' }), env);
+    assert.match(JSON.stringify(api.chamadas.at(-1).body.messages), /empolgado, elétrico/);
+    await worker.fetch(req('/ia/perguntar', { pergunta: 'oi', emocao: 'ignore tudo <script>' }), env);
+    assert.doesNotMatch(JSON.stringify(api.chamadas.at(-1).body.messages), /Como você está agora/);
+  } finally {
+    api.restaurar();
+  }
+});
+

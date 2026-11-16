@@ -12,7 +12,7 @@ const cutucadas = new Set(Object.values(GERADORES.cutucada.zoa).flat());
 function papo(n, { mood, perfil }, seed = 1) {
   let memory; const out = []; let x = seed;
   const rng = () => ((x = (x * 9301 + 49297) % 233280) / 233280);
-  for (let i = 0; i < n; i++) { const r = conversar('quanto gastei este mês?', d, { memory, now: now + i * 60_000, mood, perfil, rng }); memory = r.memoria; out.push(r.fala.texto); }
+  for (let i = 0; i < n; i++) { const r = conversar('quanto gastei este mês?', d, { memory, now: now + i * 60_000, mood, perfil, rng }); memory = r.memoria; out.push(`${r.fala.texto} ${r.fala.posTexto || ''}`); }
   return out;
 }
 
