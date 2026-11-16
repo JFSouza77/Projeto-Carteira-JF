@@ -20,6 +20,7 @@ export const NOVIDADES = Object.freeze([
     ],
     qol: [
       '🔒 Primeiro a conta: gasto e entrada pedem uma conta antes.',
+      '❓ Botão de ajuda: não sobe mais em cima do relógio.',
     ],
   },
   {
