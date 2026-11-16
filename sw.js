@@ -1,6 +1,6 @@
 // Service worker: app shell em cache para funcionar offline + lembretes.
 // Mudou algum arquivo abaixo? Suba CACHE_VERSION.
-const CACHE_VERSION = 'v120';
+const CACHE_VERSION = 'v121';
 const CACHE = `carteira-jf-${CACHE_VERSION}`;
 const APP_SHELL = [
   './',
@@ -11,6 +11,7 @@ const APP_SHELL = [
   './fontes/baloo2-latin.woff2',
   './fontes/baloo2-latin-ext.woff2',
   './js/app.js',
+  './js/estado.js',
   './js/engine.js',
   './js/db.js',
   './js/voz.js',

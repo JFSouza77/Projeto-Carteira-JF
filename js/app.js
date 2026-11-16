@@ -26,49 +26,9 @@ import * as lembretes from './notificacoes.js';
 import * as conta from './conta.js';
 import { criarAvatar, formaPara, configurarAvatar, FORMAS, EMO_DA_FORMA } from './avatar.js';
 
-const $ = sel => document.querySelector(sel);
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const cap = s => (s ? s[0].toUpperCase() + s.slice(1) : s);
-const centsToInput = c => (c ? (c / 100).toFixed(2).replace('.', ',') : '');
+import { $, esc, cap, centsToInput, SERVIDOR_PADRAO, state, dados, catById, srcById, definirRender } from './estado.js';
 
-// Servidor do C.A.O.S. Finanças (publicado com o JF em 14/11/2026). Vem ligado pra todo mundo: conta, sincronização e
-// mercado funcionam sem configurar nada. A IA online continua desligada até a pessoa ligar em Ajustes.
-const SERVIDOR_PADRAO = 'https://carteira-jf.caos-financas.workers.dev';
-
-const state = {
-  categories: [],
-  expenses: [],
-  incomes: [],
-  previstas: [], // entradas que ainda vão cair (15/11); ficam no mesmo armazém, com prevista: true
-  accounts: [],
-  settings: { mood: DEFAULT_MOOD, voice: false, aiOn: true, iaV: 1, aiUrl: SERVIDOR_PADRAO, servidorV: 1, letra: 'normal', tema: 'escuro', temaV: 2, vozVel: 1, menosMov: null },
-  caosMemory: memoriaInicial(),
-  viewMonth: monthKey(toISODate()),
-  kind: 'gasto',
-  selectedCategory: null,
-  forma: null, // pagou como (P8): dinheiro, pix, debito, credito
-  selectedSource: null,
-  photo: null, // { id, url } da foto anexada no formulário
-  chat: [],
-  compromissos: [],
-  planos: [],
-  perfil: null, // { nome, apelido, tratamento, foco[] } (primeiro acesso)
-  metas: [], // meta/metas (1.8.0)
-  transferencias: [], // meta/transferencias (13/11): entre contas suas, não é gasto nem entrada
-  investimentos: [], // meta/investimentos (app 1.8)
-  metaFlow: null, // perguntas da meta nova em andamento
-  onboarding: null, // { passo, dados } enquanto o C.A.O.S. está conhecendo a pessoa
-  catSugerida: false,
-  mercado: null, // resumo do mercado vindo do servidor (guardado pra usar offline)
-};
-
-const dados = () => ({
-  expenses: state.expenses, incomes: state.incomes, previstas: state.previstas, categories: state.categories, accounts: state.accounts,
-  diasSemGasto: state.perfil?.diasSemGasto || [], mesesSemEntrada: state.perfil?.mesesSemEntrada || [],
-  compromissos: state.compromissos, planos: state.planos, mercado: state.mercado, metas: state.metas, investimentos: state.investimentos, transferencias: state.transferencias,
-});
-const catById = id => state.categories.find(c => c.id === id);
-const srcById = id => INCOME_SOURCES.find(s => s.id === id);
+definirRender(render);
 
 // ======================================================================
 // Narrador
