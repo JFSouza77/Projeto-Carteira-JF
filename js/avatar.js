@@ -846,8 +846,9 @@ export function criarAvatar(el, { tamanho = 'pequeno', forma = 'calmo' } = {}) {
   a.nivel = x => {
     const b = q('boca');
     if (!b) return;
-    if (x == null || parar()) { b.style.scale = ''; return; }
+    if (x == null || parar()) { b.style.scale = ''; b.classList.remove('voz'); return; }
     b.classList.remove('falando');
+    b.classList.add('voz'); // tira a "respiração" da boca enquanto a voz natural fala
     b.style.transformBox = 'fill-box';
     b.style.transformOrigin = 'center';
     b.style.scale = `${(1 + x * 0.15).toFixed(3)} ${(0.5 + x * 1.1).toFixed(3)}`;
