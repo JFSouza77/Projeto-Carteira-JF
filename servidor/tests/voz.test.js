@@ -30,9 +30,9 @@ const env = (extra = {}) => ({ ORIGENS: ORIGEM, CARTEIRA_KV: kv(), AZURE_SPEECH_
 beforeEach(() => _zerarVoz());
 
 test('estado: ligada só com a chave; sem chave, a fala dá 503', async () => {
-  assert.deepEqual(await (await worker.fetch(req('/voz/estado'), env())).json(), { ligada: true });
+  assert.deepEqual(await (await worker.fetch(req('/voz/estado'), env())).json(), { ligada: true, vozes: ['padrao'] });
   const sem = { ORIGENS: ORIGEM, CARTEIRA_KV: kv() };
-  assert.deepEqual(await (await worker.fetch(req('/voz/estado'), sem)).json(), { ligada: false });
+  assert.deepEqual(await (await worker.fetch(req('/voz/estado'), sem)).json(), { ligada: false, vozes: [] });
   assert.equal((await worker.fetch(req('/voz', { t: 'Oi' }), sem)).status, 503);
 });
 

@@ -63,7 +63,8 @@ export function vozesDoServidor(env) {
 }
 
 export function vozEstado(env) {
-  return { ligada: vozesDoServidor(env).length > 0 };
+  const v = vozesDoServidor(env);
+  return { ligada: v.length > 0, vozes: v.map(x => x.id) }; // só os nomes (mai, padrao), nunca as chaves
 }
 
 // em memória (uma pessoa por app): voz principal fora do ar e ritmo por endereço
@@ -89,7 +90,8 @@ export async function vozFalar(req, env, h = {}) {
   const r = Math.round(num(d.r, 0.5, 2) * 20) / 20, p = Math.round(num(d.p, 0.5, 2) * 20) / 20;
   const e = Object.prototype.hasOwnProperty.call(VOZ_EMOCOES, d.e) ? d.e : '';
   const kv = env.CARTEIRA_KV;
-  const mp3 = (dados, origem) => new Response(dados, { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'public, max-age=604800', 'x-voz': origem, ...h } });
+  // x-voz exposto (17/11): o "Testar a voz" do app mostra qual voz respondeu
+  const mp3 = (dados, origem) => new Response(dados, { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'public, max-age=604800', 'x-voz': origem, 'access-control-expose-headers': 'x-voz', ...h } });
   const chaveDe = async v => {
     const dig = await crypto.subtle.digest('SHA-256', new TextEncoder().encode([v.nome, r, p, t, e, v.estilos ? 1 : 0, VOZ_SSML_VERSAO].join('|')));
     return 'voz:' + [...new Uint8Array(dig)].map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 40);

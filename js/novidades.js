@@ -8,6 +8,7 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.1.7 Alfa',
+    ate: '2.1.7.1',
     data: '17/11/2026',
     nome: 'Voz de Verdade',
     t: 'O C.A.O.S. ganhou voz natural, e a boca dele mexe junto com o que ele fala.',
@@ -16,7 +17,10 @@ export const NOVIDADES = Object.freeze([
       '👄 Boca que fala: com a voz ligada, a boca do avatar abre e fecha no ritmo da fala, no Início e no Chat.',
       '📶 Sem internet, sem problema: se a voz natural não responder, ele fala com a voz do celular na hora.',
     ],
-    qol: [],
+    qol: [
+      '🔊 Testar a voz: em Ajustes, no quadro do C.A.O.S., o botão fala uma frase e diz se a voz natural está funcionando.',
+      '👄 Boca mais esperta: com a voz do celular, a boca do avatar começa a mexer junto com a fala.',
+    ],
   },
   {
     v: '2.1.6 Alfa',

@@ -19,7 +19,7 @@ import { fraseDoPrint, resumoDoPrint } from './caos/ofertas.js';
 import { corCategoria, corFonte, corForma, temaBanco } from './cores.js';
 import { NUCLEO } from './caos/nucleo.js';
 import { NOVIDADES, VERSAO_APP, temNovidade, partesDoItem } from './novidades.js';
-import { calar, falar, vozDisponivel, ditadoDisponivel, ouvir, pararDeOuvir, setVelocidade, definirServidorDaVoz, definirOuvinteDaFala, destravarAudio } from './voz.js';
+import { calar, falar, vozDisponivel, ditadoDisponivel, ouvir, pararDeOuvir, setVelocidade, definirServidorDaVoz, definirOuvinteDaFala, destravarAudio, testarVoz } from './voz.js';
 import * as imagens from './imagens.js';
 import * as ia from './ia.js';
 import * as lembretes from './notificacoes.js';
@@ -1191,6 +1191,12 @@ function bind() {
   $('#cd-tipo').addEventListener('change', mostrarCamposConta);
   $('#cd-outro').addEventListener('change', mostrarCamposConta);
   $('#cd-guarda').addEventListener('change', mostrarCamposConta); // 16/11: guardar a cada compra
+  // 17/11 (JF: "a voz tá robótica ainda"): testa a voz natural e diz o motivo, se não der
+  $('#voz-testar').addEventListener('click', async () => {
+    $('#voz-status').textContent = 'Testando…';
+    const r = await testarVoz();
+    $('#voz-status').textContent = `${r.ok ? '✅' : '⚠️'} ${r.msg}`;
+  });
   $('#estudio-btn').addEventListener('click', () => alternarEstudio());
   $('#glos-busca').addEventListener('input', renderGlossario);
   for (const id of ['#calc-valor', '#calc-taxa', '#calc-meses', '#calc-periodo']) $(id).addEventListener('input', renderCalculadora);

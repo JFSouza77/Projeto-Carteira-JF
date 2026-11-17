@@ -80,6 +80,14 @@ export const EMOCAO_DA_VOZ = Object.freeze({
   vergonha: 'vergonha',
 });
 
+// AbortSignal.timeout não existe em iPhone mais antigo (iOS 15): sem ele, a voz natural desistia na hora (17/11)
+function tempoLimite(ms) {
+  if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) return AbortSignal.timeout(ms);
+  const c = new AbortController();
+  setTimeout(() => c.abort(), ms);
+  return c.signal;
+}
+
 let corte = 0; // cada calar() muda o número: fala de antes não toca mais
 let fonte = null; // o áudio da nuvem tocando agora
 
@@ -90,7 +98,7 @@ async function nuvemLigada(base) {
   if (nuvem.base === base && nuvem.ok !== null && agora - nuvem.em < (nuvem.ok ? 600_000 : 60_000)) return nuvem.ok;
   let ok = false;
   try {
-    const r = await fetch(`${base}/voz/estado`, { signal: AbortSignal.timeout(3000) });
+    const r = await fetch(`${base}/voz/estado`, { signal: tempoLimite(4000) });
     ok = r.ok && !!(await r.json()).ligada;
   } catch { ok = false; }
   nuvem = { base, ok, em: agora };
@@ -99,14 +107,19 @@ async function nuvemLigada(base) {
 
 // as falas se repetem muito: guarda as últimas 50 no aparelho (não pede de novo)
 const guardadas = new Map();
-async function pedirAudio(base, t, emocao, vel, tom) {
+let ultimaVoz = '';
+async function pedirAudio(base, t, emocao, vel, tom, limite = 5000) {
   const chave = `${emocao}|${vel}|${tom}|${t}`;
   if (guardadas.has(chave)) return guardadas.get(chave).slice(0);
   const r = await fetch(`${base}/voz`, {
-    method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(4000),
+    method: 'POST', headers: { 'content-type': 'application/json' }, signal: tempoLimite(limite),
     body: JSON.stringify({ t, r: vel, p: tom, e: EMOCAO_DA_VOZ[emocao] || 'calmo' }),
   });
-  if (!r.ok || !/audio/.test(r.headers.get('content-type') || '')) throw new Error(`voz ${r.status}`);
+  if (!r.ok || !/audio/.test(r.headers.get('content-type') || '')) {
+    const j = await r.json().catch(() => ({}));
+    throw Object.assign(new Error(`voz ${r.status}`), { status: r.status, detalhe: j });
+  }
+  ultimaVoz = r.headers.get('x-voz') || '';
   const buf = await r.arrayBuffer();
   guardadas.set(chave, buf.slice(0));
   if (guardadas.size > 50) guardadas.delete(guardadas.keys().next().value);
@@ -126,7 +139,7 @@ export function destravarAudio() {
   const c = audioCtx();
   if (!c) return;
   try {
-    if (c.state === 'suspended') c.resume();
+    if (c.state !== 'running') c.resume();
     const b = c.createBuffer(1, 1, 22050);
     const s = c.createBufferSource();
     s.buffer = b; s.connect(c.destination); s.start(0);
@@ -137,7 +150,8 @@ export function destravarAudio() {
 async function tocar(buf, minha) {
   const c = audioCtx();
   if (!c) throw new Error('sem áudio');
-  if (c.state === 'suspended') { await c.resume().catch(() => {}); if (c.state === 'suspended') throw new Error('áudio travado'); }
+  // iPhone: depois de ir pro fundo, o áudio fica "interrupted" (não só "suspended"); tenta voltar antes de tocar
+  if (c.state !== 'running') { await c.resume().catch(() => {}); if (c.state !== 'running') throw new Error('áudio travado'); }
   const dados = await c.decodeAudioData(buf);
   if (minha !== corte) return;
   const s = c.createBufferSource();
@@ -177,10 +191,12 @@ function falarNoAparelho(t, emocao, minha) {
       u.rate = Math.min(2, Math.max(0.5, vel * VELOCIDADE));
       const acabou = () => { clearTimeout(tempo); fim(); };
       const tempo = setTimeout(acabou, Math.min(30_000, 1500 + t.length * 90 / u.rate));
-      u.onstart = () => avisar('inicio', 'aparelho');
       u.onboundary = () => avisar('palavra'); // cada palavra: a boca dá uma abridinha
       u.onend = u.onerror = acabou;
       speechSynthesis.speak(u);
+      // 17/11 (JF: "os avatares não estão mexendo a boca"): no app instalado no iPhone o aviso de "começou" (onstart)
+      // nem sempre chega; a boca começa junto com o pedido de fala, sem depender dele
+      avisar('inicio', 'aparelho');
     } catch { fim(); }
   });
 }
@@ -211,6 +227,39 @@ export function falar(texto, emocao = 'calmo', { emenda = false } = {}) {
   const antes = emenda ? falaAtual : Promise.resolve();
   falaAtual = antes.then(() => (minha === corte ? falarAgora(t, emocao, minha) : null)).catch(() => {});
   return falaAtual;
+}
+
+// "Testar a voz" (Ajustes, 17/11): fala uma frase pela voz natural e diz em português o que aconteceu
+const NOME_VOZ = { mai: 'a voz MAI (a mais natural)', padrao: 'a voz grátis da Microsoft' };
+export async function testarVoz() {
+  destravarAudio();
+  const base = servidorDaVoz();
+  if (!base) return { ok: false, msg: 'A voz natural precisa da IA online ligada (aqui embaixo, em IA online e servidor).' };
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return { ok: false, msg: 'Sem internet agora: ele fala com a voz do celular.' };
+  nuvem = { base: null, ok: null, em: 0 }; // confere de novo, sem lembrar do resultado de antes
+  let estado;
+  try {
+    const r = await fetch(`${base}/voz/estado`, { signal: tempoLimite(6000) });
+    estado = await r.json();
+    if (!r.ok) return { ok: false, msg: `O servidor respondeu ${r.status}: ${estado.erro || 'sem detalhe'}.` };
+  } catch (e) { return { ok: false, msg: `Não consegui falar com o servidor (${e.name === 'AbortError' || e.name === 'TimeoutError' ? 'demorou demais' : e.message}).` }; }
+  if (!estado.ligada) return { ok: false, msg: 'O servidor ainda não tem a voz: faltam as chaves da Azure (ou o deploy depois de colocar as chaves).' };
+  try {
+    calar();
+    const buf = await pedirAudio(base, 'Oi! Essa é a minha voz natural. Gostou?', 'alegria', 1, 1, 15000);
+    const quem = ultimaVoz.replace(/^(nova|guardada):?/, '') || '';
+    await tocar(buf, corte);
+    avisar('fim');
+    return { ok: true, msg: `Funcionando: ${NOME_VOZ[quem] || 'voz natural'}${/guardada/.test(ultimaVoz) ? ' (fala guardada)' : ''}. Vozes no servidor: ${(estado.vozes || []).map(v => NOME_VOZ[v] || v).join(' e ')}.` };
+  } catch (e) {
+    avisar('fim');
+    const d = e.detalhe || {};
+    if (e.status === 502) return { ok: false, msg: `A Microsoft recusou (erro ${d.status || '?'}). ${d.status === 401 || d.status === 403 ? 'Chave ou região errada nos segredos.' : 'Confira as chaves e a região.'}` };
+    if (e.status === 429) return { ok: false, msg: d.erro === 'teto' ? 'Chegou no teto de letras do mês: até virar o mês, ele fala com a voz do celular.' : 'Muitas falas seguidas: espera um pouquinho.' };
+    if (e.status) return { ok: false, msg: `O servidor respondeu ${e.status}: ${d.erro || 'sem detalhe'}.` };
+    if (/travado/.test(e.message)) return { ok: false, msg: 'O som do celular está travado: toque na tela e tente de novo (e confira se o iPhone não está no silencioso).' };
+    return { ok: false, msg: `Não deu: ${e.name === 'AbortError' || e.name === 'TimeoutError' ? 'a voz demorou demais' : e.message}.` };
+  }
 }
 
 export function calar() {
