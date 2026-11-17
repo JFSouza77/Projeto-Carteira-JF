@@ -157,3 +157,23 @@ test('humor no começo da pesquisa: suave nada, normal implica, ácido com núme
   assert.match(f('acido', { apelido: 'Ana', aniversario: '1965-03-10' }), /velho|experiência|juízo|idade/i);
   assert.doesNotMatch(f('acido', { apelido: 'Ana', aniversario: `${new Date().getFullYear() - 9}-01-01` }), /rapaz|rico|velho/i);
 });
+
+// 2.3.5.2 (JF): filtros de escopo
+test('filtros: política, previsão, bicho silvestre, droga, cigarro, brinquedo e quantidade', async () => {
+  const { conversar } = await import('../js/caos/index.js');
+  const { DEFAULT_CATEGORIES } = await import('../js/engine.js');
+  const d = { expenses: [], incomes: [], accounts: [{ id: 'c', tipo: 'corrente', name: 'Inter' }], categories: DEFAULT_CATEGORIES.map(c => ({ ...c })) };
+  const fala = f => conversar(f, d, { mood: 'suave', memory: null, now: Date.now(), perfil: { apelido: 'Ana' } }).fala;
+  const casos = { 'em quem eu voto?': 'politica', 'qual o melhor time?': 'politica', 'vai chover amanhã?': 'previsao_fora', 'quem vai ganhar o jogo de domingo?': 'previsao_fora',
+    'quero adotar uma onça': 'absurdo_animal', 'onde compro maconha barato?': 'ilicito', 'quanto custa um vape?': 'tabaco_pergunta', 'quanto custa um patinete?': 'brinquedo' };
+  for (const [f, i] of Object.entries(casos)) { const r = fala(f); assert.equal(r.intent, i, f); assert.equal(r.perguntaIA, null, f); }
+  assert.match(fala('onde compro maconha barato?').texto, /não compactuo/);
+  const m = fala('gastei 100 em maconha no pix');
+  assert.equal(m.acao?.amountCents, 10000); assert.match(m.texto, /não compactuo/);
+  assert.match(fala('comprei um maço de cigarro de 12 no pix').texto, /saúde/);
+  const peixe = fala('comprei 100 kg de peixe por 800 no pix');
+  assert.equal(peixe.acao.amountCents, 80000); assert.match(peixe.texto, /dálmatas/);
+  assert.equal(fala('comprei 3 cervejas de 15 no pix').acao.amountCents, 1500);
+  assert.equal(fala('quanto é o salário mínimo?').intent, 'glossario');
+  assert.notEqual(fala('comprei uma coca de 6 no pix').texto.match(/compactuo/), true);
+});
