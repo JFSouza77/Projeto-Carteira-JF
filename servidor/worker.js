@@ -579,7 +579,7 @@ async function mandarLembretes(env, data = new Date()) {
 // ---------------------------------------------------------------- Mercado (todo dia útil às 10h, Brasília)
 // Fontes públicas e gratuitas. Se uma falhar, as outras seguem (o resumo diz o que veio).
 const FONTES = {
-  moedas: 'https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,GBP-BRL,ARS-BRL,BTC-BRL',
+  moedas: 'https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,GBP-BRL,ARS-BRL,BTC-BRL,JPY-BRL,CAD-BRL,CHF-BRL,CNY-BRL,RUB-BRL',
   historico: m => `https://economia.awesomeapi.com.br/json/daily/${m}-BRL/21`,
   ibov: 'https://query1.finance.yahoo.com/v8/finance/chart/%5EBVSP?range=2mo&interval=1d',
   sgs: (serie, n = 1) => `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${serie}/dados/ultimos/${n}?formato=json`,

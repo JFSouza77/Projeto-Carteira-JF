@@ -362,7 +362,7 @@ export async function confirmarAcao(i, ok) {
     }
     const events = a.tipo === 'registrar_entrada'
       ? await registrarEntrada({ amountCents: a.amountCents, sourceId: a.sourceId, note: a.note, date: a.date, accountId: a.accountId || null, prevista: !!a.prevista })
-      : await registrarGasto({ amountCents: a.amountCents, categoryId: a.categoryId, note: a.note, date: a.date, imageId: a.imageId, compromissoId: a.compromissoId, accountId: a.accountId,
+      : await registrarGasto({ amountCents: a.amountCents, categoryId: a.categoryId, note: a.note, date: a.date, imageId: a.imageId || fotoDaLegenda(a.amountCents), compromissoId: a.compromissoId, accountId: a.accountId,
           forma: a.forma || null, parcelas: a.parcelas || 1, limiteModo: a.limiteModo || 'total' });
     if (a.compromissoId) renderMes();
     const fala = narrate(events, { ignoreCooldown: true });
@@ -445,6 +445,31 @@ export function tirarAnexo() {
   $('#chat-input').placeholder = 'Pergunte ao C.A.O.S.…';
 }
 
+// 2.3.0 (JF, 18/11: "fotos com legendas no chat pra ajudar a explicar o gasto"): a foto do que foi comprado (não
+// comprovante) com a legenda contando o gasto ("comprei esse tênis por 250 no cartão"). Sem IA, ou quando a IA não acha
+// valor na foto, a legenda vira o lançamento e a foto vai junto. Se ele ainda perguntar "pagou como?", a foto espera
+// 10 minutos pela confirmação.
+function fotoDaLegenda(valor) {
+  const f = state.fotoDaLegenda;
+  if (!f || f.ate < Date.now() || (f.valor && f.valor !== valor)) return undefined; // gasto de outro assunto: sem foto
+  state.fotoDaLegenda = null;
+  return f.id;
+}
+async function legendaComoGasto(img, legenda) {
+  if (!/\d/.test(legenda)) return false;
+  const antes = state.caosMemory?.aguardando;
+  const { fala, memoria } = conversar(legenda, dados(), { mood: state.settings.mood, memory: state.caosMemory, now: Date.now(), perfil: state.perfil });
+  const perguntou = memoria?.aguardando && memoria.aguardando !== antes;
+  if (fala.intent !== 'registrar_gasto' || !(fala.acao || perguntou)) return false;
+  guardarMemoria(memoria);
+  state.fotoDaLegenda = { id: img.id, ate: Date.now() + 10 * 60_000, valor: fala.acao?.amountCents ?? memoria.aguardando?.acao?.amountCents ?? memoria.aguardando?.valor ?? null };
+  await respiro(fala.texto);
+  addMsg({ de: 'caos', texto: fala.texto, sugestoes: fala.sugestoes, acao: fala.acao ? { ...fala.acao, imageId: img.id } : null, rosto: fala.rosto, assunto: fala.intent });
+  pintarRosto(fala.rosto, fala.intent);
+  if (state.settings.voice) falar(fala.texto, fala.emocao);
+  return true;
+}
+
 export async function fotoNoChat(arquivo, legenda = '') {
   try {
     const img = await imagens.guardar(arquivo, 'chat');
@@ -459,7 +484,8 @@ export async function fotoNoChat(arquivo, legenda = '') {
     if (explicar) return explicarPrint(img, explicar.duvida);
     if (ofertas) return lerPrintDeOferta(img);
     if (!(state.settings.aiOn && state.settings.aiUrl)) {
-      addMsg({ de: 'caos', texto: 'Guardei a foto. Pra eu ler o valor sozinho, ative a IA online em Ajustes. Ou me diz: "gastei 30 no mercado".' });
+      if (await legendaComoGasto(img, legenda)) return;
+      addMsg({ de: 'caos', texto: 'Guardei a foto. Pra eu ler o valor sozinho, ative a IA online em Ajustes. Ou escreve na legenda o que foi, tipo "comprei esse tênis por 250".' });
       return;
     }
     addMsg({ de: 'caos', texto: 'Lendo a foto com a IA…', temp: true });
@@ -497,7 +523,8 @@ export async function fotoNoChat(arquivo, legenda = '') {
         addMsg({ de: 'caos', ia: true, texto: `${leitura} Anoto?`, acao: segue.acao });
       }
     } else {
-      addMsg({ de: 'caos', ia: true, texto: r.resumo || 'Não achei um valor nessa imagem.' });
+      if (await legendaComoGasto(img, legenda)) return;
+      addMsg({ de: 'caos', ia: true, texto: `${r.resumo || 'Não achei um valor nessa imagem.'}${legenda ? '' : ' Se for a foto do que você comprou, manda de novo com a legenda contando o gasto, tipo "comprei esse tênis por 250".'}` });
     }
   } catch (e) {
     state.chat = state.chat.filter(m => !m.temp);

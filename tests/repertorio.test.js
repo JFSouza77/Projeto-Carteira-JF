@@ -56,7 +56,7 @@ test('benefícios, bolsas e matemática básica (JF, 13/11 à noite)', () => {
     assert.equal(f.intent, 'glossario', p);
     assert.match(f.texto, new RegExp(termo.replace(/[-]/g, '.')), p);
   }
-  assert.equal(GLOSSARIO.length, 110); // 2.2.0: +10 de combustível e energia
+  assert.equal(GLOSSARIO.length, 115); // 2.2.0: +10 de combustível e energia; 2.3.0: +5 de trabalho e renda
   assert.match(fala('quanto é 15 vezes 23').texto, /345.*Atalho/);
   assert.match(fala('quanto é 12 x 8').texto, /96.*Atalho/);
   assert.match(fala('350 + 87').texto, /437/);
