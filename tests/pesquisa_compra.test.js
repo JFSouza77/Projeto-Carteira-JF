@@ -36,12 +36,14 @@ test('questionário sem IA, uma pergunta por vez; no fim vai pra IA com tudo jun
   assert.ok(fim.pesada);
 });
 
-test('viagem: pergunta de onde, quando e quem, o que pesquisar e região; "Pular" deixa de fora', () => {
-  const f = papo('quanto custaria uma viagem pra porto seguro?', 'vitoria', 'janeiro, 7 dias, 2 pessoas', 'Os dois', 'perto de coroa vermelha', 'sem orçamento');
+test('viagem: só a passagem (de onde, quando, quantos, datas flexíveis, orçamento) e o caminho das pedras pro resto', () => {
+  // 2.3.5.1 (JF): ele não faz plano de viagem nem olha pousada; acha a passagem que cabe e ensina o caminho
+  const f = papo('quanto custaria uma viagem pra porto seguro?', 'vitoria', '10 a 17 de janeiro', '2 pessoas', 'Sim', 'sem orçamento');
   assert.match(f[1].texto, /Quando/);
-  assert.match(f[5].perguntaIA, /^Pesquisa de viagem: .*porto seguro\. Saindo de: vitoria\. Quando e quem: janeiro, 7 dias, 2 pessoas\. Pesquisar: Os dois\. Região ou tipo de hotel: perto de coroa vermelha\. Orçamento: não informado\.$/);
+  assert.match(f[5].perguntaIA, /^Pesquisa de passagem \(só a passagem, ida e volta: sem hotel nem roteiro\): .*porto seguro\. Saindo de: vitoria\. Quando: 10 a 17 de janeiro\. Pessoas: 2 pessoas\. Datas flexíveis: Sim\. Orçamento: não informado\.$/);
+  assert.match(f[5].depoisIA, /Booking/);
   const g = papo('quanto custaria uma viagem pra porto seguro?', 'Pular', 'Pular', 'Pular', 'Pular', 'até 3000');
-  assert.match(g[5].perguntaIA, /^Pesquisa de viagem: .*\. Orçamento: R\$\s3\.000,00\.$/);
+  assert.match(g[5].perguntaIA, /\. Orçamento da passagem: R\$\s3\.000,00\.$/);
 });
 
 test('"não" responde a pergunta (marca) sem cancelar; "cancelar" cancela; pergunta nova sai do questionário', () => {
@@ -132,7 +134,7 @@ test('níveis da pesquisa e academia', async () => {
   assert.equal(fala('quanto é o ingresso pro teatro?').nivelIA, 'media');
   assert.equal(fala('esse preço tá bom? https://loja.com.br/x').nivelIA, 'pesada');
   assert.equal(fala('quanto custa em média um corte de cabelo?').nivelIA, 'media');
-  assert.equal(MEDIA_POR_DIA, 5);
+  assert.equal(MEDIA_POR_DIA, 7);
   assert.equal(MEDIA_ESGOTADA.length % 5, 0);
   assert.equal(fala('quero me inscrever numa academia').intent, 'plano_academia');
   assert.match(fala('o que você pode pesquisar?').texto, /1 por dia/);
@@ -140,4 +142,18 @@ test('níveis da pesquisa e academia', async () => {
   for (const f of ['quanto custa a smart fit?', 'Musculação', 'Jardim da Penha', 'Noite', 'até 130']) { r = conversar(f, d, { mood: 'suave', memory: mem, now: Date.now(), perfil: { apelido: 'Ana' } }); mem = r.memoria; }
   assert.equal(r.fala.nivelIA, 'media');
   assert.match(r.fala.perguntaIA, /De rede \(smart fit\)/);
+});
+
+// 2.3.5.1 (JF): o humor muda o começo da ajuda, nunca nega; ácido usa os números do mês; 50+ maneira; criança não leva
+test('humor no começo da pesquisa: suave nada, normal implica, ácido com números, 50+ mais leve', async () => {
+  const { conversar } = await import('../js/caos/index.js');
+  const hoje = new Date().toISOString().slice(0, 10);
+  const d = { expenses: [{ id: 'g', amountCents: 250000, categoryId: 'outros', date: hoje }], incomes: [{ id: 'e', amountCents: 200000, sourceId: 'salario', date: hoje }], accounts: [], categories: [] };
+  const f = (mood, perfil) => conversar('me ajuda a achar uma geladeira', d, { mood, memory: null, now: Date.now(), rng: () => 0, perfil }).fala.texto;
+  assert.doesNotMatch(f('suave', { apelido: 'Ana' }), /rapaz|rico|Irmão/i);
+  assert.match(f('normal', { apelido: 'Ana' }), /pensando grande/);
+  assert.match(f('acido', { apelido: 'Ana' }), /R\$\s2\.500,00/);
+  assert.match(f('acido', { apelido: 'Ana' }), /vamos por partes/i); // e ajuda mesmo assim
+  assert.match(f('acido', { apelido: 'Ana', aniversario: '1965-03-10' }), /velho|experiência|juízo|idade/i);
+  assert.doesNotMatch(f('acido', { apelido: 'Ana', aniversario: `${new Date().getFullYear() - 9}-01-01` }), /rapaz|rico|velho/i);
 });

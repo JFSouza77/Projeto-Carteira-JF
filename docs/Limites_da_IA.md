@@ -8,8 +8,8 @@ sobem; a regra continua.
 | --- | --- | --- | --- | --- |
 | **Sem IA** | Tudo que o app sabe sozinho | gastos, saldo, metas, contas, glossário, cálculos, dicas, apagar/corrigir, conferir um preço que a pessoa digitou, questionários dos planos | sem limite | `js/caos/` (conversa local) |
 | **Leve** | Conversa com a IA, sem pesquisa de preço | desabafo, papo (no Papo livre), pergunta de finanças que ele não sabe sozinho | dentro do total de 20 por dia | `fala.nivelIA = 'leve'` |
-| **Média** | Pesquisa de preço rápida, resposta curta | ingresso (cinema, teatro, show, jogo), academia, custo médio, piso salarial, plano de pet/moradia/transporte | **5 por dia** | `nivelIA = 'media'`, `MEDIA_POR_DIA` |
-| **Pesada** | Várias buscas, compara lojas ou compatibilidade | tecnologia (celular, notebook, RAM, peça de PC), eletrodoméstico, impressora, viagem, conferir link de loja, venda de usado, compra que a pessoa pediu pra pesquisar | **1 por dia** | `fala.pesada`, `PESADA` |
+| **Média** | Pesquisa de preço rápida, resposta curta | ingresso (cinema, teatro, show, jogo), academia, custo médio, piso salarial, plano de pet/moradia/transporte | **7 por dia** | `nivelIA = 'media'`, `MEDIA_POR_DIA` |
+| **Pesada** | Várias buscas, compara lojas ou compatibilidade | tecnologia (celular, notebook, RAM, peça de PC), eletrodoméstico, impressora, passagem de viagem, conferir link de loja, venda de usado, compra que a pessoa pediu pra pesquisar | **1 por dia** | `fala.pesada`, `PESADA` |
 | **Não faz** | Fora do papel de parceiro financeiro | escolher roupa ou coisa pessoal, "o que comprar no shopping", procurar loja sem pedido, comprar ou reservar por você, curiosidade sem dinheiro (filme, futebol, capital) | nunca: indica Google ou outra IA, e ajuda no que é de dinheiro | `BALCONISTA`, `respostaForaDoFoco`, `respostaPapoLivre` |
 
 Regras de convivência:
@@ -20,3 +20,18 @@ Regras de convivência:
   o caminho das pedras (`CAMINHO_PLANO`). Nunca deixa a pessoa na mão.
 - O criador (selo da conta) não tem esses limites, como no resto da IA.
 - "O que você pode pesquisar?" no Chat mostra este resumo pra pessoa (`TEXTO_LIMITES_PESQUISA`).
+
+## Viagem (JF, 17/11): ele te leva pra pescar
+
+Ele não faz plano de viagem, não escolhe pousada nem confere hospedagem. Ele acha a **passagem que cabe no seu
+orçamento** (de onde, quando, quantas pessoas, se as datas são flexíveis, quanto dá pra gastar) e depois dá o
+**caminho das pedras** pro resto (hospedagem, comida, transporte, seguro): "te deu o peixe e te ensinou a pescar".
+Dúvida de finanças depois disso ("vale mais a pena isso ou aquilo?", "cabe no mês?") volta pra conversa normal.
+
+## Humor: muda o jeito, nunca a ajuda (JF, 17/11)
+
+- **Suave**: sempre gentil e educado.
+- **Normal**: uma implicadinha leve ("tá achando que tá rico, é?") e ajuda.
+- **Ácido**: zoa com os números do mês ("nem se tu fosse a pessoa mais rica do mundo… este mês já saíram R$ X") e ajuda.
+- **50+ no Ácido**: zoeira mais leve ("será que a gente não tá velho pra pensar nisso? Brincadeira!"). Criança não leva.
+- Ele brinca, reclama, mas **nunca nega a ajuda**. (`provocacao()` em `js/caos/index.js`, listas `PROVOCA_*`.)

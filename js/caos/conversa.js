@@ -648,7 +648,7 @@ const PRIVACIDADE = 'Fica tranquilo: esta conversa fica só no seu celular. Pra 
 const PESADA = new Set(['ram', 'peca', 'tech', 'eletro', 'viagem']);
 // o caminho das pedras de cada plano, pra quando não tem IA (ou a pesada do dia já foi)
 export const CAMINHO_PLANO = Object.freeze({
-  viagem: 'Compare em 2 ou 3 lugares: o site das companhias (Azul, Gol, Latam) e um buscador (Google Voos, Decolar); pra hotel, Booking ou Airbnb filtrando a região. Confira se é ida e volta, bagagem, taxas, horário e escala. Numa viagem completa, some passagem, hospedagem, comida, transporte, seguro viagem e, se for pra fora, o câmbio.',
+  viagem: 'O caminho das pedras pro resto da viagem: hospedagem no Booking ou no Airbnb, filtrando a região e o preço, com nota acima de 8 e cancelamento grátis; some comida, transporte no destino e seguro viagem (e o câmbio, se for pra fora). Pra passagem, compare o site das companhias (Azul, Gol, Latam) com um buscador (Google Voos, Decolar), conferindo bagagem e taxas. Achou os valores? Me fala que eu vejo se cabe no mês.',
   produto: 'Compare em 2 ou 3 lojas (Mercado Livre, Amazon, Magalu) ou num comparador (Buscapé, Zoom). Confira frete, prazo, garantia, parcelamento e a reputação do vendedor.',
   ram: 'Pra memória: confira na placa-mãe (site do fabricante) o tipo (DDR3, DDR4 ou DDR5), a frequência máxima e quantos pentes cabem; notebook usa SO-DIMM. Dois pentes iguais (dual channel) rendem mais que um grande. Compare em 2 ou 3 lojas (Kabum, Pichau, Terabyte, Amazon) ou no Buscapé e no Zoom, e fique de olho no frete.',
   peca: 'Pra peça de PC: confira a compatibilidade antes (soquete do processador, tipo de memória, espaço no gabinete e a fonte em watts pra placa de vídeo). Sites como o PCPartPicker ajudam a checar. Compare em 2 ou 3 lojas (Kabum, Pichau, Terabyte, Amazon) e no Buscapé, e veja garantia e frete.',
@@ -670,7 +670,7 @@ export const PESADA_ESGOTADA = Object.freeze([
   'Ih, minha pesquisa pesada de hoje já foi usada. Se precisar agora, vai de ChatGPT, Gemini, Copilot, Claude, DeepSeek ou Grok. E fica com essa:',
 ]);
 // 2.3.5: pesquisa média (preço de ingresso, academia, custo médio…): até 5 por dia
-export const MEDIA_POR_DIA = 5;
+export const MEDIA_POR_DIA = 7; // JF, 17/11: "5, 7 por dia já está mais que suficiente"
 export const MEDIA_ESGOTADA = Object.freeze([
   'Hoje eu já fiz as minhas pesquisas de preço do dia. Amanhã eu volto! Enquanto isso, o caminho das pedras:',
   'Minhas pesquisas de preço de hoje acabaram: sou uma IA de bolso e economizo pra não pesar no bolso de ninguém. Pra agora:',
@@ -679,17 +679,42 @@ export const MEDIA_ESGOTADA = Object.freeze([
   'Já pesquisei bastante hoje e preciso descansar os circuitos. 😴 Amanhã tem mais. Por enquanto:',
 ]);
 // "o que você pode pesquisar?": os limites, em palavras simples
-export const TEXTO_LIMITES_PESQUISA = 'Eu sou uma IA de bolso, então divido assim. Sem limite (aqui no celular): seus gastos, saldo, metas, contas, glossário, cálculos, dicas e conferir um preço que você me passar. Pesquisa de preço rápida (até 5 por dia): ingresso de cinema, teatro ou show, academia, custo médio de algo, piso salarial. Pesquisa pesada (1 por dia): tecnologia (celular, notebook, peça de PC), eletrodoméstico, impressora, viagem e conferir o link de uma loja. O que eu não faço: escolher roupa ou coisa pessoal, procurar loja por você, comprar ou reservar no seu lugar e responder curiosidade que não é de dinheiro. Pra isso, o Google ou um chat de uso geral são melhores.';
+export const TEXTO_LIMITES_PESQUISA = 'Eu sou uma IA de bolso, então divido assim. Sem limite (aqui no celular): seus gastos, saldo, metas, contas, glossário, cálculos, dicas e conferir um preço que você me passar. Pesquisa de preço rápida (até 7 por dia): ingresso de cinema, teatro ou show, academia, custo médio de algo, piso salarial. Pesquisa pesada (1 por dia): tecnologia (celular, notebook, peça de PC), eletrodoméstico, impressora, passagem de viagem e conferir o link de uma loja. Na viagem eu acho a passagem que cabe no seu bolso e te ensino o caminho pro resto (hotel, roteiro). O que eu não faço: escolher roupa ou coisa pessoal, procurar loja por você, comprar ou reservar no seu lugar e responder curiosidade que não é de dinheiro. Pra isso, o Google ou um chat de uso geral são melhores.';
+// 2.3.5.1 (JF, 17/11): o humor muda o jeito de começar a ajuda, mas ele nunca nega a ajuda. Suave: gentil. Normal:
+// uma implicadinha leve. Ácido: zoa com os números do mês. Com quem tem 50+, o ácido maneira. 5 de cada (0 ou 5).
+export const PROVOCA_NORMAL = Object.freeze([
+  'Opa, tá pensando grande, hein? Te segura, rapaz! Brincadeira, bora ver isso.',
+  'Ih, tá achando que tá rico, é? Calma que eu te ajudo a ver se cabe.',
+  'Olha só, sonhando alto! Eu gosto. Mas bora com o pé no chão.',
+  'Hmm, gastança à vista? Relaxa, eu só implico. Vamos lá.',
+  'Ô, espera aí que o bolso precisa ser consultado primeiro! Bora.',
+]);
+export const PROVOCA_ACIDO = Object.freeze([
+  'Rapaz, nem se tu fosse a pessoa mais rica do mundo… Olha só: {mes}. Mas tá bom, eu ajudo.',
+  'Irmão, deixa eu te lembrar de uma coisinha: {mes}. Ainda assim quer? Então bora, que eu não nego ajuda.',
+  'Tu tá vendo os mesmos números que eu? {mes}. Respira. Agora sim: vamos lá.',
+  'Ah, claro, porque o mês tá uma maravilha: {mes}. Tá, tá, eu ajudo. Reclamo, mas ajudo.',
+  'Antes de sonhar, um choque de realidade: {mes}. Pronto, falei. Bora ver isso direito.',
+]);
+export const PROVOCA_ACIDO_MADURO = Object.freeze([
+  'Será que a gente não tá velho pra pensar numa coisa dessa, não? Brincadeira! Bora lá, te ajudo.',
+  'Olha só, com essa experiência toda ainda caindo em tentação? Tô brincando. Vamos ver com calma.',
+  'Quem tem juízo pensa duas vezes, né? E você tem de sobra. Bora conferir.',
+  'Ih, essa vontade aí é nova ou é antiga? Brincadeira. Vamos ver se cabe.',
+  'Calma que o bolso também tem idade! Tô zoando. Bora ver isso juntos.',
+]);
 // e o recado depois de usar a pesada do dia
 export const PESADA_USADA = 'Essa foi a minha pesquisa pesada de hoje: vai muito além de uma IA de bolso. Pra continuar se aprofundando, o ChatGPT, o Gemini, o Copilot, o Claude, o DeepSeek ou o Grok vão ser mais úteis que eu. O que for de bolso, eu tô aqui!';
 
 export const PASSOS_PESQUISA = Object.freeze({
+  // 2.3.5.1 (JF, 17/11: "ele não faz plano de viagem nem olha pousada: ajuda a achar PASSAGEM que caiba no orçamento e
+  // depois dá o caminho das pedras"): a pesquisa de viagem é só da passagem
   viagem: [
-    { id: 'origem', rotulo: 'Saindo de', q: 'De onde você sai? (a cidade)' },
-    { id: 'quando', rotulo: 'Quando e quem', q: 'Quando quer ir, por quantos dias e quantas pessoas? Tipo "janeiro, 7 dias, 2 pessoas".' },
-    { id: 'incluir', rotulo: 'Pesquisar', q: 'O que eu pesquiso: passagem, hotel ou os dois?', chips: ['Passagem', 'Hotel', 'Os dois'] },
-    { id: 'regiao', rotulo: 'Região ou tipo de hotel', q: 'Tem região ou tipo de hospedagem preferido? Tipo "perto da praia", "no centro", "pousada simples".' },
-    { id: 'orcamento', rotulo: 'Orçamento', q: 'E o orçamento total? Me fala tipo "até 5000". Se não tiver, diz "sem orçamento".', chips: ['Sem orçamento'] },
+    { id: 'origem', rotulo: 'Saindo de', q: 'Eu te ajudo com a passagem; o resto eu te ensino a pescar. De onde você sai? (a cidade)' },
+    { id: 'quando', rotulo: 'Quando', q: 'Quando quer ir e voltar? Tipo "10 a 17 de janeiro" ou "janeiro, 7 dias".' },
+    { id: 'quem', rotulo: 'Pessoas', q: 'Quantas pessoas vão?', chips: ['Só eu', '2 pessoas', 'Família'] },
+    { id: 'flexivel', rotulo: 'Datas flexíveis', q: 'Dá pra mudar a data uns dias pra achar mais barato?', chips: ['Sim', 'Não'] },
+    { id: 'orcamento', rotulo: 'Orçamento da passagem', q: 'Quanto dá pra gastar só com a passagem (ida e volta, todo mundo)? Tipo "até 1500". Se não tiver, diz "sem orçamento".', chips: ['Sem orçamento'] },
   ],
   produto: [
     { id: 'detalhe', rotulo: 'Detalhes', q: 'Me descreve melhor: modelo, tamanho ou o que precisa ter? Tipo "300 litros, frost free".' },
@@ -775,7 +800,7 @@ export const PASSOS_PESQUISA = Object.freeze({
     { id: 'prazo', rotulo: 'Prazo', q: 'Em quanto tempo quer ver o resultado?', chips: ['1 mês', '3 meses', '6 meses'] },
   ],
 });
-const NOME_DO_PLANO = { academia: 'Plano de academia', eletro: 'Pesquisa de eletrodoméstico ou impressora', ram: 'Pesquisa de memória RAM (compatível com o PC da pessoa)', peca: 'Pesquisa de peça de computador (compatível com o PC da pessoa)', tech: 'Pesquisa de tecnologia', lazer: 'Plano de passeio', viagem: 'Pesquisa de viagem', produto: 'Pesquisa de compra', pet: 'Plano de pet', moradia: 'Plano de moradia', transporte: 'Plano de transporte', economizar: 'Plano pra economizar' };
+const NOME_DO_PLANO = { academia: 'Plano de academia', eletro: 'Pesquisa de eletrodoméstico ou impressora', ram: 'Pesquisa de memória RAM (compatível com o PC da pessoa)', peca: 'Pesquisa de peça de computador (compatível com o PC da pessoa)', tech: 'Pesquisa de tecnologia', lazer: 'Plano de passeio', viagem: 'Pesquisa de passagem (só a passagem, ida e volta: sem hotel nem roteiro)', produto: 'Pesquisa de compra', pet: 'Plano de pet', moradia: 'Plano de moradia', transporte: 'Plano de transporte', economizar: 'Plano pra economizar' };
 
 const LAZER = /\b(restaurante|restaurantes|lanchonete|pizzaria|hamburgueria|cinema|cinemark|cinepolis|kinoplex|filme no cinema|ingresso|ingressos|show|shows|teatro|teatros|peca de teatro|peca|musical|stand ?up|comedia|opera|concerto|circo|museu|museus|exposicao|parque de diversao|parque de diversoes|parque aquatico|zoologico|balada|barzinho|rodizio|passeio|role|festival|estadio|jogo de futebol|partida de futebol|jogo de beisebol|beisebol|baseball|jogo de basquete|jogo de volei|boliche|pista de patinacao|patinacao|patinacao no gelo|rinque|kart|paintball|airsoft|tiro esportivo|stand de tiro|clube de tiro|laser tag|fliperama|escape room|karaoke|trilha|evento|eventos)\b/; // 2.3.4.7 (JF): beisebol, boliche, patinação; 2.3.4.8: airsoft, tiro esportivo
 // 2.3.4.5 (JF, 17/11: "preço de notebook, celular, memória RAM… tem que estar ligado à IA"): tecnologia
@@ -2584,7 +2609,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         const perguntaIA = `${NOME_DO_PLANO[tipo]}. Pedido da pessoa: "${intencao.t}".${lidas.length ? ` ${lidas.join('. ')}.` : ''}`
           + `${tipo === 'lazer' ? ' Diga se cabe no mês pelo resumo e se os extras (pipoca etc.) valem a pena.' : ''}`;
         const oQue = item.length > 40 ? { lazer: 'os preços desse passeio', viagem: 'essa viagem' }[tipo] || 'isso' : item;
-        return { fato: `${naoCompro}Bora! Vou pesquisar ${oQue} pra você${tipo === 'lazer' ? ' e ver se cabe no seu mês' : ''}.`, cru: true, perguntaIA: perguntaIA.slice(0, 600), modoIA: 'pesquisa', assunto: `plano_${tipo}`, pesada: PESADA.has(tipo) || tipo === 'produto' || /\b(vender|usado)\b/.test(intencao.t), caminho: CAMINHO_PLANO[tipo] || CAMINHO_PLANO.produto,
+        return { fato: `${naoCompro}Bora! Vou pesquisar ${oQue} pra você${tipo === 'lazer' ? ' e ver se cabe no seu mês' : ''}.`, cru: true, perguntaIA: perguntaIA.slice(0, 600), modoIA: 'pesquisa', assunto: `plano_${tipo}`, pesada: PESADA.has(tipo) || tipo === 'produto' || /\b(vender|usado)\b/.test(intencao.t), caminho: CAMINHO_PLANO[tipo] || CAMINHO_PLANO.produto, depoisIA: tipo === 'viagem' ? CAMINHO_PLANO.viagem : null,
           sugestoes: ['Dá pra gastar quanto até o salário?'] };
       }
       if (passo < passos.length) {
@@ -2614,7 +2639,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         economizar: 'Comece pelo que mais pesa no mês e pelas assinaturas esquecidas. Corte primeiro o que você nem sente falta, e guarde a economia assim que o dinheiro entrar, antes de gastar.',
       };
       void CAMINHO_ANTIGO;
-      return { assunto: `plano_${tipo}`, pesada: PESADA.has(tipo) || tipo === 'produto', caminho: CAMINHO, fato: `Fechou, com isso eu filtro. ${CAMINHO}${respostas.orcamento ? ` Seu teto: ${formatBRL(respostas.orcamento)}.` : ''} Com a IA online ligada, eu faço a conta e pesquiso o que precisar pra você comparar.`, cru: true, perguntaIA, modoIA: 'pesquisa', sugestoes: ['Dá pra gastar quanto até o salário?'] };
+      return { assunto: `plano_${tipo}`, pesada: PESADA.has(tipo) || tipo === 'produto', caminho: CAMINHO, depoisIA: tipo === 'viagem' ? CAMINHO : null, fato: `Fechou, com isso eu filtro. ${CAMINHO}${respostas.orcamento ? ` Seu teto: ${formatBRL(respostas.orcamento)}.` : ''} Com a IA online ligada, eu faço a conta e pesquiso o que precisar pra você comparar.`, cru: true, perguntaIA, modoIA: 'pesquisa', sugestoes: ['Dá pra gastar quanto até o salário?'] };
     }
     case 'moeda_jogo': {
       const { jogo, pacote } = intencao;

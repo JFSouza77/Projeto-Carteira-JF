@@ -199,6 +199,8 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
         await db.setMeta('pesquisaMedia', { dia: toISODate(), n: (m?.dia === toISODate() ? m.n : 0) + 1 });
       }
       // 2.3.4.6: marcou a pesquisa pesada do dia e avisa, num 2º balão, que pra ir além vale outra IA
+      // 2.3.5.1 (JF): depois da passagem, o caminho das pedras pro resto da viagem ("te ensina a pescar")
+      if (fala.depoisIA) { await respiro(fala.depoisIA); addMsg({ de: 'caos', texto: fala.depoisIA, rosto: fala.rosto, assunto: 'plano_viagem' }); }
       if (fala.pesada && !state.perfil?.seloCriador) {
         await db.setMeta('pesquisaPesada', { dia: toISODate() });
         await respiro(PESADA_USADA);
