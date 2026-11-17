@@ -37,10 +37,30 @@ test('C.A.O.S. escolhe o avatar: farmácia pesando, conserto e compra demais', a
   const hoje = new Date().toISOString().slice(0, 10);
   const conta = [{ id: 'c', tipo: 'corrente', name: 'Inter' }];
   const fala = (f, expenses = []) => conversar(f, { expenses, incomes: [], accounts: conta, categories }, { mood: 'suave', memory: null, now: Date.now(), perfil: { apelido: 'Ana' } }).fala;
-  assert.equal(fala('gastei 80 na farmácia no pix', [{ id: 's', amountCents: 15000, categoryId: 'saude', note: 'Farmácia', date: hoje }]).intent, 'cuidado_saude');
-  assert.equal(fala('paguei 300 no mecânico no pix').intent, 'faz_tudo');
+  assert.equal(fala('gastei 80 na farmácia no pix', [{ id: 's', amountCents: 15000, categoryId: 'saude', note: 'Farmácia', date: hoje }]).avatar, 'cuidado_saude');
+  assert.equal(fala('paguei 300 no mecânico no pix').avatar, 'faz_tudo');
   const compras = [1, 2, 3, 4].map(i => ({ id: `c${i}`, amountCents: 5000, categoryId: 'compras', note: 'Loja', date: hoje }));
   const r = fala('comprei uma blusa de 60 na shein no pix', compras);
-  assert.equal(r.intent, 'compras_demais');
+  assert.equal(r.avatar, 'compras_demais');
   assert.match(r.texto, /5ª compra|5 compras/);
+});
+
+// 2.3.4.4 (JF): Estudante, Cinéfilo, Cara do TI, Feirante e Salva-Vidas (60 → 65), e o tema escolhe o profissional
+test('os 5 avatares da 2.3.4.4 e o tema da conversa', async () => {
+  const { FORMAS, formaPara } = await import('../js/avatar.js');
+  assert.equal(Object.keys(FORMAS).length, 65);
+  for (const f of ['estudante', 'cinefilo', 'ti', 'feirante', 'salvavidas']) {
+    for (const a of FORMAS[f].acc) assert.match(fonte, new RegExp(`data-acc="${a}"`), `${f}: acessório ${a} sem desenho`);
+  }
+  assert.ok(FORMAS.faztudo.acc.includes('furadeira'));
+  const { conversar } = await import('../js/caos/index.js');
+  const { DEFAULT_CATEGORIES } = await import('../js/engine.js');
+  const categories = DEFAULT_CATEGORIES.map(c => ({ ...c }));
+  const fala = f => conversar(f, { expenses: [], incomes: [], accounts: [{ id: 'c', tipo: 'corrente', name: 'Inter' }], categories }, { mood: 'suave', memory: null, now: Date.now(), perfil: { apelido: 'Ana' } }).fala;
+  const casos = { 'paguei 900 da mensalidade da faculdade no pix': 'estudante', 'gastei 60 no cinema no pix': 'cinefilo',
+    'quanto custa em média uma memória ram de 16gb?': 'ti', 'gastei 250 no mercado no pix': 'feirante', 'paguei 150 no encanador no pix': 'faz_tudo',
+    'como saio das dívidas?': 'sair_dividas' };
+  for (const [f, a] of Object.entries(casos)) assert.equal(fala(f).avatar || fala(f).intent, a, f);
+  assert.equal(formaPara({ assunto: 'sair_dividas' }), 'salvavidas');
+  assert.equal(formaPara({ assunto: 'energia' }), 'faztudo');
 });
