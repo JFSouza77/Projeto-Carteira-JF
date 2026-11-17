@@ -356,11 +356,19 @@ export function render() {
 
   // Alertas (só no mês atual)
   const alertas = isCurrent ? analyze(dados()) : [];
-  $('#alerts-card').hidden = !alertas.length;
-  $('#alert-list').innerHTML = alertas.map(a => `
+  // 2.3.4.1 (JF, 17/11): quem já tinha cadastro descobre a pergunta do trabalho por um aviso nos Alertas
+  const p = state.perfil;
+  const avisoTrabalho = isCurrent && p?.apelido && !p.pulou && !p.trabalho && !p.trabalhoDispensado
+    && !(p.aniversario && faixaEtaria(idadeDe(p.aniversario, toISODate())) === 'crianca');
+  const totalAvisos = alertas.length + (avisoTrabalho ? 1 : 0);
+  $('#alerts-card').hidden = !totalAvisos;
+  $('#alert-list').innerHTML = (avisoTrabalho ? `
+    <li class="baixa novo-aviso">${ic('i-conversa')}<span><strong>Novidade:</strong> bora falar do seu trabalho? Me conta com o que você trabalha, que eu te conheço melhor e dou dicas do seu jeito.
+      <span class="novo-aviso-botoes"><button type="button" class="ghost small" data-trabalho="sim">Contar pro C.A.O.S.</button><button type="button" class="link-btn" data-trabalho="nao">Agora não</button></span></span></li>` : '')
+    + alertas.map(a => `
     <li class="${a.severity}">${ic(ICONE_ALERTA[a.type] || 'i-alerta')}<span>${esc(cap(nomeAlerta(a)))}</span></li>`).join('');
   // 2.3.2 (JF): os alertas recolhem com um toque; fechado, fica só o título com a quantidade
-  $('#alertas-conta').textContent = alertas.length ? `(${alertas.length})` : '';
+  $('#alertas-conta').textContent = totalAvisos ? `(${totalAvisos})` : '';
   aplicarRecolhidos();
 
   const rows = s.rows.filter(r => r.spentCents > 0 || r.budgetCents > 0).sort((a, b) => b.spentCents - a.spentCents);
@@ -1021,15 +1029,15 @@ const TRABALHOS = [
 // ordem de reconhecimento: "funcionária pública" é servidora, "dona de casa" não é dona de empresa
 const DO_LAR = ['Do lar', /\b(dona de casa|do lar|cuido da casa|cuido dos filhos)\b/i, 'Cuidar da casa é trabalho, e dos grandes! Se tiver um dinheiro que entra (pensão, ajuda, um extra), me fala que eu te ajudo a organizar.'];
 const ORDEM_TRABALHO = [DO_LAR, TRABALHOS[3], TRABALHOS[4], TRABALHOS[0], TRABALHOS[1], TRABALHOS[2], TRABALHOS[5]];
-async function perguntarTrabalhoUmaVez() {
+async function perguntarTrabalhoUmaVez({ pedido = false } = {}) {
   const p = state.perfil;
-  if (!p || p.pulou || !p.apelido || p.trabalhoPerguntado || state.onboarding) return false;
+  if (!p || p.pulou || !p.apelido || (p.trabalhoPerguntado && !pedido) || state.onboarding) return false;
   const idade = idadeDe(p.aniversario, toISODate());
   state.perfil = { ...p, trabalhoPerguntado: true };
   await db.setMeta('perfil', state.perfil);
   if (idade != null && faixaEtaria(idade) === 'crianca') return false; // criança não ganha essa pergunta
   state.onboarding = { passo: 'trabalho', unico: true, dados: { foco: [] } };
-  addMsg({ de: 'caos', texto: `${comoChamar(state.perfil)}, posso te perguntar uma coisa, só pra te ajudar a organizar melhor? Você trabalha com quê?`, sugestoes: [...TRABALHOS.map(([n]) => n), 'Prefiro não dizer'] });
+  addMsg({ de: 'caos', texto: pedido ? `Bora! Me conta, ${comoChamar(state.perfil)}: você trabalha com quê? Deixa eu te conhecer um pouco melhor.` : `${comoChamar(state.perfil)}, posso te perguntar uma coisa, só pra te ajudar a organizar melhor? Você trabalha com quê?`, sugestoes: [...TRABALHOS.map(([n]) => n), 'Prefiro não dizer'] });
   return true;
 }
 async function responderTrabalho(t, o) {
@@ -1044,6 +1052,9 @@ async function responderTrabalho(t, o) {
   }
   if (/prefiro|nao quero|não quero|agora nao|agora não|pular/i.test(t)) {
     state.onboarding = null;
+    state.perfil = { ...state.perfil, trabalhoDispensado: true };
+    await db.setMeta('perfil', state.perfil);
+    render();
     addMsg({ de: 'caos', texto: 'Tudo bem, sem problema nenhum! Bora seguir.', sugestoes: SUGESTOES.slice(0, 6) });
     return;
   }
@@ -1053,6 +1064,7 @@ async function responderTrabalho(t, o) {
   state.perfil = { ...state.perfil, trabalho: rotulo === 'Tenho empresa' ? 'Empresa própria' : rotulo };
   await db.setMeta('perfil', state.perfil);
   renderPerfil();
+  render();
   if (achado?.[0] === 'Tenho empresa') {
     o.passo = 'empresa';
     addMsg({ de: 'caos', texto: 'Que massa! E a sua empresa é de quê?', sugestoes: ['Prefiro não dizer'] });
@@ -1472,6 +1484,19 @@ function bind() {
   campo.addEventListener('input', crescer);
   campo.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey && matchMedia('(pointer: fine)').matches) { e.preventDefault(); $('#chat-form').requestSubmit(); }
+  });
+  // 2.3.4.1 (JF): o aviso do trabalho nos Alertas
+  $('#alert-list').addEventListener('click', async e => {
+    const b = e.target.closest('[data-trabalho]');
+    if (!b) return;
+    if (b.dataset.trabalho === 'nao') {
+      state.perfil = { ...state.perfil, trabalhoDispensado: true };
+      await db.setMeta('perfil', state.perfil);
+      render();
+      return toast('Tudo bem! Se mudar de ideia, me conta no Chat.');
+    }
+    location.hash = '#conversa';
+    await perguntarTrabalhoUmaVez({ pedido: true });
   });
   $('#chat-form').addEventListener('submit', () => setTimeout(crescer, 0));
   $('#chat-anexo-tirar').addEventListener('click', tirarAnexo);
