@@ -31,3 +31,10 @@ test('montarRoteiro numera os passos ("Passo 2 de 5")', () => {
   assert.equal(montarRoteiro('anotar').length, 2);
   assert.deepEqual(montarRoteiro('nada'), []);
 });
+
+test('17/11: o tutorial usa o Guia Turístico e os avatares fecham em 50', () => {
+  assert.ok(FORMAS.guia);
+  for (const p of Object.values(PASSOS_TOUR)) assert.equal(p.forma, 'guia');
+  assert.equal(Object.keys(FORMAS).length % 5, 0);
+  for (const f of ['curioso', 'distraido', 'formiga', 'pesquisador']) assert.ok(FORMAS[f], f);
+});
