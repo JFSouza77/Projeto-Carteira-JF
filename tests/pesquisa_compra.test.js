@@ -43,11 +43,12 @@ test('viagem: pergunta de onde, quando e quem, o que pesquisar e região; "Pular
 });
 
 test('"não" responde a pergunta (marca) sem cancelar; "cancelar" cancela; pergunta nova sai do questionário', () => {
-  const f = papo('quero comprar um tenis', 'corrida', 'treino', 'não');
+  // 2.3.4.8 (JF): compra comum só vira pesquisa quando a pessoa pede ("me ajuda a achar", "pesquisa")
+  const f = papo('me ajuda a achar um tenis', 'corrida', 'treino', 'não');
   assert.match(f[3].texto, /Precisa pra quando/);
-  const c = papo('quero comprar um tenis', 'Cancelar');
+  const c = papo('me ajuda a achar um tenis', 'Cancelar');
   assert.match(c[1].texto, /fica pra depois/);
-  const s = papo('quero comprar um tenis', 'quanto gastei este mês?');
+  const s = papo('me ajuda a achar um tenis', 'quanto gastei este mês?');
   assert.match(s[1].texto, /gastou|gasto/i);
 });
 
@@ -95,4 +96,14 @@ test('todo questionário tem 5 perguntas (regra do 0 ou 5) e o orçamento, quand
     const i = passos.findIndex(p => p.id === 'orcamento');
     assert.ok(i === -1 || i === passos.length - 1, k);
   }
+});
+
+// 2.3.4.8 (JF: "virei balconista de estofados?"): compra comum sem pedido de pesquisa ganha a ajuda de bolso, sem IA
+test('"quero comprar X" comum: não vira pesquisa de loja; ingresso: ele não compra por você', () => {
+  const r = papo('quero comprar um conjunto de cama, mesa e banho')[0];
+  assert.equal(r.perguntaIA, null);
+  assert.match(r.texto, /(IA de bolso|Google|balconista|bolso)/);
+  const i = papo('quero comprar o ingresso pro estádio do Maracanã')[0];
+  assert.match(i.texto, /não consigo por você/);
+  assert.match(papo('quero ir no shopping Vila Velha, o que eu posso comprar por lá?')[0].texto, /É um shopping/);
 });
