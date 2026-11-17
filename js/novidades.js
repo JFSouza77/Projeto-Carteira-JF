@@ -7,6 +7,20 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.3.4 Alfa',
+    data: '17/11/2026',
+    nome: 'Bolso Atento',
+    t: 'Apostas e pet com categoria própria, e o C.A.O.S. repara quando a saúde (sua ou do bicho) pesa.',
+    itens: [
+      '🎲 Apostas no controle: bet, cassino, poker e bicho vão pra categoria Apostas. Se pesar no mês, ele avisa, sem sermão.',
+      '🐾 Pet com categoria: ração, petshop e veterinário ficam em Pet. Se a saúde do bicho pesar, ele pergunta dele.',
+      '💊 Ele cuida de você: se farmácia e médico sobem no mês, o C.A.O.S. pergunta como você está.',
+      '🏦 Banco sem mistério: no Chat, pergunte "o que é conta corrente?", "como faço um Pix?" ou "o que é linha de crédito?".',
+      '💼 Seu trabalho: numa conversa, ele pergunta uma vez com o que você trabalha, pra dar dicas do seu jeito.',
+    ],
+    qol: [],
+  },
+  {
     v: '2.3.3 Alfa',
     ate: '2.3.3.6',
     data: '17/11/2026',

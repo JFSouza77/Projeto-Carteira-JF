@@ -72,3 +72,29 @@ test('apagar lançamento pela conversa: acha o certo e só propõe', () => {
   assert.equal(fala('você consegue apagar um gasto?').intent, 'tutorial');
   assert.equal(fala('gastei 30 no mercado').intent, 'registrar_gasto');
 });
+
+// 2.3.4 (JF, num pet center): apostas, pet e cuidado com a saúde
+test('apostas e pet: categoria certa e o aviso gentil', async () => {
+  const { DEFAULT_CATEGORIES } = await import('../js/engine.js');
+  const categories = DEFAULT_CATEGORIES.map(c => ({ ...c }));
+  const hoje = new Date().toISOString().slice(0, 10);
+  const conta = [{ id: 'c', tipo: 'corrente', name: 'Inter' }];
+  const fala = (f, expenses = []) => conversar(f, { expenses, incomes: [], accounts: conta, categories }, { mood: 'suave', memory: null, now: Date.now(), perfil: { apelido: 'Ana' } }).fala;
+  for (const [f, cat] of [['apostei 50 na bet no pix', 'apostas'], ['perdi 30 no tigrinho no pix', 'apostas'], ['joguei 10 no jogo do bicho no dinheiro', 'apostas'], ['gastei 40 no remédio do gato no pix', 'pet'], ['comprei ração 120 no pix', 'pet'], ['joguei 6 na mega no pix', 'lazer']]) {
+    assert.equal(fala(f).acao?.categoryId, cat, f);
+  }
+  const apostou = [{ id: 'a', amountCents: 18000, categoryId: 'apostas', note: 'Bet', date: hoje }];
+  assert.match(fala('apostei 50 na bet no pix', apostou).texto, /R\$\s230,00/);
+  assert.doesNotMatch(fala('apostei 50 na bet no pix', apostou).texto, /vergonha|vício|viciad/i);
+  const pet = [{ id: 'p', amountCents: 12000, categoryId: 'pet', note: 'Remédio do cachorro', date: hoje }];
+  assert.match(fala('gastei 40 no remédio do gato no pix', pet).texto, /amiguinho|bichinho|ele/);
+  const farmacia = [{ id: 's', amountCents: 15000, categoryId: 'saude', note: 'Farmácia', date: hoje }];
+  assert.match(fala('gastei 80 na farmácia no pix', farmacia).texto, /(tá bem|está bem|esteja bem|como você está|tudo bem)/i);
+});
+
+test('banco sem mistério: Pix e cartão com passo a passo', () => {
+  const fala = f => conversar(f, { expenses: [], incomes: [], categories: [] }, { mood: 'suave', memory: null, now: Date.now(), perfil: { apelido: 'Ana' } }).fala;
+  assert.match(fala('como faço um pix?').texto, /QR Code/);
+  assert.match(fala('como funciona o cartão de crédito?').texto, /fechamento/);
+  for (const f of ['o que é conta corrente?', 'o que é linha de crédito?', 'o que é crédito consignado?', 'o que é bet?', 'o que é conta PJ?']) assert.equal(fala(f).intent, 'glossario', f);
+});
