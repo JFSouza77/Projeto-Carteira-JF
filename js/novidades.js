@@ -8,7 +8,7 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.3.3 Alfa',
-    ate: '2.3.3.4',
+    ate: '2.3.3.5',
     data: '17/11/2026',
     nome: 'Do Seu Jeito',
     t: 'O app se ajusta à sua idade, e o C.A.O.S. entende quando pagaram pra você.',
@@ -25,6 +25,7 @@ export const NOVIDADES = Object.freeze([
       '⏰ Lembretes combinados: ele pergunta uma vez se você quer avisos e em que horário. Muda em Ajustes → Lembretes.',
       '📐 Telas na medida: acabou o espaço vazio no fim das abas, e os botões ficaram mais redondinhos.',
       '💬 Papo livre com freio: ele conversa, mas curiosidade (filme, futebol) ele indica outro chat.',
+      '📈 Como investir: no Chat, pergunte "como faço pra investir?" e veja o passo a passo e onde anotar.',
     ],
   },
   {

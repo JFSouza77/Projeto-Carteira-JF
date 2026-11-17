@@ -51,6 +51,8 @@ que escuta, presta atenção, reage com emoção ao que acontece, incentiva, aco
   Tudo que chegar (JF, GPT, Gemini, Code) vai pra `docs/Rascunhos_da_Semana.md` com o veredito do Wally (entra, não entra,
   depois) e o porquê; o Wally decide sozinho, sem esperar o Code. **Quinta 12/11 a partir das 16h e sexta 13/11 o dia todo:**
   rodada grande, fazendo o que entrou na lista (o Code do Perfil revisa e orienta; o código continua com o Wally).
+- **Achou erro, corrige (JF, 17/11):** bug ou resposta ruim que o Wally encontrar (em teste, print ou conversa) ele já
+  corrige e publica, sem perguntar antes ("antes que a pessoa teste e dê erro"); depois avisa o que fez.
 - **Autonomia (JF, 07/11):** o JF é o gerente; o Wally é o executor e tem a palavra final na Carteira. Se o Wally disser
   que uma ideia não entra, explica o motivo e pronto.
 
@@ -83,7 +85,7 @@ Mapa do cérebro: `docs/CAOS_Carteira.md`.
 
 ## C.A.O.S.
 
-- **Sobe de versão sempre que for mexido** (`CAOS_VERSAO` em `js/caos/index.js`; hoje 2.5.4, núcleo 1.9.0). O número é dele, separado do app, e segue a regra do 9 (x.9 vira (x+1).0, nunca x.10), como diz o núcleo 1.3.0.
+- **Sobe de versão sempre que for mexido** (`CAOS_VERSAO` em `js/caos/index.js`; hoje 2.5.5, núcleo 1.9.0). O número é dele, separado do app, e segue a regra do 9 (x.9 vira (x+1).0, nunca x.10), como diz o núcleo 1.3.0.
 - **Quantidades sempre terminam em 0 ou 5**: cada lista de falas tem 5, 10, 15… (teste confere).
 - **Quem ele é** (nome, sigla, criador, origem, pode/não pode, anatomia): só em `js/caos/identidade.js`. O app e o
   servidor da IA leem dali, pra nunca ficarem diferentes.

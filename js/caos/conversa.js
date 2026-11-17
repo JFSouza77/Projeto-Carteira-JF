@@ -138,6 +138,21 @@ export function respostaPapoLivre(rng = Math.random) {
   return PAPO_LIVRE_FREIO[Math.floor(rng() * PAPO_LIVRE_FREIO.length) % PAPO_LIVRE_FREIO.length];
 }
 
+// ---------- "Tô acordando" (2.3.3.5, JF 17/11) ----------
+// JF: quando a IA online não responde, em vez de mensagem técnica ele explica de um jeito leve, pra pessoa (a Dona
+// Débora, por exemplo) não estranhar: espera um pouquinho, fecha e abre o app e pergunta de novo.
+const ACORDANDO = Object.freeze([
+  'Eita, acho que eu ainda tô acordando 😴. Me dá um minutinho: fecha e abre o app de novo e me pergunta outra vez, que eu respondo melhor.',
+  'Ops, meu cérebro online cochilou agora. Espera um pouquinho, reinicia o app e pergunta de novo, que eu volto mais esperto.',
+  'Hmm, a conexão com a minha parte online falhou. Não é com você! Fecha e abre o app daqui a pouco e me pergunta de novo.',
+  'Tô meio sonolento ainda, deu uma travadinha aqui. Dá uma reiniciada no app e repete a pergunta, que dessa vez vai.',
+  'Opa, essa resposta não saiu. Às vezes eu demoro a acordar de verdade: espera um pouquinho, abre o app de novo e pergunta outra vez.',
+]);
+/** Fala leve pra quando a IA online não responde (sem mensagem técnica). */
+export function respostaAcordando(rng = Math.random) {
+  return ACORDANDO[Math.floor(rng() * ACORDANDO.length) % ACORDANDO.length];
+}
+
 // ---------- Fezinha: loterias (2.3.0.1, JF 17/11) ----------
 // "Ele entende mega-sena, raspadinha (não o sorvete), quina, mega da virada... essas fezinhas." Chance é conta fixa
 // (combinação de números), então sai aqui sem IA; prêmio, sorteio e resultado mudam toda semana e vão pra IA pesquisar.
@@ -940,6 +955,9 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   if (/(formiguinha|efeito formiga|gastinhos?\b|gastos? (pequenos?|miudos?|de formiga)|pequenos gastos)/.test(t) && !r.valor) return { ...r, intent: 'formiguinha' };
   // Rachadinha (07/11): "quem me deve?", "quanto tenho a receber?", "quanto me devem?"
   if (/(quem (me|ta me|esta me) dev|quanto (me )?devem|me deve[mn]?\b|(tenho|falta|faltam) (a|pra|para) receber|a receber\b|rachadinha|conta rachada|quem (nao )?(me )?pagou)/.test(t) && !r.valor) return { ...r, intent: 'a_receber' };
+  // 2.3.3.5 (JF, 17/11, pergunta da Dona Débora): "como faço pra investir?" caía no passeio geral pelas abas.
+  // Agora tem resposta de verdade: o básico (reserva, prazo, renda fixa) e onde anota no app, sem indicar produto.
+  if (/(como (eu )?(faco|faz) (pra|para) investir|como (eu )?(comeco|comecar|posso|devo|consigo) (a )?investir|como investir|(quero|queria|gostaria de|preciso) (comecar a |aprender a )?investir|onde (eu )?(posso |devo )?investir|por onde (eu )?comec\w* (a )?investir|(qual|quais) (e |eh |sao )?(o |os )?melhor(es)? investimentos?|como funciona(m)? (o |os )?investimentos?|dicas? de investimentos?|nunca investi|(adicion|cadastr|anot|coloc|lanc|registr)\w* (um |uma |meu |o |os |meus )?(investimento|aplicacao)|^investimentos?\W*$|^investir\W*$)/.test(t)) return { ...r, intent: 'como_investir' };
   if (/(quanto (eu )?(tenho )?investido|meus investimentos|minha carteira de investimento|quanto (meus investimentos|meu investimento) (rende|rendeu|renderam)|como (estao|esta) (meus|o meu|os meus) investimentos?)/.test(t)) return { ...r, intent: 'meus_investimentos' };
   // Saldo (06/11): "quanto eu tenho guardado no total?", "quanto tem nas contas?", "quanto poupei?"
   if (!/(pra|para) (pagar|gastar)/.test(t) && /(\bsaldo\b|quanto (eu )?(tenho|tem|ainda tenho|sobrou)\b(?! (pra|para|de) )|tenho guardado|guardad[oa]s?\b|poupad[oa]s?\b|quanto (eu )?(guardei|poupei|juntei)|dinheiro (no|na|nos|nas) (banco|conta)|tenho no banco|nas contas|no total)/.test(t)
@@ -2100,6 +2118,11 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       const lista = [...porPessoa].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([n, v]) => `${n} (${formatBRL(v)})`).join(', ');
       return { fato: `Você tem ${formatBRL(r.totalCents)} a receber: ${lista}${porPessoa.size > 5 ? ' e mais gente' : ''}. Quando o Pix cair, toca em "Recebi" na lista "A receber", no Início.${prevTot ? ` Fora isso, tem ${formatBRL(prevTot)} de entrada prevista (pergunta "quanto vou receber?" que eu detalho).` : ''}`, sugestoes: ['Quanto gastei este mês?'] };
     }
+    case 'como_investir':
+      return {
+        fato: 'Bora começar do jeito certo, em 3 passos. 1) Primeiro a reserva de emergência: uns 3 a 6 meses dos seus gastos, num lugar que rende e deixa tirar no mesmo dia (CDB com liquidez diária ou Tesouro Selic). 2) Depois, pensa no prazo: dinheiro pra usar logo fica na renda fixa (CDB, Tesouro, LCI e LCA); só o que pode esperar anos vai pra coisa que sobe e desce (ações, fundos). 3) A poupança é a mais simples, mas costuma render menos que um CDB que paga 100% do CDI. Pra anotar aqui no app: aba 🏦 Contas → 📈 Investimentos, com o nome, quanto aplicou e quanto está valendo, que eu acompanho com você. Eu explico e acompanho, mas não indico onde investir: pra escolher, vale conversar com o gerente do banco ou um especialista. E desconfie de lucro garantido: é o golpe mais comum.',
+        cru: true, decisao: 'investimento', sugestoes: ['O que é CDB?', 'O que é Tesouro Selic?', 'O que é reserva de emergência?'],
+      };
     case 'meus_investimentos': {
       const lista = dados.investimentos || [];
       if (!lista.length) return { fato: 'Você ainda não cadastrou investimentos. Na aba 🏦 Contas, em "📈 Investimentos", você coloca o que tem (CDB, Tesouro, ações, poupança…), quanto aplicou e quanto está valendo. Aí eu acompanho com você.', sugestoes: ['Como está o mercado?'] };

@@ -1,7 +1,8 @@
 // 2.3.1 (JF, 17/11): foco da conversa. "Só finanças" segura o que não é de dinheiro; desabafo ganha acolhimento.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { assuntoDeDinheiro, perguntaDePesquisaGeral, respostaForaDoFoco, respostaPapoLivre } from '../js/caos/conversa.js';
+import { assuntoDeDinheiro, perguntaDePesquisaGeral, respostaAcordando, respostaForaDoFoco, respostaPapoLivre } from '../js/caos/conversa.js';
+import { conversar } from '../js/caos/index.js';
 
 test('o que não é de dinheiro fica de fora do foco', () => {
   for (const f of ['Quais são os produtores do filme dos vingadores?', 'qual a distância entre Espírito Santo e São Paulo', 'qual a capital da frança', 'me conta quem ganhou o jogo', 'quanto tempo leva de ES pra SP']) {
@@ -36,4 +37,20 @@ test('papo livre: pesquisa geral indica outro chat; conversa e dinheiro passam',
     const r = respostaPapoLivre(() => i / 5);
     assert.match(r, /ChatGPT/); assert.match(r, /Claude/);
   }
+});
+
+// 2.3.3.5 (Dona Débora): "como faço pra investir?" tinha caído no passeio geral pelas abas
+test('como investir tem resposta de verdade, sem indicar produto', () => {
+  const d = { expenses: [], incomes: [], accounts: [], budgets: {}, goals: [], cards: [], investimentos: [] };
+  for (const f of ['como faço pra investir?', 'Investimento...', 'quero começar a investir', 'qual o melhor investimento?', 'como adiciono um investimento?']) {
+    const { fala } = conversar(f, d, { mood: 'suave', memory: null, now: Date.now(), perfil: { apelido: 'Ana' } });
+    assert.equal(fala.intent, 'como_investir', f);
+    assert.match(fala.texto, /reserva de emergência/);
+    assert.match(fala.texto, /Investimentos/);
+    assert.match(fala.texto, /não indico/);
+  }
+});
+
+test('IA que não respondeu: fala leve de "acordando", com o jeito de resolver', () => {
+  for (let i = 0; i < 5; i++) assert.match(respostaAcordando(() => i / 5), /(reinici|fecha e abre|abre o app)/);
 });
