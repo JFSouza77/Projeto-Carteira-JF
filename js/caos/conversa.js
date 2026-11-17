@@ -679,6 +679,26 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
     if (/(chance|chances|probabilidade|possibilidade|dificil|facil de ganhar|quantas pessoas|vale a pena|compensa|da pra ganhar|como (eu )?ganh|ficar rico|estrategia|numeros? da sorte|melhor jogo|qual (a |e a )?melhor loteria)/.test(t)) return { ...r, categoria: null, intent: 'loteria', pede: 'chance' };
     if (/(premio|acumul|resultado|sorteio|sorteados|quando (e|sai|vai ser)|que dia|ganhador|ganhou|valor da aposta|quanto custa|preco)/.test(t) && !oQueE) return { ...r, categoria: null, intent: 'loteria', pede: 'pesquisa' };
   }
+  // Métodos de poupar (2.3.3, JF 17/11): 50/30/20, pague-se primeiro, 52 semanas, envelopes; pra criança, 3 cofrinhos
+  if (!r.valor && /\b((metodos?|jeitos?|tecnicas?|formas?|dicas?|regras?) (de|pra|para) (poupar|guardar|juntar)( dinheiro)?|como (eu )?(faco|fazer|comeco|comecar|posso|consigo|aprendo|aprender) (a |uma )?(poupar|poupanca|guardar dinheiro|juntar dinheiro|ter uma poupanca)|como (se )?(poupa|guarda dinheiro|junta dinheiro)|me ensina a (poupar|guardar|juntar)|(comecar|comeco) a (poupar|guardar dinheiro|juntar dinheiro|fazer uma poupanca)|quanto (eu )?devo guardar|quanto (do meu salario|da mesada) (eu )?(guardo|devo guardar|separo))\b/.test(t)) {
+    return { ...r, categoria: null, intent: 'metodos_poupar' };
+  }
+  // Me pagaram / vaquinha (2.3.3, JF 17/11: "me chamaram pra almoçar e pagaram tudo pra mim"): comer fora sem gastar
+  // também é economia e entra como dia sem gasto; e o C.A.O.S. vai conhecendo a rotina (amigos, família…)
+  {
+    const bancado = /\b(pagaram (tudo |a conta |o almoco |a pizza |o jantar )?(pra|para|por) mim|pagou (tudo |a conta )?(pra|para|por) mim|me (bancaram|bancou|pagaram o (almoco|jantar|lanche|rodizio|cafe|cinema)|pagaram a (pizza|conta|comida))|foi por conta d[oae]s?|por conta da casa|(nao|nem) paguei nada|sem pagar nada|fui convidad[oa] pra (almocar|jantar|comer)|eu (so )?participei mas nao paguei|nao gastei nada .*\b(almoc|jant|pizza|comi|lanch))/.test(t);
+    if (bancado && !r.valor && !/\b(me deve|devendo|quem me|pagou o que|me pagou os|me pagou a parte|me devolveu)\b/.test(t)) {
+      const quem = /\b(pai|pais|mae|familia|avo|avos|tio|tia|irmao|irma|sogr[oa]|primo|prima)\b/.test(t) ? 'familia'
+        : /\b(namorad[oa]|esposa|marido|noiv[oa]|crush|mozao|amor)\b/.test(t) ? 'par'
+        : /\b(chefe|empresa|trabalho|firma|cliente)\b/.test(t) ? 'trabalho' : /\b(amig\w*|galera|turma|colegas?|pessoal|parceir\w*)\b/.test(t) ? 'amigos' : null;
+      return { ...r, categoria: null, intent: 'pagaram_pra_mim', quem };
+    }
+    if (/\bvaquinha\b/.test(t)) {
+      const minha = t.match(/\b(?:minha parte|minha cota|eu dei|eu entrei com|eu coloquei|dei|coloquei|entrei com)\D{0,25}(\d[\d.,]*)/);
+      if (minha) return { ...r, valor: acharValor(minha[0]) || r.valor, categoria: r.categoria, intent: 'registrar_gasto', vaquinha: true, t: `${t} vaquinha` };
+      if (!/(o que e|como funciona|como faz)/.test(t)) return { ...r, categoria: null, intent: 'vaquinha_parte' };
+    }
+  }
   // Perguntas de custo e gasto demais (2.3.2, JF 17/11: "ele responde em média quanto custa, curto, sem explicar o
   // passo a passo, e pergunta se é plano seu; e olha os seus gastos quando você diz que tá gastando demais com algo")
   {
@@ -1299,7 +1319,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       const cat = intencao.categoria || (aprendida && categories.find(c => c.id === aprendida.categoryId))
         || categories.find(c => c.id === 'outros') || categories[0];
       // nem categoria nem descrição ("7 reais no débito do Inter"): pergunta em quê, sem inventar "Outros"
-      if (!intencao.categoria && !aprendida && !desc) {
+      if (!intencao.categoria && !aprendida && !desc && !intencao.vaquinha) {
         const extra = intencao.t.slice(semPag.length).trim();
         return { fato: `Anotando ${formatBRL(intencao.valor)}. Foi em quê? Tipo "mercado", "uber" ou "farmácia".`, cru: true,
           sugestoes: ['Mercado', 'Restaurante', 'Transporte', 'Deixa pra depois'], aguardar: { tipo: 'desc_gasto', valor: intencao.valor, extra } };
@@ -1319,7 +1339,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
           })()].filter(Boolean).join(' ') || null,
         vars: { valor: formatBRL(intencao.valor), categoria: cat?.name ?? 'Outros' },
         acao: { tipo: 'registrar_gasto', amountCents: intencao.valor, categoryId: cat?.id ?? 'outros', date: dataDoTexto(intencao.t, today),
-          note: LOTERIA.test(intencao.t) ? nomeDaFezinha(intencao.t) : desc ? desc[0].toUpperCase() + desc.slice(1) : '', ...lerPagamento(intencao.t, dados.accounts) },
+          note: intencao.vaquinha ? 'Vaquinha (minha parte)' : LOTERIA.test(intencao.t) ? nomeDaFezinha(intencao.t) : desc ? desc[0].toUpperCase() + desc.slice(1) : '', ...lerPagamento(intencao.t, dados.accounts) },
         aprendeu: !!aprendida,
         pagamento: true,
       };
@@ -1845,6 +1865,32 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         sugestoes: ['Onde mais gastei?', 'Quanto gastei este mês?'],
       };
     }
+    case 'metodos_poupar': {
+      // 2.3.3 (JF): os métodos mais falados, com a conta feita na entrada da pessoa; criança ganha os 3 cofrinhos
+      const idade = idadeDe(perfil?.aniversario, today);
+      const faixa = idade != null ? faixaEtaria(idade) : null;
+      if (faixa === 'crianca') {
+        return { fato: 'Bora aprender juntos! Um jeito bem legal é o dos 3 cofrinhos: um pra gastar, um pra guardar (pra algo maior, tipo um jogo ou brinquedo) e um pra ajudar alguém. Toda vez que ganhar dinheiro, divide nos três antes de gastar. Outro jogo: guardar uma moedinha a mais toda semana. Quer que eu crie uma meta pro que você quer juntar?',
+          cru: true, sugestoes: ['Quero criar uma meta', 'O que é mesada?'] };
+      }
+      const entMes = (incomes || []).filter(i => i.date.slice(0, 7) === mes).reduce((x, i) => x + i.amountCents, 0);
+      const base = entMes || 0;
+      const conta = base ? ` Com a sua entrada deste mês (${formatBRL(base)}): uns ${formatBRL(Math.round(base * 0.5))} pro necessário, ${formatBRL(Math.round(base * 0.3))} pros desejos e ${formatBRL(Math.round(base * 0.2))} pra guardar.` : '';
+      return { fato: `Tem uns jeitos que funcionam bem: 1) Regra 50/30/20: metade pro necessário, 30% pro que você quer e 20% pra guardar.${conta} 2) Pague-se primeiro: o salário caiu, já transfere a parte de guardar, antes de gastar. 3) Desafio das 52 semanas: R$ 1 na 1ª semana, R$ 2 na 2ª… e no fim do ano são R$ 1.378. 4) Envelopes: um limite por categoria (o orçamento em Ajustes faz isso e eu aviso quando acaba). Se 20% for muito agora, começa com 5% e vai subindo. Quer que eu crie uma meta pra você?`,
+        cru: true, sugestoes: ['Quero criar uma meta', 'O que é 50/30/20?', 'O que é desafio das 52 semanas?'] };
+    }
+    case 'pagaram_pra_mim': {
+      // 2.3.3 (JF): "comi fora, mas não gastei: a galera pagou". Conta como dia sem gasto (o foguinho) se a pessoa quiser
+      const dia = dataDoTexto(intencao.t, today);
+      const quando = dia === today ? 'hoje' : `o dia ${dia.slice(8, 10)}/${dia.slice(5, 7)}`;
+      const quem = { familia: 'Família é tudo, né?', par: 'Que fofura!', trabalho: 'Por conta da firma, melhor ainda.', amigos: 'Amigo bom é assim!' }[intencao.quem] || 'Que sorte!';
+      const vezes = intencao.vezes || 1;
+      const extra = vezes >= 3 ? ` Já é a ${vezes}ª vez este mês que te bancam: quando der, retribui com um café ou um lanche, que amizade também se cuida.` : '';
+      return { fato: `${quem} Comer fora sem gastar é economia de verdade, e eu anoto isso também. Quer que eu marque ${quando} como dia sem gasto? Conta pro seu foguinho.${extra}`,
+        cru: true, sugestoes: [], acao: { tipo: 'dia_sem_gasto', date: dia } };
+    }
+    case 'vaquinha_parte':
+      return { fato: 'Vaquinha, boa! Quanto foi a sua parte? Me fala tipo "minha parte na vaquinha foi 40" que eu anoto só o que saiu do seu bolso.', cru: true, sugestoes: [] };
     case 'so_curiosidade':
       return { fato: 'Beleza, fica a informação! Meu foco é o seu dinheiro: se um dia virar plano, é só me chamar que a gente organiza.', cru: true, sugestoes: ['Quanto gastei este mês?'] };
     case 'gasto_demais': {

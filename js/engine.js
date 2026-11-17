@@ -1404,7 +1404,8 @@ export function idadeDe(aniversario, today = toISODate()) {
 /** Faixa do jeito de falar: até 12 · 13 a 17 · 18 a 25 · adulto. */
 export function faixaEtaria(idade) {
   if (idade == null) return null;
-  return idade <= 12 ? 'crianca' : idade <= 17 ? 'adolescente' : idade <= 25 ? 'jovem' : 'adulto';
+  // 2.3.3 (JF): 50 a 59 "maduro" (adulto, sério, mas ainda jovial e brincalhão); 60+ "senior" (o app fica mais fácil)
+  return idade <= 12 ? 'crianca' : idade <= 17 ? 'adolescente' : idade <= 25 ? 'jovem' : idade <= 49 ? 'adulto' : idade <= 59 ? 'maduro' : 'senior';
 }
 
 /** Hoje é aniversário? (29/02 comemora em 28/02 nos anos que não são bissextos) */

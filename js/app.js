@@ -8,7 +8,7 @@ import {
   DEFAULT_CATEGORIES, INCOME_SOURCES, BANKS, formatBRL, parseAmount, parseSignedAmount, toISODate, monthKey,
   shiftMonth, monthLabel, createExpense, createIncome, createAccount, summarizeMonth, detectExpenseEvents,
   detectMonthClose, incomeIn, accountBalance, accountLabel, totalBalance, analyze,
-  TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
+  TIPOS_COMPROMISSO, createCompromisso, situacaoCompromissos, createPlano, analisarPlanejamento, sugerirCategoria, validarBackup, lerAniversario, idadeDe, faixaEtaria, ehAniversario, createCartao, faturaDoCartao, createMeta, progressoMeta, guardarNaMeta, lerMesAlvo,
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
   valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, depoisDoSaldo, folgaDoPiso, diferencaDoSaldo, fatoDaSemana, podeGastar, resumoEntradas, progressoOrcamentoDiario, mascaraCentavos, valorForaDoComum, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
@@ -657,6 +657,29 @@ export function renderPerfil() {
     : 'O C.A.O.S. ainda não te conhece.';
   $('#perfil-aniversario').value = p?.aniversario || '';
   $('#perfil-aniversario').max = toISODate();
+  ajustarPelaIdade();
+}
+
+/**
+ * 2.3.3 (JF): "o aplicativo se adapta de acordo com a sua idade". A faixa vai pro <html data-idade> (o CSS cuida do
+ * resto): criança não vê cartão de crédito (a não ser que diga que já tem); 60+ ganha letra e botões maiores, uma vez
+ * só e avisando (dá pra mudar em Ajustes).
+ */
+function ajustarPelaIdade() {
+  const idade = idadeDe(state.perfil?.aniversario, toISODate());
+  const faixa = idade == null ? null : faixaEtaria(idade);
+  const raiz = document.documentElement;
+  if (faixa) raiz.dataset.idade = faixa; else delete raiz.dataset.idade;
+  raiz.dataset.cartao = state.settings.mostrarCartao || state.accounts.some(a => a.tipo === 'cartao') ? 'sim' : 'nao';
+  $('#cartao-crianca').hidden = faixa !== 'crianca';
+  $('#mostrar-cartao').checked = !!state.settings.mostrarCartao;
+  if (faixa === 'senior' && !state.settings.idadeAjustada) {
+    state.settings.idadeAjustada = true;
+    if (!['grande', 'maior'].includes(state.settings.letra)) state.settings.letra = 'grande';
+    saveSettings();
+    aplicarAcessibilidade();
+    toast('Deixei a letra e os botões maiores pra ficar mais fácil. Se preferir, dá pra mudar em Ajustes → Acessibilidade.');
+  }
 }
 
 // ---------- Me ajuda: o C.A.O.S. guia (1.5) ----------
@@ -1554,6 +1577,7 @@ function bind() {
     renderPerfil();
     toast(v ? 'Pronto, anotei seu aniversário.' : 'Aniversário apagado.');
   });
+  $('#mostrar-cartao').addEventListener('change', e => { state.settings.mostrarCartao = e.target.checked; saveSettings(); ajustarPelaIdade(); });
   $('#note').addEventListener('input', sugerirPelaDescricao);
 
   $('#export-btn').addEventListener('click', exportBackup);

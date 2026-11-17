@@ -1545,3 +1545,17 @@ li.feito .passo-n { background: transparent; color: var(--ok); box-shadow: inset
   .ajuda-menu.abrindo, .ajuda-menu.fechando { animation: none; }
   .me-ajuda, #plan-resumo #plan-mais span { transition: none; }
 }
+
+/* ---------- 2.3.3 O app se ajusta à idade (JF, 17/11) ---------- */
+/* Criança: cartão de crédito fica escondido (a não ser que ela diga em Seu perfil que já tem um) */
+:root[data-idade="crianca"][data-cartao="nao"] #add-cartao-card,
+:root[data-idade="crianca"][data-cartao="nao"] .ajuda-menu [data-guia="cartao"] { display: none; }
+/* 60+: botões maiores, nomes da barra maiores e o botão de ajuda com a palavra "Ajuda" escrita */
+:root[data-idade="senior"] .tabbar a { font-size: .82rem; }
+:root[data-idade="senior"] .tabbar a .ico { width: 1.45em; height: 1.45em; }
+:root[data-idade="senior"] :is(.atalho, .primary, .ghost, .resumo-mais, .comece-lista button) { min-height: 52px; }
+:root[data-idade="senior"] .resumo-mais { font-size: 1rem; padding: 10px 18px; }
+@media (max-width: 1023.98px) {
+  :root[data-idade="senior"] .me-ajuda { width: auto; height: 52px; padding: 0 16px; border-radius: 99px; gap: 6px; }
+  :root[data-idade="senior"] .me-ajuda .me-ajuda-txt { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
+}

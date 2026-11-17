@@ -10,7 +10,7 @@ test('idade e faixa', () => {
   assert.equal(idadeDe('2000-11-07', '2026-11-06'), 25);
   assert.equal(idadeDe(null, '2026-11-06'), null);
   assert.equal(idadeDe('2030-01-01', '2026-11-06'), null);
-  assert.deepEqual([5, 12, 13, 17, 18, 25, 26, 70].map(faixaEtaria), ['crianca', 'crianca', 'adolescente', 'adolescente', 'jovem', 'jovem', 'adulto', 'adulto']);
+  assert.deepEqual([5, 12, 13, 17, 18, 25, 26, 49, 50, 59, 60, 70].map(faixaEtaria), ['crianca', 'crianca', 'adolescente', 'adolescente', 'jovem', 'jovem', 'adulto', 'adulto', 'maduro', 'maduro', 'senior', 'senior']);
 });
 
 test('lê a data do jeito que a pessoa escreve', () => {

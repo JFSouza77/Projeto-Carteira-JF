@@ -290,6 +290,12 @@ export async function confirmarAcao(i, ok) {
       addMsg({ de: 'caos', texto: 'Antes de anotar, cadastra uma conta (o banco e o saldo, nada de senha). Toca em Contas aqui embaixo, ou no passo 2 do "Comece por aqui", que eu te levo.' });
       return;
     }
+    if (a.tipo === 'dia_sem_gasto') {
+      const { marcarDiaSemGasto } = await import('./inicio.js');
+      const fala = await marcarDiaSemGasto(a.date);
+      addMsg({ de: 'caos', texto: fala ? fala.texto : 'Anotado: dia sem gasto. Economia de quem tem bons amigos!', rosto: fala?.rosto });
+      return;
+    }
     if (a.tipo === 'criar_meta') {
       await salvarMetas([...state.metas, a.meta]);
       addMsg({ de: 'caos', texto: `Meta ${a.meta.nome} salva! Ela fica na aba 📅 Mês. Quando guardar dinheiro, me fala "guardei 50 na meta ${a.meta.nome}" que eu somo.` });
