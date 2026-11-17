@@ -132,6 +132,24 @@ const BALCONISTA = Object.freeze([
   'Essa foge do meu foco: pesquisar produto é com o Google. O que eu faço bem: ver se {t} cabe no mês, se vale à vista ou parcelado, e te ajudar a juntar se não couber agora.',
   'Balconista eu não sou, mas parceiro do bolso, sim! Me fala o preço de {t} (ou cola o link da loja) que eu digo se faz sentido e se cabe no mês. Se quiser mesmo que eu pesquise, diz "pesquisa pra mim": é a minha pesquisa pesada do dia.',
 ]);
+// 2.3.5.3 (JF, 17/11): bebida alcoólica. Ele anota sempre, brinca de vez em quando ("nem me chama?"), e se o mês
+// pesar dá o conselho ("se conselho fosse bom, ninguém dava, vendia"); muito alto, lembra dos Alcoólicos Anônimos.
+const BEBIDA = /\b(cerveja|cervejas|chopp|chope|chopes|cachaca|pinga|vodka|whisky|uisque|vinho|vinhos|gin|drink|drinks|caipirinha|caipiroska|tequila|rum|licor|catuaba|bar|barzinho|boteco|happy hour|saideira|bebida alcoolica|bebidas)\b/;
+const BEBIDA_PIADA = Object.freeze([
+  'Pô, nem me chama? Da próxima eu vou junto! 🍻',
+  'Saúde! 🍺 Só não esquece de mim no próximo brinde.',
+  'Anotado. E o convite pro C.A.O.S., cadê? 😄',
+  'Boa! Só lembra: quem bebe não dirige, e o Uber também entra na conta.',
+  'Tim-tim! 🥂 Eu fico aqui cuidando da conta enquanto você se diverte.',
+]);
+const BEBIDA_CONSELHO = Object.freeze([
+  'Se conselho fosse bom, ninguém dava, vendia. Mas como você não tá podendo comprar muita coisa, esse vai de graça: bebida e barzinho já somam {t} este mês. Dá uma segurada, pô?',
+  'Ó, sem sermão: já foram {t} em bebida e bar este mês. Eu entendo, é bom, mas vamos maneirar? Menos é mais.',
+  'Deixa eu te ajudar: {t} em bebida no mês já pesa. Que tal um teto pro barzinho até o salário cair?',
+  'Conselho de graça, que tá tudo caro: {t} em bebida este mês. Bora cortar um pouquinho? Eu fico de olho junto.',
+  'Rapaz… {t} em bebida e bar este mês. Não é bronca, é cuidado: vamos dar uma segurada?',
+]);
+const BEBIDA_AA = ' E se em algum momento ficar difícil segurar, os Alcoólicos Anônimos ajudam de graça, sem julgamento. Tô aqui com você.';
 const umaDe = (lista, n, t) => lista[n % lista.length].replace('{t}', t);
 
 /**
@@ -176,6 +194,18 @@ function cuidadosDoGastoTudo(cat, intencao, expenses, incomes, mes) {
     const passado = soma(expenses.filter(e => String(e.date).slice(0, 7) === mesAnt && ehSaude(e)));
     const limite = Math.max(20000, Math.round(passado * 1.5));
     if (antes < limite && depois >= limite) { out.push(umaDe(CUIDADO_SAUDE, Math.floor(depois / 1000), formatBRL(depois))); assunto = 'cuidado_saude'; }
+  }
+  if (BEBIDA.test(intencao.t)) {
+    const doMesB = expenses.filter(e => doMes(e) && BEBIDA.test(norm(e.note || '')));
+    const n = doMesB.length + 1;
+    const antes = soma(doMesB), depois = antes + v;
+    const entradas = soma(incomes.filter(doMes));
+    const degrau = x => Math.floor(x / 20000);
+    const muito = depois >= 50000 || (entradas > 0 && depois >= entradas * 0.2);
+    if (degrau(depois) > degrau(antes) || (antes < 50000 && depois >= 50000) || (entradas > 0 && antes < entradas * 0.1 && depois >= entradas * 0.1)) {
+      out.push(umaDe(BEBIDA_CONSELHO, degrau(depois), formatBRL(depois)) + (muito ? BEBIDA_AA : ''));
+      assunto = 'apostas_maneirar';
+    } else if (n === 1 || n % 5 === 0) out.push(umaDe(BEBIDA_PIADA, n, ''));
   }
   // 2.3.4.3 (JF): compra demais no mês (a 5ª, 10ª… compra, ou a cada R$ 500): o Sacoleiro aparece, sem sermão
   if (cat?.id === 'compras') {

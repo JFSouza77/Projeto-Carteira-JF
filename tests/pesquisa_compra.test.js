@@ -177,3 +177,19 @@ test('filtros: política, previsão, bicho silvestre, droga, cigarro, brinquedo 
   assert.equal(fala('quanto é o salário mínimo?').intent, 'glossario');
   assert.notEqual(fala('comprei uma coca de 6 no pix').texto.match(/compactuo/), true);
 });
+
+// 2.3.5.3 (JF): bebida: anota sempre, brinca de vez em quando, conselho quando pesa, AA quando passa muito
+test('bebida: piada na 1ª do mês, conselho de graça quando pesa e Alcoólicos Anônimos quando passa muito', async () => {
+  const { conversar } = await import('../js/caos/index.js');
+  const { DEFAULT_CATEGORIES } = await import('../js/engine.js');
+  const hoje = new Date().toISOString().slice(0, 10);
+  const base = { incomes: [], accounts: [{ id: 'c', tipo: 'corrente', name: 'Inter' }], categories: DEFAULT_CATEGORIES.map(c => ({ ...c })) };
+  const fala = (f, expenses = []) => conversar(f, { ...base, expenses }, { mood: 'suave', memory: null, now: Date.now(), perfil: { apelido: 'Ana' } }).fala;
+  const p = fala('comprei 3 cervejas de 15 no pix');
+  assert.ok(p.acao); assert.match(p.texto, /(Saúde|chama|brinde|Tim-tim|Uber|convite)/);
+  const muitas = [{ id: 'b', amountCents: 18000, categoryId: 'restaurante', note: 'Barzinho', date: hoje }];
+  const c = fala('gastei 40 no bar no pix', muitas);
+  assert.ok(c.acao); assert.match(c.texto, /R\$\s220,00/); assert.doesNotMatch(c.texto, /Anônimos/);
+  const demais = [{ id: 'b', amountCents: 48000, categoryId: 'restaurante', note: 'Barzinho', date: hoje }];
+  assert.match(fala('gastei 40 no bar no pix', demais).texto, /Alcoólicos Anônimos/);
+});

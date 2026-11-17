@@ -14,7 +14,7 @@ const LEMBRETES = GERADORES.lembrete_limites.inteira.geral;
 const temLembrete = t => LEMBRETES.some(l => t.includes(l));
 
 test('núcleo (desde 1.4.0): IA de bolso, limites e jeito de ajudar', () => {
-  assert.match(NUCLEO.versao, /^1\.([4-9]|\d\d)\./);
+  assert.match(NUCLEO.versao, /^(1\.([4-9]|\d\d)|[2-9])\./);
   assert.match(IDENTIDADE.oQueSou.curto, /IA de bolso/);
   assert.ok(IDENTIDADE.oQueSou.porProjeto.carteira);
   assert.ok(IDENTIDADE.limites.frequencia);
