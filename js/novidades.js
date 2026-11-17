@@ -8,6 +8,7 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.3.0 Alfa',
+    ate: '2.3.0.1',
     data: '18/11/2026',
     nome: 'Trabalho e Renda',
     t: 'Plantão, piso, salário mínimo, PIB, mais moedas, mesada e foto com legenda no Chat.',
@@ -19,7 +20,9 @@ export const NOVIDADES = Object.freeze([
       '🧒 Pedir mesada: no Chat, pergunte "como peço mesada?" e ele dá dicas e uma ideia de como conversar.',
       '📖 Mais palavras no glossário: salário mínimo de 2026, PIB, piso salarial, plantão, hora extra e mesada.',
     ],
-    qol: [],
+    qol: [
+      '🍀 Fezinha: no Chat, diga "joguei 6 na mega". Ele anota em Lazer e, se perguntar, mostra a chance real de ganhar.',
+    ],
   },
   {
     v: '2.2.0 Alfa',
