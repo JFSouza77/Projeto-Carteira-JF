@@ -119,3 +119,15 @@ test('link de loja: confere o preço (pesquisa pesada), e a lista de "já usei h
   assert.equal(PESADA_ESGOTADA.length % 5, 0);
   for (const x of [...PESADA_ESGOTADA, PESADA_USADA]) assert.match(x, /ChatGPT/);
 });
+
+// 2.3.4.7 (JF): beisebol, boliche e patinação também são lazer; resultado de jogo continua fora do campo
+test('lazer: beisebol, boliche e patinação', async () => {
+  const { conversar } = await import('../js/caos/index.js');
+  const { DEFAULT_CATEGORIES } = await import('../js/engine.js');
+  const categories = DEFAULT_CATEGORIES.map(c => ({ ...c }));
+  const fala = f => conversar(f, { expenses: [], incomes: [], accounts: [{ id: 'c', tipo: 'corrente', name: 'Inter' }], categories }, { mood: 'suave', memory: null, now: Date.now(), perfil: { apelido: 'Ana' } }).fala;
+  for (const f of ['quero ir num jogo de beisebol', 'quanto custa um ingresso de jogo de beisebol?', 'quero ir no boliche sábado', 'quanto custa a pista de patinação no gelo?']) assert.equal(fala(f).intent, 'plano_lazer', f);
+  assert.equal(fala('gastei 80 no boliche no pix').acao.categoryId, 'lazer');
+  assert.equal(fala('paguei 50 na patinação no pix').acao.categoryId, 'lazer');
+  assert.notEqual(fala('quem ganhou o jogo de beisebol ontem?').intent, 'plano_lazer');
+});

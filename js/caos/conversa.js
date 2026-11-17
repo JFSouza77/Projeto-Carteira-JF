@@ -33,6 +33,7 @@ const SINONIMOS = {
   saude: ['saude', 'farmacia', 'remedio', 'medico', 'consulta', 'exame', 'dentista', 'plano de saude', 'academia'],
   lazer: ['lazer', 'cinema', 'show', 'festa', 'viagem', 'passeio',
     // 2.3.0.1 (JF): as fezinhas (loteria) contam como Lazer
+    'boliche', 'patinacao', 'pista de patinacao', 'patinacao no gelo', 'rinque', 'beisebol', 'jogo de beisebol', 'kart', 'paintball', 'fliperama', 'teatro', 'museu', // 2.3.4.7
     'mega sena', 'megasena', 'mega da virada', 'mega', 'quina', 'lotofacil', 'lotomania', 'dupla sena', 'timemania', 'dia de sorte', 'super sete', 'loteria', 'loterica', 'raspadinha', 'raspadinhas', 'fezinha', 'bolao'],
   // revisão do Gemini (16/11): jogo tinha ficado em Lazer depois que a categoria Jogos nasceu (2.2.8)
   jogos: ['jogos', 'jogo', 'game', 'games', 'steam', 'psn', 'xbox', 'nintendo', 'skin', 'passe de batalha', 'robux', 'vbucks'],
@@ -735,7 +736,7 @@ export const PASSOS_PESQUISA = Object.freeze({
 });
 const NOME_DO_PLANO = { ram: 'Pesquisa de memória RAM (compatível com o PC da pessoa)', peca: 'Pesquisa de peça de computador (compatível com o PC da pessoa)', tech: 'Pesquisa de tecnologia', lazer: 'Plano de passeio', viagem: 'Pesquisa de viagem', produto: 'Pesquisa de compra', pet: 'Plano de pet', moradia: 'Plano de moradia', transporte: 'Plano de transporte', economizar: 'Plano pra economizar' };
 
-const LAZER = /\b(restaurante|restaurantes|lanchonete|pizzaria|hamburgueria|cinema|cinemark|cinepolis|kinoplex|filme no cinema|ingresso|ingressos|show|shows|teatro|teatros|peca de teatro|peca|musical|stand ?up|comedia|opera|concerto|circo|museu|museus|exposicao|parque de diversao|parque de diversoes|parque aquatico|zoologico|balada|barzinho|rodizio|passeio|role|festival|estadio|jogo de futebol|partida de futebol|boliche|escape room|karaoke|trilha|evento|eventos)\b/;
+const LAZER = /\b(restaurante|restaurantes|lanchonete|pizzaria|hamburgueria|cinema|cinemark|cinepolis|kinoplex|filme no cinema|ingresso|ingressos|show|shows|teatro|teatros|peca de teatro|peca|musical|stand ?up|comedia|opera|concerto|circo|museu|museus|exposicao|parque de diversao|parque de diversoes|parque aquatico|zoologico|balada|barzinho|rodizio|passeio|role|festival|estadio|jogo de futebol|partida de futebol|jogo de beisebol|beisebol|baseball|jogo de basquete|jogo de volei|boliche|pista de patinacao|patinacao|patinacao no gelo|rinque|kart|paintball|laser tag|fliperama|escape room|karaoke|trilha|evento|eventos)\b/; // 2.3.4.7 (JF): beisebol, boliche, patinação
 // 2.3.4.5 (JF, 17/11: "preço de notebook, celular, memória RAM… tem que estar ligado à IA"): tecnologia
 const TECH = /\b(computador|computadores|notebook|notebooks|pc|pc gamer|memoria ram|ram|placa de video|placa mae|ssd|hd externo|processador|monitor|teclado|mouse|headset|celular|celulares|smartphone|iphone|samsung|galaxy|xiaomi|motorola|redmi|tablet|ipad|macbook|playstation|ps5|ps4|xbox|nintendo switch|console|smartwatch|apple watch|tv|televisao|smart tv|airpods|fone bluetooth|camera|impressora|roteador|kindle|alexa)\b/;
 // pergunta de preço de algo de fora ("quanto tá um ingresso no cinemark?"): não é "quanto gastei" (2.3.9, JF)
@@ -1065,7 +1066,7 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   // orçamentos"): fala de filme, série, jogo, time, artista… sem falar do próprio dinheiro vai pra IA online
   // (sem ela, "ainda não sei responder"). Registro com valor ("gastei 40 no cinema") continua sendo registro.
   // 2.3.4.5: "ingresso de jogo de futebol" é preço, não conversa de filme/jogo
-  if (FORA_DO_TEMA.test(t) && !r.valor && !/\b(eu|meu|minha|meus|minhas|gastei|paguei|comprei|assinei|assinatura|gasto|gastos|cartao|fatura|ingressos?|preco|precos|valor|quanto (custa|sai|ta|esta|e))\b/.test(t)) return { ...r, categoria: null, intent: 'nao_entendi', foraDoTema: true };
+  if (FORA_DO_TEMA.test(t) && !r.valor && !/\b(eu|meu|minha|meus|minhas|gastei|paguei|comprei|assinei|assinatura|gasto|gastos|cartao|fatura|ingressos?|preco|precos|valor|quanto (custa|sai|ta|esta|e)|quero ir|vou (num|no|na|ao)|ir (num|no|na|ao|a))\b/.test(t)) return { ...r, categoria: null, intent: 'nao_entendi', foraDoTema: true };
   // Matemática básica (JF, 13/11 à noite: "ele ensina matemática básica pra gente"): "quanto é 15 x 23?"
   const conta = lerConta(t);
   if (conta) return { ...r, intent: 'conta', conta };
