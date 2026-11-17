@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 2.1.6 Alfa | 17/11/2026 | Guia Turístico (ideia do JF): tela "Você é novo por aqui?" no 1º acesso (tudo, básico, uma coisa só ou pular) e tutorial estilo jogo (escurece, acende o pedaço da vez, C.A.O.S. de guia). Também em Ajustes e no botão de ajuda. Depois do tutorial, segue a apresentação no Chat. |
 | 2.1.5.1 Alfa | 16/11/2026 | Núcleo 1.8.0 (ok do JF): a cabeça meio TDAH entra no jeito de falar do C.A.O.S. (cada casa com o seu jeito de tangente). C.A.O.S. 2.4.0. |
 | 2.1.5 Alfa | 16/11/2026 | Cineminha (testes do JF): plano de passeio que diz se cabe no mês, pesquisa direta sem questionário, pedido novo sai do questionário, respiro da voz entre os balões, resumo no topo da Análise, Ajustes em grupos com ícone, alerta de conferir saldo por banco, categorias de assinatura de IA e bar. Servidor: pesquisa aceita até 800 letras e regra do passeio (precisa publicar). C.A.O.S. 2.3.9. |
 | 2.1.4 Alfa | 16/11/2026 | Formiguinha (pedido do JF): efeito formiguinha (aviso a cada 10 gastinhos de até R$ 30 + pergunta "quais meus gastinhos?"), pergunta curiosa depois do gasto no Chat, tangentes de TDAH sem internet, guardar a cada compra no cofrinho (como no Mercado Pago) e raio-X sem as linhas repetidas. C.A.O.S. 2.3.8. |

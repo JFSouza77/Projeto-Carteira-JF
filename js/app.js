@@ -25,6 +25,7 @@ import * as ia from './ia.js';
 import * as lembretes from './notificacoes.js';
 import * as conta from './conta.js';
 import { criarAvatar, formaPara, configurarAvatar, FORMAS, rostoDaForma } from './avatar.js';
+import { abrirBoasVindas } from './telas/tour.js';
 
 import { $, esc, cap, centsToInput, SERVIDOR_PADRAO, state, dados, catById, srcById, definirRender } from './estado.js';
 import { addMsg, confirmarAcao, enviarPergunta, fotoNoChat, ligarTeclado, processarFila, renderChat, tirarAnexo } from './telas/chat.js';
@@ -655,6 +656,7 @@ const AJUDA_RAPIDA = [
   { q: 'Quanto gastei este mês?', ic: 'i-lupa', cor: 'var(--cyan)' },
   { q: 'Como ponho orçamento?', ic: 'i-meta', cor: 'var(--warn)' },
   { q: 'O que você pode fazer?', ic: 'i-conversa', cor: 'var(--caos)' },
+  { tour: true, t: 'Tutorial do app (passo a passo)', ic: 'i-livro', cor: 'var(--accent)' }, // 17/11 (JF): o C.A.O.S. guia turístico
 ];
 const telaGrande = () => window.matchMedia('(min-width: 1024px)').matches;
 
@@ -691,7 +693,9 @@ function abrirAjudaMenu() {
 
 function ligarMeAjuda() {
   const b = $('#me-ajuda'), m = $('#ajuda-menu');
-  m.innerHTML = AJUDA_RAPIDA.map(a => a.guia
+  m.innerHTML = AJUDA_RAPIDA.map(a => a.tour
+    ? `<button type="button" role="menuitem" data-tour-abrir style="--cor-item:${a.cor}">${ic(a.ic)}<span>${esc(a.t)}</span></button>`
+    : a.guia
     ? `<button type="button" role="menuitem" data-guia="${a.guia}" data-ajuda style="--cor-item:${a.cor}">${ic(a.ic)}<span>${esc(a.t)}</span></button>`
     : `<button type="button" role="menuitem" data-q="${esc(a.q)}" style="--cor-item:${a.cor}">${ic(a.ic)}<span>${esc(a.q)}</span></button>`).join('')
     + `<button type="button" role="menuitem" data-q="" class="ajuda-tudo">${ic('i-livro')}<span>Ver toda a ajuda</span></button>`;
@@ -726,6 +730,7 @@ function ligarMeAjuda() {
   });
   m.addEventListener('click', e => {
     if (e.target.closest('[data-guia]')) { fecharAjudaMenu(); return; } // o guia abre pelo clique geral de [data-guia]
+    if (e.target.closest('[data-tour-abrir]')) { fecharAjudaMenu(); return; } // o tutorial abre pelo clique geral
     const q = e.target.closest('button[data-q]');
     if (!q) return;
     fecharAjudaMenu();
@@ -1130,6 +1135,8 @@ function bind() {
   // "do mês" abre o relatório: das entradas na aba Entradas, o normal na aba Gasto
   // passo a passo (15/11): qualquer [data-guia] leva até o lugar e abre o balão
   document.addEventListener('click', e => { const g = e.target.closest('[data-guia]'); if (g) guiar(g.dataset.guia, { ajuda: 'ajuda' in g.dataset }); });
+  // tutorial guiado (17/11, JF): pelo botão de ajuda ou por Ajustes, a qualquer hora
+  document.addEventListener('click', e => { if (e.target.closest('[data-tour-abrir]')) { fecharGuia(); abrirBoasVindas(); } });
   $('#guia-ok').addEventListener('click', fecharGuia);
   $('#guia-pular').addEventListener('click', async () => { state.settings.pulouConta = true; await db.setMeta('settings', state.settings); fecharGuia(); location.hash = 'inicio'; renderComece(); });
   // "não entrou nada" e "não gastei nada" (Anne, 15/11): pro mês não passar batido e o C.A.O.S. não achar que você esqueceu
@@ -1573,7 +1580,9 @@ async function init() {
   if (location.hash.slice(1) !== abrirEm) history.replaceState(null, '', `#${abrirEm}`);
   irPara(abrirEm);
   // Primeiro acesso: o C.A.O.S. se apresenta e conhece a pessoa
-  if (!state.perfil) iniciarOnboarding();
+  // 17/11 (JF): antes, a tela "Você é novo por aqui?" oferece o tutorial guiado; a apresentação vem depois dele
+  if (!state.perfil && !state.settings.tourVisto) abrirBoasVindas({ primeiraVez: true, depois: iniciarOnboarding });
+  else if (!state.perfil) iniciarOnboarding();
   else { await parabensSeForODia(); await perguntarAniversarioUmaVez(); }
   $('#install-hint').textContent = installHint();
 
