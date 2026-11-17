@@ -7,6 +7,18 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.1.9 Alfa',
+    data: '17/11/2026',
+    nome: 'Posto',
+    t: 'O C.A.O.S. agora entende de combustível: preço, rumo do petróleo e etanol ou gasolina.',
+    itens: [
+      '⛽ Preço da gasolina: no Chat, pergunte "a gasolina vai subir?" ou "como tá o petróleo?" e ele pesquisa o preço e o que mexe nele.',
+      '🧾 Tô pagando caro?: no Chat, diga "paguei 6,29 no litro, tá caro?" e ele compara com a média da sua região.',
+      '🧮 Etanol ou gasolina: no Chat, mande os dois preços, tipo "etanol 4,10 gasolina 6,20", e ele faz a conta na hora.',
+    ],
+    qol: [],
+  },
+  {
     v: '2.1.8 Alfa',
     ate: '2.1.8.1',
     data: '17/11/2026',
