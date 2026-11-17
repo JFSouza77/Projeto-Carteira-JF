@@ -119,7 +119,7 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
   }
   const { fala, memoria } = conversar(t, dados(), { mood: state.settings.mood, memory: state.caosMemory, now: Date.now(), perfil: state.perfil });
   guardarMemoria(memoria);
-  pintarRosto(fala.rosto, fala.intent);
+  pintarRosto(fala.rosto, fala.avatar || fala.intent);
 
   // Travas de crédito no aparelho (15/11, JF: "IA de bolso, sem abusar"): a mesma pergunta na última meia hora usa a
   // resposta guardada; e cada aparelho manda no máximo IA_POR_DIA perguntas por dia pra IA (o servidor tem os dele).
@@ -143,7 +143,7 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
     const texto = focoAtual() === 'financas' ? respostaForaDoFoco(t) : respostaPapoLivre();
     await respiro(texto);
     addMsg({ de: 'caos', texto, sugestoes: ['Quanto gastei este mês?', 'Me dá uma dica', 'O que é juros compostos?'], rosto: fala.rosto, assunto: 'fora_do_foco' });
-    pintarRosto(fala.rosto);
+    pintarRosto(fala.rosto, 'fora_do_foco'); // 2.3.4.4: o Recalculando
     if (state.settings.voice) falar(texto, fala.emocao);
     await anotarUso('local');
     return;
@@ -164,8 +164,8 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
       iaRecentes.set(chaveIA, { texto: resposta, em: Date.now() });
       state.chat = state.chat.filter(m => !m.temp);
       // 2.3.2: depois da média pesquisada, os botões de "quer juntar pra isso?" / "só curiosidade"
-      addMsg({ de: 'caos', texto: resposta, ia: true, sugestoes: fala.intent === 'custo_medio' ? fala.sugestoes : SUGESTOES.slice(0, 5), rosto: fala.rosto });
-      pintarRosto(fala.rosto);
+      addMsg({ de: 'caos', texto: resposta, ia: true, sugestoes: fala.intent === 'custo_medio' ? fala.sugestoes : SUGESTOES.slice(0, 5), rosto: fala.rosto, assunto: fala.avatar || null });
+      pintarRosto(fala.rosto, fala.avatar || null);
       if (state.settings.voice) falar(trocarNome(resposta, comoChamar(state.perfil)).replace(/\*\*/g, ''));
       return;
     } catch (e) {
@@ -187,8 +187,8 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
   }
   if (fala.entendeu) await anotarUso('local');
   await respiro(fala.texto);
-  addMsg({ de: 'caos', texto: fala.texto, sugestoes: fala.sugestoes, acao: fala.acao, rosto: fala.rosto, assunto: fala.intent });
-  pintarRosto(fala.rosto, fala.intent);
+  addMsg({ de: 'caos', texto: fala.texto, sugestoes: fala.sugestoes, acao: fala.acao, rosto: fala.rosto, assunto: fala.avatar || fala.intent });
+  pintarRosto(fala.rosto, fala.avatar || fala.intent);
   avatarFala(Math.min(2600, 400 + fala.texto.length * 22));
   if (state.settings.voice) falar(fala.texto, fala.emocao);
   // 2º balão (JF, 16/11): "digitando…" de novo e o "ah, e…" logo depois, como amigo no WhatsApp

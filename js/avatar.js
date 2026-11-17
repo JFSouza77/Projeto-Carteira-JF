@@ -33,16 +33,19 @@ const POR_ASSUNTO = Object.freeze({
   xingamento: 'parceiro', xingamento_2: 'desconfiado', xingamento_3: 'decepcionado', xingamento_3_forte: 'decepcionado',
   xingamento_fim: 'chocado', xingamento_fim_forte: 'vermelho', silencio: 'chocado', passou_raiva: 'anjinho', desculpa_aceita: 'parceiro',
   moeda_jogo: 'gamer',
-  consumo_carro: 'frentista', energia: 'contador', // 2.1.9.3 (JF): km por litro e kWh // 15/11 (JF): moedas de jogo
+  consumo_carro: 'frentista', energia: 'faztudo', // 2.3.4.4 (JF): luz e energia de casa são do Faz-Tudo
+  // 2.1.9.3 (JF): km por litro e kWh // 15/11 (JF): moedas de jogo
   combustivel: 'frentista', etanol_ou_gasolina: 'frentista', // 17/11 (JF): combustível
-  plano_pet: 'petlover', plano_moradia: 'corretor', plano_viagem: 'turista', plano_transporte: 'frentista', plano_economizar: 'economista', plano_produto: 'pesquisador', plano_lazer: 'pesquisador',
+  plano_pet: 'petlover', plano_moradia: 'corretor', plano_viagem: 'turista', plano_transporte: 'frentista', plano_economizar: 'economista', plano_produto: 'pesquisador', plano_lazer: 'cinefilo',
   motivacao: 'treinador', frase_do_dia: 'treinador', ditado: 'vovo', curiosidade_fin: 'professor', // 17/11 (JF)
   formiguinha: 'formiga', curiosidade: 'curioso', tangente: 'distraido', pesquisa_compra: 'pesquisador', // 16 e 17/11 (JF): avatares próprios
   // 2.3.4.3 (JF, 17/11): sem resposta → Recalculando (GPS); saúde pesando → Farmacêutico; conserto → Faz-Tudo;
   // compra demais → Sacoleiro; loteria e fezinha → Sortudo; trabalho e salário → Colega de Trabalho
   nao_entendi: 'recalculando', texto_longo: 'recalculando', ia_acordando: 'recalculando', fora_do_foco: 'recalculando',
   cuidado_saude: 'farmaceutico', cuidado_pet: 'farmaceutico', faz_tudo: 'faztudo', compras_demais: 'sacoleiro',
-  loteria: 'sortudo', apostas_maneirar: 'alerta', piso_salarial: 'trabalhador', trabalho: 'trabalhador', sair_dividas: 'economista',
+  loteria: 'sortudo', apostas_maneirar: 'alerta', piso_salarial: 'trabalhador', trabalho: 'trabalhador', sair_dividas: 'salvavidas',
+  // 2.3.4.4 (JF): estudo, lazer, tecnologia, mercado e aperto ganham avatar próprio
+  estudante: 'estudante', cinefilo: 'cinefilo', ti: 'ti', feirante: 'feirante', aperto: 'salvavidas', salvavidas: 'salvavidas',
   desabafo: 'parceiro', limite_investido: 'banqueiro', bancos: 'investidor', conta: 'contador', glossario: 'professor', privacidade: 'anjinho', como_esta: 'calmo',
 });
 
@@ -59,6 +62,7 @@ export const EMO_DA_FORMA = Object.freeze({
   guia: 'carinho', curioso: 'pensando', distraido: 'surpresa', formiga: 'preocupado', pesquisador: 'analista',
   frentista: 'calmo', petlover: 'carinho', corretor: 'orgulho', turista: 'festa', chef: 'festa',
   farmaceutico: 'carinho', faztudo: 'pensando', sacoleiro: 'preocupado', sortudo: 'festa', trabalhador: 'orgulho', // 2.3.4.3
+  estudante: 'pensando', cinefilo: 'festa', ti: 'analista', feirante: 'calmo', salvavidas: 'carinho', // 2.3.4.4
 });
 
 // 2.1.3.2 (JF, 16/11: "os rostinhos não acompanham os avatares; avatar pensador com rostinho tímido não dá"):
@@ -111,6 +115,7 @@ export const KAOMOJI_DA_FORMA = Object.freeze({
   chef: ['(•‿•)🍳', '(•ᴗ•)🥄'],
   farmaceutico: ['(•‿•)💊', '(•ᴗ•)✚'], faztudo: ['(•_•)🔧', '(•ᴗ•)🪛'], sacoleiro: ['(°o°)🛍️', '(•_•)🛍️🛍️'],
   sortudo: ['(•‿•)🍀', '(☆ᴗ☆)🍀'], trabalhador: ['(•_•)💼', '(•ᴗ•)💼 ✓'], // 2.3.4.3
+  estudante: ['(•_•)📚', '(•ᴗ•)✏️'], cinefilo: ['(•‿•)🍿', '(⌐■‿■)🎬'], ti: ['[•_•]💻', '[•ᴗ•]⌨️'], feirante: ['(•‿•)🧺', '(•ᴗ•)🍅'], salvavidas: ['(•_•)🛟', '(•ᴗ•)🛟 ✓'], // 2.3.4.4
   vovo: ['(ᵔ_ᵔ)', '(ᵔᴗᵔ) ~'],
 });
 
@@ -326,8 +331,8 @@ export const FORMAS = Object.freeze({
     acc:['cruzFarmacia','pilula','bochechas'], corpo:'translateY(-3px)',
     olhoE:{ d:'M150 202 Q 161 192, 172 202', cheio:false }, olhoD:{ d:'M228 202 Q 239 192, 250 202', cheio:false },
     sob:'', boca:'M182 242 Q 200 254, 218 242', extra:'' },
-  faztudo:   { nome:'🔧 Faz-Tudo', quando:'mecânico, eletricista, encanador, conserto', cor:'#f59e0b', modo:'calmo', grupo:'jf5',
-    acc:['capacete','chaveInglesa'], corpo:'rotate(-2deg)',
+  faztudo:   { nome:'🔧 Faz-Tudo', quando:'casa, carro, encanamento, luz, conserto', cor:'#f59e0b', modo:'calmo', grupo:'jf5',
+    acc:['capacete','chaveInglesa','furadeira'], corpo:'rotate(-2deg)',
     olhoE:{ d:'M152 196 h18 v16 h-18 z', cheio:true }, olhoD:{ d:'M230 196 h18 v16 h-18 z', cheio:true },
     sob:'', boca:'M178 244 Q 200 256, 222 242', extra:'' },
   sacoleiro: { nome:'🛍️ Sacoleiro', quando:'muita compra no mês', cor:'#e879f9', modo:'agitado', grupo:'jf5',
@@ -342,6 +347,27 @@ export const FORMAS = Object.freeze({
     acc:['cracha','maleta'], corpo:'translateY(-2px)',
     olhoE:{ d:'M152 198 h18 v14 h-18 z', cheio:true }, olhoD:{ d:'M230 198 h18 v14 h-18 z', cheio:true },
     sob:'', boca:'M176 242 Q 200 258, 224 242', extra:'' },
+  // 2.3.4.4 (JF, 17/11: "o C.A.O.S. estudante, um do lazer (cinéfilo), o cara do TI… e você vê quais outros faltam"): 60 → 65
+  estudante: { nome:'🎒 Estudante', quando:'faculdade, curso, escola, bolsa e FIES', cor:'#818cf8', modo:'calmo', grupo:'jf6',
+    acc:['oculos','mochila','livro'], corpo:'translateY(-2px)',
+    olhoE:{ d:'M154 198 a8 8 0 1 0 16 0 a8 8 0 1 0 -16 0', cheio:true }, olhoD:{ d:'M232 198 a8 8 0 1 0 16 0 a8 8 0 1 0 -16 0', cheio:true },
+    sob:'', boca:'M182 244 Q 200 254, 218 244', extra:'' },
+  cinefilo:  { nome:'🍿 Cinéfilo', quando:'lazer: cinema, show, passeio, série', cor:'#f472b6', modo:'festa', grupo:'jf6',
+    acc:['oculos3d','pipoca'], corpo:'translateY(-4px) rotate(-2deg)', anim:'balanca',
+    olhoE:{ d:'M152 196 h18 v16 h-18 z', cheio:true }, olhoD:{ d:'M230 196 h18 v16 h-18 z', cheio:true },
+    sob:'', boca:'M170 238 Q 200 266, 230 238', extra:'' },
+  ti:        { nome:'💻 Cara do TI', quando:'computador, celular, peça e programa', cor:'#22d3ee', modo:'anel', grupo:'jf6',
+    acc:['oculos','fone','notebook'], corpo:'translateY(-2px)',
+    olhoE:{ d:'M154 198 a8 8 0 1 0 16 0 a8 8 0 1 0 -16 0', cheio:true }, olhoD:{ d:'M232 198 a8 8 0 1 0 16 0 a8 8 0 1 0 -16 0', cheio:true },
+    sob:'', boca:'M184 244 h32', extra:'' },
+  feirante:  { nome:'🧺 Feirante', quando:'mercado, feira e compras do mês', cor:'#a3e635', modo:'calmo', grupo:'jf6',
+    acc:['chapeuPalha','cesta','bochechas'], corpo:'rotate(2deg)',
+    olhoE:{ d:'M150 200 Q 161 190, 172 200', cheio:false }, olhoD:{ d:'M228 200 Q 239 190, 250 200', cheio:false },
+    sob:'', boca:'M176 240 Q 200 260, 224 240', extra:'' },
+  salvavidas:{ nome:'🛟 Salva-Vidas', quando:'aperto e dívida: bora sair dessa', cor:'#fb7185', modo:'abraco', grupo:'jf6',
+    acc:['boia','apito'], corpo:'translateY(-3px)',
+    olhoE:{ d:'M152 198 h18 v14 h-18 z', cheio:true }, olhoD:{ d:'M230 198 h18 v14 h-18 z', cheio:true },
+    sob:'', boca:'M180 240 Q 200 252, 220 240', extra:'' },
   simulador: { nome:'🛒 Simulador', quando:'"vale comprar agora ou esperar?"', cor:'#facc15', modo:'lento', grupo:'jf2',
     acc:['balanca','calculadora','calendario'], corpo:'rotate(-2deg)',
     olhoE:{ d:'M156 190 h16 v18 h-16 z', cheio:true }, olhoD:{ d:'M236 190 h16 v18 h-16 z', cheio:true },
@@ -393,6 +419,7 @@ const ANIM_ACC = Object.freeze({
   bigodao:'bigode', bigode:'bigode', chapeu:'balanca', coroa:'balanca', gravata:'balanca', terno:'sobe', tesoura:'balanca',
   boneCobrador:'sobe', faixa:'sobe', viseira:'sobe', chapeuDetetive:'balanca', turbante:'sobe', nariz:'pulsa', microfone:'balanca',
   cruzFarmacia:'pulsa', pilula:'vaivem', capacete:'sobe', chaveInglesa:'balanca', sacolas:'balanca', trevo:'pulsa', cracha:'balanca', // 2.3.4.3
+  furadeira:'vaivem', mochila:'sobe', livro:'balanca', oculos3d:'sobe', pipoca:'balanca', notebook:'pulsa', chapeuPalha:'balanca', cesta:'balanca', boia:'balanca', // 2.3.4.4
   bombaGas:'balanca', orelhasPet:'balanca', osso:'vaivem', casinha:'pulsa', chave:'balanca', camera:'balanca', mala:'vaivem', chapeuChef:'balanca', colher:'vaivem', // 17/11
   chapeuGuia:'balanca', bandeira:'balanca', interrogacao:'pulsa', borboleta:'vaivem', formigas:'vaivem', binoculo:'sobe', // 17/11
   medidor:'balanca', evolucao:'sobe', capelo:'balanca', bochechas:'pulsa', monoculo:'balanca', fone:'sobe', controle:'balanca', bilhete:'balanca', olheiras:'pulsa',
@@ -757,8 +784,13 @@ d="M150 96 C 136 96, 132 76, 148 72 C 150 56, 174 52, 182 66 C 192 50, 222 54, 2
 <path class="neon" fill="none" stroke-width="4" d="M128 146 h144 M200 96 v24 M178 100 v20 M222 100 v20"/>
 </g>
 <g class="acc" data-acc="chaveInglesa"><g class="av-chaveInglesa">
-<path class="neon" fill="none" stroke-width="8" stroke-linecap="round" d="M300 310 L 344 252"/>
-<path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M336 244 a18 18 0 1 1 22 20 l -8 -4 l 6 -10 l -8 -6 l -8 8 z"/>
+<path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M302 318 l 36 -46 l 9 7 l -36 46 z"/>
+<path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M338 272 l -8 -8 a 22 22 0 0 1 26 -32 l -12 16 l 8 8 l 16 -10 a 22 22 0 0 1 -30 26 z"/>
+</g></g>
+<g class="acc" data-acc="furadeira"><g class="av-furadeira">
+<path class="neon" fill="color-mix(in srgb, var(--cor) 25%, #0f1320)" stroke-width="4" stroke-linejoin="round" d="M40 262 h52 a8 8 0 0 1 8 8 v12 a8 8 0 0 1 -8 8 h-26 l -6 30 h-16 l 4 -30 h-8 a6 6 0 0 1 -6 -6 v-16 a6 6 0 0 1 6 -6 z"/>
+<path class="neon" fill="none" stroke-width="4" stroke-linecap="round" d="M100 276 h18 M118 276 h10"/>
+<path class="neon" fill="none" stroke-width="3" d="M52 270 v12 M60 270 v12"/>
 </g></g>
 <g class="acc" data-acc="sacolas"><g class="av-sacolas">
 <path class="neon" fill="color-mix(in srgb, var(--cor) 22%, #0f1320)" stroke-width="4" stroke-linejoin="round" d="M300 262 h40 l 4 54 h-48 z"/>
@@ -779,6 +811,47 @@ d="M150 96 C 136 96, 132 76, 148 72 C 150 56, 174 52, 182 66 C 192 50, 222 54, 2
 <path class="neon" fill="none" stroke-width="3" d="M192 334 h16 M192 340 h10"/>
 <circle class="neon" cx="200" cy="322" r="5" fill="var(--cor)" stroke-width="1"/>
 </g>
+<g class="acc" data-acc="mochila">
+<path class="neon" fill="none" stroke-width="5" stroke-linecap="round" d="M146 270 q -6 30 4 56 M254 270 q 6 30 -4 56"/>
+<path class="neon" fill="color-mix(in srgb, var(--cor) 22%, #0f1320)" stroke-width="4" stroke-linejoin="round" d="M276 236 h40 a10 10 0 0 1 10 10 v54 h-60 v-54 a10 10 0 0 1 10 -10 z"/>
+<path class="neon" fill="none" stroke-width="3" d="M276 268 h50 M292 276 h18"/>
+</g>
+<g class="acc" data-acc="livro"><g class="av-livro">
+<path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M52 292 q 24 -10 44 2 q 20 -12 44 -2 v40 q -24 -10 -44 2 q -20 -12 -44 -2 z"/>
+<path class="neon" fill="none" stroke-width="3" d="M96 294 v40"/>
+</g></g>
+<g class="acc" data-acc="oculos3d">
+<path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M136 186 h56 v26 h-56 z M208 186 h56 v26 h-56 z"/>
+<path fill="#ff4d5e" opacity=".55" d="M140 190 h48 v18 h-48 z"/><path fill="#3ef0ff" opacity=".55" d="M212 190 h48 v18 h-48 z"/>
+<path class="neon" fill="none" stroke-width="4" d="M192 196 h16"/>
+</g>
+<g class="acc" data-acc="pipoca"><g class="av-pipoca">
+<path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M296 246 h52 l -8 66 h-36 z"/>
+<path fill="none" stroke="#ff4d5e" stroke-width="5" d="M310 250 l 4 58 M324 250 v58 M338 250 l -4 58"/>
+<circle class="neon" cx="304" cy="240" r="8" fill="#fff6d8" stroke-width="2"/><circle class="neon" cx="320" cy="234" r="9" fill="#fff6d8" stroke-width="2"/>
+<circle class="neon" cx="336" cy="236" r="8" fill="#fff6d8" stroke-width="2"/><circle class="neon" cx="346" cy="244" r="6" fill="#fff6d8" stroke-width="2"/>
+</g></g>
+<g class="acc" data-acc="notebook"><g class="av-notebook">
+<path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M150 296 h100 v40 h-100 z"/>
+<path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M136 336 h128 l -8 10 h-112 z"/>
+<path class="neon" fill="none" stroke-width="3" d="M166 310 l 8 6 l -8 6 M182 324 h14"/>
+</g></g>
+<g class="acc" data-acc="chapeuPalha">
+<path class="neon" fill="color-mix(in srgb, #f5d77a 30%, #0f1320)" stroke-width="4" stroke-linejoin="round" d="M162 134 Q 166 98, 200 98 Q 234 98, 238 134 Z"/>
+<path class="neon" fill="color-mix(in srgb, #f5d77a 30%, #0f1320)" stroke-width="4" d="M112 140 Q 200 118, 288 140 Q 200 152, 112 140 Z"/>
+<path class="neon" fill="none" stroke-width="3" d="M164 124 h72"/>
+</g>
+<g class="acc" data-acc="cesta"><g class="av-cesta">
+<path class="neon" fill="none" stroke-width="4" d="M302 262 q 24 -40 48 0"/>
+<path class="neon" fill="color-mix(in srgb, var(--cor) 20%, #0f1320)" stroke-width="4" stroke-linejoin="round" d="M294 262 h64 l -8 44 h-48 z"/>
+<path class="neon" fill="none" stroke-width="2" d="M300 276 h52 M302 290 h48"/>
+<circle cx="314" cy="256" r="8" fill="#ff4d5e"/><circle cx="332" cy="254" r="7" fill="#7dff8a"/>
+</g></g>
+<g class="acc" data-acc="boia"><g class="av-boia">
+<circle class="neon" cx="324" cy="270" r="30" fill="none" stroke-width="12"/>
+<path fill="none" stroke="#ffffff" stroke-width="12" stroke-dasharray="16 31" d="M324 240 a30 30 0 1 1 -0.1 0"/>
+<circle class="neon" cx="324" cy="270" r="18" fill="none" stroke-width="2"/>
+</g></g>
 <g class="acc" data-acc="colher"><g class="av-colher">
 <path class="neon" fill="none" stroke-width="6" stroke-linecap="round" d="M300 300 L 318 214"/>
 <ellipse class="neon" cx="322" cy="196" rx="11" ry="18" fill="color-mix(in srgb, var(--cor) 20%, #0f1320)" stroke-width="4"/>
