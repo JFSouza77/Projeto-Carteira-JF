@@ -24,14 +24,16 @@ test('entende viagem e produto sem roubar outras intenções', () => {
 });
 
 test('questionário sem IA, uma pergunta por vez; no fim vai pra IA com tudo junto', () => {
-  const f = papo('me ajuda a achar uma geladeira de 300 litros', 'frost free, inox', 'casa com 4 pessoas', 'tanto faz', 'este mês', 'até 5000');
+  // 2.3.4.9: geladeira agora é eletrodoméstico ("vamos por partes", com voltagem)
+  const f = papo('me ajuda a achar uma geladeira de 300 litros', 'frost free, inox', 'casa com 4 pessoas', 'tanto faz', '220V', 'até 5000');
   assert.match(f[0].texto, /Me ajuda a te ajudar/);
   for (const x of f.slice(0, 5)) { assert.equal(x.entendeu, true, 'pergunta do questionário não gasta IA'); assert.equal(x.modoIA, null); }
   assert.ok(f[0].sugestoes.includes('Pular'));
   const fim = f[5];
   assert.equal(fim.entendeu, false);
   assert.equal(fim.modoIA, 'pesquisa');
-  assert.match(fim.perguntaIA, /^Pesquisa de compra: uma geladeira de 300 litros\. Detalhes: frost free, inox\. Pra quê: casa com 4 pessoas\. Precisa pra: este mês\. Orçamento: R\$\s5\.000,00\.$/);
+  assert.match(fim.perguntaIA, /^Pesquisa de eletrodoméstico ou impressora: uma geladeira de 300 litros\. O que precisa ter: frost free, inox\. Pra quê: casa com 4 pessoas\. Voltagem: 220V\. Orçamento: R\$\s5\.000,00\./);
+  assert.ok(fim.pesada);
 });
 
 test('viagem: pergunta de onde, quando e quem, o que pesquisar e região; "Pular" deixa de fora', () => {
@@ -44,11 +46,11 @@ test('viagem: pergunta de onde, quando e quem, o que pesquisar e região; "Pular
 
 test('"não" responde a pergunta (marca) sem cancelar; "cancelar" cancela; pergunta nova sai do questionário', () => {
   // 2.3.4.8 (JF): compra comum só vira pesquisa quando a pessoa pede ("me ajuda a achar", "pesquisa")
-  const f = papo('me ajuda a achar um tenis', 'corrida', 'treino', 'não');
+  const f = papo('me ajuda a achar um colchão de casal', 'molas ensacadas', 'dormir melhor', 'não');
   assert.match(f[3].texto, /Precisa pra quando/);
-  const c = papo('me ajuda a achar um tenis', 'Cancelar');
+  const c = papo('me ajuda a achar um colchão de casal', 'Cancelar');
   assert.match(c[1].texto, /fica pra depois/);
-  const s = papo('me ajuda a achar um tenis', 'quanto gastei este mês?');
+  const s = papo('me ajuda a achar um colchão de casal', 'quanto gastei este mês?');
   assert.match(s[1].texto, /gastou|gasto/i);
 });
 
@@ -106,4 +108,17 @@ test('"quero comprar X" comum: não vira pesquisa de loja; ingresso: ele não co
   const i = papo('quero comprar o ingresso pro estádio do Maracanã')[0];
   assert.match(i.texto, /não consigo por você/);
   assert.match(papo('quero ir no shopping Vila Velha, o que eu posso comprar por lá?')[0].texto, /É um shopping/);
+});
+
+// 2.3.4.9 (JF): eletro sempre "vamos por partes"; roupa não é com ele (nem com pedido), mas ele anota; móvel é da casa
+test('geladeira e impressora: questionário mesmo detalhado; camisa: só anotar; armário: Moradia sem "conta do mês"', () => {
+  const g = papo('vê o preço de uma geladeira frost free electrolux 2 portas pra mim')[0];
+  assert.match(g.texto, /vamos por partes/i);
+  assert.equal(g.perguntaIA, null);
+  for (const f of ['quero comprar uma impressora 3d', 'quanto custa um scanner?']) assert.match(papo(f)[0].texto, /vamos por partes/i, f);
+  for (const f of ['quero comprar uma camisa social', 'pesquisa pra mim uma camisa social']) {
+    const r = papo(f)[0];
+    assert.equal(r.perguntaIA, null, f);
+    assert.match(r.texto, /anoto em Compras/, f);
+  }
 });

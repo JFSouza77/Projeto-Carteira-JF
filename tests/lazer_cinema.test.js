@@ -30,7 +30,7 @@ test('pedido detalhado de cinema vai direto, com o que já foi dito e a pergunta
 
 test('no meio do questionário, um pedido novo de pesquisa não vira resposta', () => {
   const a = fala('me ajuda a achar uma geladeira');
-  assert.match(a.fala.texto, /300 litros/);
+  assert.match(a.fala.texto, /litros/); // 2.3.4.9: geladeira tem o questionário de eletrodoméstico
   const b = fala('Pesquisa na internet o preço de um ingresso no Cinema', a.memoria).fala;
   assert.equal(b.modoIA, 'pesquisa');
   assert.match(b.perguntaIA, /ingresso/);
