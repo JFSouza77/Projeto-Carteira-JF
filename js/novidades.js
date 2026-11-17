@@ -8,7 +8,7 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.3.4 Alfa',
-    ate: '2.3.4.7',
+    ate: '2.3.4.8',
     data: '17/11/2026',
     nome: 'Bolso Atento',
     t: 'Apostas e pet com categoria própria, e o C.A.O.S. repara quando a saúde (sua ou do bicho) pesa.',

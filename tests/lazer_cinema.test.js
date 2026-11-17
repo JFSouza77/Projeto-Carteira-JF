@@ -50,7 +50,7 @@ test('17/11: pergunta de "qual o melhor" vira pesquisa na IA; do próprio dinhei
   const tipo = f => { const r = entender(f, { categories: C }); return `${r.intent}:${r.tipo || ''}:${r.direto ? 'direto' : ''}`; };
   assert.equal(tipo('Qual melhor Shopping pra curtir um cinema?!'), 'pesquisa_compra:lazer:direto');
   assert.equal(tipo('qual o melhor tipo de ração para o meu cachorro?'), 'pesquisa_compra:pet:direto');
-  assert.equal(tipo('qual o melhor custo-benefício de celular até 1500?'), 'pesquisa_compra:produto:direto');
+  assert.equal(tipo('qual o melhor custo-benefício de celular até 1500?'), 'pesquisa_compra:tech:direto'); // 2.3.4.6: tecnologia tem plano próprio
   assert.equal(tipo('me recomenda um restaurante barato em vitória'), 'pesquisa_compra:lazer:direto');
   assert.equal(tipo('onde é mais barato comprar fralda?'), 'pesquisa_compra:produto:direto');
   assert.equal(entender('qual banco rende mais?', { categories: C }).intent, 'bancos');
