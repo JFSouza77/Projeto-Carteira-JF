@@ -245,6 +245,16 @@ export function eventoOfensiva(antes) {
   return [];
 }
 
+/** 2.3.3 (JF): marca um dia como sem gasto (comi fora mas me bancaram). O "Hoje não gastei" usa a mesma coisa. */
+export async function marcarDiaSemGasto(dia = toISODate()) {
+  const antes = ofensivaAgora();
+  const dias = [...new Set([...(state.perfil?.diasSemGasto || []), dia])].sort().slice(-400);
+  state.perfil = { ...(state.perfil || {}), diasSemGasto: dias };
+  await db.setMeta('perfil', state.perfil);
+  renderizar();
+  return narrate(eventoOfensiva(antes));
+}
+
 export async function hojeNaoGastei() {
   const antes = ofensivaAgora();
   const hoje = toISODate();

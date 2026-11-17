@@ -82,6 +82,8 @@ Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o q
 | Foco da conversa | Ajustes → C.A.O.S. → "Só finanças" (padrão) ou "Papo livre" | No foco, pergunta sem dinheiro não vai pra IA: ele responde amigável e manda pro Google; desabafo ganha acolhimento + CVV 188 🖥️ |
 | Quanto custa | "em média quanto custa tirar a CNH?" / "quanto custa emplacar?" / "hotel ou pousada?" | Média curta com fonte, e pergunta se é plano (vira meta) 🌐; sem IA, dica por assunto 🖥️ |
 | Gastando demais | "tô gastando demais com cafezinho" / "tô almoçando muito fora" | Quantas vezes, quanto no mês e na semana, e quanto economiza cortando metade 🖥️ |
+| Pagaram pra mim / vaquinha | "fui almoçar e pagaram pra mim" / "minha parte na vaquinha foi 40" | Oferece marcar dia sem gasto e lembra a rotina do mês; vaquinha anota só a sua parte 🖥️ |
+| Jeitos de poupar | "como começo a guardar dinheiro?" / "quanto do salário devo guardar?" | 50/30/20 com a sua entrada, pague-se primeiro, 52 semanas, envelopes; criança: 3 cofrinhos 🖥️ |
 | Moedas de jogo | "quanto tá valendo 100 robux?" | A moeda, onde comprar, preço de hoje e alerta de golpe 🖥️/🌐 |
 
 ## 4. Aprender

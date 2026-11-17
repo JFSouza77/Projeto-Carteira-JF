@@ -648,6 +648,9 @@ export const GERADORES = {
       idade_adolescente: ['Sem enrolação:', 'Direto ao ponto:', 'Lá vai, sem sermão:', 'Saca só:', 'Na real:'],
       idade_jovem: ['Bora entender:', 'Vou te mostrar o caminho:', 'Fiz as contas pra você:', 'Olha o retrato:', 'Pra você decidir melhor:'],
       idade_adulto: ['Resumindo:', 'Aqui o número:', 'Conferi pra você:', 'Os números do momento:', 'Direto:'],
+      // 2.3.3 (JF): 50 a 59, maduro mas jovial (brinca um pouco); 60+, claro, calmo e respeitoso
+      idade_maduro: ['Vamos ao que interessa:', 'Conferi direitinho:', 'Olha só que interessante:', 'Os números, sem rodeio:', 'Aqui está, com capricho:'],
+      idade_senior: ['Com calma, olha só:', 'Vou explicar direitinho:', 'Aqui está:', 'Conferi pra você:', 'Prontinho:'],
     },
     fecho: {
       idade_crianca: [
@@ -677,6 +680,20 @@ export const GERADORES = {
         'Posso ajudar a planejar o resto do mês.',
         'Qualquer coisa, tô aqui.',
         'Seguimos de olho juntos.',
+      ],
+      idade_maduro: [
+        'Experiência conta, mas conta de cabeça cansa: deixa comigo.',
+        'Quer que eu compare com o mês passado?',
+        'Tá no caminho certo. Seguimos juntos.',
+        'Se quiser, eu detalho sem pressa.',
+        'Planejar hoje é o melhor presente pro futuro.',
+      ],
+      idade_senior: [
+        'Qualquer dúvida, é só me perguntar. Eu explico de novo, sem problema.',
+        'Se preferir, peça pra alguém de confiança olhar junto.',
+        'Tô aqui sempre que precisar.',
+        'Fique à vontade pra perguntar o que quiser.',
+        'Vamos devagar e sempre, que dá certo.',
       ],
       geral: [
         'Quer saber mais alguma coisa?',

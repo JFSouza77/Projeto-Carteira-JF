@@ -7,6 +7,21 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.3.3 Alfa',
+    data: '17/11/2026',
+    nome: 'Do Seu Jeito',
+    t: 'O app se ajusta à sua idade, e o C.A.O.S. entende quando pagaram pra você.',
+    itens: [
+      '🍕 Pagaram pra mim: no Chat, diga "fui almoçar e pagaram pra mim". Ele marca o dia sem gasto, se você quiser.',
+      '🤝 Vaquinha: no Chat, diga "minha parte na vaquinha foi 40" e ele anota só o que saiu do seu bolso.',
+      '🐷 Jeitos de poupar: no Chat, pergunte "como começo a guardar dinheiro?" e veja 50/30/20, 52 semanas e mais.',
+      '👵 Mais fácil pra quem tem 60+: com a data de nascimento em Ajustes → Seu perfil, letra e botões ficam maiores.',
+      '🧒 Pra criança: sem cartão de crédito na tela. Já tem um? Ligue "Já tenho cartão" em Seu perfil.',
+      '📖 Mais palavras no glossário: regra 50/30/20, pague-se primeiro, 52 semanas, envelopes e 3 cofrinhos.',
+    ],
+    qol: [],
+  },
+  {
     v: '2.3.2 Alfa',
     ate: '2.3.2.2',
     data: '17/11/2026',
