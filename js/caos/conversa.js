@@ -73,6 +73,8 @@ function acharCategoria(t, categorias) {
   if (melhor?.c.id === 'saude' && PET_ANIMAL.test(t)) return categorias.find(c => c.id === 'pet') || melhor.c;
   return melhor ? melhor.c : null;
 }
+// 2.3.4.3 (JF): conserto e serviço da casa ou do carro chamam o Faz-Tudo
+const FAZ_TUDO = /\b(mecanic\w*|oficina|eletricist\w*|encanador\w*|bombeiro hidraulico|hidraulic\w*|pedreiro|pintor|marceneiro|serralheiro|chaveiro|vidraceiro|conserto|consertar|reparo|reforma|manutencao|marido de aluguel|faz tudo|troca de oleo|vazamento|curto circuito|chuveiro queimado)\b/;
 const PET_ANIMAL = /\b(cachorr\w*|gat[oa]s?|gatinh\w*|cao|caes|pet|pets|filhote|bichinho|bicho de estimacao|coelho|calopsita|passarinho|hamster|veterinari\w*|vet)\b/;
 const PET_SAUDE = /\b(remedio|remedios|vermifugo|antipulgas?|veterinari\w*|vet|vacina|vacinas|exame|exames|cirurgia|consulta|internacao|tratamento|pomada|antibiotico)\b/;
 const SAUDE_CUIDADO = /\b(farmacia|drogaria|remedio|remedios|medico|medica|consulta|exame|exames|hospital|pronto socorro|upa|dentista|tratamento|antibiotico)\b/;
@@ -101,6 +103,14 @@ const CUIDADO_SAUDE = Object.freeze([
   'Reparei que a saúde pesou mais este mês ({t}). Espero que você esteja bem! Se o remédio for de uso contínuo, vale ver o Farmácia Popular.',
   '{t} em farmácia e saúde este mês. Como você está? Melhoras, se for o caso. E se precisar reorganizar o mês por causa disso, eu ajudo.',
 ]);
+// 5 jeitos do Sacoleiro falar de compra demais (regra do 0 ou 5). {n} = quantas compras, {t} = total
+const COMPRAS_DEMAIS = Object.freeze([
+  'Opa, essa é a {n}ª compra do mês, somando {t}. Tá tudo planejado? Uma dica: antes da próxima, espera 24 horas. Se ainda quiser, aí compra.',
+  'Sacolas cheias, hein! {n} compras este mês ({t}). Antes da próxima, vale perguntar: eu preciso ou só quero?',
+  'Já são {t} em compras no mês ({n} compras). Sem julgamento! Só confere se o resto do mês continua cabendo.',
+  'Ih, o carrinho tá animado: {n} compras, {t}. Que tal deixar a próxima na lista de desejos por uns dias?',
+  'Compras do mês: {n}, somando {t}. Se alguma foi por impulso, tudo bem; a gente segura a próxima juntos.',
+]);
 const umaDe = (lista, n, t) => lista[n % lista.length].replace('{t}', t);
 
 /**
@@ -111,6 +121,12 @@ const umaDe = (lista, n, t) => lista[n % lista.length].replace('{t}', t);
  * Avisa só quando cruza o degrau, pra não repetir a cada gasto.
  */
 function cuidadosDoGasto(cat, intencao, expenses, incomes, mes) {
+  const r = cuidadosDoGastoTudo(cat, intencao, expenses, incomes, mes);
+  return r.textos;
+}
+// 2.3.4.3: o mesmo, dizendo também qual avatar combina (farmacêutico, sacoleiro, alerta)
+function cuidadosDoGastoTudo(cat, intencao, expenses, incomes, mes) {
+  let assunto = null;
   const v = intencao.valor || 0;
   const doMes = e => String(e.date).slice(0, 7) === mes;
   const soma = lista => lista.reduce((x, e) => x + (e.amountCents || 0), 0);
@@ -121,13 +137,13 @@ function cuidadosDoGasto(cat, intencao, expenses, incomes, mes) {
     const entradas = soma(incomes.filter(doMes));
     const degrau = x => Math.floor(x / 20000);
     const passouPct = entradas > 0 && antes < entradas * 0.1 && depois >= entradas * 0.1;
-    if (degrau(depois) > degrau(antes) || passouPct) out.push(umaDe(MANEIRAR_APOSTAS, degrau(depois), formatBRL(depois)));
+    if (degrau(depois) > degrau(antes) || passouPct) { out.push(umaDe(MANEIRAR_APOSTAS, degrau(depois), formatBRL(depois))); assunto = 'apostas_maneirar'; }
     else if (depois >= 5000) out.push(`Com essa, as apostas do mês vão a ${formatBRL(depois)}.`);
   }
   if (cat?.id === 'pet' && PET_SAUDE.test(intencao.t)) {
     const antes = soma(expenses.filter(e => doMes(e) && e.categoryId === 'pet' && PET_SAUDE.test(norm(e.note || ''))));
     const depois = antes + v;
-    if (antes < 15000 && depois >= 15000) out.push(umaDe(CUIDADO_PET, Math.floor(depois / 1000), formatBRL(depois)));
+    if (antes < 15000 && depois >= 15000) { out.push(umaDe(CUIDADO_PET, Math.floor(depois / 1000), formatBRL(depois))); assunto = 'cuidado_pet'; }
     else if (/\b(remedio|remedios|veterinari\w*|vet|cirurgia|internacao|antibiotico)\b/.test(intencao.t)) out.push('Melhoras pro seu amiguinho! 🐾');
   }
   if (cat?.id === 'saude' && SAUDE_CUIDADO.test(intencao.t)) {
@@ -138,9 +154,17 @@ function cuidadosDoGasto(cat, intencao, expenses, incomes, mes) {
     const mesAnt = m === 1 ? `${a - 1}-12` : `${a}-${String(m - 1).padStart(2, '0')}`;
     const passado = soma(expenses.filter(e => String(e.date).slice(0, 7) === mesAnt && ehSaude(e)));
     const limite = Math.max(20000, Math.round(passado * 1.5));
-    if (antes < limite && depois >= limite) out.push(umaDe(CUIDADO_SAUDE, Math.floor(depois / 1000), formatBRL(depois)));
+    if (antes < limite && depois >= limite) { out.push(umaDe(CUIDADO_SAUDE, Math.floor(depois / 1000), formatBRL(depois))); assunto = 'cuidado_saude'; }
   }
-  return out;
+  // 2.3.4.3 (JF): compra demais no mês (a 5ª, 10ª… compra, ou a cada R$ 500): o Sacoleiro aparece, sem sermão
+  if (cat?.id === 'compras') {
+    const doMesC = expenses.filter(e => doMes(e) && e.categoryId === 'compras');
+    const n = doMesC.length + 1;
+    const antes = soma(doMesC), depois = antes + v;
+    const passouValor = Math.floor(depois / 50000) > Math.floor(antes / 50000);
+    if (n % 5 === 0 || passouValor) { out.push(umaDe(COMPRAS_DEMAIS, n, formatBRL(depois)).replace('{n}', String(n))); assunto = 'compras_demais'; }
+  }
+  return { textos: out, assunto };
 }
 
 function acharFonte(t) {
@@ -1519,6 +1543,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         return { fato: `Anotando ${formatBRL(intencao.valor)}. Foi em quê? Tipo "mercado", "uber" ou "farmácia".`, cru: true,
           sugestoes: ['Mercado', 'Restaurante', 'Transporte', 'Deixa pra depois'], aguardar: { tipo: 'desc_gasto', valor: intencao.valor, extra } };
       }
+      const cuidados = cuidadosDoGastoTudo(cat, intencao, expenses, incomes, mes); // 2.3.4.3: textos + avatar
       const recorrente = /\b(internet|luz|energia|agua|aluguel|condominio|netflix|spotify|streaming|academia|plano|celular|telefone|assinatura|mensalidade|escola|faculdade|seguro|gas)\b/.test(intencao.t)
         || ['contas', 'moradia', 'streaming'].includes(cat?.id);
       return {
@@ -1532,7 +1557,8 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
             const tot = expenses.filter(e => e.date.slice(0, 7) === mes && ehLoteriaNota(e.note)).reduce((x, e) => x + e.amountCents, 0) + intencao.valor;
             return tot >= 5000 ? `Com essa, a fezinha do mês vai a ${formatBRL(tot)}. Boa sorte! Só não deixa a sorte entrar no orçamento das contas.` : 'Boa sorte! 🍀';
           })(),
-          ...cuidadosDoGasto(cat, intencao, expenses, incomes, mes)].filter(Boolean).join(' ') || null,
+          ...cuidados.textos].filter(Boolean).join(' ') || null,
+        assunto: cuidados.assunto || (FAZ_TUDO.test(intencao.t) ? 'faz_tudo' : null),
         vars: { valor: formatBRL(intencao.valor), categoria: cat?.name ?? 'Outros' },
         acao: { tipo: 'registrar_gasto', amountCents: intencao.valor, categoryId: cat?.id ?? 'outros', date: dataDoTexto(intencao.t, today),
           note: intencao.vaquinha ? 'Vaquinha (minha parte)' : LOTERIA.test(intencao.t) ? nomeDaFezinha(intencao.t) : desc ? desc[0].toUpperCase() + desc.slice(1) : '', ...lerPagamento(intencao.t, dados.accounts) },

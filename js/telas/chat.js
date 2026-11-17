@@ -112,6 +112,7 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
     const r = respostaTextoLongo(t, state.categories);
     await respiro(r.texto);
     addMsg({ de: 'caos', texto: r.texto, sugestoes: r.sugestoes.length ? r.sugestoes : SUGESTOES.slice(0, 5), assunto: 'texto_longo' });
+    pintarRosto(null, 'texto_longo'); // 2.3.4.3: o Recalculando (GPS)
     if (state.settings.voice) falar(r.texto);
     await anotarUso('local');
     return;
@@ -173,7 +174,8 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
       // 2.3.3.5 (JF, 17/11): nada de mensagem técnica; ele diz que está "acordando" e ensina a reiniciar e perguntar de novo
       console.warn('IA online não respondeu:', e?.message);
       const texto = guardou ? `${respostaAcordando()} Se preferir esperar, guardei sua pergunta e trago a resposta depois.` : respostaAcordando();
-      addMsg({ de: 'caos', texto, sugestoes: fala.sugestoes, rosto: fala.rosto });
+      addMsg({ de: 'caos', texto, sugestoes: fala.sugestoes, rosto: fala.rosto, assunto: 'ia_acordando' });
+      pintarRosto(fala.rosto, 'ia_acordando'); // 2.3.4.3: o Recalculando (GPS)
       if (state.settings.voice) falar(texto, fala.emocao);
       pintarRosto(fala.rosto);
       return;

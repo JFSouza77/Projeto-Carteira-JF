@@ -1037,7 +1037,8 @@ async function perguntarTrabalhoUmaVez({ pedido = false } = {}) {
   await db.setMeta('perfil', state.perfil);
   if (idade != null && faixaEtaria(idade) === 'crianca') return false; // criança não ganha essa pergunta
   state.onboarding = { passo: 'trabalho', unico: true, dados: { foco: [] } };
-  addMsg({ de: 'caos', texto: pedido ? `Bora! Me conta, ${comoChamar(state.perfil)}: você trabalha com quê? Deixa eu te conhecer um pouco melhor.` : `${comoChamar(state.perfil)}, posso te perguntar uma coisa, só pra te ajudar a organizar melhor? Você trabalha com quê?`, sugestoes: [...TRABALHOS.map(([n]) => n), 'Prefiro não dizer'] });
+  addMsg({ de: 'caos', texto: pedido ? `Bora! Me conta, ${comoChamar(state.perfil)}: você trabalha com quê? Deixa eu te conhecer um pouco melhor.` : `${comoChamar(state.perfil)}, posso te perguntar uma coisa, só pra te ajudar a organizar melhor? Você trabalha com quê?`, sugestoes: [...TRABALHOS.map(([n]) => n), 'Prefiro não dizer'], assunto: 'trabalho' });
+  pintarRosto(null, 'trabalho'); // 2.3.4.3: o Colega de Trabalho
   return true;
 }
 async function responderTrabalho(t, o) {
