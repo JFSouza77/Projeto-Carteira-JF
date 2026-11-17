@@ -160,6 +160,9 @@ export function renderMes() {
     el.textContent = formatBRL(a.sobraCents);
     el.className = `big ${a.sobraCents < 0 ? 'bad' : 'ok'}`;
   }
+  // 2.3.2.2 (JF): o cartão ganha um tom pelo resultado (verde sobrando, vermelho faltando)
+  $('#plan-resumo').classList.toggle('pos', a.sobraCents != null && a.sobraCents >= 0);
+  $('#plan-resumo').classList.toggle('neg', a.sobraCents != null && a.sobraCents < 0);
   // 15/11 (Anne): cada linha abre e mostra o que tem dentro (entradas do mês, onde gastou, o que falta pagar, os planos)
   const dm = iso => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
   const det = (itens, vazio) => itens.length

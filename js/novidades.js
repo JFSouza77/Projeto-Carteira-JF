@@ -8,7 +8,7 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.3.2 Alfa',
-    ate: '2.3.2.1',
+    ate: '2.3.2.2',
     data: '17/11/2026',
     nome: 'Início Arrumado',
     t: 'O Início ficou mais organizado: cada coisa no seu lugar, e as cores de volta.',
@@ -20,6 +20,9 @@ export const NOVIDADES = Object.freeze([
     ],
     qol: [
       '✏️ Nome mais claro: na aba Entradas do Início, o quadrinho laranja agora se chama "Já saiu" (o que já foi gasto).',
+      '📅 Previsão mais limpa: no Mês, toque no valor da Previsão do mês (ou em "Ver detalhes") pra abrir as contas.',
+      '🆘 Ajuda com dois toques: no botão "?", o 1º toque escolhe a opção e o 2º abre. Ele também não cobre mais o Lançar.',
+      '🔔 Alertas em destaque: recolhidos, eles ficam maiores e no centro do Início.',
     ],
   },
   {
