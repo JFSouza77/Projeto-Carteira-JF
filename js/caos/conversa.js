@@ -28,7 +28,7 @@ const SINONIMOS = {
   delivery: ['delivery', 'ifood', 'i food', 'rappi', 'pedido de comida', 'pedi comida', 'lanche em casa'],
   restaurante: ['restaurante', 'almoco', 'jantar', 'lanche', 'lanchonete', 'bar', 'cafe', 'pizzaria', 'hamburguer', 'sorvete', 'casquinha', 'acai', 'pastel', 'salgado', 'coxinha', 'mcdonalds', 'mcdonald s', 'mc donalds', 'burger king', 'subway', 'bobs'],
   transporte: ['transporte', 'uber', '99', 'onibus', 'metro', 'gasolina', 'combustivel', 'estacionamento', 'pedagio', 'taxi', 'carro', 'posto', 'etanol', 'alcool', 'diesel'],
-  moradia: ['moradia', 'aluguel', 'condominio', 'iptu', 'casa'],
+  moradia: ['moradia', 'aluguel', 'condominio', 'iptu', 'casa', 'armario', 'guarda roupa', 'sofa', 'colchao', 'estante', 'rack', 'movel', 'moveis', 'cortina', 'geladeira', 'fogao', 'maquina de lavar', 'micro ondas'], // 2.3.4.9: móvel e eletrodoméstico são da casa
   contas: ['contas', 'conta de luz', 'luz', 'agua', 'internet', 'celular', 'telefone', 'gas', 'energia', 'boleto'],
   saude: ['saude', 'farmacia', 'remedio', 'medico', 'consulta', 'exame', 'dentista', 'plano de saude', 'academia'],
   lazer: ['lazer', 'cinema', 'show', 'festa', 'viagem', 'passeio',
@@ -42,7 +42,7 @@ const SINONIMOS = {
   streaming: ['streaming', 'netflix', 'mercado play', 'disney', 'disney plus', 'hbo', 'hbo max', 'max', 'paramount',
     'paramount plus', 'prime video', 'amazon prime', 'globoplay', 'apple tv', 'crunchyroll', 'spotify', 'deezer',
     'youtube premium', 'star plus', 'telecine', 'assinatura de filme'],
-  compras: ['compras', 'roupa', 'tenis', 'sapato', 'shopping', 'presente', 'eletronico', 'loja', 'shopee', 'amazon', 'mercado livre', 'shein', 'aliexpress'],
+  compras: ['compras', 'roupa', 'roupas', 'camisa', 'camisa social', 'camiseta', 'calca', 'blusa', 'vestido', 'bermuda', 'saia', 'jaqueta', 'tenis', 'sapato', 'shopping', 'presente', 'eletronico', 'loja', 'shopee', 'amazon', 'mercado livre', 'shein', 'aliexpress'],
   // Educação (JF, 13/11): faculdade e bolsa de estudos
   // 2.3.4 (JF, num pet center): o que é do bicho vai pra Pet (ganha de Saúde quando o remédio é dele)
   pet: ['pet', 'petshop', 'pet shop', 'racao', 'petisco', 'areia de gato', 'areia do gato', 'tapete higienico', 'banho e tosa', 'tosa', 'veterinario', 'veterinaria', 'vet', 'vermifugo', 'antipulgas', 'antipulga', 'coleira', 'cobasi', 'petz', 'petlove', 'cachorro', 'cachorra', 'gato', 'gata', 'cao', 'filhote', 'remedio do cachorro', 'remedio do gato', 'remedio pro cachorro', 'remedio pro gato'],
@@ -644,13 +644,14 @@ const SO_CHAMADO = /^(e ai|eai|fala|oi|ola|opa|salve|bom dia|boa tarde|boa noite
 // pesquisa só, certeira, sem inventar número. O orçamento é sempre o último.
 const PRIVACIDADE = 'Fica tranquilo: esta conversa fica só no seu celular. Pra IA vai só o necessário, sem seu nome, e o servidor do app não guarda sua pergunta. Quer apagar? A lixeira do Chat limpa a conversa e a minha memória dela. ';
 // 2.3.4.6 (JF): pesquisa de tecnologia é "pesada" (vai muito além de uma IA de bolso): uma por dia
-const PESADA = new Set(['ram', 'peca', 'tech']);
+const PESADA = new Set(['ram', 'peca', 'tech', 'eletro']);
 // o caminho das pedras de cada plano, pra quando não tem IA (ou a pesada do dia já foi)
 export const CAMINHO_PLANO = Object.freeze({
   viagem: 'Compare em 2 ou 3 lugares: o site das companhias (Azul, Gol, Latam) e um buscador (Google Voos, Decolar); pra hotel, Booking ou Airbnb filtrando a região. Confira se é ida e volta, bagagem, taxas, horário e escala. Numa viagem completa, some passagem, hospedagem, comida, transporte, seguro viagem e, se for pra fora, o câmbio.',
   produto: 'Compare em 2 ou 3 lojas (Mercado Livre, Amazon, Magalu) ou num comparador (Buscapé, Zoom). Confira frete, prazo, garantia, parcelamento e a reputação do vendedor.',
   ram: 'Pra memória: confira na placa-mãe (site do fabricante) o tipo (DDR3, DDR4 ou DDR5), a frequência máxima e quantos pentes cabem; notebook usa SO-DIMM. Dois pentes iguais (dual channel) rendem mais que um grande. Compare em 2 ou 3 lojas (Kabum, Pichau, Terabyte, Amazon) ou no Buscapé e no Zoom, e fique de olho no frete.',
   peca: 'Pra peça de PC: confira a compatibilidade antes (soquete do processador, tipo de memória, espaço no gabinete e a fonte em watts pra placa de vídeo). Sites como o PCPartPicker ajudam a checar. Compare em 2 ou 3 lojas (Kabum, Pichau, Terabyte, Amazon) e no Buscapé, e veja garantia e frete.',
+  eletro: 'Pra eletrodoméstico ou impressora: defina o tamanho e o que precisa ter, confira a voltagem (110, 220 ou bivolt) e o selo Procel de consumo de energia. Na impressora, veja o preço do cartucho ou da tinta, que pesa mais que a própria impressora (tanque de tinta sai mais barato por página). Compare em 2 ou 3 lojas e no Buscapé, com frete e garantia.',
   tech: 'Pra aparelho: defina o mínimo que você precisa (memória, armazenamento, bateria) e compare 2 ou 3 modelos parecidos. Veja o histórico de preço (Zoom ou Buscapé), garantia e se a loja é oficial. Recondicionado com garantia pode sair bem mais barato.',
   pet: 'Some o fixo do mês (ração, areia ou tapete, antipulgas) e reserve pro que vem de vez em quando (vacinas, vermífugo, veterinário, banho e tosa). Uma reserva pra emergência do bicho evita susto. Adotar sai bem mais em conta que comprar.',
   moradia: 'Uma regra de bolso: moradia até uns 30% do que entra. Compare com anúncios do mesmo bairro e de bairros vizinhos (QuintoAndar, OLX, Zap) e some o custo de ir pro trabalho: às vezes um aluguel um pouco maior perto do serviço sai mais barato no fim do mês.',
@@ -700,6 +701,15 @@ export const PASSOS_PESQUISA = Object.freeze({
     { id: 'uso', rotulo: 'Pra quê', q: 'É pra quê? Jogos, trabalho, edição de vídeo, estudo?', chips: ['Jogos', 'Trabalho', 'Estudo'] },
     { id: 'orcamento', rotulo: 'Orçamento', q: 'E o orçamento? Tipo "até 2000". Se não tiver, diz "sem orçamento".', chips: ['Sem orçamento'] },
   ],
+  // 2.3.4.9 (JF: "vê o preço de uma geladeira… calma, filho, vamos por partes"): eletrodoméstico e impressora (comum,
+  // scanner ou 3D) sempre passam pelo questionário, mesmo com o pedido detalhado
+  eletro: [
+    { id: 'detalhe', rotulo: 'O que precisa ter', q: 'Vamos por partes. O que ele precisa ter? Tipo "frost free, 2 portas, uns 400 litros" ou "imprime colorido e tem Wi-Fi".' },
+    { id: 'uso', rotulo: 'Pra quê', q: 'É pra quê, e quanto vai usar? Tipo "casa com 4 pessoas", "escritório", "imprimir pouco".', chips: ['Uso leve', 'Uso pesado'] },
+    { id: 'marca', rotulo: 'Marca', q: 'Tem preferência de marca, ou alguma que você não quer?', chips: ['Tanto faz'] },
+    { id: 'voltagem', rotulo: 'Voltagem', q: 'Na sua casa é 110 ou 220? (Bivolt serve nos dois.)', chips: ['110V', '220V', 'Bivolt', 'Não sei'] },
+    { id: 'orcamento', rotulo: 'Orçamento', q: 'E já sabe mais ou menos quanto quer gastar? Tipo "até 3000". Se não tiver, diz "sem orçamento".', chips: ['Sem orçamento'] },
+  ],
   tech: [
     { id: 'aparelho', rotulo: 'Aparelho', q: 'Qual aparelho e, se já tiver de olho, qual modelo?' },
     { id: 'uso', rotulo: 'Pra quê', q: 'Pra que você vai usar? Jogos, trabalho, estudo, ou só redes sociais e vídeo?', chips: ['Jogos', 'Trabalho', 'Estudo', 'Uso básico'] },
@@ -744,10 +754,14 @@ export const PASSOS_PESQUISA = Object.freeze({
     { id: 'prazo', rotulo: 'Prazo', q: 'Em quanto tempo quer ver o resultado?', chips: ['1 mês', '3 meses', '6 meses'] },
   ],
 });
-const NOME_DO_PLANO = { ram: 'Pesquisa de memória RAM (compatível com o PC da pessoa)', peca: 'Pesquisa de peça de computador (compatível com o PC da pessoa)', tech: 'Pesquisa de tecnologia', lazer: 'Plano de passeio', viagem: 'Pesquisa de viagem', produto: 'Pesquisa de compra', pet: 'Plano de pet', moradia: 'Plano de moradia', transporte: 'Plano de transporte', economizar: 'Plano pra economizar' };
+const NOME_DO_PLANO = { eletro: 'Pesquisa de eletrodoméstico ou impressora', ram: 'Pesquisa de memória RAM (compatível com o PC da pessoa)', peca: 'Pesquisa de peça de computador (compatível com o PC da pessoa)', tech: 'Pesquisa de tecnologia', lazer: 'Plano de passeio', viagem: 'Pesquisa de viagem', produto: 'Pesquisa de compra', pet: 'Plano de pet', moradia: 'Plano de moradia', transporte: 'Plano de transporte', economizar: 'Plano pra economizar' };
 
 const LAZER = /\b(restaurante|restaurantes|lanchonete|pizzaria|hamburgueria|cinema|cinemark|cinepolis|kinoplex|filme no cinema|ingresso|ingressos|show|shows|teatro|teatros|peca de teatro|peca|musical|stand ?up|comedia|opera|concerto|circo|museu|museus|exposicao|parque de diversao|parque de diversoes|parque aquatico|zoologico|balada|barzinho|rodizio|passeio|role|festival|estadio|jogo de futebol|partida de futebol|jogo de beisebol|beisebol|baseball|jogo de basquete|jogo de volei|boliche|pista de patinacao|patinacao|patinacao no gelo|rinque|kart|paintball|airsoft|tiro esportivo|stand de tiro|clube de tiro|laser tag|fliperama|escape room|karaoke|trilha|evento|eventos)\b/; // 2.3.4.7 (JF): beisebol, boliche, patinação; 2.3.4.8: airsoft, tiro esportivo
 // 2.3.4.5 (JF, 17/11: "preço de notebook, celular, memória RAM… tem que estar ligado à IA"): tecnologia
+// 2.3.4.9 (JF): eletrodoméstico e impressora (o questionário "vamos por partes") e roupa/coisa pessoal (fora do escopo)
+const ELETRO = /\b(geladeira|refrigerador|freezer|fogao|cooktop|forno|micro ?ondas|maquina de lavar|lava e seca|lavadora|secadora|lava loucas|lava louca|airfryer|air fryer|fritadeira|ar condicionado|ventilador|aspirador|purificador|bebedouro|impressora|impressoras|impressora 3d|multifuncional|scanner|escaner)\b/;
+const MARCAS_ELETRO = /\b(electrolux|brastemp|consul|samsung|lg|panasonic|midea|philco|mondial|britania|arno|electrolux|epson|hp|canon|brother|bambu|creality|elgin|gree|springer)\b/;
+const VESTUARIO = /\b(camisa|camisas|camiseta|camisetas|calca|calcas|bermuda|short|vestido|saia|blusa|jaqueta|casaco|moletom|roupa|roupas|sapato|sapatos|tenis|sandalia|chinelo|bota|perfume|maquiagem|batom|bijuteria|brinco|colar|pulseira|cueca|calcinha|meia|meias|bone|chapeu|cinto|bolsa feminina)\b/;
 const TECH = /\b(computador|computadores|notebook|notebooks|pc|pc gamer|memoria ram|ram|placa de video|placa mae|ssd|hd externo|processador|monitor|teclado|mouse|headset|celular|celulares|smartphone|iphone|samsung|galaxy|xiaomi|motorola|redmi|tablet|ipad|macbook|playstation|ps5|ps4|xbox|nintendo switch|console|smartwatch|apple watch|tv|televisao|smart tv|airpods|fone bluetooth|camera|impressora|roteador|kindle|alexa)\b/;
 // pergunta de preço de algo de fora ("quanto tá um ingresso no cinemark?"): não é "quanto gastei" (2.3.9, JF)
 const PRECO_DE_FORA = /\b(quanto (ta|esta|custa|custam|sai|fica|anda|e|eh|ta custando|esta custando)|qual (o )?(preco|valor)|preco d[eoa]s?|valor d[eoa]s?|valores d[eoa]s?)\b/;
@@ -774,6 +788,7 @@ export function acharPesquisa(t, valor) {
   if (/\b(juntar|guardar|poupar|meta|gastei|paguei|comprei|recebi|robux|v ?bucks|diamantes|quanto gastei|quanto gasto com|gasto com|gastando com)\b/.test(t)) return null;
   let tipo = null;
   const precoDeFora = PRECO_DE_FORA.test(t) && /\b(um|uma|o|a|os|as|no|na|do|da)\b/.test(t);
+  const pedidaTxt = /\b(pesquisa|pesquisar|pesquise|busca|buscar|procura|procurar|me ajuda a (achar|encontrar|escolher)|acha|achar|encontra|encontrar|compara|comparar|ve o preco|ver o preco|olha o preco)\b/.test(t);
   if (LAZER.test(t) && (PEDE.test(t) || precoDeFora || /\b(da pra (eu )?ir|posso ir|vale ir|recomenda|pesquis|valores?|precos?|mais proxim\w*|perto( de mim| daqui)?|aqui perto|na minha cidade|tem (algum|alguma|algo)|bo[ma]s?|legal|programacao|em cartaz)\b/.test(t))) tipo = 'lazer';
   // 2.3.4.5: preço de tecnologia (comprar ou vender usado) vai pra IA pesquisar
   const venda = /\b(vender|vendo|revender|desapegar)\b/.test(t) && /\b(quanto (vale|consigo|da pra|posso|devo|cobro)|por quanto|preco|valor)\b/.test(t);
@@ -805,13 +820,25 @@ export function acharPesquisa(t, valor) {
     }
     if (tipo === 'tech') { const ap = (t.match(TECH) || [])[0]; if (ap) respTech.aparelho = ap; }
   }
+  // 2.3.4.9: eletrodoméstico e impressora (comum, scanner, 3D) → questionário "vamos por partes"; roupa e coisa pessoal
+  // (camisa, sapato, perfume…) não é com ele, nem com pedido de pesquisa: ele ajuda a anotar e a ver se cabe
+  const querSaber = PEDE.test(t) || precoDeFora || pedidaTxt || vaiComprar;
+  if (ELETRO.test(t) && querSaber && !venda) {
+    tipo = 'eletro';
+    const marca = (t.match(MARCAS_ELETRO) || [])[1];
+    if (marca) respTech.marca = marca[0].toUpperCase() + marca.slice(1);
+    const volt = t.match(/\b(110|127|220) ?v?\b|\bbivolt\b/);
+    if (volt) respTech.voltagem = volt[0].includes('bivolt') ? 'Bivolt' : `${volt[1]}V`;
+  }
+  const pessoal = VESTUARIO.test(t) && !ELETRO.test(t) && !TECH.test(t);
+  if (pessoal && (tipo === 'produto' || (!tipo && querSaber))) tipo = 'produto';
   if (!tipo) return null;
   // vai direto pra IA, sem questionário (2.3.9, JF): pesquisa pedida com todas as letras ("pesquisa na internet…"),
   // pergunta de preço curta ("quanto tá um ingresso no cinemark?") ou pedido já detalhado (o questionário só atrapalha)
   const palavras = t.split(/\s+/).filter(Boolean).length;
   // (pergunta de preço curta só pula no passeio: compra, pet e casa ainda ganham as perguntas, que poupam crédito)
   // 2.3.4.6: tecnologia não vai direto (precisa filtrar compatibilidade); só a venda de usado e o que já veio completo
-  const direto = (tipo === 'ram' || tipo === 'peca' || tipo === 'tech') ? Object.keys(respTech).length >= 3 || PESQUISA_DIRETA.test(t) || recomenda
+  const direto = tipo === 'eletro' ? false : (tipo === 'ram' || tipo === 'peca' || tipo === 'tech') ? Object.keys(respTech).length >= 3 || PESQUISA_DIRETA.test(t) || recomenda
     : PESQUISA_DIRETA.test(t) || recomenda || (tipo === 'lazer' && precoDeFora && palavras <= 12) || palavras >= 18 || (tipo === 'produto' && (venda || vaiComprar));
   const orc = t.match(/\b(orcamento|ate|teto|no maximo|maximo)\b[^0-9]{0,15}(\d[\d.,]*)/);
   const orcamento = orc ? Math.round(Number(orc[2].replace(/\./g, '').replace(',', '.')) * 100) : undefined;
@@ -819,13 +846,13 @@ export function acharPesquisa(t, valor) {
     .replace(/\b(orcamento|ate|teto|no maximo|maximo)\b[^0-9]{0,15}\d[\d.,]*( reais| mil)?/g, ' ').replace(/[?!.,;]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^((qual|o|a|os|as|da|do|de|pra|para|que|e)\s+)+/, '');
   // lazer: o que a pessoa já disse não vira pergunta de novo
   const respostas = tipo === 'lazer' ? respostasDoLazer(t) : respTech;
-  const padrao = { ram: 'a memória RAM', peca: 'essa peça', tech: 'esse aparelho', lazer: 'esse passeio', viagem: 'essa viagem', produto: 'isso', pet: 'seu pet', moradia: 'sua moradia', transporte: 'seu transporte', economizar: 'onde economizar' }[tipo];
+  const padrao = { eletro: 'esse aparelho', ram: 'a memória RAM', peca: 'essa peça', tech: 'esse aparelho', lazer: 'esse passeio', viagem: 'essa viagem', produto: 'isso', pet: 'seu pet', moradia: 'sua moradia', transporte: 'seu transporte', economizar: 'onde economizar' }[tipo];
   const aparelho = (t.match(TECH) || [])[0];
   const itemLimpo = (item || '').replace(/\b(vale a pena comprar|compensa comprar|devo comprar|vale a pena|tem (algum|alguma|algo)|bo[ma]s?|legal|vender|vendo|meu|minha|vale|quanto)\b/g, ' ').replace(/\s+/g, ' ').trim();
   // 2.3.4.8 (JF): "compra o ingresso pra mim" → ele não compra (não sai do app), mas ajuda a ver preço e se cabe
   const comprarPorMim = /\b(compra|comprar|compre|reserva|reservar|reserve)\b.{0,30}\b(ingressos?|entradas?|bilhetes?|passagens?)\b|\b(compra|compre|reserva|reserve) (pra|para) mim\b/.test(t);
-  const pedida = PESQUISA_DIRETA.test(t) || /\b(pesquisa|pesquisar|pesquise|busca|buscar|procura|procurar|me ajuda a (achar|encontrar|escolher)|acha|achar|encontra|encontrar|compara|comparar)\b/.test(t);
-  return { tipo, venda, pedida, comprarPorMim, viagem: tipo === 'viagem', item: (venda ? `preço de usado pra vender: ${aparelho || itemLimpo || 'o aparelho'}` : (itemLimpo || padrao)).slice(0, 80), direto, respostas,
+  const pedida = (PESQUISA_DIRETA.test(t) || pedidaTxt) && !(VESTUARIO.test(t) && !ELETRO.test(t) && !TECH.test(t));
+  return { tipo, venda, pedida, comprarPorMim, pessoal, viagem: tipo === 'viagem', item: (venda ? `preço de usado pra vender: ${aparelho || itemLimpo || 'o aparelho'}` : (itemLimpo || padrao)).slice(0, 80), direto, respostas,
     orcamento: orcamento && orcamento > 0 ? orcamento : (valor && /\b(orcamento|ate)\b/.test(t) ? valor : undefined) };
 }
 
@@ -1638,9 +1665,10 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       const cuidados = cuidadosDoGastoTudo(cat, intencao, expenses, incomes, mes); // 2.3.4.3: textos + avatar
       const recorrente = /\b(internet|luz|energia|agua|aluguel|condominio|netflix|spotify|streaming|academia|plano|celular|telefone|assinatura|mensalidade|escola|faculdade|seguro|gas)\b/.test(intencao.t)
         || ['contas', 'moradia', 'streaming'].includes(cat?.id);
+      const movel = /\b(armario|guarda roupa|sofa|colchao|estante|rack|movel|moveis|cortina|geladeira|fogao|maquina de lavar|micro ondas|cama box)\b/.test(intencao.t); // 2.3.4.9
       return {
         gatilho: 'proposta_registro',
-        dica: [avisoDaData(dataDoTexto(intencao.t, today), today), recorrente ? 'Isso parece conta de todo mês. Se for, cadastra em 📅 Mês → Contas fixas que eu passo a lembrar do vencimento e já entra no planejamento.' : null,
+        dica: [avisoDaData(dataDoTexto(intencao.t, today), today), recorrente && !movel ? 'Isso parece conta de todo mês. Se for, cadastra em 📅 Mês → Contas fixas que eu passo a lembrar do vencimento e já entra no planejamento.' : null,
           // 15/11 (JF, que compra Robux): gasto com jogo ganha a dica de gift card × crédito
           cat?.id === 'jogos' && !lerPagamento(intencao.t, dados.accounts).forma ? 'Dica de gamer: gift card ajuda a gastar só o que você separou pro jogo; no crédito é mais prático pra compra que se repete (passe, assinatura), mas aí vale ficar de olho na fatura.' : null,
           // 2.3.0.1 (JF): fezinha anotada; a partir de R$ 50 no mês, ele mostra o total, sem sermão
@@ -1649,6 +1677,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
             const tot = expenses.filter(e => e.date.slice(0, 7) === mes && ehLoteriaNota(e.note)).reduce((x, e) => x + e.amountCents, 0) + intencao.valor;
             return tot >= 5000 ? `Com essa, a fezinha do mês vai a ${formatBRL(tot)}. Boa sorte! Só não deixa a sorte entrar no orçamento das contas.` : 'Boa sorte! 🍀';
           })(),
+          movel ? 'Boa! Coisa pra casa que dura é um investimento legal.' : null,
           ...cuidados.textos].filter(Boolean).join(' ') || null,
         avatar: cuidados.assunto || (FAZ_TUDO.test(intencao.t) ? 'faz_tudo' : null),
         vars: { valor: formatBRL(intencao.valor), categoria: cat?.name ?? 'Outros' },
@@ -2500,6 +2529,11 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       // 2.3.4.8 (JF: "virei balconista de estofados? Sou uma IA de bolso, não o Google"): compra comum (cama, mesa e
       // banho, roupa, geladeira…) não vira pesquisa de loja. Ele ajuda no que é de dinheiro e confere preço que a
       // pessoa trouxer. Pesquisa só se pedir com todas as letras ("pesquisa pra mim"): é a pesada do dia.
+      if (tipo === 'produto' && intencao.pessoal && !intencao.passo) {
+        // 2.3.4.9 (JF: "quero comprar uma camisa social → isso não tem a ver comigo; comprou? anoto em Compras")
+        return { fato: 'Roupa e coisa pessoal eu deixo com você e com a loja: isso não tem muito a ver comigo. 😄 Agora, comprou? Me fala tipo "comprei uma camisa de 120" que eu anoto em Compras e te digo se ainda cabe no mês.', cru: true, assunto: 'plano_produto',
+          sugestoes: ['Dá pra gastar quanto até o salário?', 'Quanto gastei com compras?'] };
+      }
       if (tipo === 'produto' && !intencao.venda && !intencao.pedida && !intencao.passo) {
         return { fato: umaDe(BALCONISTA, item.length, item), cru: true, assunto: 'plano_produto',
           sugestoes: ['Dá pra gastar quanto até o salário?', 'Vale a pena parcelar?', `Quero juntar pra ${item}`.slice(0, 40)] };
@@ -2522,7 +2556,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       if (passo < passos.length) {
         const p = passos[passo];
         const abre = !intencao.passo
-          ? `${tipo === 'viagem' || tipo === 'produto' || PESADA.has(tipo) ? `Bora pesquisar ${item}!` : tipo === 'lazer' ? `Bora planejar ${item}!` : 'Bora planejar isso junto!'} Me ajuda a te ajudar: umas perguntas rápidas antes, pra eu filtrar logo de cara e não sair inventando número nem procurando o que não te serve. `
+          ? `${tipo === 'eletro' ? `Calma, vamos por partes! Bora pesquisar ${item}.` : tipo === 'viagem' || tipo === 'produto' || PESADA.has(tipo) ? `Bora pesquisar ${item}!` : tipo === 'lazer' ? `Bora planejar ${item}!` : 'Bora planejar isso junto!'} Me ajuda a te ajudar: umas perguntas rápidas antes, pra eu filtrar logo de cara e não sair inventando número nem procurando o que não te serve. `
           : '';
         return { fato: `${naoCompro}${abre}${p.q}`, cru: true, sugestoes: [...(p.chips || []), 'Pular', 'Cancelar'], aguardar: { tipo: 'pesquisa', plano: tipo, item, passo, respostas }, assunto: `plano_${tipo}` };
       }
@@ -2530,7 +2564,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       const linhas = passos.filter(p => respostas[p.id]).map(p => (p.id === 'orcamento' ? `${p.rotulo}: ${formatBRL(respostas.orcamento)}` : `${p.rotulo}: ${respostas[p.id]}`));
       if (temOrcamento && !respostas.orcamento) linhas.push('Orçamento: não informado');
       // 2.3.4.6: o que a pessoa não soube responder vai junto, pra IA explicar como descobrir e dar a faixa de cada opção
-      const naoSabe = PESADA.has(tipo) ? passos.filter(p => p.id !== 'orcamento' && !respostas[p.id]).map(p => p.rotulo.toLowerCase()) : [];
+      const naoSabe = PESADA.has(tipo) ? passos.filter(p => p.id !== 'orcamento' && !respostas[p.id] && !(p.id === 'detalhe' && item.split(' ').length > 3)).map(p => p.rotulo.toLowerCase()) : [];
       const extraTech = PESADA.has(tipo) ? ` ${naoSabe.length ? `A pessoa não sabe: ${naoSabe.join(', ')}; explique em uma frase como descobrir e dê a faixa de preço de cada opção. ` : ''}Avise o que precisa ser compatível. Resposta curta, focada em preço e onde comparar.` : '';
       const perguntaIA = `${NOME_DO_PLANO[tipo]}: ${item}. ${linhas.join('. ')}.${tipo === 'lazer' ? ' Diga se cabe no mês pelo resumo e se os extras valem a pena.' : ''}${extraTech}`.slice(0, 700);
       // sem a IA online (ou sem internet), ele dá o caminho das pedras
