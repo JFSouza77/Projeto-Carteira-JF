@@ -35,3 +35,15 @@ Dúvida de finanças depois disso ("vale mais a pena isso ou aquilo?", "cabe no 
 - **Ácido**: zoa com os números do mês ("nem se tu fosse a pessoa mais rica do mundo… este mês já saíram R$ X") e ajuda.
 - **50+ no Ácido**: zoeira mais leve ("será que a gente não tá velho pra pensar nisso? Brincadeira!"). Criança não leva.
 - Ele brinca, reclama, mas **nunca nega a ajuda**. (`provocacao()` em `js/caos/index.js`, listas `PROVOCA_*`.)
+
+## Filtros de escopo (JF, 17/11)
+
+| Assunto | O que ele faz |
+| --- | --- |
+| Política, eleição, "qual o melhor time" | Imparcial, sem lado. Volta pro bolso (imposto, benefício, salário mínimo explica). |
+| Previsão do tempo, placar, "quem vai ganhar", número da Mega | "Vidente eu não sou!" e oferece a previsão do **mês** da pessoa. |
+| Bicho silvestre (onça, macaco, papagaio…) | Leva na brincadeira, lembra do IBAMA e oferece o custo de adotar cachorro ou gato. |
+| Droga ilícita | Não compactua: não dá preço, lugar nem compara. Se a pessoa quiser anotar o gasto, anota (o controle é dela) e indica o CAPS AD do SUS. |
+| Cigarro, vape, narguilé | Anota e lembra da saúde. Não pesquisa preço (vape tem venda proibida no Brasil). |
+| Brinquedo (skate, patins, patinete, Lego…) | Não pesquisa. Anota o gasto e ajuda a programar a compra (meta). |
+| Quantidade absurda ("100 kg de peixe") | Anota o valor certo e zoa ("dá pra alimentar os 101 dálmatas"). |

@@ -24,9 +24,10 @@ const norm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLow
 
 // Palavras que levam a cada categoria (além do próprio nome dela)
 const SINONIMOS = {
-  mercado: ['mercado', 'supermercado', 'feira', 'acougue', 'padaria', 'hortifruti', 'atacadao', 'compras do mes', 'cerveja', 'refrigerante', 'bebida'],
+  mercado: ['peixe', 'peixaria', 'carne', 'frango', // 2.3.5.2
+    'mercado', 'supermercado', 'feira', 'acougue', 'padaria', 'hortifruti', 'atacadao', 'compras do mes', 'cerveja', 'cervejas', 'refrigerante', 'refrigerantes', 'refri', 'coca', 'coca cola', 'bebida', 'bebidas'],
   delivery: ['delivery', 'ifood', 'i food', 'rappi', 'pedido de comida', 'pedi comida', 'lanche em casa'],
-  restaurante: ['restaurante', 'almoco', 'jantar', 'lanche', 'lanchonete', 'bar', 'cafe', 'pizzaria', 'hamburguer', 'sorvete', 'casquinha', 'acai', 'pastel', 'salgado', 'coxinha', 'mcdonalds', 'mcdonald s', 'mc donalds', 'burger king', 'subway', 'bobs'],
+  restaurante: ['restaurante', 'almoco', 'jantar', 'lanche', 'lanchonete', 'bar', 'cafe', 'pizza', 'pizzaria', 'hamburguer', 'sorvete', 'casquinha', 'acai', 'pastel', 'salgado', 'coxinha', 'mcdonalds', 'mcdonald s', 'mc donalds', 'burger king', 'subway', 'bobs'],
   transporte: ['transporte', 'uber', '99', 'onibus', 'metro', 'gasolina', 'combustivel', 'estacionamento', 'pedagio', 'taxi', 'carro', 'posto', 'etanol', 'alcool', 'diesel'],
   moradia: ['moradia', 'aluguel', 'condominio', 'iptu', 'casa', 'armario', 'guarda roupa', 'sofa', 'colchao', 'estante', 'rack', 'movel', 'moveis', 'cortina', 'geladeira', 'fogao', 'maquina de lavar', 'micro ondas'], // 2.3.4.9: móvel e eletrodoméstico são da casa
   contas: ['contas', 'conta de luz', 'luz', 'agua', 'internet', 'celular', 'telefone', 'gas', 'energia', 'boleto'],
@@ -42,7 +43,8 @@ const SINONIMOS = {
   streaming: ['streaming', 'netflix', 'mercado play', 'disney', 'disney plus', 'hbo', 'hbo max', 'max', 'paramount',
     'paramount plus', 'prime video', 'amazon prime', 'globoplay', 'apple tv', 'crunchyroll', 'spotify', 'deezer',
     'youtube premium', 'star plus', 'telecine', 'assinatura de filme'],
-  compras: ['compras', 'roupa', 'roupas', 'camisa', 'camisa social', 'camiseta', 'calca', 'blusa', 'vestido', 'bermuda', 'saia', 'jaqueta', 'tenis', 'sapato', 'shopping', 'presente', 'eletronico', 'loja', 'shopee', 'amazon', 'mercado livre', 'shein', 'aliexpress'],
+  compras: ['brinquedo', 'brinquedos', 'skate', 'patins', 'patinete', 'lego', 'boneca', // 2.3.5.2
+    'compras', 'roupa', 'roupas', 'camisa', 'camisa social', 'camiseta', 'calca', 'blusa', 'vestido', 'bermuda', 'saia', 'jaqueta', 'tenis', 'sapato', 'shopping', 'presente', 'eletronico', 'loja', 'shopee', 'amazon', 'mercado livre', 'shein', 'aliexpress'],
   // Educação (JF, 13/11): faculdade e bolsa de estudos
   // 2.3.4 (JF, num pet center): o que é do bicho vai pra Pet (ganha de Saúde quando o remédio é dele)
   pet: ['pet', 'petshop', 'pet shop', 'racao', 'petisco', 'areia de gato', 'areia do gato', 'tapete higienico', 'banho e tosa', 'tosa', 'veterinario', 'veterinaria', 'vet', 'vermifugo', 'antipulgas', 'antipulga', 'coleira', 'cobasi', 'petz', 'petlove', 'cachorro', 'cachorra', 'gato', 'gata', 'cao', 'filhote', 'remedio do cachorro', 'remedio do gato', 'remedio pro cachorro', 'remedio pro gato'],
@@ -66,7 +68,8 @@ function acharCategoria(t, categorias) {
   for (const c of categorias) {
     const chaves = [norm(c.name), ...(SINONIMOS[c.id] || []), ...(c.id === 'lazer' && !temJogos ? SINONIMOS.jogos : [])];
     for (const k of chaves) {
-      if (k && new RegExp(`(^|\\s)${k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\s|$)`).test(t)) {
+      // 2.3.5.2: plural também vale ("2 pizzas", "camisetas")
+      if (k && new RegExp(`(^|\\s)${k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(s|es)?(\\s|$)`).test(t)) {
         if (!melhor || k.length > melhor.k.length) melhor = { c, k };
       }
     }
@@ -77,6 +80,14 @@ function acharCategoria(t, categorias) {
 }
 // 2.3.4.3 (JF): conserto e serviço da casa ou do carro chamam o Faz-Tudo
 const FAZ_TUDO = /\b(mecanic\w*|oficina|eletricist\w*|encanador\w*|bombeiro hidraulico|hidraulic\w*|pedreiro|pintor|marceneiro|serralheiro|chaveiro|vidraceiro|conserto|consertar|reparo|reforma|manutencao|marido de aluguel|faz tudo|troca de oleo|vazamento|curto circuito|chuveiro queimado)\b/;
+// 2.3.5.2 (JF): filtros de escopo
+const ILICITO = /\b(maconha|baseado|beck|cocaina|crack|pedra de crack|droga|drogas|lanca perfume|ecstasy|bala de ecstasy|lsd|md(ma)?|skunk|haxixe|heroina|metanfetamina|cigarro de maconha)\b/;
+const POLITICA = /\b(em quem (eu )?(voto|votar|devo votar)|qual (partido|candidato)|lula|bolsonaro|esquerda ou direita|direita ou esquerda|petista|bolsonarista|comunista|eleicao|eleicoes|votar em|o presidente (e|eh) (bom|ruim)|governo (e|eh) (bom|ruim)|qual (o )?melhor presidente)\b/;
+const TIME_LADO = /\b(qual (o |e o )?melhor time|pra (qual|que) time (voce|vc) torce|voce torce|vc torce|(flamengo|corinthians|palmeiras|vasco|botafogo|fluminense|sao paulo|santos|gremio|internacional|cruzeiro|atletico) (e|eh) melhor|melhor que o (flamengo|corinthians|palmeiras|vasco|botafogo|fluminense|sao paulo|santos|gremio|internacional|cruzeiro|atletico))\b/;
+const PREVISAO_FORA = /\b(vai chover|previsao do tempo|como (vai|vai estar|vai ficar) o tempo|vai fazer (sol|frio|calor)|temperatura (de|pra) amanha|quem vai ganhar|qual (o )?placar|vai ser campeao|resultado do jogo de (hoje|amanha)|palpite (do|pro|pra) jogo|aposta certa|numeros? que vai sair|vai sair na mega)\b/;
+const ANIMAL_SILVESTRE = /\b(onca|oncas|leao|tigre|jacare|macaco|mico|papagaio|arara|tucano|cobra|jiboia|tartaruga marinha|capivara|tamandua|lobo guara|bicho preguica|preguica|lontra|pinguim|girafa|elefante|urso)\b/;
+const TABACO = /\b(cigarro|cigarros|maco de cigarro|vape|cigarro eletronico|narguile|essencia de narguile|charuto|fumo|tabaco|seda)\b/;
+const BRINQUEDO = /\b(brinquedo|brinquedos|patins|patinete|skate|boneca|bonecas|lego|carrinho de controle|hot wheels|pelucia|quebra cabeca|bicicleta infantil|velotrol|pula pula|jogo de tabuleiro)\b/;
 const PET_ANIMAL = /\b(cachorr\w*|gat[oa]s?|gatinh\w*|cao|caes|pet|pets|filhote|bichinho|bicho de estimacao|coelho|calopsita|passarinho|hamster|veterinari\w*|vet)\b/;
 const PET_SAUDE = /\b(remedio|remedios|vermifugo|antipulgas?|veterinari\w*|vet|vacina|vacinas|exame|exames|cirurgia|consulta|internacao|tratamento|pomada|antibiotico)\b/;
 const SAUDE_CUIDADO = /\b(farmacia|drogaria|remedio|remedios|medico|medica|consulta|exame|exames|hospital|pronto socorro|upa|dentista|tratamento|antibiotico)\b/;
@@ -1024,7 +1035,11 @@ const PAPO_PESSOAL = /\b(como (voce )?(se sente|esta se sentindo|ta se sentindo|
 
 function entenderSimples(t, { categories = [], anterior = null } = {}) {
   // "dia 10" é data, não valor (P9, "esqueci de lançar": "gastei 50 no mercado dia 10")
-  const r = { t, categoria: acharCategoria(t, categories), periodo: acharPeriodo(t), valor: acharValor(t.replace(/\bdia \d{1,2}\b/g, ' ').replace(MOEDA_QTD, ' ')), fonte: acharFonte(t) };
+  // 2.3.5.2: "comprei 3 cervejas de 15": o 3 é quantidade; o valor é o que vem depois de "de/por"
+  const qtdItens = t.match(/\b\d{1,2} [a-z]{3,}s\b.*?\b(?:por|de|custou|custaram|deu|paguei) (?:r\$ ?)?(\d+(?:[.,]\d{1,2})?)\b/);
+  // 2.3.5.2: quantidade ("100 kg de peixe por 800") não vira valor
+  const r = { t, categoria: acharCategoria(t, categories), periodo: acharPeriodo(t), valor: acharValor(t.replace(/\bdia \d{1,2}\b/g, ' ').replace(MOEDA_QTD, ' ').replace(/\b\d+([.,]\d+)? ?(kg|quilos?|gramas?|litros?|ml|unidades?|duzias?)\b/g, ' ')), fonte: acharFonte(t) };
+  if (qtdItens && !/\b(reais|r\$)\b/.test(t.slice(0, t.indexOf(qtdItens[0]) + 4))) r.valor = Math.round(Number(qtdItens[1].replace(',', '.')) * 100);
   const pergunta = /\b(quanto|qual|quais|onde|como|tive|teve|tenho|vai|posso|consigo|algum|alguma)\b|\?/.test(t);
 
   if (!t) return { ...r, intent: 'nao_entendi' };
@@ -1036,6 +1051,17 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
     if (/(chance|chances|probabilidade|possibilidade|dificil|facil de ganhar|quantas pessoas|vale a pena|compensa|da pra ganhar|como (eu )?ganh|ficar rico|estrategia|numeros? da sorte|melhor jogo|qual (a |e a )?melhor loteria)/.test(t)) return { ...r, categoria: null, intent: 'loteria', pede: 'chance' };
     if (/(premio|acumul|resultado|sorteio|sorteados|quando (e|sai|vai ser)|que dia|ganhador|ganhou|valor da aposta|quanto custa|preco)/.test(t) && !oQueE) return { ...r, categoria: null, intent: 'loteria', pede: 'pesquisa' };
   }
+  // 2.3.5.2 (JF, 17/11): filtros de escopo. Imparcial em política e time; não faz previsão do tempo nem de jogo
+  // (zoa e oferece a previsão do mês); entende absurdo (adotar onça) e droga ilícita (não compactua: anota se pedirem,
+  // mas não dá preço nem lugar); cigarro, vape e bebida: anota e lembra da saúde; brinquedo: anota e ajuda a juntar.
+  const registra = r.valor && /\b(gastei|paguei|comprei|torrei|gasto de|foi|foram)\b/.test(t);
+  if (ILICITO.test(t) && !registra) return { ...r, categoria: null, intent: 'ilicito' };
+  if (POLITICA.test(t) && !r.valor && !/\b(imposto|inss|salario minimo|bolsa familia|aposentadoria|beneficio|irpf|imposto de renda)\b/.test(t)) return { ...r, categoria: null, intent: 'politica' };
+  if (TIME_LADO.test(t) && !r.valor) return { ...r, categoria: null, intent: 'politica', time: true };
+  if (PREVISAO_FORA.test(t) && !r.valor) return { ...r, categoria: null, intent: 'previsao_fora' };
+  if (ANIMAL_SILVESTRE.test(t) && /\b(adotar|adoto|comprar|compro|ter um|ter uma|criar|quero)\b/.test(t)) return { ...r, categoria: null, intent: 'absurdo_animal' };
+  if (!registra && TABACO.test(t) && /\b(quanto|preco|onde|mais barato|vale|compensa|qual)\b/.test(t)) return { ...r, categoria: null, intent: 'tabaco_pergunta' };
+  if (!registra && BRINQUEDO.test(t) && /\b(quanto|preco|onde|mais barato|qual|quero comprar|pesquisa|recomenda|melhor)\b/.test(t)) return { ...r, categoria: null, intent: 'brinquedo' };
   // 2.3.4.2: "como saio das dívidas?" (era palpite do texto longo e caía no "não entendi")
   if (!r.valor && /((sair|saio|sai) d[ae]s? (minhas? )?dividas?|(sair|saio) do vermelho|quitar (minhas? |as )?dividas?|pagar (minhas? |as )?dividas?|tô endividad|to endividad|estou endividad|endividad[oa]|limpar (meu )?nome|nome sujo|negociar (a |minha |as |minhas )?dividas?|organizar (minhas |as )?dividas)/.test(t)) {
     return { ...r, categoria: null, intent: 'sair_dividas' };
@@ -1735,6 +1761,10 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
             return tot >= 5000 ? `Com essa, a fezinha do mês vai a ${formatBRL(tot)}. Boa sorte! Só não deixa a sorte entrar no orçamento das contas.` : 'Boa sorte! 🍀';
           })(),
           movel ? 'Boa! Coisa pra casa que dura é um investimento legal.' : null,
+          // 2.3.5.2 (JF): anota, mas não compactua com ilícito; cigarro/bebida: anota e lembra da saúde; quantidade absurda: zoa
+          ILICITO.test(intencao.t) ? 'Anoto porque o controle é seu, mas não compactuo: preço e lugar disso eu não passo. Se quiser ajuda pra parar, o CAPS AD do SUS atende de graça.' : null,
+          TABACO.test(intencao.t) && !ILICITO.test(intencao.t) ? 'Anotado. O máximo que eu faço é te lembrar de cuidar da saúde, que ela vale mais que qualquer economia.' : null,
+          (() => { const kg = intencao.t.match(/\b(\d{2,4}) ?(kg|quilos?)\b/); return kg && Number(kg[1]) >= 50 ? `${kg[1]} quilos?! 😂 Com isso dá pra alimentar a ninhada inteira dos 101 dálmatas. Se foi pra revender ou pra festa, beleza; se não, confere se não digitou errado.` : null; })(),
           ...cuidados.textos].filter(Boolean).join(' ') || null,
         avatar: cuidados.assunto || (FAZ_TUDO.test(intencao.t) ? 'faz_tudo' : null),
         vars: { valor: formatBRL(intencao.valor), categoria: cat?.name ?? 'Outros' },
@@ -2567,6 +2597,21 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         cru: true, sugestoes: ['Onde posso economizar?', 'Onde mais gastei?', 'O que tenho pra pagar?'],
       };
     }
+    case 'ilicito':
+      return { fato: 'Aí não, parceiro. Coisa ilegal eu não compactuo: não passo preço, lugar, valor nem comparo nada disso. Se você gastou e quiser anotar, eu anoto, porque o controle é seu. E se quiser ajuda pra parar, o CAPS AD do SUS atende de graça, sem julgamento.', cru: true, sugestoes: ['Quanto gastei este mês?', 'Me dá uma dica'] };
+    case 'politica':
+      return { fato: intencao.time
+        ? 'Eu torço pro seu bolso! 😄 Time eu não escolho: sou imparcial. Agora, se o ingresso ou a camisa do time tão pesando no mês, isso é comigo.'
+        : 'Em política eu sou totalmente imparcial: não tenho lado, candidato nem partido. Meu negócio é o seu dinheiro. Se a dúvida for de imposto, benefício, salário mínimo ou como uma regra nova mexe no seu bolso, aí eu explico.',
+        cru: true, sugestoes: ['O que é imposto de renda?', 'Quanto é o salário mínimo?'] };
+    case 'previsao_fora':
+      return { fato: 'Rapaz, vidente eu não sou! 🔮 Tempo e placar de jogo fogem da minha alçada. Agora, prever como vai ficar o seu mês, isso eu faço: quer ver?', cru: true, sugestoes: ['Como vai fechar meu mês?', 'Quanto posso gastar até o salário?'] };
+    case 'absurdo_animal':
+      return { fato: 'Tá de sacanagem? 😂 Bicho silvestre não é pet: a menos que seja num lugar legalizado pelo IBAMA, não rola, e comprar sem autorização é crime. Agora, se quiser um amigo de quatro patas, cachorro e gato pra adotar tem aos montes. Quer ver quanto custa ter um?', cru: true, sugestoes: ['Quanto custa ter um cachorro?', 'Quanto custa ter um gato?'] };
+    case 'tabaco_pergunta':
+      return { fato: 'Preço e lugar disso eu não pesquiso: não é comigo. O máximo que eu faço é anotar quando você comprar e te lembrar de cuidar da saúde (um maço por dia passa de R$ 300 por mês, e vape tem venda proibida no Brasil). Se quiser parar, o SUS tem programa gratuito contra o tabagismo.', cru: true, sugestoes: ['Quanto gastei este mês?', 'Me dá uma dica'] };
+    case 'brinquedo':
+      return { fato: 'Brinquedo eu não pesquiso: escolher é com você e com a loja. 😄 Mas eu anoto o gasto quando comprar e te ajudo a programar a compra: me fala quanto custa que eu vejo se cabe no mês ou monto uma meta pra juntar.', cru: true, sugestoes: ['Quero juntar dinheiro pra um presente', 'Dá pra gastar quanto até o salário?'] };
     case 'limites_pesquisa':
       return { fato: TEXTO_LIMITES_PESQUISA, cru: true, sugestoes: ['O que você pode fazer?', 'Quanto gastei este mês?'] };
     case 'shopping_vago':

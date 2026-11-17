@@ -499,7 +499,7 @@ test('fora do papel (esporte, tempo, receita) responde aqui, sem chamar a IA (JF
   for (const t of ['quem venceu o brasileirão de 1959?', 'receita de bolo de cenoura', 'vai chover amanhã?']) {
     const f = conversar(t, d, { now: Date.UTC(2026, 10, 15, 12) }).fala;
     assert.equal(f.entendeu, true, t); // entendeu = não vai pra IA
-    assert.match(f.texto, /Google/, t);
+    assert.match(f.texto, /(Google|vidente)/, t); // 2.3.5.2: previsão do tempo ganha o "vidente eu não sou"
   }
   const ing = conversar('quanto custa o ingresso do brasileirão', d, { now: Date.UTC(2026, 10, 15, 12) }).fala;
   assert.equal(ing.entendeu, false); // tem dinheiro: pode ir pra IA

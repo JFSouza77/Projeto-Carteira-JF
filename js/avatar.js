@@ -37,7 +37,7 @@ const POR_ASSUNTO = Object.freeze({
   // 2.1.9.3 (JF): km por litro e kWh // 15/11 (JF): moedas de jogo
   combustivel: 'frentista', etanol_ou_gasolina: 'frentista', // 17/11 (JF): combustível
   plano_pet: 'petlover', plano_moradia: 'corretor', plano_viagem: 'turista', plano_transporte: 'frentista', plano_economizar: 'economista', plano_produto: 'pesquisador', plano_lazer: 'cinefilo', plano_ram: 'ti', plano_peca: 'ti', plano_tech: 'ti', // 2.3.4.6
-  shopping_vago: 'guia', plano_eletro: 'faztudo', plano_academia: 'treinador', limites_pesquisa: 'anjinho', // 2.3.4.8 / 2.3.4.9: eletro com o Faz-Tudo: o guia turístico do shopping
+  shopping_vago: 'guia', plano_eletro: 'faztudo', plano_academia: 'treinador', limites_pesquisa: 'anjinho', ilicito: 'bronca', politica: 'zen', previsao_fora: 'vidente', absurdo_animal: 'chocado', tabaco_pergunta: 'preocupado', brinquedo: 'guia', // 2.3.5.2 // 2.3.4.8 / 2.3.4.9: eletro com o Faz-Tudo: o guia turístico do shopping
   motivacao: 'treinador', frase_do_dia: 'treinador', ditado: 'vovo', curiosidade_fin: 'professor', // 17/11 (JF)
   formiguinha: 'formiga', curiosidade: 'curioso', tangente: 'distraido', pesquisa_compra: 'pesquisador', // 16 e 17/11 (JF): avatares próprios
   // 2.3.4.3 (JF, 17/11): sem resposta → Recalculando (GPS); saúde pesando → Farmacêutico; conserto → Faz-Tudo;
