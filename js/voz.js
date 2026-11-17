@@ -58,33 +58,167 @@ export function setVelocidade(v) {
 // 2.1.5 (JF, 16/11: "ele não espera acabar a primeira fala antes de falar a segunda; tem que dar esse respiro"):
 // falar() devolve uma promessa que termina quando a fala acaba (ou num tempo máximo, se o aparelho não avisar).
 // O 2º balão espera ela. Com { emenda: true }, a fala entra na fila em vez de cortar a anterior.
+//
+// 2.1.7 (JF, 17/11: "vamos ligar a voz dele na Azure igual fiz no Perfil" + "seria muito legal se a boca dele
+// mexesse quando a voz estivesse ligada"): primeiro tenta a voz natural do servidor (Microsoft Azure, igual ao Perfil);
+// se o servidor não tiver voz, se não tiver internet, se demorar mais de 4 s ou falhar, fala com a voz do aparelho,
+// sem a pessoa perceber. E avisa quem estiver ouvindo (o avatar): começou, o volume de cada instante (pra boca abrir
+// na medida da fala) e acabou. Vai pro servidor só o texto da fala (o mesmo que aparece no balão).
 let falaAtual = Promise.resolve();
 export const falaTerminou = () => falaAtual;
 
-export function falar(texto, emocao = 'calmo', { emenda = false } = {}) {
-  if (!vozDisponivel()) return Promise.resolve();
+let servidorDaVoz = () => null; // o app diz qual é o servidor (com a IA online ligada)
+export function definirServidorDaVoz(fn) { servidorDaVoz = typeof fn === 'function' ? fn : () => null; }
+let ouvinte = {}; // { inicio(modo), nivel(0..1), palavra(), fim() }
+export function definirOuvinteDaFala(o) { ouvinte = o || {}; }
+const avisar = (nome, ...a) => { try { ouvinte[nome]?.(...a); } catch { /* o avatar nunca derruba a voz */ } };
+
+// emoção da Carteira → emoção da voz do servidor (tabela do Code, 05_Voz.md: nunca raiva nem fúria, firme e não bravo)
+export const EMOCAO_DA_VOZ = Object.freeze({
+  alegria: 'orgulho', radiante: 'festa', orgulho: 'orgulho', preocupacao: 'preocupado', protetor: 'carinho', tenso: 'preocupado',
+  irritacao: 'desafio', tedio: 'tedio', curiosidade: 'pensando', carinho: 'carinho', calmo: 'calmo', medo: 'medo', nojo: 'nojo',
+  vergonha: 'vergonha',
+});
+
+let corte = 0; // cada calar() muda o número: fala de antes não toca mais
+let fonte = null; // o áudio da nuvem tocando agora
+
+// estado da voz do servidor: "ligada" vale 10 min; "não deu" é conferido de novo em 1 min (como no Perfil)
+let nuvem = { base: null, ok: null, em: 0 };
+async function nuvemLigada(base) {
+  const agora = Date.now();
+  if (nuvem.base === base && nuvem.ok !== null && agora - nuvem.em < (nuvem.ok ? 600_000 : 60_000)) return nuvem.ok;
+  let ok = false;
   try {
-    if (!emenda) speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(textoParaVoz(texto));
-    u.lang = 'pt-BR';
-    const v = melhorVoz();
-    if (v) u.voice = v;
-    const [vel, tom] = JEITO[emocao] || JEITO.calmo;
-    // sem voz masculina no aparelho, ele fala um pouco mais grave (como no Perfil)
-    u.pitch = Math.max(0.4, Math.min(2, (v && !MASC.test(v.name || '') ? 0.8 : 1) * tom));
-    u.rate = Math.min(2, Math.max(0.5, vel * VELOCIDADE));
-    const limite = Math.min(30_000, 1500 + textoParaVoz(texto).length * 90 / u.rate);
-    falaAtual = new Promise(fim => {
-      const t = setTimeout(fim, limite);
-      u.onend = u.onerror = () => { clearTimeout(t); fim(); };
-    });
-    speechSynthesis.speak(u);
-    return falaAtual;
-  } catch { return Promise.resolve(); }
+    const r = await fetch(`${base}/voz/estado`, { signal: AbortSignal.timeout(3000) });
+    ok = r.ok && !!(await r.json()).ligada;
+  } catch { ok = false; }
+  nuvem = { base, ok, em: agora };
+  return ok;
+}
+
+// as falas se repetem muito: guarda as últimas 50 no aparelho (não pede de novo)
+const guardadas = new Map();
+async function pedirAudio(base, t, emocao, vel, tom) {
+  const chave = `${emocao}|${vel}|${tom}|${t}`;
+  if (guardadas.has(chave)) return guardadas.get(chave).slice(0);
+  const r = await fetch(`${base}/voz`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(4000),
+    body: JSON.stringify({ t, r: vel, p: tom, e: EMOCAO_DA_VOZ[emocao] || 'calmo' }),
+  });
+  if (!r.ok || !/audio/.test(r.headers.get('content-type') || '')) throw new Error(`voz ${r.status}`);
+  const buf = await r.arrayBuffer();
+  guardadas.set(chave, buf.slice(0));
+  if (guardadas.size > 50) guardadas.delete(guardadas.keys().next().value);
+  return buf;
+}
+
+let ctx = null;
+function audioCtx() {
+  if (ctx) return ctx;
+  const C = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext);
+  if (!C) return null;
+  try { ctx = new C(); } catch { ctx = null; }
+  return ctx;
+}
+/** iPhone: o som só sai depois de um toque. O app chama isto no primeiro toque na tela. */
+export function destravarAudio() {
+  const c = audioCtx();
+  if (!c) return;
+  try {
+    if (c.state === 'suspended') c.resume();
+    const b = c.createBuffer(1, 1, 22050);
+    const s = c.createBufferSource();
+    s.buffer = b; s.connect(c.destination); s.start(0);
+  } catch { /* sem som destravado, a voz do aparelho segura */ }
+}
+
+// toca o MP3 e mede o volume enquanto toca (é isso que mexe a boca do avatar no ritmo da fala)
+async function tocar(buf, minha) {
+  const c = audioCtx();
+  if (!c) throw new Error('sem áudio');
+  if (c.state === 'suspended') { await c.resume().catch(() => {}); if (c.state === 'suspended') throw new Error('áudio travado'); }
+  const dados = await c.decodeAudioData(buf);
+  if (minha !== corte) return;
+  const s = c.createBufferSource();
+  s.buffer = dados;
+  const an = c.createAnalyser();
+  an.fftSize = 512;
+  s.connect(an); an.connect(c.destination);
+  fonte = s;
+  const amostra = new Uint8Array(an.fftSize);
+  let raf = 0;
+  const medir = () => {
+    an.getByteTimeDomainData(amostra);
+    let soma = 0;
+    for (const v of amostra) { const x = (v - 128) / 128; soma += x * x; }
+    avisar('nivel', Math.min(1, Math.sqrt(soma / amostra.length) * 4));
+    raf = requestAnimationFrame(medir);
+  };
+  await new Promise(fim => {
+    s.onended = () => { cancelAnimationFrame(raf); if (fonte === s) fonte = null; fim(); };
+    avisar('inicio', 'nuvem');
+    s.start(0);
+    raf = requestAnimationFrame(medir);
+  });
+}
+
+function falarNoAparelho(t, emocao, minha) {
+  if (!vozDisponivel() || minha !== corte) return Promise.resolve();
+  return new Promise(fim => {
+    try {
+      const u = new SpeechSynthesisUtterance(t);
+      u.lang = 'pt-BR';
+      const v = melhorVoz();
+      if (v) u.voice = v;
+      const [vel, tom] = JEITO[emocao] || JEITO.calmo;
+      // sem voz masculina no aparelho, ele fala um pouco mais grave (como no Perfil)
+      u.pitch = Math.max(0.4, Math.min(2, (v && !MASC.test(v.name || '') ? 0.8 : 1) * tom));
+      u.rate = Math.min(2, Math.max(0.5, vel * VELOCIDADE));
+      const acabou = () => { clearTimeout(tempo); fim(); };
+      const tempo = setTimeout(acabou, Math.min(30_000, 1500 + t.length * 90 / u.rate));
+      u.onstart = () => avisar('inicio', 'aparelho');
+      u.onboundary = () => avisar('palavra'); // cada palavra: a boca dá uma abridinha
+      u.onend = u.onerror = acabou;
+      speechSynthesis.speak(u);
+    } catch { fim(); }
+  });
+}
+
+async function falarAgora(t, emocao, minha) {
+  const base = servidorDaVoz();
+  const [vel, tom] = JEITO[emocao] || JEITO.calmo;
+  try {
+    if (base && (typeof navigator === 'undefined' || navigator.onLine !== false) && await nuvemLigada(base)) {
+      try {
+        const buf = await pedirAudio(base, t, emocao, Math.round(vel * VELOCIDADE * 20) / 20, Math.round(tom * 20) / 20);
+        if (minha !== corte) return;
+        await tocar(buf, minha);
+        return;
+      } catch { /* demorou, falhou ou o som está travado: a voz do aparelho fala */ }
+    }
+    if (minha === corte) await falarNoAparelho(t, emocao, minha);
+  } finally {
+    if (minha === corte) avisar('fim');
+  }
+}
+
+export function falar(texto, emocao = 'calmo', { emenda = false } = {}) {
+  const t = textoParaVoz(texto);
+  if (!t || (!vozDisponivel() && !servidorDaVoz())) return Promise.resolve();
+  if (!emenda) calar();
+  const minha = corte;
+  const antes = emenda ? falaAtual : Promise.resolve();
+  falaAtual = antes.then(() => (minha === corte ? falarAgora(t, emocao, minha) : null)).catch(() => {});
+  return falaAtual;
 }
 
 export function calar() {
+  corte++;
   try { if (vozDisponivel()) speechSynthesis.cancel(); } catch {}
+  try { fonte?.stop(); } catch {}
+  fonte = null;
+  avisar('fim');
 }
 
 /** Ditado (falar com o C.A.O.S.): usa o reconhecimento de voz do navegador, quando existe. */

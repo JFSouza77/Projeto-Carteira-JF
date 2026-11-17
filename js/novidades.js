@@ -7,6 +7,18 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.1.7 Alfa',
+    data: '17/11/2026',
+    nome: 'Voz de Verdade',
+    t: 'O C.A.O.S. ganhou voz natural, e a boca dele mexe junto com o que ele fala.',
+    itens: [
+      '🗣️ Voz natural: com a voz ligada em Ajustes e a IA online ligada, o C.A.O.S. fala com uma voz da Microsoft, bem mais natural.',
+      '👄 Boca que fala: com a voz ligada, a boca do avatar abre e fecha no ritmo da fala, no Início e no Chat.',
+      '📶 Sem internet, sem problema: se a voz natural não responder, ele fala com a voz do celular na hora.',
+    ],
+    qol: [],
+  },
+  {
     v: '2.1.6 Alfa',
     ate: '2.1.6.1',
     data: '17/11/2026',

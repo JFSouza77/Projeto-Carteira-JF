@@ -24,13 +24,16 @@
  *   POST /sync            → (Authorization) { desde, mudancas:[{store,id,em,rec}] } → { versao, mudancas }
  *   cron (15 em 15 min)   → manda os lembretes do horário e, em dia útil depois das 10h, atualiza o mercado
  *
- * Segredos (npx wrangler secret put NOME): ANTHROPIC_API_KEY, VAPID_PRIVATE_JWK.
- * Variáveis (wrangler.toml): ORIGENS, IA_MODELO, IA_LIMITE_DIA, IA_TETO_DIA, VAPID_PUBLIC_KEY, VAPID_CONTATO.
+ * Segredos (npx wrangler secret put NOME): ANTHROPIC_API_KEY, VAPID_PRIVATE_JWK; voz (17/11): AZURE_SPEECH_KEY +
+ * AZURE_SPEECH_REGION e, opcional, AZURE_MAI_KEY + AZURE_MAI_REGION (servidor/voz.js).
+ * Variáveis (wrangler.toml): ORIGENS, IA_MODELO, IA_LIMITE_DIA, IA_TETO_DIA, VAPID_PUBLIC_KEY, VAPID_CONTATO;
+ * voz: AZURE_VOZ, AZURE_MAI_VOZ, AZURE_ESTILOS, VOZ_TETO_MES (padrão 100 mil letras).
  * Como publicar: servidor/LEIA-ME.md
  */
 import Anthropic from '@anthropic-ai/sdk';
 import { resumoIdentidade } from '../js/caos/identidade.js';
 import { analisarSerie, MOEDAS } from '../js/mercado.js';
+import { vozEstado, vozFalar } from './voz.js';
 import { mesclar, mudancasDesde, estadoVazio, normalizarApelido, LIMITE_MUDANCAS, recCifrado, ACESSO_RE } from '../js/sincronia.js';
 
 const MODELO_PADRAO = 'claude-opus-5-5';
@@ -871,6 +874,9 @@ export default {
         throw new ErroHttp(origensPermitidas(env).length ? 403 : 503,
           origensPermitidas(env).length ? 'Origem não autorizada.' : 'Configure ORIGENS no wrangler.toml com o endereço do app.');
       }
+      // voz natural do C.A.O.S. (Azure, 17/11): estado e a fala em MP3 (o app cai na voz do aparelho se falhar)
+      if (req.method === 'GET' && url.pathname === '/voz/estado') return json(vozEstado(env), 200, h);
+      if (req.method === 'POST' && url.pathname === '/voz') return await vozFalar(req, env, h);
       if (req.method === 'GET' && url.pathname === '/mercado') return json(await mercadoRota(env), 200, h);
       if (req.method === 'GET' && url.pathname === '/noticias') return json(await noticiasRota(env), 200, h);
       if (req.method === 'GET' && url.pathname === '/push/chave') {

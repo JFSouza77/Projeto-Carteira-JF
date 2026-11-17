@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 2.1.7 Alfa | 17/11/2026 | Voz de Verdade (JF): voz natural da Azure igual ao Perfil (`servidor/voz.js`: mai + padrão, cache no KV, teto 100 mil letras/mês), reserva na voz do aparelho em 4 s; boca do avatar segue o volume da fala (analisador do WebAudio) e, na voz do aparelho, mexe do começo ao fim. Servidor precisa dos segredos AZURE_SPEECH_KEY/REGION. |
 | 2.1.6.1 Alfa | 17/11/2026 | Avatar Guia Turístico (pedido do JF) e mais 4 avatares pras funções da semana: Curioso (pergunta de amigo), Distraído (tangente), Formiguinha e Pesquisador. 45 → 50 avatares. C.A.O.S. 2.4.1. |
 | 2.1.6 Alfa | 17/11/2026 | Guia Turístico (ideia do JF): tela "Você é novo por aqui?" no 1º acesso (tudo, básico, uma coisa só ou pular) e tutorial estilo jogo (escurece, acende o pedaço da vez, C.A.O.S. de guia). Também em Ajustes e no botão de ajuda. Depois do tutorial, segue a apresentação no Chat. |
 | 2.1.5.1 Alfa | 16/11/2026 | Núcleo 1.8.0 (ok do JF): a cabeça meio TDAH entra no jeito de falar do C.A.O.S. (cada casa com o seu jeito de tangente). C.A.O.S. 2.4.0. |
