@@ -149,7 +149,8 @@ function ligarBocaNaVoz() {
     },
   });
   // iPhone: o som da voz natural só sai depois de um toque na tela
-  for (const ev of ['pointerdown', 'keydown']) document.addEventListener(ev, destravarAudio, { once: true, capture: true });
+  // (17/11, voz ainda robótica no iPhone: o destrave era só no 1º toque; agora é em todo toque, e no dedo saindo da tela)
+  for (const ev of ['pointerdown', 'touchend', 'click', 'keydown']) document.addEventListener(ev, destravarAudio, { capture: true, passive: true });
 }
 
 export function avatarFala(ms) {
@@ -1611,7 +1612,7 @@ async function init() {
   irPara(abrirEm);
   // Primeiro acesso: o C.A.O.S. se apresenta e conhece a pessoa
   // 17/11 (JF): antes, a tela "Você é novo por aqui?" oferece o tutorial guiado; a apresentação vem depois dele
-  if (!state.perfil && !state.settings.tourVisto) abrirBoasVindas({ primeiraVez: true, depois: iniciarOnboarding });
+  if (!state.perfil && !state.settings.tourVisto) abrirBoasVindas({ primeiraVez: true, desistirSe: () => !!state.perfil, depois: () => { if (!state.perfil) iniciarOnboarding(); } });
   else if (!state.perfil) iniciarOnboarding();
   else { await parabensSeForODia(); await perguntarAniversarioUmaVez(); }
   $('#install-hint').textContent = installHint();

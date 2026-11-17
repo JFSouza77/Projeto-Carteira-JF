@@ -234,7 +234,6 @@ export const FORMAS = Object.freeze({
     sob:'', boca:'M178 256 L 196 250 L 210 258 L 224 250', extra:'' },
   desnorteado:{ gira:true, nome:'😵‍💫 Desnorteado', quando:'sumiu um tempão e voltou com a bomba', cor:'#67e8f9', modo:'bagunca', grupo:'reacoes',
     acc:['tontura','suor'], corpo:'translateY(4px)', anim:'cambaleia',
-    gira:true,
     olhoE:{ d:'M161 202 a 3 3 0 0 1 6 0 a 6 6 0 0 1 -12 0 a 9 9 0 0 1 18 0 a 12 12 0 0 1 -24 0', cheio:false }, olhoD:{ d:'M239 202 a 3 3 0 0 1 6 0 a 6 6 0 0 1 -12 0 a 9 9 0 0 1 18 0 a 12 12 0 0 1 -24 0', cheio:false },
     sob:'M146 182 Q 160 172, 174 178 M226 176 Q 240 172, 254 184', boca:'M180 256 q 8 -10 16 0 t 16 0 t 16 -4', extra:'?!' },
   recalculando:{ nome:'🧭 Recalculando', quando:'alerta vermelho: refazer a rota', cor:'#ff4d5e', modo:'anel', grupo:'reacoes',
