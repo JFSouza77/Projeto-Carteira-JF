@@ -1890,6 +1890,18 @@ Object.assign(GERADORES, {
         'É, parceiro, tem coisas que só a Philco faz por você. Mas tem coisas que eu também faço.',
         'Meu nome é C.A.O.S., mas pode me chamar de Rexona: eu não te abandono.',
         'Sou igual carregador portátil: pequeno, sempre no bolso e salvo o seu dia quando o orçamento tá no fim.',
+        // 2.3.5.4 (JF, 17/11: "piadas com mais contexto… 'você viu que seu boleto venceu? Pois é. Eu tava torcendo
+        // pra ele.' É sem graça? É, mas tá valendo"): pergunta, pausa e a virada no fim
+        'Rapaz, você viu que seu boleto venceu? Pois é. Eu tava torcendo pra ele.',
+        'Sabe aquele dinheiro que você guardou "pra emergência"? Então. O iFood achou que era uma.',
+        'Seu salário caiu hoje. Eu ouvi o barulho daqui. Foi feio, mas ele levantou e já foi embora.',
+        'Você viu que a fatura fechou? Pois é. Ela fechou, mas a ferida continua aberta.',
+        'Lembra da promoção que você não comprou? Pois é. Ela não lembra de você. Ponto pra nós.',
+        'Sabe o que o boleto e o seu ex têm em comum? Os dois voltam todo mês e sempre cobram alguma coisa.',
+        'Fui conferir seu cofrinho. Ele me pediu pra falar baixo, porque tá ecoando.',
+        'Você disse "só vou ver o preço" na loja? Pois é. O preço viu você primeiro.',
+        'Sabe aquele parcelado em 12x de janeiro? Ele mandou lembranças. De novo. Até dezembro.',
+        'Rapaz, o dia 5 chegou. O salário entrou, deu um oi pro aluguel e saiu sem se despedir de você.',
       ],
       // piada que "nasce" do dia do mês (sugestão do Gemini, 06/11)
       inicioDoMes: [
