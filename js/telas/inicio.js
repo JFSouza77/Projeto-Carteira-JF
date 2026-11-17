@@ -197,7 +197,8 @@ export function renderUltimos() {
     ...state.incomes.map(x => ({ ...x, kind: 'entrada' })),
   ].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 5);
   $('#ultimos-card').hidden = !lista.length;
-  $('#res-ultimos').textContent = lista.length ? `${lista.length} mais recentes` : '';
+  // 2.3.3.2 (prints do JF): "5 mais recentes" apertava o título em duas linhas
+  $('#res-ultimos').textContent = lista.length ? `${lista.length} itens` : '';
   el.innerHTML = lista.map(x => {
     const [, m, d] = x.date.split('-');
     const nome = x.kind === 'entrada' ? (x.note || srcById(x.sourceId)?.name || 'Entrada') : (x.note || catById(x.categoryId)?.name || 'Gasto');
