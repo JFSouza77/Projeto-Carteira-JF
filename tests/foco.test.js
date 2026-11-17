@@ -1,7 +1,7 @@
 // 2.3.1 (JF, 17/11): foco da conversa. "Só finanças" segura o que não é de dinheiro; desabafo ganha acolhimento.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { assuntoDeDinheiro, perguntaDePesquisaGeral, respostaAcordando, respostaForaDoFoco, respostaPapoLivre } from '../js/caos/conversa.js';
+import { assuntoDeDinheiro, perguntaDePesquisaGeral, respostaAcordando, respostaTextoLongo, textoLongoDemais, respostaForaDoFoco, respostaPapoLivre } from '../js/caos/conversa.js';
 import { conversar } from '../js/caos/index.js';
 
 test('o que não é de dinheiro fica de fora do foco', () => {
@@ -97,4 +97,23 @@ test('banco sem mistério: Pix e cartão com passo a passo', () => {
   assert.match(fala('como faço um pix?').texto, /QR Code/);
   assert.match(fala('como funciona o cartão de crédito?').texto, /fechamento/);
   for (const f of ['o que é conta corrente?', 'o que é linha de crédito?', 'o que é crédito consignado?', 'o que é bet?', 'o que é conta PJ?']) assert.equal(fala(f).intent, 'glossario', f);
+});
+
+// 2.3.4.2 (JF): "redação do Enem" no chat: pede pra resumir e dá palpites
+test('texto longo demais: pede resumo e sugere o que achou', () => {
+  assert.equal(textoLongoDemais('quanto gastei no mercado este mês?'), false);
+  const longo = 'Então, deixa eu te contar, ' + 'hoje foi um dia bem corrido e eu fiquei pensando em muita coisa da vida, '.repeat(6) + 'e queria saber da minha fatura do cartão e se dá pra guardar um pouco no CDB.';
+  assert.equal(textoLongoDemais(longo), true);
+  const r = respostaTextoLongo(longo, [{ id: 'mercado', name: 'Mercado' }], () => 0);
+  assert.match(r.texto, /resum|uma frase/i);
+  assert.ok(r.sugestoes.includes('O que é CDB?'));
+  assert.ok(r.sugestoes.includes('Como está minha fatura?'));
+  assert.ok(r.sugestoes.length <= 3);
+});
+
+test('palpites do texto longo têm resposta (como saio das dívidas)', () => {
+  for (const f of ['Como saio das dívidas?', 'tô endividado, e agora?', 'quero limpar meu nome']) {
+    const { fala } = conversar(f, { expenses: [], incomes: [], categories: [] }, { mood: 'suave', memory: null, now: Date.now(), perfil: { apelido: 'Ana' } });
+    assert.equal(fala.intent, 'sair_dividas', f);
+  }
 });

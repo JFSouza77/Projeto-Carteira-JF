@@ -7,7 +7,7 @@ import { FORMAS, formaPara, rostoDaForma } from '../avatar.js';
 import { IDENTIDADE, SUGESTOES, comoChamar, conversar, curiosidadeDoGasto, humorParaIA, emocaoDoMomento, rostoAvulso } from '../caos/index.js';
 import { accountLabel, createTransferencia, depoisDoSaldo, marcarRecebido, editarConta, editarLancamento, formatBRL, sugerirCategoria, toISODate } from '../engine.js';
 import * as conta from '../conta.js';
-import { assuntoDeDinheiro, lerPagamento, perguntaDePesquisaGeral, respostaAcordando, respostaForaDoFoco, respostaPapoLivre, seguirPagamento } from '../caos/conversa.js';
+import { assuntoDeDinheiro, lerPagamento, perguntaDePesquisaGeral, respostaAcordando, respostaTextoLongo, textoLongoDemais, respostaForaDoFoco, respostaPapoLivre, seguirPagamento } from '../caos/conversa.js';
 import * as db from '../db.js';
 import { falar, falaTerminou } from '../voz.js';
 import { fraseDoPrint, resumoDoPrint } from '../caos/ofertas.js';
@@ -107,6 +107,15 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
   if (state.onboarding) return onboardingResposta(t);
   if (state.metaFlow) return metaResposta(t);
   if (!doPrint) addMsg({ de: 'eu', texto: t });
+  // 2.3.4.2 (JF, 17/11): texto enorme não vai pra IA nem pro entendimento; ele pede pra resumir (com palpites)
+  if (!doPrint && textoLongoDemais(t)) {
+    const r = respostaTextoLongo(t, state.categories);
+    await respiro(r.texto);
+    addMsg({ de: 'caos', texto: r.texto, sugestoes: r.sugestoes.length ? r.sugestoes : SUGESTOES.slice(0, 5), assunto: 'texto_longo' });
+    if (state.settings.voice) falar(r.texto);
+    await anotarUso('local');
+    return;
+  }
   const { fala, memoria } = conversar(t, dados(), { mood: state.settings.mood, memory: state.caosMemory, now: Date.now(), perfil: state.perfil });
   guardarMemoria(memoria);
   pintarRosto(fala.rosto, fala.intent);
