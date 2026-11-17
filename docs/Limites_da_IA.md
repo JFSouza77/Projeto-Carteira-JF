@@ -8,7 +8,7 @@ sobem; a regra continua.
 | --- | --- | --- | --- | --- |
 | **Sem IA** | Tudo que o app sabe sozinho | gastos, saldo, metas, contas, glossário, cálculos, dicas, apagar/corrigir, conferir um preço que a pessoa digitou, questionários dos planos | sem limite | `js/caos/` (conversa local) |
 | **Leve** | Conversa com a IA, sem pesquisa de preço | desabafo, papo (no Papo livre), pergunta de finanças que ele não sabe sozinho | dentro do total de 20 por dia | `fala.nivelIA = 'leve'` |
-| **Média** | Pesquisa de preço rápida, resposta curta | ingresso (cinema, teatro, show, jogo), academia, custo médio, piso salarial, plano de pet/moradia/transporte | **7 por dia** | `nivelIA = 'media'`, `MEDIA_POR_DIA` |
+| **Média** | Pesquisa de preço rápida, resposta curta | ingresso (cinema, teatro, show, jogo), academia, custo médio, piso salarial, plano de pet/moradia/transporte, carro e moto (Tabela FIPE) | **7 por dia** | `nivelIA = 'media'`, `MEDIA_POR_DIA` |
 | **Pesada** | Várias buscas, compara lojas ou compatibilidade | tecnologia (celular, notebook, RAM, peça de PC), eletrodoméstico, impressora, passagem de viagem, conferir link de loja, venda de usado, compra que a pessoa pediu pra pesquisar | **1 por dia** | `fala.pesada`, `PESADA` |
 | **Não faz** | Fora do papel de parceiro financeiro | escolher roupa ou coisa pessoal, "o que comprar no shopping", procurar loja sem pedido, comprar ou reservar por você, curiosidade sem dinheiro (filme, futebol, capital) | nunca: indica Google ou outra IA, e ajuda no que é de dinheiro | `BALCONISTA`, `respostaForaDoFoco`, `respostaPapoLivre` |
 
@@ -47,4 +47,5 @@ Dúvida de finanças depois disso ("vale mais a pena isso ou aquilo?", "cabe no 
 | Cigarro, vape, narguilé | Anota e lembra da saúde. Não pesquisa preço (vape tem venda proibida no Brasil). |
 | Brinquedo (skate, patins, patinete, Lego…) | Não pesquisa. Anota o gasto e ajuda a programar a compra (meta). |
 | Bebida alcoólica (cerveja, pinga, barzinho…) | Anota sempre; brinca de vez em quando ("nem me chama?"); se o mês pesar, conselho de graça; muito alto, lembra dos Alcoólicos Anônimos. |
+| Recorde de preço ("o carro mais caro do mundo", "o homem mais rico", "quanto custa um jatinho") | Não pesquisa: brinca ("um Fusca 87", "susto na pobreza") e puxa pro bolso da pessoa. |
 | Quantidade absurda ("100 kg de peixe") | Anota o valor certo e zoa ("dá pra alimentar os 101 dálmatas"). |
