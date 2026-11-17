@@ -140,3 +140,9 @@
 .avatar.avatar-pequeno .neon { filter: none; }
 .avatar.avatar-pequeno svg { filter: drop-shadow(0 0 3px var(--cor)); }
 .avatar.parado *, .avatar.parado *::before { animation: none !important; transition: none !important; }
+
+/* 2.1.7.2 (JF, 17/11: "a boca ainda não tá mexendo"): a "respiração" da boca (.oscila) ganhava da fala e a boca nunca
+   mexia. Enquanto ele fala, a fala manda: com a voz do celular, abre e fecha no ritmo de sempre; com a voz natural
+   (.voz), a boca segue o volume (o app põe o tamanho a cada instante), sem animação por cima. */
+.avatar .av-boca.falando { transform-box:fill-box; transform-origin:center; animation:av-mexeBoca .16s ease-in-out infinite alternate; }
+.avatar .av-boca.voz { transform-box:fill-box; transform-origin:center; animation:none; }

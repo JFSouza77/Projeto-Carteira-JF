@@ -372,11 +372,16 @@ export const PASSOS_PESQUISA = Object.freeze({
 });
 const NOME_DO_PLANO = { lazer: 'Plano de passeio', viagem: 'Pesquisa de viagem', produto: 'Pesquisa de compra', pet: 'Plano de pet', moradia: 'Plano de moradia', transporte: 'Plano de transporte', economizar: 'Plano pra economizar' };
 
-const LAZER = /\b(cinema|cinemark|cinepolis|kinoplex|filme no cinema|ingresso|ingressos|show|teatro|parque de diversao|balada|barzinho|rodizio|passeio|role|festival|estadio|boliche|escape room)\b/;
+const LAZER = /\b(restaurante|restaurantes|lanchonete|pizzaria|hamburgueria|cinema|cinemark|cinepolis|kinoplex|filme no cinema|ingresso|ingressos|show|teatro|parque de diversao|balada|barzinho|rodizio|passeio|role|festival|estadio|boliche|escape room)\b/;
 // pergunta de preço de algo de fora ("quanto tá um ingresso no cinemark?"): não é "quanto gastei" (2.3.9, JF)
 const PRECO_DE_FORA = /\b(quanto (ta|esta|custa|custam|sai|fica|anda|e|eh|ta custando|esta custando)|qual (o )?(preco|valor)|preco d[eoa]s?|valor d[eoa]s?|valores d[eoa]s?)\b/;
 // pesquisa pedida com todas as letras: vai direto pra IA, sem questionário (JF: "sou seu criador, me respeita")
 const PESQUISA_DIRETA = /\b(pesquisa|pesquisar|busca|buscar|procura|procurar|ve|ver|olha|olhar)( (pra|para) mim)?( (na|no) (internet|google|web))\b/;
+// pergunta de recomendação ("qual o melhor shopping pra ver um filme?", "melhor ração pro meu cachorro",
+// "qual o melhor custo-benefício?"): vai direto pra IA pesquisar (2.4.2, JF: "ele tem que entender muito melhor
+// as perguntas"). Fica de fora o que é do próprio dinheiro (banco, cartão, investimento…), que tem resposta aqui.
+const RECOMENDA = /\b((qual|quais) (e |eh |seria |sao )?(o |a |os |as )?melhor(es)?|(o|a) melhor (tipo de |marca de |lugar pra |opcao )?\w+ (pra|para)|melhor custo.?beneficio|custo.?beneficio|vale mais a pena|compensa mais|(me )?recomenda(r|ria)?|(me )?indica(r|ria)?|onde (e|eh|fica|sai|compro) mais barat[oa]|qual (e |eh )?(o |a )?mais barat[oa]|o que (e|eh) melhor)\b/;
+const DO_PROPRIO_DINHEIRO = /\b(banco|bancos|conta|contas|cartao|cartoes|fatura|investimento|investimentos|investir|cdb|tesouro|rende|rendimento|poupanca|orcamento|categoria|gasto|gastos|gastei|meta|metas|saldo|salario|juros|cofrinho|caixinha|dica|app|aplicativo|economizar|economia|poupar)\b/;
 const VIAGEM = /\b(viagem|viajar|passagem|passagens|voo|voos|hotel|hospedagem|pacote de viagem)\b/;
 const PET = /\b(pet|pets|cachorro|cachorrinho|cao|gato|gatinho|gata|filhote|pinscher|pincher|calopsita|passaro|hamster|coelho|peixe|aquario|vira lata)\b/;
 const MORADIA = /\b(aluguel|apartamento|ape|casa propria|me mudar|mudar de casa|mudar de apartamento|mudanca|morar sozinh[oa]|condominio|financiar (uma |a )?(casa|ape))\b/;
@@ -388,6 +393,10 @@ export function acharPesquisa(t, valor) {
   let tipo = null;
   const precoDeFora = PRECO_DE_FORA.test(t) && /\b(um|uma|o|a|os|as|no|na|do|da)\b/.test(t);
   if (LAZER.test(t) && (PEDE.test(t) || precoDeFora || /\b(da pra (eu )?ir|posso ir|vale ir|recomenda|pesquis|valores?|precos?)\b/.test(t))) tipo = 'lazer';
+  // recomendação: o assunto decide o plano; sem assunto conhecido, é compra
+  const recomenda = RECOMENDA.test(t) && !DO_PROPRIO_DINHEIRO.test(t);
+  if (!tipo && recomenda) tipo = LAZER.test(t) ? 'lazer' : PET.test(t) ? 'pet' : VIAGEM.test(t) ? 'viagem' : MORADIA.test(t) ? 'moradia' : TRANSPORTE.test(t) ? 'transporte' : 'produto';
+  if (tipo) { /* já decidido acima */ }
   else if (/(onde (posso|da pra|consigo|eu posso) economizar|como (posso |eu )?economizar|me ajuda a economizar|cortar gastos|reduzir (meus )?gastos|gastar menos)/.test(t)) tipo = 'economizar';
   else if (PET.test(t) && PEDE.test(t) && !/\b(racao|petshop|pet shop)\b.*\b\d/.test(t)) tipo = 'pet';
   else if (MORADIA.test(t) && PEDE.test(t)) tipo = 'moradia';
@@ -401,7 +410,7 @@ export function acharPesquisa(t, valor) {
   // pergunta de preço curta ("quanto tá um ingresso no cinemark?") ou pedido já detalhado (o questionário só atrapalha)
   const palavras = t.split(/\s+/).filter(Boolean).length;
   // (pergunta de preço curta só pula no passeio: compra, pet e casa ainda ganham as perguntas, que poupam crédito)
-  const direto = PESQUISA_DIRETA.test(t) || (tipo === 'lazer' && precoDeFora && palavras <= 12) || palavras >= 18;
+  const direto = PESQUISA_DIRETA.test(t) || recomenda || (tipo === 'lazer' && precoDeFora && palavras <= 12) || palavras >= 18;
   const orc = t.match(/\b(orcamento|ate|teto|no maximo|maximo)\b[^0-9]{0,15}(\d[\d.,]*)/);
   const orcamento = orc ? Math.round(Number(orc[2].replace(/\./g, '').replace(',', '.')) * 100) : undefined;
   const item = t.replace(/\b(pra mim|para mim|na internet|no google|na web|quais sao|qual e|qual|quanto (ta|esta|anda)|os valores|o valor|valores|valor|ve|ver|olha|olhar|busca|buscar)\b/g, ' ').replace(/\b(me ajuda a|me ajude a|ajuda a|ajude a|me ajuda|me ajude|caos|por favor|pesquisa|pesquisar|procura|procurar|acha|achar|encontra|encontrar|compara|comparar|quanto|custa|custaria|sai|sairia|fica|ficaria|o preco de|preco de|preco|onde (compro|comprar|acho)|quero comprar|quero fazer|quero|pretendo|penso em|calcular|planejar|considerando|pra eu|para eu|eu)\b/g, ' ')
@@ -757,7 +766,9 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   if (/(dica|economiz|poupar|guardar dinheiro|como gastar menos|conselho|sugestao)/.test(t)) return { ...r, intent: 'dica' };
   if (/(gast|paguei|saiu|despesa|torrei)/.test(t) && pergunta) return { ...r, intent: 'gasto_total' };
   if (/^(o+i+e*|ola+|e a+i+|ea+i+|opa+|bom dia|boa tarde|boa noite|salve+|he+y+|alo+)\b/.test(t)) return { ...r, intent: 'saudacao' }; // "oii", "oie", "eaii" (teste do amigo do JF, 15/11)
-  if (r.categoria && pergunta) return { ...r, intent: 'gasto_total' };
+  // 2.4.2 (JF: "qual melhor shopping pra curtir um cinema?" respondia "nenhum gasto em Compras"): nome de categoria
+  // só vira "quanto gastei" em pergunta curta ("e no mercado?") ou que fala de gasto; o resto vai pra IA
+  if (r.categoria && pergunta && (t.split(/\s+/).length <= 4 || /\b(quanto|total|soma|gastos?|gastei|foi)\b/.test(t))) return { ...r, intent: 'gasto_total' };
   return { ...r, intent: 'nao_entendi' };
 }
 

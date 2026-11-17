@@ -45,3 +45,16 @@ test('"conferir o saldo" junta por banco e deixa o cartão de fora', () => {
   assert.equal(a.count, 5);
   assert.equal(a.accountName, '5 contas (Banestes, C6 Bank, Inter e PicPay)');
 });
+
+test('17/11: pergunta de "qual o melhor" vira pesquisa na IA; do próprio dinheiro continua aqui', () => {
+  const tipo = f => { const r = entender(f, { categories: C }); return `${r.intent}:${r.tipo || ''}:${r.direto ? 'direto' : ''}`; };
+  assert.equal(tipo('Qual melhor Shopping pra curtir um cinema?!'), 'pesquisa_compra:lazer:direto');
+  assert.equal(tipo('qual o melhor tipo de ração para o meu cachorro?'), 'pesquisa_compra:pet:direto');
+  assert.equal(tipo('qual o melhor custo-benefício de celular até 1500?'), 'pesquisa_compra:produto:direto');
+  assert.equal(tipo('me recomenda um restaurante barato em vitória'), 'pesquisa_compra:lazer:direto');
+  assert.equal(tipo('onde é mais barato comprar fralda?'), 'pesquisa_compra:produto:direto');
+  assert.equal(entender('qual banco rende mais?', { categories: C }).intent, 'bancos');
+  assert.equal(entender('qual a melhor forma de economizar?', { categories: C }).intent, 'dica');
+  assert.equal(entender('quanto gastei em restaurante?', { categories: C }).intent, 'gasto_total');
+  assert.notEqual(entender('qual o shopping mais legal da cidade pra passear?', { categories: C }).intent, 'gasto_total');
+});
