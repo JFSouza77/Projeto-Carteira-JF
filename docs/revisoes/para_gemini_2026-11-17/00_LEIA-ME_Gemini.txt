@@ -1,0 +1,48 @@
+LEIA-ME PRO GEMINI — revisão da Carteira (C.A.O.S. Finanças), 17/11/2026
+App 2.1.8.1 Alfa · C.A.O.S. 2.4.3 · núcleo 1.8.0. Preparado pelo Wally (o Claude Code da Carteira).
+
+O QUE É
+PWA de controle de gastos em JavaScript puro (sem framework). O C.A.O.S. é o narrador: um "parceiro financeiro"
+que conversa, reage com emoção e propõe registros (a pessoa sempre confirma; ele nunca grava nada sozinho).
+Os blocos vêm com o número da linha na frente (ex.: "  123| código"). Cite o arquivo e a linha em cada achado.
+
+REGRAS QUE NÃO PODEM SER QUEBRADAS (não proponha nada que fure estas)
+1. O C.A.O.S. (pasta js/caos/) nunca grava dado, nunca usa rede, DOM nem armazenamento. Devolve { fala, memoria }.
+2. Valores sempre em centavos inteiros. Datas AAAA-MM-DD.
+3. Toda lista de falas tem 5, 10, 15… itens (regra do dono do app: quantidades terminam em 0 ou 5).
+4. A IA online só recebe totais do mês, nunca a lista de gastos. A voz natural recebe só o texto da fala.
+5. Humor "suave" (o padrão) nunca zoa a pessoa; zoeira só no humor "ácido".
+
+O QUE OLHAR EM CADA BLOCO (o que mudou de 16 a 17/11 está em negrito mental: comece por aí)
+01_cerebro_entender.txt — Frases que ele entende errado. Novidades: plano de passeio (LAZER, PRECO_DE_FORA,
+   PESQUISA_DIRETA), pergunta de recomendação (RECOMENDA, DO_PROPRIO_DINHEIRO), formiguinha, motivação/ditado/
+   curiosidade, e a regra "nome de categoria só vira quanto gastei se a pergunta for curta ou falar de gasto".
+   Teste mental com frases reais de brasileiro (gíria, erro de digitação, sem acento). Quais caem na intenção errada?
+02_cerebro_responder.txt — Contas e respostas: o questionário dos planos (pula o que já foi dito?), pesquisa direta,
+   dar baixa (fatura paga, amigo pagou), formiguinha. Algum número errado, divisão por zero, texto quebrado?
+03_caos_espinha.txt — 2º balão (cutucada, "ah, e…", tangente de TDAH com intervalo de 30 min), pergunta de amigo
+   depois do gasto (curiosidade.js: a resposta só mexe na memória dele). A memória pode crescer sem limite?
+   A tangente pode aparecer junto de um aviso? O nome da pessoa entra certinho no começo da frase?
+04_falas.txt — Revise os FATOS: frases de famosos (autoria correta? quando é incerta, o texto diz "atribuída a"?),
+   ditados e curiosidades (datas e números certos?). Português natural, sem erro. Conte se cada lista fecha em 0 ou 5.
+05_voz.txt — Voz natural (Azure, pelo servidor) com reserva na voz do celular. Problema conhecido: no iPhone do dono
+   ela ainda sai robótica. Procure motivos: destrave do áudio no iOS (WebAudio), tempo-limite, CORS, formato.
+   E a boca do avatar: o app mede o volume e manda pro avatar. Algo pode travar a fila de falas (emenda)?
+06_tutorial_e_chat.txt — Tutorial estilo jogo (escurece e acende uma parte por vez). Pode travar? Pula passo
+   quando a parte não existe? Funciona em tela pequena? E o fluxo do Chat (ordem das mensagens, voz, IA).
+07_contas_lancar_avatar.txt — "Guardar a cada compra" (o cofrinho recebe um valor a cada compra; a transferência
+   automática fica ligada ao gasto e some se o gasto for apagado). Algum caso guarda duas vezes, ou no banco errado?
+   Raio-X das contas. Avatar: 50 formas, cada uma com rostinho; a boca mexe quando ele fala.
+08_motor.txt — Cálculo de saldo (o saldo informado + o que foi lançado DEPOIS dele), fatura do cartão, formiguinha,
+   guardarACadaCompra, alerta "conferir o saldo". Procure erro de conta e caso de borda (mês com 28/31 dias, valor 0).
+09_servidor.txt — Segurança: CORS, limites por dia, teto de busca, cache, conta e sincronização ponta a ponta.
+   Algo deixa vazar dado de uma pessoa pra outra, ou gastar crédito sem limite?
+
+COMO DEVOLVER (um arquivo de texto, em português simples)
+Pra cada achado:
+- Gravidade: ALTA (quebra o app ou dado errado), MÉDIA (resposta errada), BAIXA (detalhe).
+- Arquivo e linha.
+- O que acontece (com uma frase de exemplo, se for do Chat).
+- Sugestão de correção (curta).
+No fim: as 5 frases que você acha que mais confundem o C.A.O.S. hoje.
+Não reescreva arquivos inteiros. Achado sem certeza: diga "suspeita" em vez de afirmar.

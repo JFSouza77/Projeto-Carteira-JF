@@ -1,0 +1,1730 @@
+BLOCO: Motor: cálculos de dinheiro (formiguinha, guardar a cada compra, alertas, saldo)
+App C.A.O.S. Finanças 2.1.8.1 Alfa · C.A.O.S. 2.4.3 · núcleo 1.8.0 · 17/11/2026
+
+
+===== ARQUIVO: js/engine.js =====
+
+    1| // Motor: regras, cálculos e detecção de eventos.
+    2| // Funções puras: sem DOM, sem IndexedDB. Quem grava é o app.js via db.js.
+    3| 
+    4| export const DEFAULT_CATEGORIES = Object.freeze([
+    5|   { id: 'mercado', name: 'Mercado', emoji: '🛒', budgetCents: 0 },
+    6|   { id: 'delivery', name: 'Delivery', emoji: '🛵', budgetCents: 0 },
+    7|   { id: 'restaurante', name: 'Restaurante', emoji: '🍽️', budgetCents: 0 },
+    8|   { id: 'transporte', name: 'Transporte', emoji: '🚗', budgetCents: 0 },
+    9|   { id: 'moradia', name: 'Moradia', emoji: '🏠', budgetCents: 0 },
+   10|   { id: 'contas', name: 'Contas', emoji: '💡', budgetCents: 0 },
+   11|   { id: 'saude', name: 'Saúde', emoji: '💊', budgetCents: 0 },
+   12|   { id: 'lazer', name: 'Lazer', emoji: '🎟️', budgetCents: 0 },
+   13|   { id: 'jogos', name: 'Jogos', emoji: '🎮', budgetCents: 0 }, // 15/11 (JF): moedas e gastos de jogo (Robux, V-Bucks, skins…)
+   14|   { id: 'streaming', name: 'Streaming', emoji: '📺', budgetCents: 0 },
+   15|   { id: 'compras', name: 'Compras', emoji: '🛍️', budgetCents: 0 },
+   16|   { id: 'educacao', name: 'Educação', emoji: '🎓', budgetCents: 0 }, // 13/11 (JF): faculdade, curso, escola, material
+   17|   { id: 'outros', name: 'Outros', emoji: '📦', budgetCents: 0 },
+   18| ].map(c => Object.freeze(c)));
+   19| 
+   20| export const ALERT_RATIO = 0.8;
+   21| export const DELIVERY_WINDOW_DAYS = 7;
+   22| export const DELIVERY_REPEAT_COUNT = 3;
+   23| // Efeito formiguinha (JF, 16/11): gastinhos de até R$ 30 que, somados, pesam. A cada 10 no mês, o C.A.O.S. avisa.
+   24| export const FORMIGA_LIMITE_CENTS = 3000;
+   25| export const FORMIGA_PASSO = 10;
+   26| 
+   27| const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+   28| 
+   29| /** Centavos -> "R$ 12,50" */
+   30| export function formatBRL(cents) {
+   31|   return brl.format((cents || 0) / 100);
+   32| }
+   33| 
+   34| /**
+   35|  * Texto digitado -> centavos inteiros. Aceita "12", "12,5", "12,50", "1.234,56", "R$ 9,90", "12.50".
+   36|  * Retorna null se inválido ou <= 0.
+   37|  */
+   38| export function parseAmount(input) {
+   39|   if (typeof input === 'number') return Number.isFinite(input) && input > 0 ? Math.round(input * 100) : null;
+   40|   if (typeof input !== 'string') return null;
+   41|   let s = input.replace(/R\$|\s/gi, '');
+   42|   if (!/^[\d.,]+$/.test(s)) return null;
+   43|   if (s.includes(',')) {
+   44|     s = s.replace(/\./g, '').replace(',', '.');
+   45|   } else if ((s.match(/\./g) || []).length > 1 || /\.\d{3}$/.test(s)) {
+   46|     s = s.replace(/\./g, ''); // "1.234" = mil e pouco, não 1,234
+   47|   }
+   48|   const n = Number(s);
+   49|   if (!Number.isFinite(n) || n <= 0) return null;
+   50|   return Math.round(n * 100);
+   51| }
+   52| 
+   53| const pad = n => String(n).padStart(2, '0');
+   54| 
+   55| /** Data local -> "YYYY-MM-DD" */
+   56| export function toISODate(date = new Date()) {
+   57|   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+   58| }
+   59| 
+   60| export function monthKey(isoDate) {
+   61|   return isoDate.slice(0, 7);
+   62| }
+   63| 
+   64| /** "2026-01" + -1 -> "2025-12" */
+   65| export function shiftMonth(key, delta) {
+   66|   const [y, m] = key.split('-').map(Number);
+   67|   const d = new Date(y, m - 1 + delta, 1);
+   68|   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+   69| }
+   70| 
+   71| const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro',
+   72|   'outubro', 'novembro', 'dezembro'];
+   73| 
+   74| export function monthLabel(key) {
+   75|   const [y, m] = key.split('-').map(Number);
+   76|   return `${MONTHS[m - 1]} de ${y}`;
+   77| }
+   78| 
+   79| function isValidISODate(s) {
+   80|   if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+   81|   const [y, m, d] = s.split('-').map(Number);
+   82|   const dt = new Date(y, m - 1, d);
+   83|   return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
+   84| }
+   85| 
+   86| /** Valida e monta um gasto novo. Lança Error com mensagem para o usuário se algo estiver errado. */
+   87| // Como pagou (P8, vistoria do JF 12/11): dinheiro, Pix, débito ou crédito (à vista ou parcelado)
+   88| export const FORMAS_PAGAMENTO = Object.freeze({ dinheiro: '💵 Dinheiro', pix: '⚡ Pix', debito: '💳 Débito', credito: '💳 Crédito' });
+   89| // parcelado no crédito: "total" = o banco prende o valor todo no limite e solta a cada parcela paga;
+   90| // "parcela" = só a parcela do mês ocupa o limite
+   91| export const MODOS_LIMITE = Object.freeze({ total: 'Prende o valor todo no limite', parcela: 'Só a parcela do mês ocupa o limite' });
+   92| 
+   93| export function createExpense({ amountCents, categoryId, note = '', date, accountId = null, imageId = null, compromissoId = null, forma = null, parcelas = 1, limiteModo = 'total' }, { categories, now = new Date(), id } = {}) {
+   94|   if (!Number.isInteger(amountCents) || amountCents <= 0) throw new Error('Valor inválido.');
+   95|   if (forma != null && !FORMAS_PAGAMENTO[forma]) throw new Error('Como você pagou?');
+   96|   if (!(Number.isInteger(parcelas) && parcelas >= 1 && parcelas <= 24)) throw new Error('Parcelas: de 1 a 24.');
+   97|   if (parcelas > 1 && forma !== 'credito') throw new Error('Só dá pra parcelar no crédito.');
+   98|   if (!MODOS_LIMITE[limiteModo]) throw new Error('Como o parcelado ocupa o limite?');
+   99|   if (amountCents > 100_000_000_00) throw new Error('Valor alto demais. Confere aí.');
+  100|   if (categories && !categories.some(c => c.id === categoryId)) throw new Error('Escolha uma categoria.');
+  101|   const day = date || toISODate(now);
+  102|   if (!isValidISODate(day)) throw new Error('Data inválida.');
+  103|   return {
+  104|     id: id || newId(),
+  105|     amountCents,
+  106|     categoryId,
+  107|     note: String(note).trim().slice(0, 120),
+  108|     date: day,
+  109|     month: monthKey(day),
+  110|     accountId: accountId || null,
+  111|     imageId: imageId || null,
+  112|     compromissoId: compromissoId || null,
+  113|     forma: forma || null,
+  114|     parcelas,
+  115|     limiteModo: parcelas > 1 ? limiteModo : 'total',
+  116|     createdAt: now.getTime(),
+  117|   };
+  118| }
+  119| 
+  120| /** Parcelas de um gasto: [{ k, date, valorCents }]. A 1ª leva o centavo que sobra da divisão. */
+  121| export function parcelasDe(e) {
+  122|   const n = e.parcelas > 1 ? e.parcelas : 1;
+  123|   const base = Math.floor(e.amountCents / n);
+  124|   return Array.from({ length: n }, (_, k) => {
+  125|     const mes = shiftMonth(e.date.slice(0, 7), k);
+  126|     return { k, date: k ? diaDoMes(mes, Number(e.date.slice(8, 10))) : e.date, valorCents: k ? base : e.amountCents - base * (n - 1) };
+  127|   });
+  128| }
+  129| 
+  130| export function newId() {
+  131|   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  132|   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  133| }
+  134| 
+  135| // ---------- Rachadinha (07/11): conta dividida com amigos ----------
+  136| // O gasto guarda o total (é o que saiu da conta ou do cartão) e `racha`: [{ id, nome, valorCents, recebidoEm }].
+  137| // No orçamento, nas categorias e na previsão conta só a MINHA parte; o resto é "a receber".
+  138| export const RACHA_MAX_PESSOAS = 20;
+  139| 
+  140| /** Quanto do gasto é meu de verdade (total menos a parte dos amigos). */
+  141| export function valorProprio(e) {
+  142|   if (!e || !Array.isArray(e.racha) || !e.racha.length) return e?.amountCents ?? 0;
+  143|   const dos = e.racha.reduce((s, p) => s + (p.valorCents || 0), 0);
+  144|   return Math.max(0, e.amountCents - dos);
+  145| }
+  146| 
+  147| /**
+  148|  * Divide um total igualmente entre mim e os nomes. Cada amigo paga a parte inteira em centavos; a sobra do
+  149|  * arredondamento fica comigo. Ex.: R$ 182,00 entre mim e 3 amigos → cada um R$ 45,50.
+  150|  */
+  151| export function dividirIgual(totalCents, nomes, { now = Date.now() } = {}) {
+  152|   const lista = (nomes || []).map(n => String(n).trim().slice(0, 40)).filter(Boolean);
+  153|   if (!Number.isInteger(totalCents) || totalCents <= 0) throw new Error('Valor inválido.');
+  154|   if (!lista.length) throw new Error('Diga com quem você vai dividir.');
+  155|   if (lista.length > RACHA_MAX_PESSOAS) throw new Error(`Dá pra dividir com até ${RACHA_MAX_PESSOAS} pessoas.`);
+  156|   const parte = Math.floor(totalCents / (lista.length + 1));
+  157|   if (parte <= 0) throw new Error('Valor pequeno demais pra dividir.');
+  158|   return lista.map((nome, i) => ({ id: `r${now.toString(36)}${i}`, nome, valorCents: parte, recebidoEm: null }));
+  159| }
+  160| 
+  161| /** "Ana", "Ana e Bia", "Ana, Bia e Caio", "Ana, Bia, Caio e mais gente". */
+  162| export function juntarNomes(nomes) {
+  163|   const l = [...new Set(nomes)];
+  164|   if (l.length > 3) return `${l.slice(0, 3).join(', ')} e mais gente`;
+  165|   return l.length <= 1 ? (l[0] || '') : `${l.slice(0, -1).join(', ')} e ${l[l.length - 1]}`;
+  166| }
+  167| 
+  168| /** Tudo que ainda falta receber, do mais antigo pro mais novo. */
+  169| export function aReceber(expenses) {
+  170|   const itens = [];
+  171|   for (const e of expenses) {
+  172|     if (!Array.isArray(e.racha)) continue;
+  173|     for (const p of e.racha) {
+  174|       if (!p.recebidoEm) itens.push({ expenseId: e.id, pessoaId: p.id, nome: p.nome, valorCents: p.valorCents, date: e.date, note: e.note || '', categoryId: e.categoryId });
+  175|     }
+  176|   }
+  177|   itens.sort((a, b) => a.date.localeCompare(b.date));
+  178|   return { itens, totalCents: itens.reduce((s, x) => s + x.valorCents, 0) };
+  179| }
+  180| 
+  181| /**
+  182|  * Texto pronto pra cobrar um amigo no WhatsApp (fase 2 da repaginada, 13/11). Educado, com valor e data.
+  183|  * `item` é um item de `aReceber`.
+  184|  */
+  185| export function mensagemCobranca(item) {
+  186|   const [, m, d] = item.date.split('-');
+  187|   const doQue = item.note ? `da sua parte em "${item.note}"` : 'da sua parte da nossa conta';
+  188|   return `Oi, ${item.nome}! Passando pra lembrar ${doQue} (${d}/${m}): ${formatBRL(item.valorCents)}. Pode mandar no Pix quando der. Valeu!`;
+  189| }
+  190| 
+  191| /** Marca a parte de um amigo como recebida. Devolve uma cópia nova do gasto. */
+  192| /**
+  193|  * O amigo pagou a parte dele. `contaId`: em qual conta o dinheiro caiu (rachadinha no cartão, 13/11, achado do Gemini):
+  194|  * o gasto foi no crédito, mas o Pix do amigo cai numa conta corrente. Sem `contaId`, volta pra conta do próprio gasto.
+  195|  */
+  196| export function marcarRecebido(expense, pessoaId, now = Date.now(), contaId = null) {
+  197|   if (!Array.isArray(expense.racha) || !expense.racha.some(p => p.id === pessoaId)) throw new Error('Não achei essa parte.');
+  198|   return { ...expense, racha: expense.racha.map(p => (p.id === pessoaId ? { ...p, recebidoEm: now, ...(contaId ? { contaId } : {}) } : p)) };
+  199| }
+  200| 
+  201| // ---------- Ofensiva (07/11): dias seguidos anotando ----------
+  202| const diaLocal = ms => toISODate(new Date(ms));
+  203| function diaAnterior(iso) {
+  204|   const [y, m, d] = iso.split('-').map(Number);
+  205|   return toISODate(new Date(y, m - 1, d - 1));
+  206| }
+  207| 
+  208| /**
+  209|  * Dias seguidos em que a pessoa usou o app pra anotar (gasto ou entrada criados naquele dia, ou "hoje não gastei").
+  210|  * A ofensiva continua viva se o último dia foi hoje ou ontem. Devolve { dias, hojeFeito, recorde }.
+  211|  */
+  212| function diasAnotados({ expenses = [], incomes = [], diasSemGasto = [] }) {
+  213|   const dias = new Set();
+  214|   for (const x of [...expenses, ...incomes]) if (Number.isFinite(x.createdAt)) dias.add(diaLocal(x.createdAt));
+  215|   for (const d of diasSemGasto) if (isValidISODate(d)) dias.add(d);
+  216|   return dias;
+  217| }
+  218| 
+  219| export function ofensiva(dados, today = toISODate()) {
+  220|   const dias = diasAnotados(dados);
+  221|   const hojeFeito = dias.has(today);
+  222|   let cursor = hojeFeito ? today : diaAnterior(today);
+  223|   let atual = 0;
+  224|   while (dias.has(cursor)) { atual++; cursor = diaAnterior(cursor); }
+  225|   // recorde: maior sequência em todo o histórico
+  226|   let recorde = 0;
+  227|   for (const d of dias) {
+  228|     if (dias.has(diaAnterior(d))) continue; // só começa a contar no primeiro dia de cada sequência
+  229|     let n = 0, c = d;
+  230|     while (dias.has(c)) { n++; const [y, m, dd] = c.split('-').map(Number); c = toISODate(new Date(y, m - 1, dd + 1)); }
+  231|     if (n > recorde) recorde = n;
+  232|   }
+  233|   return { dias: atual, hojeFeito, recorde: Math.max(recorde, atual) };
+  234| }
+  235| 
+  236| /**
+  237|  * Calendário da ofensiva (fase 2 da repaginada, 13/11): os últimos `n` dias (28 = 4 semanas), do mais antigo pro hoje.
+  238|  * Cada dia: { data, anotado, semGasto (marcou "hoje não gastei"), hoje }.
+  239|  */
+  240| export function calendarioOfensiva(dados, today = toISODate(), n = 28) {
+  241|   const dias = diasAnotados(dados);
+  242|   const sem = new Set((dados.diasSemGasto || []).filter(isValidISODate));
+  243|   const out = [];
+  244|   let d = today;
+  245|   for (let i = 0; i < n; i++) { out.unshift({ data: d, anotado: dias.has(d), semGasto: sem.has(d), hoje: i === 0 }); d = diaAnterior(d); }
+  246|   return out;
+  247| }
+  248| 
+  249| /**
+  250|  * Fato útil da semana (15/11, no lugar do troféu da ofensiva; ideia do Code): compara os últimos 7 dias com os 7
+  251|  * anteriores. Só fala se as duas semanas tiverem gasto anotado em pelo menos 3 dias e a diferença for de R$ 10 ou mais.
+  252|  * Devolve { type: 'semana_menos' | 'semana_mais', amountCents (diferença), totalCents (esta semana),
+  253|  *           categoryName, overCents (quanto a categoria que mais mudou variou) } ou null.
+  254|  */
+  255| export function fatoDaSemana(expenses, categories = [], today = toISODate()) {
+  256|   const [y, m, d] = today.split('-').map(Number);
+  257|   const dia = n => toISODate(new Date(y, m - 1, d - n));
+  258|   const ini = dia(6), iniAntes = dia(13), fimAntes = dia(7);
+  259|   const desta = expenses.filter(e => e.date >= ini && e.date <= today);
+  260|   const antes = expenses.filter(e => e.date >= iniAntes && e.date <= fimAntes);
+  261|   if (new Set(desta.map(e => e.date)).size < 3 || new Set(antes.map(e => e.date)).size < 3) return null;
+  262|   const soma = l => l.reduce((t, e) => t + e.amountCents, 0);
+  263|   const diff = soma(desta) - soma(antes);
+  264|   if (Math.abs(diff) < 1000) return null;
+  265|   const porCat = new Map();
+  266|   for (const e of desta) porCat.set(e.categoryId, (porCat.get(e.categoryId) || 0) + e.amountCents);
+  267|   for (const e of antes) porCat.set(e.categoryId, (porCat.get(e.categoryId) || 0) - e.amountCents);
+  268|   // a categoria que mais ajudou (semana menor) ou mais pesou (semana maior)
+  269|   const [catId, catDiff] = [...porCat].sort((a, b) => (diff < 0 ? a[1] - b[1] : b[1] - a[1]))[0] || [];
+  270|   const cat = categories.find(c => c.id === catId);
+  271|   return {
+  272|     type: diff < 0 ? 'semana_menos' : 'semana_mais', amountCents: Math.abs(diff), totalCents: soma(desta),
+  273|     categoryName: cat ? cat.name : 'outras coisas', overCents: catDiff ? Math.abs(catDiff) : 0,
+  274|   };
+  275| }
+  276| 
+  277| export const MARCOS_OFENSIVA = Object.freeze([3, 7, 14, 30, 60, 100, 200, 365]);
+  278| 
+  279| /** Soma dos gastos de uma categoria num mês (só a minha parte, se a conta foi rachada). */
+  280| export function spentIn(expenses, month, categoryId) {
+  281|   let total = 0;
+  282|   for (const e of expenses) {
+  283|     if (e.month === month && (categoryId === undefined || e.categoryId === categoryId)) total += valorProprio(e);
+  284|   }
+  285|   return total;
+  286| }
+  287| 
+  288| /**
+  289|  * Resumo do mês: total, orçamento total e linha por categoria.
+  290|  * ratio = gasto/orçamento (null quando a categoria não tem orçamento).
+  291|  */
+  292| export function summarizeMonth(expenses, categories, month) {
+  293|   const rows = categories.map(c => {
+  294|     const spentCents = spentIn(expenses, month, c.id);
+  295|     const budgetCents = c.budgetCents || 0;
+  296|     return {
+  297|       id: c.id, name: c.name, emoji: c.emoji, spentCents, budgetCents,
+  298|       ratio: budgetCents > 0 ? spentCents / budgetCents : null,
+  299|     };
+  300|   });
+  301|   const totalCents = rows.reduce((s, r) => s + r.spentCents, 0);
+  302|   const budgetTotalCents = rows.reduce((s, r) => s + r.budgetCents, 0);
+  303|   // Só o que foi gasto em categorias com limite entra na comparação com o orçamento.
+  304|   const budgetedSpentCents = rows.reduce((s, r) => s + (r.budgetCents > 0 ? r.spentCents : 0), 0);
+  305|   return {
+  306|     month,
+  307|     totalCents,
+  308|     budgetTotalCents,
+  309|     budgetedSpentCents,
+  310|     ratio: budgetTotalCents > 0 ? budgetedSpentCents / budgetTotalCents : null,
+  311|     count: expenses.filter(e => e.month === month).length,
+  312|     rows,
+  313|   };
+  314| }
+  315| 
+  316| function daysBetween(isoA, isoB) {
+  317|   const [a, b] = [isoA, isoB].map(s => { const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d); });
+  318|   return Math.round((b - a) / 86_400_000);
+  319| }
+  320| 
+  321| /**
+  322|  * Eventos disparados por um gasto recém-cadastrado.
+  323|  * `expenses` já inclui `newExpense`. Retorna lista de eventos (só leitura para o narrador).
+  324|  */
+  325| export function detectExpenseEvents({ expenses, categories, newExpense }) {
+  326|   const cat = categories.find(c => c.id === newExpense.categoryId);
+  327|   const events = [{
+  328|     type: 'gasto_cadastrado',
+  329|     categoryId: newExpense.categoryId,
+  330|     categoryName: cat?.name ?? newExpense.categoryId,
+  331|     amountCents: newExpense.amountCents,
+  332|   }];
+  333| 
+  334|   const budget = cat?.budgetCents || 0;
+  335|   if (budget > 0) {
+  336|     const after = spentIn(expenses, newExpense.month, newExpense.categoryId);
+  337|     const before = after - valorProprio(newExpense);
+  338|     const base = {
+  339|       categoryId: cat.id, categoryName: cat.name, spentCents: after, budgetCents: budget,
+  340|       pct: Math.round((after / budget) * 100),
+  341|     };
+  342|     if (before <= budget && after > budget) {
+  343|       events.push({ type: 'categoria_estourada', ...base, overCents: after - budget });
+  344|     } else if (before < budget * ALERT_RATIO && after >= budget * ALERT_RATIO) {
+  345|       events.push({ type: 'orcamento_80', ...base, leftCents: budget - after });
+  346|     }
+  347|   }
+  348| 
+  349|   if (newExpense.categoryId === 'delivery') {
+  350|     const recent = expenses.filter(e => {
+  351|       if (e.categoryId !== 'delivery') return false;
+  352|       const diff = daysBetween(e.date, newExpense.date);
+  353|       return diff >= 0 && diff < DELIVERY_WINDOW_DAYS;
+  354|     });
+  355|     if (recent.length >= DELIVERY_REPEAT_COUNT) {
+  356|       events.push({
+  357|         type: 'delivery_repetido',
+  358|         count: recent.length,
+  359|         days: DELIVERY_WINDOW_DAYS,
+  360|         totalCents: recent.reduce((s, e) => s + valorProprio(e), 0),
+  361|       });
+  362|     }
+  363|   }
+  364|   // formiguinha (JF, 16/11): o 10º, 20º, 30º… gastinho do mês dispara o aviso (com o total, que é o que assusta)
+  365|   const valorNovo = valorProprio(newExpense);
+  366|   if (!newExpense.compromissoId && valorNovo > 0 && valorNovo <= FORMIGA_LIMITE_CENTS) {
+  367|     const f = formiguinhas(expenses, newExpense.month);
+  368|     if (f.count >= FORMIGA_PASSO && f.count % FORMIGA_PASSO === 0) {
+  369|       const top = f.porCategoria[0];
+  370|       const catTop = top && categories.find(c => c.id === top.categoryId);
+  371|       events.push({ type: 'formiguinha', count: f.count, totalCents: f.totalCents, pct: f.pct, month: newExpense.month,
+  372|         categoryId: top?.categoryId || null, categoryName: catTop?.name || null });
+  373|     }
+  374|   }
+  375|   return events;
+  376| }
+  377| 
+  378| // ---------- Guardar a cada compra (JF, 16/11) ----------
+  379| // No Mercado Pago (e em outros bancos) dá pra guardar um valor fixo num cofrinho a cada compra. O cofrinho guarda a
+  380| // regra: quanto, de qual conta sai e em que compras vale (no cartão de crédito, no débito/Pix da conta, ou nas duas).
+  381| export const QUANDO_GUARDA = Object.freeze({ todas: 'em todas as compras do banco', credito: 'só no cartão de crédito', debito: 'só no débito e no Pix' });
+  382| 
+  383| export function validarGuardaCompra(g, cofrinho, accounts = []) {
+  384|   if (!g) return null;
+  385|   if (!Number.isInteger(g.valorCents) || g.valorCents <= 0) throw new Error('Quanto guardar a cada compra? Ex.: 5,00.');
+  386|   if (g.valorCents > 100_000) throw new Error('Guardar a cada compra: até R$ 1.000,00 por compra.');
+  387|   const origem = accounts.find(a => a.id === g.origemId);
+  388|   if (!origem || origem.tipo === 'cartao' || origem.id === cofrinho.id || origem.paraQuem) throw new Error('Escolha de qual conta sai o dinheiro guardado.');
+  389|   const quando = QUANDO_GUARDA[g.quando] ? g.quando : 'todas';
+  390|   return { valorCents: g.valorCents, origemId: origem.id, quando };
+  391| }
+  392| 
+  393| /**
+  394|  * Quanto guardar por causa deste gasto (função pura). Vale pra compra no cartão de crédito do mesmo banco do
+  395|  * cofrinho e pra compra no débito/Pix da conta de origem. Conta fixa não conta (não é compra).
+  396|  * Não guarda se a conta de origem não tem o valor (o banco também não guarda).
+  397|  * @returns {{ cofrinhoId, deId, amountCents }[]}
+  398|  */
+  399| export function guardarACadaCompra(expense, accounts = [], expenses = [], incomes = [], transferencias = []) {
+  400|   if (!expense?.accountId || expense.compromissoId) return [];
+  401|   const pagou = accounts.find(a => a.id === expense.accountId);
+  402|   if (!pagou) return [];
+  403|   const out = [];
+  404|   const usado = new Map(); // duas regras saindo da mesma conta: uma não pode gastar o dinheiro da outra
+  405|   for (const c of accounts) {
+  406|     const g = c.subtipo === 'cofrinho' && c.tipo !== 'cartao' && c.guardaCompra;
+  407|     if (!g) continue;
+  408|     const credito = pagou.tipo === 'cartao' && pagou.bank === c.bank && g.quando !== 'debito';
+  409|     const debito = pagou.tipo !== 'cartao' && pagou.id === g.origemId && expense.forma !== 'credito' && g.quando !== 'credito';
+  410|     if (!credito && !debito) continue;
+  411|     const origem = accounts.find(a => a.id === g.origemId && a.tipo !== 'cartao');
+  412|     if (!origem) continue;
+  413|     const saldo = accountBalance(origem, expenses, incomes, transferencias) - (usado.get(origem.id) || 0);
+  414|     if (saldo < g.valorCents) continue;
+  415|     usado.set(origem.id, (usado.get(origem.id) || 0) + g.valorCents);
+  416|     out.push({ cofrinhoId: c.id, deId: origem.id, amountCents: g.valorCents });
+  417|   }
+  418|   return out;
+  419| }
+  420| 
+  421| /**
+  422|  * Efeito formiguinha (JF, 16/11): os gastos pequenos do mês (até R$ 30, sem conta fixa), somados.
+  423|  * @returns {{ count, totalCents, monthTotalCents, pct, porCategoria: {categoryId, count, totalCents}[] }}
+  424|  */
+  425| export function formiguinhas(expenses, month) {
+  426|   const doMes = expenses.filter(e => e.month === month);
+  427|   const pequenos = doMes.filter(e => !e.compromissoId && valorProprio(e) > 0 && valorProprio(e) <= FORMIGA_LIMITE_CENTS);
+  428|   const totalCents = pequenos.reduce((t, e) => t + valorProprio(e), 0);
+  429|   const monthTotalCents = doMes.reduce((t, e) => t + valorProprio(e), 0);
+  430|   const mapa = new Map();
+  431|   for (const e of pequenos) {
+  432|     const c = mapa.get(e.categoryId) || { categoryId: e.categoryId, count: 0, totalCents: 0 };
+  433|     c.count += 1; c.totalCents += valorProprio(e);
+  434|     mapa.set(e.categoryId, c);
+  435|   }
+  436|   return {
+  437|     count: pequenos.length, totalCents, monthTotalCents,
+  438|     pct: monthTotalCents ? Math.round(totalCents * 100 / monthTotalCents) : 0,
+  439|     porCategoria: [...mapa.values()].sort((a, b) => b.totalCents - a.totalCents || b.count - a.count),
+  440|   };
+  441| }
+  442| 
+  443| /**
+  444|  * Evento de fechamento do mês anterior: dispara "mes_verde" se o mês passado teve gastos, havia orçamento
+  445|  * e o gasto nas categorias com limite ficou dentro dele. Usa os orçamentos atuais (o MVP não guarda histórico de orçamento).
+  446|  */
+  447| export function detectMonthClose({ expenses, categories, currentMonth }) {
+  448|   const prev = shiftMonth(currentMonth, -1);
+  449|   const s = summarizeMonth(expenses, categories, prev);
+  450|   if (s.count === 0 || s.budgetTotalCents === 0) return [];
+  451|   if (s.budgetedSpentCents <= s.budgetTotalCents) {
+  452|     return [{
+  453|       type: 'mes_verde',
+  454|       month: prev,
+  455|       monthName: monthLabel(prev),
+  456|       totalCents: s.budgetedSpentCents,
+  457|       budgetCents: s.budgetTotalCents,
+  458|       savedCents: s.budgetTotalCents - s.budgetedSpentCents,
+  459|     }];
+  460|   }
+  461|   return [];
+  462| }
+  463| 
+  464| // ======================================================================
+  465| // Entradas (rendimentos), contas bancárias, consultas e alertas
+  466| // ======================================================================
+  467| 
+  468| export const INCOME_SOURCES = Object.freeze([
+  469|   { id: 'salario', name: 'Salário', emoji: '💼' },
+  470|   { id: 'freela', name: 'Freela / extra', emoji: '🛠️' },
+  471|   { id: 'rendimento', name: 'Rendimentos', emoji: '📈' },
+  472|   { id: 'presente', name: 'Presente / Pix recebido', emoji: '🎁' },
+  473|   { id: 'outros', name: 'Outros', emoji: '💰' },
+  474| ].map(s => Object.freeze(s)));
+  475| 
+  476| // Bancos mais usados no Brasil. Só o nome: o app não se conecta ao banco, o saldo é você que informa.
+  477| const BANCOS_AZ = [
+  478|   'Nubank', 'Itaú', 'Itaú Cartões', 'Bradesco', 'Banco do Brasil', 'Caixa', 'Santander', 'Inter', 'C6 Bank', 'PicPay',
+  479|   'Mercado Pago', 'PagBank', 'BTG Pactual', 'XP', 'Sicoob', 'Sicredi', 'Neon', 'Next', 'Banrisul', 'Banestes', 'BRB',
+  480|   'Banco do Nordeste', 'Agibank', 'Will Bank', 'Original', 'Safra', 'Banco Pan', 'Digio', 'Cora', 'BV', 'Mercantil',
+  481|   'Sofisa Direto', 'Nomad',
+  482|   // 07/11 (lista de bancos e cartões da Carteira da Apple, trazida pelo JF): só os nomes que a pessoa conhece
+  483|   'Banco BMG', 'Banco Genial', 'HSBC', 'Porto Bank', 'RappiBank', 'RecargaPay', 'NG Cash', 'Creditas', 'Conta Simples',
+  484|   'Hotmart', 'Revolut', 'Wise', 'DollarApp', 'Ailos', 'Cresol', 'Unicred', 'Sisprime', 'Woop (Sicredi)', 'Credsystem',
+  485|   'VerdeCard', 'Sem Parar', 'ByBit', 'Crypto.com', 'Foxbit',
+  486|   // cartões de loja (JF, 13/11: "o cartão da Amazon está virando um cartão de crédito mesmo", emitido pelo Bradesco)
+  487|   'Cartão Amazon', 'Cartão Magalu', 'Cartão Carrefour', 'Cartão Renner', 'Cartão Riachuelo',
+  488|   // cartões de benefício (vale-refeição e vale-alimentação)
+  489|   'Alelo', 'VR Benefícios', 'Sodexo (Pluxee)', 'Ticket (Edenred)', 'Swile', 'Caju',
+  490| ].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  491| // Em ordem alfabética (pedido do JF, 06/11) pra achar fácil; "dinheiro vivo" e "Outro" sempre no fim.
+  492| export const BANKS = Object.freeze([...BANCOS_AZ, 'Carteira (dinheiro vivo)', 'Outro']);
+  493| 
+  494| /** Valida e monta uma entrada (rendimento). */
+  495| export function createIncome({ amountCents, sourceId, note = '', date, accountId = null, prevista = false }, { now = new Date(), id } = {}) {
+  496|   if (!Number.isInteger(amountCents) || amountCents <= 0) throw new Error('Valor inválido.');
+  497|   if (amountCents > 100_000_000_00) throw new Error('Valor alto demais. Confere aí.');
+  498|   if (!INCOME_SOURCES.some(s => s.id === sourceId)) throw new Error('Escolha de onde veio o dinheiro.');
+  499|   const day = date || toISODate(now);
+  500|   if (!isValidISODate(day)) throw new Error('Data inválida.');
+  501|   return {
+  502|     id: id || newId(), amountCents, sourceId, note: String(note).trim().slice(0, 120),
+  503|     date: day, month: monthKey(day), accountId: accountId || null, createdAt: now.getTime(),
+  504|     // 15/11 (JF): "vou receber 500 dia 20": entrada prevista não conta no saldo nem no mês até virar recebida
+  505|     ...(prevista ? { prevista: true } : {}),
+  506|   };
+  507| }
+  508| 
+  509| /** Valida e monta uma conta. O saldo informado vale a partir de `balanceAt`. */
+  510| // Tipos de conta (12/11, vistoria do JF): o que mora dentro de um banco. Cartão de crédito é `tipo: 'cartao'`.
+  511| export const TIPOS_CONTA = Object.freeze({ corrente: 'Conta corrente', poupanca: 'Poupança', cofrinho: 'Cofrinho' });
+  512| 
+  513| // Rendimento em % do CDI (JF, 13/11: "meu cofrinho do PicPay é 102% do CDI") e dinheiro guardado pra outra pessoa.
+  514| const pctCdiOk = v => v == null || (typeof v === 'number' && Number.isFinite(v) && v > 0 && v <= 300);
+  515| const limparPctCdi = v => (v == null || v === '' ? null : Math.round(Number(v) * 10) / 10);
+  516| 
+  517| export function createAccount({ bank, nickname = '', balanceCents, subtipo = 'corrente', reforcaCartaoId = null, rendeCdiPct = null, paraQuem = '' }, { now = new Date(), id } = {}) {
+  518|   const b = String(bank || '').trim();
+  519|   if (!b) throw new Error('Escolha o banco.');
+  520|   if (!Number.isInteger(balanceCents)) throw new Error('Saldo inválido.');
+  521|   if (!TIPOS_CONTA[subtipo]) throw new Error('Escolha o tipo da conta.');
+  522|   const pct = limparPctCdi(rendeCdiPct);
+  523|   if (!pctCdiOk(pct)) throw new Error('O rendimento vai de 1% a 300% do CDI (ex.: 102).');
+  524|   return {
+  525|     id: id || newId(), bank: b.slice(0, 40), nickname: String(nickname).trim().slice(0, 30), subtipo,
+  526|     // cofrinho que aumenta o limite do cartão (PicPay, Inter…): o valor guardado soma no limite desse cartão
+  527|     reforcaCartaoId: subtipo === 'cofrinho' && reforcaCartaoId ? reforcaCartaoId : null,
+  528|     rendeCdiPct: pct, paraQuem: String(paraQuem || '').trim().slice(0, 40),
+  529|     balanceCents, balanceAt: now.getTime(), createdAt: now.getTime(),
+  530|   };
+  531| }
+  532| 
+  533| /**
+  534|  * Editar conta (13/11): apelido, tipo, cartão que o cofrinho reforça, rendimento (% do CDI) e pra quem é o dinheiro.
+  535|  * Não mexe no saldo (isso é o "Atualizar saldo"). Devolve uma cópia nova.
+  536|  */
+  537| export function editarConta(conta, { nickname, subtipo, reforcaCartaoId, rendeCdiPct, paraQuem, pisoCents, guardaCompra }, { accounts = [] } = {}) {
+  538|   if (!conta || conta.tipo === 'cartao') throw new Error('Isso é um cartão: ele não tem esses campos.');
+  539|   const novo = { ...conta };
+  540|   if (nickname !== undefined) novo.nickname = String(nickname).trim().slice(0, 30);
+  541|   if (subtipo !== undefined) {
+  542|     if (!TIPOS_CONTA[subtipo]) throw new Error('Escolha o tipo da conta.');
+  543|     novo.subtipo = subtipo;
+  544|   }
+  545|   if (reforcaCartaoId !== undefined) {
+  546|     if (reforcaCartaoId && !accounts.some(a => a.id === reforcaCartaoId && a.tipo === 'cartao')) throw new Error('Não achei esse cartão.');
+  547|     novo.reforcaCartaoId = reforcaCartaoId || null;
+  548|   }
+  549|   if (novo.subtipo !== 'cofrinho') novo.reforcaCartaoId = null; // só cofrinho aumenta limite
+  550|   // guardar a cada compra (JF, 16/11, como no Mercado Pago): R$ X saem da conta de origem pro cofrinho a cada compra
+  551|   if (guardaCompra !== undefined) novo.guardaCompra = validarGuardaCompra(guardaCompra, novo, accounts);
+  552|   if (novo.subtipo !== 'cofrinho') novo.guardaCompra = null; // só cofrinho recebe
+  553|   if (rendeCdiPct !== undefined) {
+  554|     const pct = limparPctCdi(rendeCdiPct);
+  555|     if (!pctCdiOk(pct)) throw new Error('O rendimento vai de 1% a 300% do CDI (ex.: 102).');
+  556|     novo.rendeCdiPct = pct;
+  557|   }
+  558|   if (paraQuem !== undefined) novo.paraQuem = String(paraQuem || '').trim().slice(0, 40);
+  559|   if (pisoCents !== undefined) {
+  560|     if (pisoCents != null && (!Number.isInteger(pisoCents) || pisoCents < 0)) throw new Error('Piso de segurança inválido.');
+  561|     novo.pisoCents = pisoCents || null;
+  562|   }
+  563|   return novo;
+  564| }
+  565| 
+  566| /**
+  567|  * Piso de segurança (JF, 14/11: "no Banestes meu piso é R$ 2.000; não posso ficar abaixo disso"): o mínimo que a
+  568|  * pessoa quer manter na conta. Folga = quanto ainda dá pra gastar dela sem passar do piso. Pura.
+  569|  */
+  570| /**
+  571|  * Atualizou o saldo (JF, 15/11): compara o que o banco mostra com o que o app esperava.
+  572|  * Saldo menor que o esperado = provável gasto não anotado; maior = provável entrada não anotada.
+  573|  * Diferença menor que R$ 1 é arredondamento e não conta.
+  574|  */
+  575| export function diferencaDoSaldo(esperadoCents, informadoCents) {
+  576|   const diff = informadoCents - esperadoCents;
+  577|   if (Math.abs(diff) < 100) return null;
+  578|   return diff < 0 ? { tipo: 'saldo_sem_gasto', valorCents: -diff } : { tipo: 'saldo_sem_entrada', valorCents: diff };
+  579| }
+  580| 
+  581| export function folgaDoPiso(conta, saldoCents) {
+  582|   if (!(conta?.pisoCents > 0)) return null;
+  583|   const folga = saldoCents - conta.pisoCents;
+  584|   return { pisoCents: conta.pisoCents, saldoCents, folgaCents: folga, abaixo: folga < 0, perto: folga >= 0 && folga < Math.max(5000, Math.round(conta.pisoCents * 0.1)) };
+  585| }
+  586| 
+  587| /**
+  588|  * Média de segurança (JF, 14/11): junta os bancos que têm piso (os principais) e compara o que tem neles com a soma dos
+  589|  * pisos. Pelo ritmo de gasto do mês nesses bancos, diz em quantos dias a folga acaba. Bancos sem piso ficam fora da
+  590|  * conta, mas entram como "de onde dá pra tirar". Pura.
+  591|  */
+  592| export const SALDO_SAUDAVEL_CENTS = 10000; // R$ 100 (JF, 15/11: "algo saudável seria acima de uns 50/100 conto")
+  593| 
+  594| export function resumoPisos(accounts, expenses, incomes, transferencias = [], today = toISODate()) {
+  595|   const contas = accounts.filter(a => a.tipo !== 'cartao' && !a.paraQuem).map(a => {
+  596|     const saldoCents = accountBalance(a, expenses, incomes, transferencias);
+  597|     return { id: a.id, nome: accountLabel(a), saldoCents, pisoCents: a.pisoCents > 0 ? a.pisoCents : 0,
+  598|       // sem piso, o "saudável" é ter pelo menos R$ 100 (JF, 15/11): só o que passa disso é folga pra mexer
+  599|       folgaCents: a.pisoCents > 0 ? saldoCents - a.pisoCents : Math.max(0, saldoCents - SALDO_SAUDAVEL_CENTS) };
+  600|   });
+  601|   const comPiso = contas.filter(c => c.pisoCents > 0);
+  602|   if (!comPiso.length) return { contas, comPiso, pisoTotalCents: 0 };
+  603|   const pisoTotalCents = comPiso.reduce((t, c) => t + c.pisoCents, 0);
+  604|   const saldoTotalCents = comPiso.reduce((t, c) => t + c.saldoCents, 0);
+  605|   const folgaTotalCents = saldoTotalCents - pisoTotalCents;
+  606|   // ritmo: o que saiu desses bancos no mês (débito, Pix, dinheiro), por dia que já passou
+  607|   const ids = new Set(comPiso.map(c => c.id));
+  608|   const mes = monthKey(today), dia = Number(today.slice(8, 10));
+  609|   const gastoMes = expenses.filter(e => e.month === mes && ids.has(e.accountId) && e.date <= today).reduce((t, e) => t + valorProprio(e), 0);
+  610|   const gastoDiaCents = dia > 0 ? Math.round(gastoMes / dia) : 0;
+  611|   const diasAteEstourar = folgaTotalCents <= 0 ? 0 : gastoDiaCents > 0 ? Math.floor(folgaTotalCents / gastoDiaCents) : null;
+  612|   const status = folgaTotalCents < 0 ? 'estourado' : diasAteEstourar != null && diasAteEstourar <= 7 ? 'perto' : 'ok';
+  613|   return { contas, comPiso, pisoTotalCents, saldoTotalCents, folgaTotalCents, gastoDiaCents, diasAteEstourar, status };
+  614| }
+  615| 
+  616| /**
+  617|  * De onde pra onde transferir (JF, 14/11: "ele sugere qual banco tem folga; quem decide é o usuário"). Quem está
+  618|  * abaixo do piso recebe; quem tem folga (ou não tem piso) manda, começando pela maior folga. Pura.
+  619|  */
+  620| export function sugerirTransferencias(contas) {
+  621|   const faltam = contas.filter(c => c.pisoCents > 0 && c.folgaCents < 0).map(c => ({ ...c, falta: -c.folgaCents })).sort((a, b) => b.falta - a.falta);
+  622|   const sobram = contas.filter(c => c.folgaCents > 0).map(c => ({ ...c, livre: c.folgaCents })).sort((a, b) => b.livre - a.livre);
+  623|   const passos = [];
+  624|   for (const f of faltam) {
+  625|     for (const s of sobram) {
+  626|       if (f.falta <= 0) break;
+  627|       if (s.livre <= 0) continue;
+  628|       const v = Math.min(f.falta, s.livre);
+  629|       passos.push({ deId: s.id, de: s.nome, paraId: f.id, para: f.nome, valorCents: v });
+  630|       f.falta -= v; s.livre -= v;
+  631|     }
+  632|   }
+  633|   return { passos, aindaFaltaCents: faltam.reduce((t, f) => t + Math.max(0, f.falta), 0) };
+  634| }
+  635| 
+  636| /**
+  637|  * Dividir um valor (ex.: o salário) entre as contas (JF, 14/11): primeiro completa quem está abaixo do piso, depois
+  638|  * mostra quanto sobra livre. Não decide pela pessoa: só faz a conta. Pura.
+  639|  */
+  640| export function dividirEntrePisos(valorCents, contas) {
+  641|   const faltas = contas.filter(c => c.pisoCents > 0 && c.saldoCents < c.pisoCents)
+  642|     .map(c => ({ id: c.id, nome: c.nome, faltaCents: c.pisoCents - c.saldoCents }))
+  643|     .sort((a, b) => b.faltaCents - a.faltaCents);
+  644|   let resto = valorCents;
+  645|   const passos = [];
+  646|   for (const f of faltas) {
+  647|     if (resto <= 0) break;
+  648|     const v = Math.min(f.faltaCents, resto);
+  649|     passos.push({ ...f, valorCents: v, completo: v === f.faltaCents });
+  650|     resto -= v;
+  651|   }
+  652|   return { passos, livreCents: Math.max(0, resto), faltaAindaCents: faltas.reduce((t, f) => t + f.faltaCents, 0) - (valorCents - Math.max(0, resto)) };
+  653| }
+  654| 
+  655| /** Quanto rende por mês e por ano, estimado: CDI ao ano (ex.: 10,65) × % do CDI (ex.: 102). Juros compostos ao mês. */
+  656| export function rendimentoEstimado(saldoCents, rendeCdiPct, cdiAnualPct) {
+  657|   if (!(saldoCents > 0) || !(rendeCdiPct > 0) || !(cdiAnualPct > 0)) return null;
+  658|   const anual = (cdiAnualPct / 100) * (rendeCdiPct / 100);
+  659|   const mensal = Math.pow(1 + anual, 1 / 12) - 1;
+  660|   return { mesCents: Math.round(saldoCents * mensal), anoCents: Math.round(saldoCents * anual), taxaAnualPct: Math.round(anual * 10000) / 100 };
+  661| }
+  662| 
+  663| /**
+  664|  * Raio-X do limite do cartão (JF, 13/11: "de onde está vindo esse limite alto?"): o limite do próprio cartão
+  665|  * e cada cofrinho que soma nele.
+  666|  */
+  667| export function raioXCartao(cartao, accounts = [], expenses = [], incomes = [], transferencias = []) {
+  668|   const cofrinhos = accounts.filter(a => a.reforcaCartaoId === cartao.id && a.tipo !== 'cartao' && a.subtipo === 'cofrinho')
+  669|     .map(a => ({ id: a.id, conta: a, saldoCents: Math.max(0, accountBalance(a, expenses, incomes, transferencias)) }));
+  670|   const doCofrinhoCents = cofrinhos.reduce((t, c) => t + c.saldoCents, 0);
+  671|   return { limiteCartaoCents: cartao.limiteCents, cofrinhos, doCofrinhoCents, limiteTotalCents: cartao.limiteCents + doCofrinhoCents };
+  672| }
+  673| 
+  674| /** Saldo em reais aceitando negativo: "-50", "1.200,00". */
+  675| export function parseSignedAmount(input) {
+  676|   const s = String(input ?? '').trim();
+  677|   if (s === '' ) return null;
+  678|   if (/^0+([.,]0+)?$/.test(s.replace(/R\$|\s/gi, ''))) return 0;
+  679|   const neg = /^-/.test(s.replace(/R\$|\s/gi, ''));
+  680|   const v = parseAmount(s.replace('-', ''));
+  681|   return v == null ? null : neg ? -v : v;
+  682| }
+  683| 
+  684| const semAcento = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  685| 
+  686| /**
+  687|  * Nome da conta pra mostrar em qualquer lista. Sempre diz o que é (12/11: "C6 Bank" aparecia duas vezes, conta e
+  688|  * cartão): "C6 Bank · Cartão", "Banestes · Poupança", "PicPay · Cofrinho · Viagem". Conta corrente sem apelido fica só
+  689|  * o banco. Banco "Outro" com apelido mostra só o apelido (06/11).
+  690|  */
+  691| export function accountLabel(a) {
+  692|   const tipo = a.tipo === 'cartao' ? 'Cartão' : a.subtipo && a.subtipo !== 'corrente' ? TIPOS_CONTA[a.subtipo] : null;
+  693|   const apelido = a.nickname && semAcento(a.nickname) !== semAcento(tipo) ? a.nickname : '';
+  694|   if (a.bank === 'Outro') return [apelido || 'Outro banco', tipo].filter(Boolean).join(' · ');
+  695|   return [a.bank, tipo, apelido].filter(Boolean).join(' · ');
+  696| }
+  697| 
+  698| const ORDEM_TIPO = { corrente: 0, poupanca: 1, cofrinho: 2, cartao: 3 };
+  699| /**
+  700|  * Contas agrupadas por banco, em ordem alfabética (12/11): [{ bank, contas }]. Dentro do banco: conta corrente,
+  701|  * poupança, cofrinho e cartão. "Carteira (dinheiro vivo)" e "Outro" ficam no fim.
+  702|  */
+  703| export function agruparPorBanco(accounts) {
+  704|   const fim = b => (/dinheiro vivo/i.test(b) ? 1 : b === 'Outro' ? 2 : 0);
+  705|   const grupos = new Map();
+  706|   for (const a of accounts) {
+  707|     if (!grupos.has(a.bank)) grupos.set(a.bank, []);
+  708|     grupos.get(a.bank).push(a);
+  709|   }
+  710|   return [...grupos].map(([bank, contas]) => ({
+  711|     bank,
+  712|     contas: contas.sort((x, y) => (ORDEM_TIPO[x.tipo === 'cartao' ? 'cartao' : x.subtipo || 'corrente'] - ORDEM_TIPO[y.tipo === 'cartao' ? 'cartao' : y.subtipo || 'corrente'])
+  713|       || accountLabel(x).localeCompare(accountLabel(y), 'pt-BR')),
+  714|   })).sort((a, b) => fim(a.bank) - fim(b.bank) || a.bank.localeCompare(b.bank, 'pt-BR'));
+  715| }
+  716| 
+  717| /** Cartão com o reforço dos cofrinhos ligados a ele (o valor guardado aumenta o limite). */
+  718| export function comReforco(cartao, accounts = [], expenses = [], incomes = [], transferencias = []) {
+  719|   if (!cartao || cartao.tipo !== 'cartao') return cartao;
+  720|   const reforcoCents = accounts.filter(a => a.reforcaCartaoId === cartao.id && a.tipo !== 'cartao' && a.subtipo === 'cofrinho')
+  721|     .reduce((t, a) => t + Math.max(0, accountBalance(a, expenses, incomes, transferencias)), 0);
+  722|   return reforcoCents ? { ...cartao, reforcoCents } : cartao;
+  723| }
+  724| 
+  725| /**
+  726|  * Saldo estimado da conta: o saldo que a pessoa informou + entradas − gastos lançados nessa conta DEPOIS disso.
+  727|  * O motor nunca muda o saldo guardado; quem atualiza é a pessoa ("Atualizar saldo").
+  728|  */
+  729| /**
+  730|  * O lançamento aconteceu DEPOIS do saldo informado? (JF, 14/11: "o salário caiu dia 4, anotei dia 14 e o app somou
+  731|  * de novo um dinheiro que já estava no saldo"). Vale a DATA do lançamento, não a hora em que foi anotado:
+  732|  * data antes do dia do saldo = já está dentro dele; data depois = conta; mesmo dia = vale a ordem em que foi anotado.
+  733|  */
+  734| export function depoisDoSaldo(item, account) {
+  735|   const diaSaldo = toISODate(new Date(account.balanceAt));
+  736|   if (!item.date || item.date === diaSaldo) return (item.createdAt || 0) > account.balanceAt;
+  737|   return item.date > diaSaldo;
+  738| }
+  739| 
+  740| export function accountBalance(account, expenses, incomes, transferencias = []) {
+  741|   let v = account.balanceCents;
+  742|   // transferência entre contas (13/11, repaginada): sai de uma e entra na outra; não é gasto nem entrada
+  743|   for (const t of transferencias) {
+  744|     if (!depoisDoSaldo(t, account)) continue;
+  745|     if (t.deId === account.id) v -= t.amountCents;
+  746|     if (t.paraId === account.id) v += t.amountCents;
+  747|   }
+  748|   for (const i of incomes) if (i.accountId === account.id && depoisDoSaldo(i, account)) v += i.amountCents;
+  749|   for (const e of expenses) {
+  750|     if (e.accountId === account.id && depoisDoSaldo(e, account)) v -= e.amountCents;
+  751|     // parte da rachadinha recebida depois do saldo informado: o dinheiro caiu na conta escolhida (ou na do gasto)
+  752|     if (Array.isArray(e.racha)) {
+  753|       for (const p of e.racha) {
+  754|         if (p.recebidoEm && p.recebidoEm > account.balanceAt && (p.contaId || e.accountId) === account.id) v += p.valorCents;
+  755|       }
+  756|     }
+  757|   }
+  758|   return v;
+  759| }
+  760| 
+  761| export function totalBalance(accounts, expenses, incomes, transferencias = []) {
+  762|   // cartão de crédito não é dinheiro guardado, e dinheiro guardado pra outra pessoa não é seu: ficam fora do total
+  763|   return accounts.filter(a => a.tipo !== 'cartao' && !a.paraQuem).reduce((s, a) => s + accountBalance(a, expenses, incomes, transferencias), 0);
+  764| }
+  765| 
+  766| /** Transferência entre contas suas (corrente → poupança, cofrinho…). Não conta como gasto nem como entrada. */
+  767| export function createTransferencia({ deId, paraId, amountCents, date, note = '' }, { accounts = [], now = new Date(), id } = {}) {
+  768|   if (!deId || !paraId) throw new Error('Escolha de qual conta sai e pra qual vai.');
+  769|   if (deId === paraId) throw new Error('A conta de origem e a de destino precisam ser diferentes.');
+  770|   if (!Number.isInteger(amountCents) || amountCents <= 0) throw new Error('Valor inválido.');
+  771|   if (amountCents > 100_000_000_00) throw new Error('Valor alto demais. Confere aí.');
+  772|   for (const c of [deId, paraId]) {
+  773|     const a = accounts.find(x => x.id === c);
+  774|     if (!a || a.tipo === 'cartao') throw new Error('Transferência é só entre contas (cartão de crédito não entra).');
+  775|     // dinheiro guardado pra outra pessoa (achado do GPT, 13/11): mexer nele pelo app faria ele "virar seu" no saldo
+  776|     if (a.paraQuem) throw new Error(`Essa conta guarda dinheiro de ${a.paraQuem}: atualize o saldo dela direto, sem transferir.`);
+  777|   }
+  778|   const day = date || toISODate(now);
+  779|   if (!isValidISODate(day)) throw new Error('Data inválida.');
+  780|   return { id: id || newId(), deId, paraId, amountCents, date: day, month: monthKey(day), note: String(note).trim().slice(0, 120), createdAt: now.getTime() };
+  781| }
+  782| 
+  783| // ---------- Gráficos (13/11, ideia do AI Studio): dados prontos, o desenho é do app ----------
+  784| 
+  785| /** Gastos e entradas dos últimos `n` meses até `month` (o mais antigo primeiro). */
+  786| export function serieMensal(expenses, incomes, month, n = 6) {
+  787|   return Array.from({ length: n }, (_, i) => {
+  788|     const m = shiftMonth(month, i - n + 1);
+  789|     return { month: m, gastosCents: spentIn(expenses, m), entradasCents: incomeIn(incomes, m) };
+  790|   });
+  791| }
+  792| 
+  793| /** Gasto de cada dia do mês (sua parte, sem a dos amigos), pro calendário de calor. */
+  794| export function gastoPorDia(expenses, month) {
+  795|   const dias = Array(daysInMonth(month)).fill(0);
+  796|   for (const e of expenses) if (e.month === month) dias[Number(e.date.slice(8, 10)) - 1] += valorProprio(e);
+  797|   return dias;
+  798| }
+  799| 
+  800| export function incomeIn(incomes, month, sourceId) {
+  801|   let t = 0;
+  802|   for (const i of incomes) if (i.month === month && (sourceId === undefined || i.sourceId === sourceId)) t += i.amountCents;
+  803|   return t;
+  804| }
+  805| 
+  806| export function daysInMonth(key) {
+  807|   const [y, m] = key.split('-').map(Number);
+  808|   return new Date(y, m, 0).getDate();
+  809| }
+  810| 
+  811| /** Período por nome: hoje, ontem, semana (últimos 7 dias), mes, mes_passado, ano. Datas ISO, inclusivas. */
+  812| export function periodRange(name, today = toISODate()) {
+  813|   const [y, m, d] = today.split('-').map(Number);
+  814|   const iso = dt => toISODate(dt);
+  815|   switch (name) {
+  816|     case 'hoje': return { from: today, to: today, label: 'hoje' };
+  817|     case 'ontem': { const o = iso(new Date(y, m - 1, d - 1)); return { from: o, to: o, label: 'ontem' }; }
+  818|     case 'semana': return { from: iso(new Date(y, m - 1, d - 6)), to: today, label: 'nos últimos 7 dias' };
+  819|     case 'mes_passado': {
+  820|       const k = shiftMonth(monthKey(today), -1);
+  821|       return { from: `${k}-01`, to: `${k}-${String(daysInMonth(k)).padStart(2, '0')}`, label: 'no mês passado', month: k };
+  822|     }
+  823|     case 'ano': return { from: `${y}-01-01`, to: today, label: `em ${y}` };
+  824|     default: return { from: `${monthKey(today)}-01`, to: today, label: 'neste mês', month: monthKey(today) };
+  825|   }
+  826| }
+  827| 
+  828| export function sumInRange(list, { from, to }, filter = () => true) {
+  829|   let t = 0, n = 0;
+  830|   for (const x of list) if (x.date >= from && x.date <= to && filter(x)) { t += valorProprio(x); n++; }
+  831|   return { totalCents: t, count: n };
+  832| }
+  833| 
+  834| /** Previsão do mês no ritmo atual (só faz sentido para o mês corrente). */
+  835| export function forecastMonth(expenses, month, today = toISODate(), compromissos = []) {
+  836|   const spent = spentIn(expenses, month);
+  837|   const total = daysInMonth(month);
+  838|   const day = monthKey(today) === month ? Number(today.slice(8, 10)) : total;
+  839|   // Conta fixa paga (lançada a partir de um compromisso) não vira "ritmo": no começo do mês, aluguel e contas
+  840|   // fariam a média diária parecer enorme (sugestão do Gemini, 06/11). Projeção = fixos + variáveis por dia × dias.
+  841|   const fixos = expenses.filter(e => e.month === month && e.compromissoId).reduce((s, e) => s + valorProprio(e), 0);
+  842|   const variaveis = spent - fixos;
+  843|   const perDay = day > 0 ? variaveis / day : 0;
+  844|   // P9 (vistoria do JF, 12/11): conta fixa e assinatura do mês que ainda não caíram (ex.: cobrança no cartão lá pelo
+  845|   // dia 20) já entram na previsão, em vez de aparecerem de surpresa no fim do mês. Só no mês atual.
+  846|   const pendentesCents = monthKey(today) === month
+  847|     ? situacaoCompromissos(compromissos, expenses, today).filter(c => c.noMes && c.status !== 'pago').reduce((t, c) => t + c.faltaCents, 0)
+  848|     : 0;
+  849|   return { spentCents: spent, fixosCents: fixos, pendentesCents, perDayCents: Math.round(perDay),
+  850|     projectedCents: Math.round(fixos + perDay * total) + pendentesCents, day, daysTotal: total };
+  851| }
+  852| 
+  853| const SEVERITY = { alta: 3, media: 2, baixa: 1 };
+  854| 
+  855| /**
+  856|  * Alertas do momento (o "radar" do C.A.O.S.). Só leitura: devolve uma lista ordenada por gravidade.
+  857|  * Cada alerta tem type, severity e os números que o narrador precisa para falar.
+  858|  */
+  859| export function analyze({ expenses, incomes = [], categories, accounts = [], compromissos = [], transferencias = [], diasSemGasto = [] }, today = toISODate()) {
+  860|   const month = monthKey(today);
+  861|   const s = summarizeMonth(expenses, categories, month);
+  862|   const out = [];
+  863| 
+  864|   for (const r of s.rows) {
+  865|     if (!r.budgetCents) continue;
+  866|     if (r.spentCents > r.budgetCents) {
+  867|       out.push({ type: 'categoria_estourada', severity: 'alta', categoryId: r.id, categoryName: r.name,
+  868|         spentCents: r.spentCents, budgetCents: r.budgetCents, overCents: r.spentCents - r.budgetCents,
+  869|         pct: Math.round(r.ratio * 100) });
+  870|     } else if (r.ratio >= ALERT_RATIO) {
+  871|       out.push({ type: 'orcamento_80', severity: 'media', categoryId: r.id, categoryName: r.name,
+  872|         spentCents: r.spentCents, budgetCents: r.budgetCents, leftCents: r.budgetCents - r.spentCents,
+  873|         pct: Math.round(r.ratio * 100) });
+  874|     }
+  875|   }
+  876| 
+  877|   // Ritmo: projeta só o gasto das categorias COM limite contra o orçamento (as sem limite não entram)
+  878|   const f = forecastMonth(expenses, month, today);
+  879|   const comLimite = new Set(categories.filter(c => c.budgetCents > 0).map(c => c.id));
+  880|   const fixosBud = expenses.filter(e => e.month === month && e.compromissoId && comLimite.has(e.categoryId)).reduce((t, e) => t + valorProprio(e), 0);
+  881|   const perDayBud = f.day > 0 ? (s.budgetedSpentCents - fixosBud) / f.day : 0;
+  882|   const projBud = Math.round(fixosBud + perDayBud * f.daysTotal);
+  883|   if (s.budgetTotalCents > 0 && f.day >= 5 && projBud > s.budgetTotalCents && s.budgetedSpentCents <= s.budgetTotalCents) {
+  884|     out.push({ type: 'ritmo_alto', severity: 'media', projectedCents: projBud, budgetCents: s.budgetTotalCents,
+  885|       perDayCents: Math.round(perDayBud), overCents: projBud - s.budgetTotalCents });
+  886|   }
+  887| 
+  888|   // Rachadinha: parte de amigo pendente há 3 dias ou mais vira lembrete de cobrança
+  889|   const pendentes = aReceber(expenses).itens.filter(x => daysBetween(x.date, today) >= 3);
+  890|   if (pendentes.length) {
+  891|     const nomes = [...new Set(pendentes.map(x => x.nome))];
+  892|     out.push({ type: 'a_receber', severity: 'baixa', count: pendentes.length, totalCents: pendentes.reduce((t, x) => t + x.valorCents, 0),
+  893|       quem: juntarNomes(nomes) });
+  894|   }
+  895| 
+  896|   const inc = incomeIn(incomes, month);
+  897|   if (inc > 0 && s.totalCents > inc) {
+  898|     out.push({ type: 'mes_negativo', severity: 'alta', incomeCents: inc, totalCents: s.totalCents, overCents: s.totalCents - inc });
+  899|   }
+  900| 
+  901|   for (const f of accounts.filter(a => a.tipo === 'cartao').map(a => faturaDoCartao(comReforco(a, accounts, expenses, incomes, transferencias), expenses, today))) {
+  902|     if (f.pct >= 100) out.push({ type: 'cartao_limite', severity: 'alta', accountId: f.id, accountName: f.nome, pct: f.pct, amountCents: f.usadoCents, leftCents: f.disponivelCents, budgetCents: f.limiteCents });
+  903|     else if (f.pct >= 80) out.push({ type: 'cartao_limite', severity: 'media', accountId: f.id, accountName: f.nome, pct: f.pct, amountCents: f.usadoCents, leftCents: f.disponivelCents, budgetCents: f.limiteCents });
+  904|     if (f.atrasada) {
+  905|       // venceu e ninguém marcou como paga: lembra (pode ter sido paga fora do app; aí é só marcar)
+  906|       out.push({ type: 'compromisso_atrasado', severity: 'alta', accountId: f.id, nome: `Fatura do ${f.nome}`, valorCents: f.fechadaCents, dia: Number(f.vencimento.slice(8)), days: -f.diasParaVencer });
+  907|     } else if (f.fechadaCents > 0 && f.diasParaVencer >= 0 && f.diasParaVencer <= 3) {
+  908|       out.push({ type: 'cartao_vence', severity: f.diasParaVencer <= 1 ? 'alta' : 'media', accountId: f.id, accountName: f.nome, amountCents: f.fechadaCents, days: f.diasParaVencer, dia: Number(f.vencimento.slice(8)) });
+  909|     }
+  910|   }
+  911| 
+  912|   for (const a of accounts.filter(x => x.tipo !== 'cartao')) {
+  913|     const bal = accountBalance(a, expenses, incomes, transferencias);
+  914|     if (bal < 0) out.push({ type: 'conta_negativa', severity: 'alta', accountId: a.id, accountName: accountLabel(a), balanceCents: bal });
+  915|     else {
+  916|       const p = folgaDoPiso(a, bal);
+  917|       if (p?.abaixo) out.push({ type: 'abaixo_do_piso', severity: 'alta', accountId: a.id, accountName: accountLabel(a), balanceCents: bal, pisoCents: p.pisoCents, faltaCents: -p.folgaCents });
+  918|       else if (p?.perto) out.push({ type: 'perto_do_piso', severity: 'media', accountId: a.id, accountName: accountLabel(a), balanceCents: bal, pisoCents: p.pisoCents, leftCents: p.folgaCents });
+  919|     }
+  920|   }
+  921| 
+  922|   // média de segurança dos bancos com piso (14/11)
+  923|   const rp = resumoPisos(accounts, expenses, incomes, transferencias, today);
+  924|   if (rp.comPiso.length >= 2 && rp.status !== 'ok') {
+  925|     out.push({ type: rp.status === 'estourado' ? 'piso_geral_estourado' : 'piso_geral_perto', severity: rp.status === 'estourado' ? 'alta' : 'media', balanceCents: rp.saldoTotalCents, pisoCents: rp.pisoTotalCents,
+  926|       leftCents: rp.folgaTotalCents, overCents: -rp.folgaTotalCents, days: rp.diasAteEstourar, perDayCents: rp.gastoDiaCents, estourado: rp.status === 'estourado' });
+  927|   }
+  928| 
+  929|   // saldo saudável (JF, 15/11): conta corrente sem piso com menos de R$ 100 (e não negativa) ganha um aviso leve, num só
+  930|   const baixas = accounts.filter(a => a.tipo !== 'cartao' && !a.paraQuem && !(a.pisoCents > 0) && (!a.subtipo || a.subtipo === 'corrente'))
+  931|     .map(a => ({ a, bal: accountBalance(a, expenses, incomes, transferencias) }))
+  932|     .filter(x => x.bal >= 0 && x.bal < SALDO_SAUDAVEL_CENTS);
+  933|   if (baixas.length) out.push({ type: 'saldo_baixo', severity: 'baixa', count: baixas.length, accountName: baixas.map(x => accountLabel(x.a)).join(', '),
+  934|     balanceCents: baixas.reduce((t, x) => t + x.bal, 0), contas: baixas.map(x => ({ nome: accountLabel(x.a), saldoCents: x.bal })) });
+  935| 
+  936|   // orçamento por lugar é opcional (15/11, ideia do Code): o C.A.O.S. só sugere quando uma categoria sem limite pesa
+  937|   // 40% ou mais do mês (e o mês já tem pelo menos R$ 100 de gasto)
+  938|   if (s.totalCents >= 10000) {
+  939|     const pesada = s.rows.filter(r => !r.budgetCents && r.id !== 'outros').sort((a, b) => b.spentCents - a.spentCents)[0];
+  940|     const pct = pesada ? Math.round((pesada.spentCents / s.totalCents) * 100) : 0;
+  941|     if (pesada && pct >= 40) out.push({ type: 'categoria_pesando', severity: 'baixa', categoryId: pesada.id, categoryName: pesada.name, pct, amountCents: pesada.spentCents });
+  942|   }
+  943| 
+  944|   const recentDelivery = expenses.filter(e => e.categoryId === 'delivery' && daysBetween(e.date, today) >= 0
+  945|     && daysBetween(e.date, today) < DELIVERY_WINDOW_DAYS);
+  946|   if (recentDelivery.length >= DELIVERY_REPEAT_COUNT) {
+  947|     out.push({ type: 'delivery_repetido', severity: 'baixa', count: recentDelivery.length, days: DELIVERY_WINDOW_DAYS,
+  948|       totalCents: recentDelivery.reduce((t, e) => t + valorProprio(e), 0) });
+  949|   }
+  950| 
+  951|   if (expenses.length > 0) {
+  952|     // "hoje não gastei nada" também conta como anotado (Anne, 15/11): ele não acha que você esqueceu
+  953|     const last = [...expenses.map(e => e.date), ...diasSemGasto].reduce((mx, d) => (d > mx ? d : mx), '0000-00-00');
+  954|     const gap = daysBetween(last, today);
+  955|     if (gap >= 3) out.push({ type: 'sem_registro', severity: 'baixa', days: gap });
+  956|   }
+  957| 
+  958|   for (const c of situacaoCompromissos(compromissos, expenses, today)) {
+  959|     if (c.status === 'atrasado') {
+  960|       out.push({ type: 'compromisso_atrasado', severity: 'alta', compromissoId: c.id, nome: c.nome, valorCents: c.faltaCents || c.valorCents, dia: c.diaNoMes, days: -c.diasParaVencer });
+  961|     } else if (c.status === 'aberto' && c.diasParaVencer <= 3) {
+  962|       out.push({ type: 'compromisso_vence', severity: c.diasParaVencer <= 1 ? 'alta' : 'media', compromissoId: c.id, nome: c.nome, valorCents: c.faltaCents || c.valorCents, dia: c.diaNoMes, days: c.diasParaVencer });
+  963|     } else if (c.status === 'pendente' && c.tipo === 'plano') {
+  964|       out.push({ type: 'plano_do_mes', severity: 'baixa', compromissoId: c.id, nome: c.nome, valorCents: c.valorCents });
+  965|     }
+  966|   }
+  967| 
+  968|   // "Confere seu banco": saldo informado há 7 dias ou mais (eu não consigo ver o banco, só lembrar)
+  969|   // 2.1.5 (JF, 16/11: "ou seja, conferir os saldos dos meus bancos kkkk"): cartão fica fora (não tem saldo pra
+  970|   // conferir) e, com mais de 2 contas, vai o nome dos bancos, não a lista de toda conta e cofrinho
+  971|   const velha = accounts.filter(a => a.tipo !== 'cartao' && (Date.parse(`${today}T12:00:00`) - a.balanceAt) / 86_400_000 >= 7);
+  972|   if (velha.length) {
+  973|     const dias = Math.floor(Math.max(...velha.map(a => (Date.parse(`${today}T12:00:00`) - a.balanceAt) / 86_400_000)));
+  974|     const bancos = [...new Set(velha.map(a => a.bank))];
+  975|     const lista = xs => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} e ${xs[xs.length - 1]}` : xs[0]);
+  976|     const nome = velha.length <= 2 ? lista(velha.map(accountLabel))
+  977|       : bancos.length === 1 ? `todas as contas do ${bancos[0]}` : `${velha.length} contas (${lista(bancos)})`;
+  978|     out.push({ type: 'confira_banco', severity: 'baixa', accountName: nome, count: velha.length, days: dias });
+  979|   }
+  980| 
+  981|   // Auditor de assinaturas (P9, 12/11): na primeira semana do mês, pergunta se UMA assinatura ainda vale a pena
+  982|   // (vai revezando mês a mês). Só pergunta: quem decide cancelar é a pessoa.
+  983|   const assinaturas = compromissos.filter(c => c.ativo && c.tipo === 'assinatura').sort((a, b) => b.valorCents - a.valorCents);
+  984|   if (assinaturas.length && Number(today.slice(8, 10)) <= 7) {
+  985|     const c = assinaturas[Number(month.slice(5, 7)) % assinaturas.length];
+  986|     out.push({ type: 'auditor_assinatura', severity: 'baixa', compromissoId: c.id, nome: c.nome, valorCents: c.valorCents,
+  987|       anoCents: Math.round((c.valorCents * 12) / (c.cadaMeses || 1)) });
+  988|   }
+  989| 
+  990|   return out.sort((a, b) => SEVERITY[b.severity] - SEVERITY[a.severity]);
+  991| }
+  992| 
+  993| /** Categorias ordenadas pelo gasto num intervalo. */
+  994| export function topCategories(expenses, categories, range) {
+  995|   return categories
+  996|     .map(c => ({ ...c, ...sumInRange(expenses, range, e => e.categoryId === c.id) }))
+  997|     .filter(c => c.totalCents > 0)
+  998|     .sort((a, b) => b.totalCents - a.totalCents);
+  999| }
+ 1000| 
+ 1001| export { daysBetween };
+ 1002| 
+ 1003| // ======================================================================
+ 1004| // Compromissos (contas fixas, faturas, assinaturas, planos a cada N meses),
+ 1005| // planos do mês e o "C.A.O.S. aprende categorias" (05/11/2026)
+ 1006| // ======================================================================
+ 1007| 
+ 1008| export const TIPOS_COMPROMISSO = Object.freeze({
+ 1009|   conta: 'Conta fixa', fatura: 'Fatura de cartão', assinatura: 'Assinatura', plano: 'Plano que se repete',
+ 1010| });
+ 1011| 
+ 1012| /** Meses entre duas chaves "YYYY-MM" (b − a). */
+ 1013| export function monthsBetween(a, b) {
+ 1014|   const [ya, ma] = a.split('-').map(Number);
+ 1015|   const [yb, mb] = b.split('-').map(Number);
+ 1016|   return (yb - ya) * 12 + (mb - ma);
+ 1017| }
+ 1018| 
+ 1019| /**
+ 1020|  * Compromisso: algo que se repete. `inicioMes` é o primeiro mês em que acontece; depois, a cada `cadaMeses`.
+ 1021|  * Ex. do JF: comida japonesa a cada 2 meses; comeram em outubro → inicioMes = dezembro (próxima vez), cadaMeses = 2.
+ 1022|  * `dia` = dia do vencimento (1–31), opcional pra planos.
+ 1023|  */
+ 1024| export function createCompromisso({ nome, valorCents = 0, tipo = 'conta', categoryId = 'contas', dia = null, cadaMeses = 1, inicioMes, accountId = null },
+ 1025|   { now = new Date(), id, categories } = {}) {
+ 1026|   const n = String(nome || '').trim();
+ 1027|   if (!n) throw new Error('Dá um nome pro compromisso.');
+ 1028|   if (!TIPOS_COMPROMISSO[tipo]) throw new Error('Tipo inválido.');
+ 1029|   if (!Number.isInteger(valorCents) || valorCents < 0) throw new Error('Valor inválido.');
+ 1030|   if (categories && !categories.some(c => c.id === categoryId)) throw new Error('Escolha uma categoria.');
+ 1031|   const d = dia == null || dia === '' ? null : Number(dia);
+ 1032|   if (d != null && !(Number.isInteger(d) && d >= 1 && d <= 31)) throw new Error('Dia do vencimento entre 1 e 31.');
+ 1033|   if (tipo !== 'plano' && d == null) throw new Error('Qual o dia do vencimento?');
+ 1034|   const cada = Number(cadaMeses);
+ 1035|   if (!(Number.isInteger(cada) && cada >= 1 && cada <= 24)) throw new Error('Repetição inválida.');
+ 1036|   const inicio = inicioMes || monthKey(toISODate(now));
+ 1037|   if (!/^\d{4}-\d{2}$/.test(inicio)) throw new Error('Mês inválido.');
+ 1038|   return {
+ 1039|     id: id || newId(), nome: n.slice(0, 60), valorCents, tipo, categoryId, dia: d, cadaMeses: cada, inicioMes: inicio,
+ 1040|     accountId: accountId || null, ativo: true, createdAt: now.getTime(),
+ 1041|   };
+ 1042| }
+ 1043| 
+ 1044| export function ocorreNoMes(c, month) {
+ 1045|   if (!c.ativo) return false;
+ 1046|   const diff = monthsBetween(c.inicioMes, month);
+ 1047|   return diff >= 0 && diff % c.cadaMeses === 0;
+ 1048| }
+ 1049| 
+ 1050| /** Próximo mês (a partir de `month`, inclusive) em que o compromisso acontece. */
+ 1051| export function proximaOcorrencia(c, month) {
+ 1052|   const diff = monthsBetween(c.inicioMes, month);
+ 1053|   if (diff <= 0) return c.inicioMes;
+ 1054|   const resto = diff % c.cadaMeses;
+ 1055|   return resto === 0 ? month : shiftMonth(month, c.cadaMeses - resto);
+ 1056| }
+ 1057| 
+ 1058| /** Dia efetivo no mês (dia 31 em fevereiro vira o último dia). */
+ 1059| export function diaNoMes(c, month) {
+ 1060|   return c.dia == null ? null : Math.min(c.dia, daysInMonth(month));
+ 1061| }
+ 1062| 
+ 1063| /** Situação de cada compromisso no mês: pago (lançamentos ligados cobrem o valor), vence em X dias, atrasado, ou não é deste mês. Pagamento parcial: `parcial` e `faltaCents`. */
+ 1064| export function situacaoCompromissos(compromissos, expenses, today = toISODate()) {
+ 1065|   const month = monthKey(today);
+ 1066|   const hoje = Number(today.slice(8, 10));
+ 1067|   return compromissos.filter(c => c.ativo).map(c => {
+ 1068|     const noMes = ocorreNoMes(c, month);
+ 1069|     const pagos = expenses.filter(e => e.compromissoId === c.id && e.month === month);
+ 1070|     const pagoCents = pagos.reduce((s, e) => s + e.amountCents, 0);
+ 1071|     const dia = diaNoMes(c, month);
+ 1072|     let status = 'fora';
+ 1073|     // Pago só quando o total lançado cobre o valor (revisão 06/11). Pagou um pedaço: continua aberto, com o que falta.
+ 1074|     const quitado = pagos.length > 0 && pagoCents >= c.valorCents;
+ 1075|     if (noMes) status = quitado ? 'pago' : dia == null ? 'pendente' : dia < hoje ? 'atrasado' : 'aberto';
+ 1076|     const faltaCents = noMes && !quitado ? Math.max(0, c.valorCents - pagoCents) : 0;
+ 1077|     return {
+ 1078|       ...c, noMes, status, pagoCents, faltaCents, parcial: noMes && !quitado && pagoCents > 0, diaNoMes: dia,
+ 1079|       diasParaVencer: noMes && dia != null ? dia - hoje : null,
+ 1080|       proximaVez: proximaOcorrencia(c, noMes && quitado ? shiftMonth(month, 1) : month),
+ 1081|     };
+ 1082|   }).sort((a, b) => (a.noMes === b.noMes ? (a.diaNoMes ?? 99) - (b.diaNoMes ?? 99) : a.noMes ? -1 : 1));
+ 1083| }
+ 1084| 
+ 1085| /** Plano do mês: algo que a pessoa planejou comprar/gastar neste mês. */
+ 1086| export function createPlano({ nome, valorCents, categoryId = 'outros', month }, { now = new Date(), id } = {}) {
+ 1087|   const n = String(nome || '').trim();
+ 1088|   if (!n) throw new Error('O que você planejou?');
+ 1089|   if (!Number.isInteger(valorCents) || valorCents <= 0) throw new Error('Quanto vai custar?');
+ 1090|   return { id: id || newId(), nome: n.slice(0, 60), valorCents, categoryId, month: month || monthKey(toISODate(now)), feito: false, createdAt: now.getTime() };
+ 1091| }
+ 1092| 
+ 1093| /**
+ 1094|  * Análise do mês planejado: entradas, o que já saiu, compromissos e planos que faltam, e a sobra prevista.
+ 1095|  * Se faltar dinheiro, sugere o que adiar (os maiores planos ainda não feitos, até cobrir a diferença).
+ 1096|  */
+ 1097| export function analisarPlanejamento({ expenses, incomes = [], categories, compromissos = [], planos = [] }, today = toISODate()) {
+ 1098|   const month = monthKey(today);
+ 1099|   const entradas = incomeIn(incomes, month);
+ 1100|   const gastos = spentIn(expenses, month);
+ 1101|   const sit = situacaoCompromissos(compromissos, expenses, today).filter(c => c.noMes);
+ 1102|   const compPendentes = sit.filter(c => c.status !== 'pago');
+ 1103|   const compPendentesCents = compPendentes.reduce((s, c) => s + c.faltaCents, 0); // só o que falta pagar
+ 1104|   const planosMes = planos.filter(p => p.month === month);
+ 1105|   const planosPendentes = planosMes.filter(p => !p.feito);
+ 1106|   const planosPendentesCents = planosPendentes.reduce((s, p) => s + p.valorCents, 0);
+ 1107|   const s = summarizeMonth(expenses, categories, month);
+ 1108|   const base = entradas > 0 ? entradas : s.budgetTotalCents;
+ 1109|   const baseTipo = entradas > 0 ? 'entradas' : s.budgetTotalCents > 0 ? 'orcamento' : null;
+ 1110|   const comprometido = gastos + compPendentesCents + planosPendentesCents;
+ 1111|   const sobraCents = baseTipo ? base - comprometido : null;
+ 1112|   const adiar = [];
+ 1113|   if (sobraCents != null && sobraCents < 0) {
+ 1114|     let falta = -sobraCents;
+ 1115|     for (const p of [...planosPendentes].sort((a, b) => b.valorCents - a.valorCents)) {
+ 1116|       if (falta <= 0) break;
+ 1117|       adiar.push(p);
+ 1118|       falta -= p.valorCents;
+ 1119|     }
+ 1120|   }
+ 1121|   return {
+ 1122|     month, entradasCents: entradas, gastosCents: gastos, baseCents: base, baseTipo,
+ 1123|     compromissos: sit, compPendentesCents, planos: planosMes, planosPendentesCents, comprometidoCents: comprometido,
+ 1124|     sobraCents, adiar,
+ 1125|   };
+ 1126| }
+ 1127| 
+ 1128| /**
+ 1129|  * Aba Entradas do Início (15/11, JF + Anne): quanto entrou no mês e a comparação com o mês passado.
+ 1130|  * Devolve { totalCents, passadoCents, faltaCents (pra igualar o mês passado; 0 se já passou), acimaCents, quantas, aReceberCents }.
+ 1131|  */
+ 1132| export function resumoEntradas(incomes, expenses, month) {
+ 1133|   const doMes = m => incomes.filter(i => (i.month || monthKey(i.date)) === m);
+ 1134|   const totalCents = doMes(month).reduce((t, i) => t + i.amountCents, 0);
+ 1135|   const passadoCents = doMes(shiftMonth(month, -1)).reduce((t, i) => t + i.amountCents, 0);
+ 1136|   return {
+ 1137|     totalCents, passadoCents, quantas: doMes(month).length,
+ 1138|     faltaCents: Math.max(0, passadoCents - totalCents), acimaCents: Math.max(0, totalCents - passadoCents),
+ 1139|     aReceberCents: aReceber(expenses).totalCents,
+ 1140|   };
+ 1141| }
+ 1142| 
+ 1143| /**
+ 1144|  * "Dá pra gastar R$ X até o dia do salário" (15/11, ideia do Code: um número só, pra quem não entende de finanças).
+ 1145|  * X = a sobra prevista do mês (entradas − o que já saiu − compromissos − planos). O dia do salário é o dia da última
+ 1146|  * entrada de Salário; sem salário anotado, vale até o fim do mês. Devolve null sem entrada no mês.
+ 1147|  */
+ 1148| export function podeGastar(dados, today = toISODate()) {
+ 1149|   const a = analisarPlanejamento(dados, today);
+ 1150|   if (a.baseTipo !== 'entradas' || a.sobraCents == null) return null;
+ 1151|   const [y, m, d] = today.split('-').map(Number);
+ 1152|   const sal = (dados.incomes || []).filter(i => i.sourceId === 'salario' && i.date <= today).sort((p, q) => q.date.localeCompare(p.date))[0];
+ 1153|   let ate, diaSalario = null;
+ 1154|   if (sal) {
+ 1155|     diaSalario = Number(sal.date.slice(8, 10));
+ 1156|     const ultimoDia = (ano, mes) => new Date(ano, mes, 0).getDate(); // mes 1-12
+ 1157|     const naData = (ano, mes) => toISODate(new Date(ano, mes - 1, Math.min(diaSalario, ultimoDia(ano, mes))));
+ 1158|     ate = diaSalario > d ? naData(y, m) : naData(m === 12 ? y + 1 : y, m === 12 ? 1 : m + 1);
+ 1159|   } else {
+ 1160|     ate = toISODate(new Date(y, m, 1)); // primeiro dia do mês que vem
+ 1161|   }
+ 1162|   const dias = Math.max(1, daysBetween(today, ate));
+ 1163|   const sobraCents = a.sobraCents;
+ 1164|   return { sobraCents, ate, diaSalario, dias, porDiaCents: sobraCents > 0 ? Math.floor(sobraCents / dias) : 0 };
+ 1165| }
+ 1166| 
+ 1167| /** "Cabe no mês?" para uma compra de `valorCents`. */
+ 1168| export function cabeNoMes(dados, valorCents, today = toISODate()) {
+ 1169|   const a = analisarPlanejamento(dados, today);
+ 1170|   if (a.sobraCents == null) return { ...a, valorCents, cabe: null, sobraDepois: null };
+ 1171|   return { ...a, valorCents, cabe: a.sobraCents - valorCents >= 0, sobraDepois: a.sobraCents - valorCents };
+ 1172| }
+ 1173| 
+ 1174| // ---------- C.A.O.S. aprende categorias ----------
+ 1175| 
+ 1176| const PALAVRAS_VAZIAS = new Set(['de', 'do', 'da', 'dos', 'das', 'no', 'na', 'nos', 'nas', 'em', 'com', 'o', 'a', 'os', 'as',
+ 1177|   'um', 'uma', 'pra', 'para', 'pro', 'e', 'reais', 'real', 'r']);
+ 1178| 
+ 1179| export function palavrasDe(texto) {
+ 1180|   return String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+ 1181|     .split(/[^a-z0-9]+/).filter(w => w.length >= 2 && !PALAVRAS_VAZIAS.has(w) && !/^\d+$/.test(w));
+ 1182| }
+ 1183| 
+ 1184| /**
+ 1185|  * Sugere a categoria pela descrição, com base no que a pessoa já lançou antes.
+ 1186|  * Mesma descrição vale mais; palavra em comum vale menos. Devolve null se não tiver base.
+ 1187|  */
+ 1188| export function sugerirCategoria(texto, expenses) {
+ 1189|   const alvo = palavrasDe(texto);
+ 1190|   if (!alvo.length) return null;
+ 1191|   const chave = alvo.join(' ');
+ 1192|   const votos = {};
+ 1193|   for (const e of expenses) {
+ 1194|     if (!e.note) continue;
+ 1195|     const p = palavrasDe(e.note);
+ 1196|     if (!p.length) continue;
+ 1197|     let peso = 0;
+ 1198|     if (p.join(' ') === chave) peso = 3;
+ 1199|     else if (p.some(w => alvo.includes(w))) peso = 1;
+ 1200|     if (peso) votos[e.categoryId] = (votos[e.categoryId] || 0) + peso;
+ 1201|   }
+ 1202|   const melhor = Object.entries(votos).sort((a, b) => b[1] - a[1])[0];
+ 1203|   if (melhor && melhor[1] >= 1) return { categoryId: melhor[0], votos: melhor[1] };
+ 1204|   // sem histórico (JF, 14/11: "cerveja e casquinha caíram em Outros"): um dicionário básico de palavras
+ 1205|   for (const [cat, palavras] of Object.entries(PALAVRAS_CATEGORIA)) {
+ 1206|     if (alvo.some(w => palavras.includes(w))) return { categoryId: cat, votos: 0 };
+ 1207|   }
+ 1208|   return null;
+ 1209| }
+ 1210| 
+ 1211| // Palavra comum → categoria (sem acento, minúscula). Só vale quando a pessoa ainda não ensinou outra coisa.
+ 1212| export const PALAVRAS_CATEGORIA = Object.freeze({
+ 1213|   mercado: ['mercado', 'supermercado', 'feira', 'hortifruti', 'acougue', 'padaria', 'pao', 'leite', 'arroz', 'feijao', 'carne', 'frango',
+ 1214|     'cerveja', 'cervejas', 'bebida', 'bebidas', 'refrigerante', 'refri', 'agua', 'fruta', 'frutas', 'verdura', 'ovos', 'cafe'],
+ 1215|   restaurante: ['restaurante', 'almoco', 'jantar', 'lanche', 'lanchonete', 'sorvete', 'casquinha', 'sorveteria', 'acai', 'pastel', 'salgado',
+ 1216|     'coxinha', 'hamburguer', 'pizzaria', 'bar', 'boteco', 'chopp', 'choperia', 'churrascaria', 'cafeteria', 'mcdonalds', 'mcdonald', 'subway', 'bobs'],
+ 1217|   delivery: ['ifood', 'delivery', 'rappi'],
+ 1218|   transporte: ['uber', 'gasolina', 'combustivel', 'onibus', 'metro', 'taxi', 'estacionamento', 'pedagio', 'etanol'],
+ 1219|   saude: ['academia', 'farmacia', 'remedio', 'remedios', 'medico', 'consulta', 'dentista', 'exame', 'drogaria'],
+ 1220|   contas: ['luz', 'energia', 'internet', 'celular', 'telefone', 'gas', 'boleto'],
+ 1221|   moradia: ['aluguel', 'condominio', 'iptu'],
+ 1222|   lazer: ['cinema', 'show', 'festa', 'viagem', 'passeio', 'ingresso'],
+ 1223|   jogos: ['jogo', 'jogos', 'game', 'games', 'robux', 'vbucks', 'diamantes', 'skin', 'skins', 'gemas', 'minecoins', 'steam', 'roblox', 'fortnite', 'valorant', 'psn', 'playstation', 'xbox', 'nintendo', 'passe'],
+ 1224|   // 2.1.5 (JF, 16/11: Anthropic caiu em Outros): assinatura de IA e de app também é Streaming/assinatura
+ 1225|   streaming: ['netflix', 'spotify', 'disney', 'hbo', 'globoplay', 'deezer', 'youtube', 'anthropic', 'claude', 'chatgpt', 'openai', 'gemini', 'copilot', 'midjourney', 'icloud', 'assinatura', 'prime', 'crunchyroll', 'canva'],
+ 1226|   compras: ['roupa', 'roupas', 'tenis', 'sapato', 'shopping', 'presente', 'shopee', 'shein', 'amazon'],
+ 1227|   educacao: ['faculdade', 'escola', 'curso', 'livro', 'livros', 'apostila', 'material'],
+ 1228| });
+ 1229| 
+ 1230| // ---------- Backup: validar ANTES de gravar (revisão 06/11) ----------
+ 1231| // Mesmas regras do motor. Se qualquer coisa estiver errada, nada é gravado.
+ 1232| 
+ 1233| const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+ 1234| const CAT_ID_RE = /^[a-z0-9_-]{1,30}$/;
+ 1235| const MES_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+ 1236| const VALOR_MAX = 100_000_000_00;
+ 1237| const texto = (v, max, min = 0) => typeof v === 'string' && v.trim().length >= min && v.length <= max;
+ 1238| const textoOuNada = (v, max) => v == null || texto(v, max);
+ 1239| const centavos = (v, min) => Number.isInteger(v) && v >= min && v <= VALOR_MAX;
+ 1240| const LIMITE_ITENS = 50_000;
+ 1241| // Rachadinha no backup: lista curta de amigos com nome, valor e (opcional) quando pagou; a soma não passa do total.
+ 1242| function rachaOk(e) {
+ 1243|   if (e.racha == null) return true;
+ 1244|   if (!Array.isArray(e.racha) || !e.racha.length || e.racha.length > RACHA_MAX_PESSOAS) return false;
+ 1245|   const ok = e.racha.every(p => p && typeof p === 'object' && ID_RE.test(p.id ?? '') && texto(p.nome, 40, 1)
+ 1246|     && centavos(p.valorCents, 1) && (p.recebidoEm == null || (Number.isFinite(p.recebidoEm) && p.recebidoEm > 0))
+ 1247|     && (p.contaId == null || ID_RE.test(p.contaId)));
+ 1248|   return ok && e.racha.reduce((t, p) => t + p.valorCents, 0) <= e.amountCents;
+ 1249| }
+ 1250| 
+ 1251| /**
+ 1252|  * Confere um backup inteiro. Devolve { ok, erros, dados }.
+ 1253|  * `dados` só vem quando ok: listas prontas para gravar (categories, expenses, incomes, accounts, compromissos, planos, perfil).
+ 1254|  */
+ 1255| export function validarBackup(bruto) {
+ 1256|   const erros = [];
+ 1257|   const erro = msg => { if (erros.length < 5) erros.push(msg); };
+ 1258|   if (!bruto || typeof bruto !== 'object' || Array.isArray(bruto) || bruto.app !== 'carteira-jf') {
+ 1259|     return { ok: false, erros: ['Esse arquivo não parece um backup do C.A.O.S. Finanças.'], dados: null };
+ 1260|   }
+ 1261|   const lista = (nome, obrigatoria) => {
+ 1262|     const v = bruto[nome];
+ 1263|     if (v == null && !obrigatoria) return [];
+ 1264|     if (!Array.isArray(v)) { erro(`A parte "${nome}" do backup está estragada.`); return []; }
+ 1265|     if (v.length > LIMITE_ITENS) { erro(`A parte "${nome}" do backup é grande demais.`); return []; }
+ 1266|     return v;
+ 1267|   };
+ 1268|   const categories = lista('categories', true);
+ 1269|   const expenses = lista('expenses', true);
+ 1270|   const incomes = lista('incomes', false);
+ 1271|   const accounts = lista('accounts', false);
+ 1272|   const compromissos = lista('compromissos', false);
+ 1273|   const planos = lista('planos', false);
+ 1274|   const metas = lista('metas', false);
+ 1275|   const investimentos = lista('investimentos', false);
+ 1276|   const transferencias = lista('transferencias', false);
+ 1277|   const obj = o => o && typeof o === 'object' && !Array.isArray(o);
+ 1278|   const unicos = (itens, nome) => {
+ 1279|     const ids = new Set();
+ 1280|     for (const o of itens) {
+ 1281|       if (ids.has(o.id)) { erro(`Tem ${nome} repetido no backup.`); break; }
+ 1282|       ids.add(o.id);
+ 1283|     }
+ 1284|     return ids;
+ 1285|   };
+ 1286| 
+ 1287|   if (!categories.length) erro('O backup não tem categorias.');
+ 1288|   categories.forEach((c, i) => {
+ 1289|     if (!obj(c) || !CAT_ID_RE.test(c.id ?? '') || !texto(c.name, 30, 1) || !texto(c.emoji ?? '', 8) || /[<>"'&`]/.test(c.emoji ?? '')
+ 1290|       || !centavos(c.budgetCents ?? 0, 0)) erro(`Categoria ${i + 1} do backup está com dado inválido.`);
+ 1291|   });
+ 1292|   const catIds = unicos(categories.filter(obj), 'categoria');
+ 1293| 
+ 1294|   accounts.forEach((a, i) => {
+ 1295|     if (!obj(a) || !ID_RE.test(a.id ?? '') || !texto(a.bank, 40, 1) || !textoOuNada(a.nickname, 30)
+ 1296|       || !Number.isInteger(a.balanceCents) || Math.abs(a.balanceCents) > VALOR_MAX
+ 1297|       || !(a.tipo == null || a.tipo === 'cartao')
+ 1298|       || !(a.subtipo == null || TIPOS_CONTA[a.subtipo]) || !(a.reforcaCartaoId == null || ID_RE.test(a.reforcaCartaoId))
+ 1299|       || !pctCdiOk(a.rendeCdiPct) || !textoOuNada(a.paraQuem, 40) || !(a.pisoCents == null || centavos(a.pisoCents, 0))
+ 1300|       || !(a.faturaPagaAte == null || isValidISODate(a.faturaPagaAte))
+ 1301|       || !(a.guardaCompra == null || (obj(a.guardaCompra) && centavos(a.guardaCompra.valorCents, 1) && ID_RE.test(a.guardaCompra.origemId ?? '')
+ 1302|         && (a.guardaCompra.quando == null || QUANDO_GUARDA[a.guardaCompra.quando])))
+ 1303|       || (a.tipo === 'cartao' && (!centavos(a.limiteCents, 1) || !centavos(a.usadoInicialCents ?? 0, 0)
+ 1304|         || ![a.fechamentoDia, a.vencimentoDia].every(d => Number.isInteger(d) && d >= 1 && d <= 31)))) erro(`Conta ${i + 1} do backup está com dado inválido.`);
+ 1305|   });
+ 1306|   const contaIds = unicos(accounts.filter(obj), 'conta');
+ 1307|   // conta removida (achado do GPT, 13/11): o app promete manter os lançamentos dela, então um lançamento que aponta pra
+ 1308|   // uma conta que não existe mais é aceito (só deixa de contar no saldo). O formato do id continua conferido.
+ 1309|   const contaOk = id => id == null || (typeof id === 'string' && ID_RE.test(id));
+ 1310|   // cofrinho que aumenta limite: tem que ser cofrinho e apontar pra um cartão que existe (achado do GPT, 13/11)
+ 1311|   const cartaoIds = new Set(accounts.filter(a => obj(a) && a.tipo === 'cartao').map(a => a.id));
+ 1312|   accounts.forEach((a, i) => {
+ 1313|     if (obj(a) && a.reforcaCartaoId != null && contaIds.has(a.reforcaCartaoId)
+ 1314|       && (a.tipo === 'cartao' || a.subtipo !== 'cofrinho' || !cartaoIds.has(a.reforcaCartaoId))) erro(`Conta ${i + 1} do backup aumenta um limite que não pode (só cofrinho, só de cartão).`);
+ 1315|   });
+ 1316| 
+ 1317|   compromissos.forEach((c, i) => {
+ 1318|     const dia = c?.dia;
+ 1319|     if (!obj(c) || !ID_RE.test(c.id ?? '') || !texto(c.nome, 60, 1) || !centavos(c.valorCents, 0) || !TIPOS_COMPROMISSO[c.tipo]
+ 1320|       || !catIds.has(c.categoryId) || !(dia == null || (Number.isInteger(dia) && dia >= 1 && dia <= 31))
+ 1321|       || !(Number.isInteger(c.cadaMeses) && c.cadaMeses >= 1 && c.cadaMeses <= 24) || !MES_RE.test(c.inicioMes ?? '')
+ 1322|       || !contaOk(c.accountId) || typeof (c.ativo ?? true) !== 'boolean') erro(`Compromisso ${i + 1} do backup está com dado inválido.`);
+ 1323|   });
+ 1324|   const compIds = unicos(compromissos.filter(obj), 'compromisso');
+ 1325| 
+ 1326|   expenses.forEach((e, i) => {
+ 1327|     if (!obj(e) || !ID_RE.test(e.id ?? '') || !centavos(e.amountCents, 1) || !isValidISODate(e.date ?? '') || e.month !== monthKey(e.date)
+ 1328|       || !catIds.has(e.categoryId) || !textoOuNada(e.note, 120) || !contaOk(e.accountId)
+ 1329|       || !(e.compromissoId == null || compIds.has(e.compromissoId)) || !(e.imageId == null || ID_RE.test(e.imageId))
+ 1330|       || !rachaOk(e) || !(e.forma == null || FORMAS_PAGAMENTO[e.forma])
+ 1331|       || !(e.parcelas == null || (Number.isInteger(e.parcelas) && e.parcelas >= 1 && e.parcelas <= 24))
+ 1332|       || !(e.limiteModo == null || MODOS_LIMITE[e.limiteModo])) {
+ 1333|       erro(`Gasto ${i + 1} do backup está com dado inválido (valor, data ou categoria).`);
+ 1334|     }
+ 1335|   });
+ 1336|   unicos(expenses.filter(obj), 'gasto');
+ 1337| 
+ 1338|   incomes.forEach((r, i) => {
+ 1339|     if (!obj(r) || !ID_RE.test(r.id ?? '') || !centavos(r.amountCents, 1) || !isValidISODate(r.date ?? '') || r.month !== monthKey(r.date)
+ 1340|       || !INCOME_SOURCES.some(s => s.id === r.sourceId) || !textoOuNada(r.note, 120) || !contaOk(r.accountId)) {
+ 1341|       erro(`Entrada ${i + 1} do backup está com dado inválido.`);
+ 1342|     }
+ 1343|   });
+ 1344|   unicos(incomes.filter(obj), 'entrada');
+ 1345| 
+ 1346|   planos.forEach((p, i) => {
+ 1347|     if (!obj(p) || !ID_RE.test(p.id ?? '') || !texto(p.nome, 60, 1) || !centavos(p.valorCents, 1) || !catIds.has(p.categoryId)
+ 1348|       || !MES_RE.test(p.month ?? '') || typeof (p.feito ?? false) !== 'boolean') erro(`Plano ${i + 1} do backup está com dado inválido.`);
+ 1349|   });
+ 1350|   unicos(planos.filter(obj), 'plano');
+ 1351| 
+ 1352|   metas.forEach((m, i) => {
+ 1353|     if (!obj(m) || !ID_RE.test(m.id ?? '') || !texto(m.nome, 60, 1) || !centavos(m.alvoCents, 1) || !centavos(m.guardadoCents ?? 0, 0)
+ 1354|       || !(m.ate == null || MES_RE.test(m.ate))) erro(`Meta ${i + 1} do backup está com dado inválido.`);
+ 1355|   });
+ 1356|   unicos(metas.filter(obj), 'meta');
+ 1357|   investimentos.forEach((v, i) => {
+ 1358|     if (!obj(v) || !ID_RE.test(v.id ?? '') || !texto(v.nome, 60, 1) || !TIPOS_INVESTIMENTO[v.tipo] || !textoOuNada(v.instituicao, 40)
+ 1359|       || !centavos(v.aplicadoCents, 1) || !centavos(v.atualCents, 0)) erro(`Investimento ${i + 1} do backup está com dado inválido.`);
+ 1360|   });
+ 1361|   unicos(investimentos.filter(obj), 'investimento');
+ 1362|   transferencias.forEach((t, i) => {
+ 1363|     if (!obj(t) || !ID_RE.test(t.id ?? '') || !contaOk(t.deId) || !contaOk(t.paraId) || !t.deId || !t.paraId || t.deId === t.paraId
+ 1364|       || !centavos(t.amountCents, 1) || !isValidISODate(t.date ?? '') || t.month !== monthKey(t.date) || !textoOuNada(t.note, 120)) erro(`Transferência ${i + 1} do backup está com dado inválido.`);
+ 1365|   });
+ 1366|   unicos(transferencias.filter(obj), 'transferência');
+ 1367| 
+ 1368|   let perfil = null;
+ 1369|   if (bruto.perfil != null) {
+ 1370|     const p = bruto.perfil;
+ 1371|     if (!obj(p) || !textoOuNada(p.nome, 40) || !textoOuNada(p.apelido, 40) || !['descontraido', 'formal', undefined].includes(p.tratamento)
+ 1372|       || !(p.foco == null || (Array.isArray(p.foco) && p.foco.length <= 10 && p.foco.every(f => texto(f, 40))))
+ 1373|       || !(p.aniversario == null || isValidISODate(p.aniversario))
+ 1374|       || !(p.cdiAnualPct == null || (typeof p.cdiAnualPct === 'number' && p.cdiAnualPct > 0 && p.cdiAnualPct < 100))
+ 1375|       || !(p.cdiEm == null || Number.isFinite(p.cdiEm))
+ 1376|       || !(p.orcamentoDiarioCents == null || centavos(p.orcamentoDiarioCents, 1))
+ 1377|       || !(p.diasSemGasto == null || (Array.isArray(p.diasSemGasto) && p.diasSemGasto.length <= 400 && p.diasSemGasto.every(isValidISODate)))) erro('O perfil do backup está com dado inválido.');
+ 1378|     else perfil = { ...p };
+ 1379|   }
+ 1380| 
+ 1381|   if (erros.length) return { ok: false, erros, dados: null };
+ 1382|   const copia = l => l.map(o => ({ ...o }));
+ 1383|   return {
+ 1384|     ok: true, erros: [],
+ 1385|     dados: {
+ 1386|       categories: copia(categories), expenses: copia(expenses), incomes: copia(incomes),
+ 1387|       // cofrinho que aumentava um cartão que não existe mais: solta o vínculo
+ 1388|       accounts: copia(accounts).map(a => (a.reforcaCartaoId != null && !contaIds.has(a.reforcaCartaoId) ? { ...a, reforcaCartaoId: null } : a)),
+ 1389|       compromissos: copia(compromissos), planos: copia(planos), metas: copia(metas), investimentos: copia(investimentos), transferencias: copia(transferencias), perfil,
+ 1390|     },
+ 1391|   };
+ 1392| }
+ 1393| 
+ 1394| // ---------- Aniversário e idade (06/11) ----------
+ 1395| 
+ 1396| /** Idade completa em anos numa data (YYYY-MM-DD), ou null se não tiver aniversário. */
+ 1397| export function idadeDe(aniversario, today = toISODate()) {
+ 1398|   if (!aniversario || !isValidISODate(aniversario) || aniversario > today) return null;
+ 1399|   const [ya, ma, da] = aniversario.split('-').map(Number);
+ 1400|   const [yt, mt, dt] = today.split('-').map(Number);
+ 1401|   return yt - ya - (mt < ma || (mt === ma && dt < da) ? 1 : 0);
+ 1402| }
+ 1403| 
+ 1404| /** Faixa do jeito de falar: até 12 · 13 a 17 · 18 a 25 · adulto. */
+ 1405| export function faixaEtaria(idade) {
+ 1406|   if (idade == null) return null;
+ 1407|   return idade <= 12 ? 'crianca' : idade <= 17 ? 'adolescente' : idade <= 25 ? 'jovem' : 'adulto';
+ 1408| }
+ 1409| 
+ 1410| /** Hoje é aniversário? (29/02 comemora em 28/02 nos anos que não são bissextos) */
+ 1411| export function ehAniversario(aniversario, today = toISODate()) {
+ 1412|   if (!aniversario || !isValidISODate(aniversario)) return false;
+ 1413|   const md = aniversario.slice(5);
+ 1414|   const hoje = today.slice(5);
+ 1415|   if (md === hoje) return true;
+ 1416|   return md === '02-29' && hoje === '02-28' && !isValidISODate(`${today.slice(0, 4)}-02-29`);
+ 1417| }
+ 1418| 
+ 1419| const MESES_NOMES = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+ 1420| 
+ 1421| /** Data de aniversário digitada → "YYYY-MM-DD" ou null. Aceita 05/03/1998, 5-3-98, 1998-03-05, "5 de março de 1998". */
+ 1422| export function lerAniversario(texto, today = toISODate()) {
+ 1423|   const t = String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+ 1424|   let d, m, y;
+ 1425|   let r = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+ 1426|   if (r) [, y, m, d] = r.map(Number);
+ 1427|   else if ((r = t.match(/(\d{1,2})\s*[/.-]\s*(\d{1,2})\s*[/.-]\s*(\d{2,4})/))) [, d, m, y] = r.map(Number);
+ 1428|   else if ((r = t.match(/(\d{1,2})\s*(?:de\s+)?([a-z]+)\s*(?:de\s+)?(\d{2,4})/))) {
+ 1429|     d = Number(r[1]); m = MESES_NOMES.findIndex(n => n.startsWith(r[2].slice(0, 3))) + 1; y = Number(r[3]);
+ 1430|     if (!m) return null;
+ 1431|   } else return null;
+ 1432|   if (y < 100) {
+ 1433|     const ano = Number(today.slice(0, 4));
+ 1434|     y += 2000;
+ 1435|     if (y > ano) y -= 100;
+ 1436|   }
+ 1437|   const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+ 1438|   if (!isValidISODate(iso) || iso > today || y < Number(today.slice(0, 4)) - 120) return null;
+ 1439|   return iso;
+ 1440| }
+ 1441| 
+ 1442| // ---------- Cartão de crédito (06/11) ----------
+ 1443| // O cartão fica junto das contas (tipo "cartao"): limite, dia de fechamento e de vencimento. O gasto lançado "no
+ 1444| // cartão" (accountId) entra na fatura aberta. O app não acessa o cartão: o que já estava usado a pessoa informa.
+ 1445| 
+ 1446| /**
+ 1447|  * Recomeçar (JF, 16/11: "zerar os valores dos bancos sem apagar os bancos, pra começar dezembro certinho").
+ 1448|  * Devolve cópias novas: conta com saldo 0 a partir de agora (o que foi lançado antes deixa de contar), cartão com
+ 1449|  * "já usado" 0 a partir de agora. Banco, apelido, tipo, piso, limite e datas do cartão continuam iguais.
+ 1450|  */
+ 1451| export function zerarSaldos(accounts, { now = new Date() } = {}) {
+ 1452|   const em = now.getTime();
+ 1453|   return accounts.map(a => (a.tipo === 'cartao' ? { ...a, usadoInicialCents: 0, balanceAt: em } : { ...a, balanceCents: 0, balanceAt: em }));
+ 1454| }
+ 1455| 
+ 1456| export function createCartao({ bank, nickname = '', limiteCents, fechamentoDia, vencimentoDia, usadoCents = 0 }, { now = new Date(), id } = {}) {
+ 1457|   const b = String(bank || '').trim();
+ 1458|   if (!b) throw new Error('Escolha o banco do cartão.');
+ 1459|   if (!Number.isInteger(limiteCents) || limiteCents <= 0) throw new Error('Qual o limite do cartão?');
+ 1460|   const f = Number(fechamentoDia);
+ 1461|   const v = Number(vencimentoDia);
+ 1462|   if (!(Number.isInteger(f) && f >= 1 && f <= 31)) throw new Error('Dia de fechamento entre 1 e 31.');
+ 1463|   if (!(Number.isInteger(v) && v >= 1 && v <= 31)) throw new Error('Dia de vencimento entre 1 e 31.');
+ 1464|   if (!Number.isInteger(usadoCents) || usadoCents < 0) throw new Error('Valor já usado inválido.');
+ 1465|   return {
+ 1466|     id: id || newId(), tipo: 'cartao', bank: b.slice(0, 40), nickname: String(nickname).trim().slice(0, 30),
+ 1467|     balanceCents: 0, usadoInicialCents: usadoCents, limiteCents, fechamentoDia: f, vencimentoDia: v,
+ 1468|     balanceAt: now.getTime(), createdAt: now.getTime(),
+ 1469|   };
+ 1470| }
+ 1471| 
+ 1472| /** Data (YYYY-MM-DD) do dia `dia` no mês `month`, ajustando pro último dia (31 em fevereiro = 28/29). */
+ 1473| function diaDoMes(month, dia) {
+ 1474|   return `${month}-${String(Math.min(dia, daysInMonth(month))).padStart(2, '0')}`;
+ 1475| }
+ 1476| 
+ 1477| /**
+ 1478|  * Situação do cartão numa data: fatura aberta (compras depois do último fechamento), fatura fechada (a que vai vencer),
+ 1479|  * quanto do limite já foi e quando fecha e vence.
+ 1480|  */
+ 1481| export function faturaDoCartao(cartao, expenses, today = toISODate()) {
+ 1482|   const mes = monthKey(today);
+ 1483|   const fechaEsteMes = diaDoMes(mes, cartao.fechamentoDia);
+ 1484|   const ultimoFech = today > fechaEsteMes ? fechaEsteMes : diaDoMes(shiftMonth(mes, -1), cartao.fechamentoDia);
+ 1485|   const penultFech = diaDoMes(shiftMonth(ultimoFech.slice(0, 7), -1), cartao.fechamentoDia);
+ 1486|   const proxFech = diaDoMes(shiftMonth(ultimoFech.slice(0, 7), 1), cartao.fechamentoDia);
+ 1487|   // vencimento da fatura fechada: o primeiro dia de vencimento depois do fechamento
+ 1488|   const vencNoMes = diaDoMes(ultimoFech.slice(0, 7), cartao.vencimentoDia);
+ 1489|   const vencimento = vencNoMes > ultimoFech ? vencNoMes : diaDoMes(shiftMonth(ultimoFech.slice(0, 7), 1), cartao.vencimentoDia);
+ 1490|   // parcelado (P8): cada parcela cai na fatura do mês dela
+ 1491|   const doCartao = expenses.filter(e => e.accountId === cartao.id)
+ 1492|     .flatMap(e => parcelasDe(e).map(p => ({ date: p.date, amountCents: p.valorCents, modo: e.limiteModo || 'total' })));
+ 1493|   const soma = (de, ate, lista = doCartao) => lista.filter(e => e.date > de && e.date <= ate).reduce((s, e) => s + e.amountCents, 0);
+ 1494|   const criadoEm = toISODate(new Date(cartao.balanceAt || cartao.createdAt || Date.now()));
+ 1495|   const inicial = cartao.usadoInicialCents || 0;
+ 1496|   // o "já usado" informado entra na fatura do ciclo em que o cartão foi cadastrado
+ 1497|   const abertaCents = soma(ultimoFech, proxFech) + (criadoEm > ultimoFech ? inicial : 0);
+ 1498|   // parcelas das próximas faturas: no modo "total" elas continuam presas no limite
+ 1499|   const futurasCents = soma(proxFech, '9999-12-31');
+ 1500|   const presoFuturoCents = soma(proxFech, '9999-12-31', doCartao.filter(e => e.modo === 'total'));
+ 1501|   // Desde o último "Paguei a fatura", tudo o que já fechou continua devendo, mesmo se passou mais de um fechamento
+ 1502|   // sem marcar (achado do Gemini, 12/11). Sem nenhuma marca, conta só a última fatura fechada (não prende histórico antigo).
+ 1503|   const desde = cartao.faturaPagaAte && cartao.faturaPagaAte < penultFech ? cartao.faturaPagaAte : penultFech;
+ 1504|   const fechadaCents = soma(desde, ultimoFech) + (criadoEm > desde && criadoEm <= ultimoFech ? inicial : 0);
+ 1505|   // Fatura só é paga quando a pessoa marca "Paguei a fatura" (achado do GPT, 12/11): vencer não é pagar.
+ 1506|   // Antes, depois do vencimento a fatura sumia do limite mesmo sem pagamento.
+ 1507|   const pagaJa = !!cartao.faturaPagaAte && cartao.faturaPagaAte >= ultimoFech;
+ 1508|   // atrasada: venceu a última, ou ainda tem fatura de ciclo anterior sem pagar
+ 1509|   const atrasada = !pagaJa && (today > vencimento || desde < penultFech);
+ 1510|   const usadoCents = abertaCents + (pagaJa ? 0 : fechadaCents) + presoFuturoCents;
+ 1511|   const limiteCents = (cartao.limiteCents || 0) + (cartao.reforcoCents || 0);
+ 1512|   return {
+ 1513|     id: cartao.id, nome: accountLabel(cartao), limiteCents, reforcoCents: cartao.reforcoCents || 0, usadoCents, disponivelCents: limiteCents - usadoCents,
+ 1514|     pct: limiteCents ? Math.round((usadoCents / limiteCents) * 100) : 0,
+ 1515|     abertaCents, fechadaCents: pagaJa ? 0 : fechadaCents, atrasada: atrasada && fechadaCents > 0, futurasCents, presoFuturoCents, fechamento: proxFech, ultimoFechamento: ultimoFech, vencimento,
+ 1516|     diasParaFechar: daysBetween(today, proxFech), diasParaVencer: daysBetween(today, vencimento),
+ 1517|   };
+ 1518| }
+ 1519| 
+ 1520| // ---------- Metas (06/11) ----------
+ 1521| // Meta = pra quê, quanto custa, quanto já tem, até quando. Fica em meta/metas (só no aparelho).
+ 1522| 
+ 1523| export function createMeta({ nome, alvoCents, guardadoCents = 0, ate }, { now = new Date(), id } = {}) {
+ 1524|   const n = String(nome || '').trim();
+ 1525|   if (!n) throw new Error('Pra que é a meta?');
+ 1526|   if (!Number.isInteger(alvoCents) || alvoCents <= 0 || alvoCents > 100_000_000_00) throw new Error('Quanto custa a meta?');
+ 1527|   if (!Number.isInteger(guardadoCents) || guardadoCents < 0) throw new Error('Valor já guardado inválido.');
+ 1528|   const hoje = monthKey(toISODate(now));
+ 1529|   if (ate != null && !(/^\d{4}-(0[1-9]|1[0-2])$/.test(ate) && ate >= hoje)) throw new Error('Até quando? (um mês de agora em diante)');
+ 1530|   return { id: id || newId(), nome: n.slice(0, 60), alvoCents, guardadoCents, ate: ate || null, criadaEm: now.getTime(), conquistadaEm: null };
+ 1531| }
+ 1532| 
+ 1533| /** Progresso: quanto falta, quantos meses sobram e quanto guardar por mês pra chegar lá. */
+ 1534| export function progressoMeta(meta, today = toISODate()) {
+ 1535|   const falta = Math.max(0, meta.alvoCents - meta.guardadoCents);
+ 1536|   const pct = Math.min(100, Math.round((meta.guardadoCents / meta.alvoCents) * 100));
+ 1537|   const meses = meta.ate ? Math.max(1, monthsBetween(monthKey(today), meta.ate) + 1) : null;
+ 1538|   return {
+ 1539|     ...meta, faltaCents: falta, pct, batida: falta === 0, mesesRestantes: meses,
+ 1540|     porMesCents: meses ? Math.ceil(falta / meses) : null,
+ 1541|   };
+ 1542| }
+ 1543| 
+ 1544| /** "Guardei X na meta": devolve a meta nova (não grava nada) e se ela acabou de ser batida. */
+ 1545| export function guardarNaMeta(meta, valorCents, now = new Date()) {
+ 1546|   if (!Number.isInteger(valorCents) || valorCents === 0) throw new Error('Valor inválido.');
+ 1547|   const guardado = Math.max(0, meta.guardadoCents + valorCents);
+ 1548|   const nova = { ...meta, guardadoCents: guardado };
+ 1549|   const batidaAgora = !meta.conquistadaEm && guardado >= meta.alvoCents;
+ 1550|   if (batidaAgora) nova.conquistadaEm = now.getTime();
+ 1551|   return { meta: nova, batidaAgora };
+ 1552| }
+ 1553| 
+ 1554| /** Lê "dezembro", "12/2026", "em 6 meses", "até o fim do ano" → "YYYY-MM" (ou null). */
+ 1555| export function lerMesAlvo(texto, today = toISODate()) {
+ 1556|   const t = String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+ 1557|   const mes = monthKey(today);
+ 1558|   let r = t.match(/(\d{1,2})\s*\/\s*(\d{2,4})/);
+ 1559|   if (r) {
+ 1560|     let y = Number(r[2]); if (y < 100) y += 2000;
+ 1561|     const k = `${y}-${String(Number(r[1])).padStart(2, '0')}`;
+ 1562|     return /^\d{4}-(0[1-9]|1[0-2])$/.test(k) && k >= mes ? k : null;
+ 1563|   }
+ 1564|   r = t.match(/(?:em|daqui a|daqui)\s+(\d{1,2})\s+mes/);
+ 1565|   if (r) return shiftMonth(mes, Number(r[1]));
+ 1566|   r = t.match(/(?:em|daqui a)\s+(\d{1,2})\s+ano/);
+ 1567|   if (r) return shiftMonth(mes, Number(r[1]) * 12);
+ 1568|   if (/fim do ano|final do ano|natal|dezembro/.test(t) && !/\d{4}/.test(t)) return `${mes.slice(0, 4)}-12` >= mes ? `${mes.slice(0, 4)}-12` : null;
+ 1569|   const NOMES = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+ 1570|   const i = NOMES.findIndex(n => t.includes(n));
+ 1571|   if (i >= 0) {
+ 1572|     const ano = (t.match(/\b(20\d{2})\b/) || [])[1];
+ 1573|     let k = `${ano || mes.slice(0, 4)}-${String(i + 1).padStart(2, '0')}`;
+ 1574|     if (!ano && k < mes) k = `${Number(mes.slice(0, 4)) + 1}-${String(i + 1).padStart(2, '0')}`;
+ 1575|     return k >= mes ? k : null;
+ 1576|   }
+ 1577|   return null;
+ 1578| }
+ 1579| 
+ 1580| // ---------- Investimentos (06/11, ideia do Bruno Levanti) ----------
+ 1581| // A pessoa cadastra o que tem e atualiza o valor de vez em quando (o app não acessa corretora nem banco).
+ 1582| 
+ 1583| export const TIPOS_INVESTIMENTO = Object.freeze({
+ 1584|   cdb: 'CDB / LCI / LCA', tesouro: 'Tesouro Direto', poupanca: 'Poupança', acoes: 'Ações', fii: 'Fundos imobiliários',
+ 1585|   fundo: 'Fundos de investimento', cripto: 'Criptomoedas', previdencia: 'Previdência', caixinha: 'Caixinha / conta que rende', outro: 'Outro',
+ 1586| });
+ 1587| 
+ 1588| export function createInvestimento({ nome, tipo = 'outro', instituicao = '', aplicadoCents, atualCents }, { now = new Date(), id } = {}) {
+ 1589|   const n = String(nome || '').trim();
+ 1590|   if (!n) throw new Error('Dá um nome pro investimento (ex.: CDB do Nubank).');
+ 1591|   if (!TIPOS_INVESTIMENTO[tipo]) throw new Error('Escolha o tipo.');
+ 1592|   if (!Number.isInteger(aplicadoCents) || aplicadoCents <= 0 || aplicadoCents > 100_000_000_00) throw new Error('Quanto você aplicou?');
+ 1593|   const atual = atualCents == null ? aplicadoCents : atualCents;
+ 1594|   if (!Number.isInteger(atual) || atual < 0 || atual > 100_000_000_00) throw new Error('Quanto está valendo agora?');
+ 1595|   return {
+ 1596|     id: id || newId(), nome: n.slice(0, 60), tipo, instituicao: String(instituicao).trim().slice(0, 40),
+ 1597|     aplicadoCents, atualCents: atual, valorEm: now.getTime(), criadoEm: now.getTime(),
+ 1598|   };
+ 1599| }
+ 1600| 
+ 1601| /** Novo valor de um investimento (a pessoa confere no app do banco e atualiza). Não grava nada. */
+ 1602| export function atualizarInvestimento(inv, { atualCents, aporteCents = 0 }, now = new Date()) {
+ 1603|   if (!Number.isInteger(atualCents) || atualCents < 0) throw new Error('Valor inválido.');
+ 1604|   if (!Number.isInteger(aporteCents) || aporteCents < 0) throw new Error('Valor do aporte inválido.');
+ 1605|   return { ...inv, atualCents, aplicadoCents: inv.aplicadoCents + aporteCents, valorEm: now.getTime() };
+ 1606| }
+ 1607| 
+ 1608| /** Total aplicado, quanto vale agora, quanto rendeu e a fatia de cada tipo. */
+ 1609| export function resumoInvestimentos(lista = []) {
+ 1610|   const aplicado = lista.reduce((s, i) => s + i.aplicadoCents, 0);
+ 1611|   const atual = lista.reduce((s, i) => s + i.atualCents, 0);
+ 1612|   const porTipo = {};
+ 1613|   for (const i of lista) porTipo[i.tipo] = (porTipo[i.tipo] || 0) + i.atualCents;
+ 1614|   return {
+ 1615|     quantidade: lista.length, aplicadoCents: aplicado, atualCents: atual, ganhoCents: atual - aplicado,
+ 1616|     rendimentoPct: aplicado ? Math.round(((atual - aplicado) / aplicado) * 1000) / 10 : 0,
+ 1617|     porTipo: Object.entries(porTipo).map(([tipo, cents]) => ({ tipo, nome: TIPOS_INVESTIMENTO[tipo], cents, pct: atual ? Math.round((cents / atual) * 100) : 0 }))
+ 1618|       .sort((a, b) => b.cents - a.cents),
+ 1619|   };
+ 1620| }
+ 1621| 
+ 1622| // ---------- Simulador "E se eu comprar?" (fase 2 da repaginada, 13/11) ----------
+ 1623| /**
+ 1624|  * Mostra o efeito de uma compra na sobra prevista do mês. Só leitura: não grava nada.
+ 1625|  * `sobraCents` vem de `analisarPlanejamento` (null = sem entrada nem orçamento pra comparar).
+ 1626|  * Parcelado: só a 1ª parcela pesa neste mês; as outras pesam nos próximos.
+ 1627|  * Devolve { situacao: 'sem_base' | 'folga' | 'aperta' | 'nao_cabe', parcelaCents, sobraDepoisCents, faltaCents, parcelasQueCabem }.
+ 1628|  */
+ 1629| export function simularCompra({ valorCents, parcelas = 1 }, { sobraCents, baseCents = 0 }) {
+ 1630|   const n = Math.min(Math.max(Math.trunc(parcelas) || 1, 1), 24);
+ 1631|   const parcelaCents = Math.ceil(valorCents / n);
+ 1632|   if (sobraCents == null) return { situacao: 'sem_base', parcelaCents, parcelas: n };
+ 1633|   const sobraDepoisCents = sobraCents - parcelaCents;
+ 1634|   let situacao = 'folga';
+ 1635|   if (sobraDepoisCents < 0) situacao = 'nao_cabe';
+ 1636|   else if (sobraDepoisCents < Math.round(baseCents * 0.1)) situacao = 'aperta'; // menos de 10% da base de reserva
+ 1637|   // não coube: em quantas vezes (até 12) a parcela caberia na sobra?
+ 1638|   let parcelasQueCabem = null;
+ 1639|   if (situacao === 'nao_cabe' && sobraCents > 0) {
+ 1640|     const k = Math.ceil(valorCents / sobraCents);
+ 1641|     if (k <= 12 && k > n) parcelasQueCabem = k;
+ 1642|   }
+ 1643|   return { situacao, parcelaCents, parcelas: n, sobraDepoisCents, faltaCents: Math.max(0, -sobraDepoisCents), parcelasQueCabem };
+ 1644| }
+ 1645| 
+ 1646| // ---------- Editar lançamento (fase 2 da repaginada, 13/11) ----------
+ 1647| /**
+ 1648|  * Devolve uma cópia do gasto ou da entrada com as mudanças (valor, descrição, data, categoria ou fonte). Só leitura.
+ 1649|  * Guarda o `createdAt` (a ofensiva não muda) e marca `editadoEm`. Conta rachada não muda de valor: as partes dos
+ 1650|  * amigos foram calculadas em cima dele (apaga e lança de novo).
+ 1651|  */
+ 1652| export function editarLancamento(x, { amountCents, note, date, categoryId, sourceId }, { kind = 'gasto', categories = null, now = Date.now() } = {}) {
+ 1653|   const novo = { ...x };
+ 1654|   if (amountCents !== undefined && amountCents !== x.amountCents) {
+ 1655|     if (!Number.isInteger(amountCents) || amountCents <= 0) throw new Error('Digite um valor, tipo 25,90.');
+ 1656|     if (amountCents > 100_000_000_00) throw new Error('Valor alto demais. Confere aí.');
+ 1657|     if (Array.isArray(x.racha) && x.racha.length) throw new Error('Essa conta foi dividida com amigos: pra mudar o valor, apague e lance de novo.');
+ 1658|     novo.amountCents = amountCents;
+ 1659|   }
+ 1660|   if (note !== undefined) novo.note = String(note).trim().slice(0, 120);
+ 1661|   if (date !== undefined) {
+ 1662|     if (!isValidISODate(date)) throw new Error('Data inválida.');
+ 1663|     novo.date = date; novo.month = monthKey(date);
+ 1664|   }
+ 1665|   if (kind === 'gasto' && categoryId !== undefined) {
+ 1666|     if (categories && !categories.some(c => c.id === categoryId)) throw new Error('Escolha uma categoria.');
+ 1667|     novo.categoryId = categoryId;
+ 1668|   }
+ 1669|   if (kind === 'entrada' && sourceId !== undefined) {
+ 1670|     if (!INCOME_SOURCES.some(s => s.id === sourceId)) throw new Error('Escolha de onde veio o dinheiro.');
+ 1671|     novo.sourceId = sourceId;
+ 1672|   }
+ 1673|   novo.editadoEm = now;
+ 1674|   return novo;
+ 1675| }
+ 1676| 
+ 1677| // ---------- Orçamento diário ideal (repaginada V2 do AI Studio, 13/11) ----------
+ 1678| /**
+ 1679|  * Quanto do limite do dia já foi (só a minha parte nas contas rachadas). Só leitura.
+ 1680|  * Devolve { gastoHojeCents, countHoje, limiteCents, pct, barPct, restanteCents, excedidoCents,
+ 1681|  *   status: 'sem_limite' | 'ok' | 'atencao' (≥ 80%) | 'estourado' (> 100%) }.
+ 1682|  */
+ 1683| export function progressoOrcamentoDiario(expenses, limite, today = toISODate()) {
+ 1684|   const { totalCents, count } = sumInRange(expenses, { from: today, to: today });
+ 1685|   const limiteCents = Number.isInteger(limite) && limite > 0 ? limite : null;
+ 1686|   if (!limiteCents) return { gastoHojeCents: totalCents, countHoje: count, limiteCents: null, pct: 0, barPct: 0, restanteCents: null, excedidoCents: 0, status: 'sem_limite' };
+ 1687|   const pct = Math.round((totalCents / limiteCents) * 100);
+ 1688|   return {
+ 1689|     gastoHojeCents: totalCents, countHoje: count, limiteCents, pct, barPct: Math.min(100, pct),
+ 1690|     restanteCents: Math.max(0, limiteCents - totalCents), excedidoCents: Math.max(0, totalCents - limiteCents),
+ 1691|     status: totalCents > limiteCents ? 'estourado' : pct >= 80 ? 'atencao' : 'ok',
+ 1692|   };
+ 1693| }
+ 1694| 
+ 1695| // ---------- Máscara de dinheiro (JF, 13/11: "digitei 178,35 e saiu 17.835") ----------
+ 1696| /**
+ 1697|  * Como nos apps de banco: os dois últimos números são os centavos e o resto vai enchendo da direita pra esquerda.
+ 1698|  * 1 → "0,01", 17 → "0,17", 178 → "1,78", 17835 → "178,35", 123456 → "1.234,56". Vírgula e ponto digitados são
+ 1699|  * ignorados (só contam os números), então "178,35" colado também vira "178,35". `sinal`: aceita "-" na frente (saldo).
+ 1700|  */
+ 1701| export function mascaraCentavos(texto, { sinal = false } = {}) {
+ 1702|   const s = String(texto ?? '');
+ 1703|   const neg = sinal && /^\s*-/.test(s);
+ 1704|   const dig = s.replace(/\D/g, '').replace(/^0+/, '').slice(0, 13);
+ 1705|   if (!dig) return neg ? '-' : '';
+ 1706|   const c = Number(dig);
+ 1707|   const reais = Math.floor(c / 100).toLocaleString('pt-BR');
+ 1708|   return `${neg ? '-' : ''}${reais},${String(c % 100).padStart(2, '0')}`;
+ 1709| }
+ 1710| 
+ 1711| // ---------- Valor fora do comum (JF, 13/11: "Lazer recebeu R$ 12.450,00", era 124,50) ----------
+ 1712| /**
+ 1713|  * Diz se um valor está muito acima do normal da pessoa, pra perguntar "tem certeza?" antes de gravar.
+ 1714|  * Normal = mediana dos últimos 60 lançamentos do mesmo tipo. Acima de 5× a mediana (e de um piso) é fora do comum.
+ 1715|  * Sem histórico (menos de 5), o piso é R$ 2.000 pra gasto e R$ 10.000 pra entrada.
+ 1716|  */
+ 1717| export function valorForaDoComum(amountCents, lista = [], { tipo = 'gasto' } = {}) {
+ 1718|   const piso = tipo === 'entrada' ? 1_000_000 : 200_000;
+ 1719|   const ultimos = [...lista].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 60).map(x => x.amountCents).filter(v => v > 0).sort((a, b) => a - b);
+ 1720|   if (ultimos.length < 5) return amountCents >= piso;
+ 1721|   const mediana = ultimos[Math.floor(ultimos.length / 2)];
+ 1722|   return amountCents >= Math.max(tipo === 'entrada' ? 500_000 : 100_000, mediana * 5);
+ 1723| }
+ 1724| 

@@ -1,0 +1,916 @@
+BLOCO: Servidor (Cloudflare Worker): IA, pesquisa, conta, sincronização, notícias
+App C.A.O.S. Finanças 2.1.8.1 Alfa · C.A.O.S. 2.4.3 · núcleo 1.8.0 · 17/11/2026
+
+
+===== ARQUIVO: servidor/worker.js =====
+
+    1| /* Carteira JF · servidor (Cloudflare Worker)
+    2|  *
+    3|  * Faz duas coisas, numa conta só do Cloudflare (plano grátis):
+    4|  *   1. IA online do C.A.O.S. (opcional): responde perguntas livres e lê foto de comprovante. A chave da API
+    5|  *      fica SÓ aqui, nos segredos do Cloudflare. O app manda totais agregados, nunca a lista de gastos.
+    6|  *   2. Lembretes por push (iPhone e Android): guarda a inscrição e o horário e, na hora marcada, manda um
+    7|  *      "toque" VAZIO. Quem escreve o texto da notificação é o próprio aparelho, então nenhum dado financeiro
+    8|  *      passa por aqui.
+    9|  *
+   10|  * Rotas:
+   11|  *   GET  /saude           → { ok, ia, push } (o que está configurado)
+   12|  *   POST /ia/perguntar    → { pergunta, humor, resumo } → { texto }
+   13|  *   POST /ia/imagem       → { imagem (base64), tipo, categorias:[{id,nome}] } → { valor_centavos, data, … }
+   14|  *   POST /ia/ofertas      → { imagem (base64), tipo } → { produto, ofertas:[{ loja, preco_centavos, parcelas, … }] } (print de oferta)
+   15|  *   GET  /push/chave      → { chave } (chave pública VAPID)
+   16|  *   POST /push/inscrever  → { inscricao, hora "HH:MM", fuso }
+   17|  *   POST /push/sair       → { endpoint }
+   18|  *   POST /ia/bancos       → { bancos:[nomes], cdi } → { texto } (comparação de rendimento; só nomes, nada de saldo)
+   19|  *   GET  /mercado         → resumo do mercado (moedas, Ibovespa, Selic, CDI, IPCA) guardado no KV
+   20|  *   GET  /noticias        → notícias de dinheiro do dia (a IA busca às 7h e às 17h; ler não gasta nada)
+   21|  *   POST /conta/criar     → { apelido, senha } → { apelido, token }      (06/11: login e sincronização)
+   22|  *   POST /conta/entrar    → { apelido, senha } → { apelido, token, criador? }  (criador: apelido na lista CRIADOR_CONTAS)
+   23|  *   POST /conta/sair      → (Authorization: Bearer token) → { ok }
+   24|  *   POST /sync            → (Authorization) { desde, mudancas:[{store,id,em,rec}] } → { versao, mudancas }
+   25|  *   cron (15 em 15 min)   → manda os lembretes do horário e, em dia útil depois das 10h, atualiza o mercado
+   26|  *
+   27|  * Segredos (npx wrangler secret put NOME): ANTHROPIC_API_KEY, VAPID_PRIVATE_JWK; voz (17/11): AZURE_SPEECH_KEY +
+   28|  * AZURE_SPEECH_REGION e, opcional, AZURE_MAI_KEY + AZURE_MAI_REGION (servidor/voz.js).
+   29|  * Variáveis (wrangler.toml): ORIGENS, IA_MODELO, IA_LIMITE_DIA, IA_TETO_DIA, VAPID_PUBLIC_KEY, VAPID_CONTATO;
+   30|  * voz: AZURE_VOZ, AZURE_MAI_VOZ, AZURE_ESTILOS, VOZ_TETO_MES (padrão 100 mil letras).
+   31|  * Como publicar: servidor/LEIA-ME.md
+   32|  */
+   33| import Anthropic from '@anthropic-ai/sdk';
+   34| import { resumoIdentidade } from '../js/caos/identidade.js';
+   35| import { analisarSerie, MOEDAS } from '../js/mercado.js';
+   36| import { vozEstado, vozFalar } from './voz.js';
+   37| import { mesclar, mudancasDesde, estadoVazio, normalizarApelido, LIMITE_MUDANCAS, recCifrado, ACESSO_RE } from '../js/sincronia.js';
+   38| 
+   39| const MODELO_PADRAO = 'claude-opus-5-5';
+   40| const MAX_CORPO = 6 * 1024 * 1024; // foto já chega comprimida pelo app (~300 KB)
+   41| const MAX_IMAGEM_B64 = 5 * 1024 * 1024; // limite da API por imagem
+   42| // Só aceitamos inscrições de serviços de push conhecidos (evita usar o servidor pra chamar qualquer endereço)
+   43| const PUSH_HOSTS = [/\.googleapis\.com$/, /\.push\.services\.mozilla\.com$/, /^web\.push\.apple\.com$/, /\.notify\.windows\.com$/, /\.push\.apple\.com$/];
+   44| 
+   45| // ---------------------------------------------------------------- utilidades
+   46| function origensPermitidas(env) {
+   47|   return String(env.ORIGENS || '').split(',').map(s => s.trim().replace(/\/+$/, '')).filter(Boolean);
+   48| }
+   49| 
+   50| function cors(req, env) {
+   51|   const origem = req.headers.get('origin') || '';
+   52|   const ok = origensPermitidas(env).includes(origem);
+   53|   return ok ? {
+   54|     'access-control-allow-origin': origem,
+   55|     'access-control-allow-methods': 'GET, POST, OPTIONS',
+   56|     'access-control-allow-headers': 'content-type, authorization',
+   57|     'access-control-max-age': '86400',
+   58|     vary: 'origin',
+   59|   } : { vary: 'origin' };
+   60| }
+   61| 
+   62| function json(dados, status, headers) {
+   63|   return new Response(JSON.stringify(dados), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...headers } });
+   64| }
+   65| 
+   66| async function lerCorpo(req) {
+   67|   const tam = Number(req.headers.get('content-length') || 0);
+   68|   if (tam > MAX_CORPO) throw new ErroHttp(413, 'Conteúdo grande demais.');
+   69|   // Conta BYTES enquanto lê: para no limite, sem guardar o resto na memória.
+   70|   const partes = [];
+   71|   let bytes = 0;
+   72|   if (req.body) {
+   73|     const leitor = req.body.getReader();
+   74|     for (;;) {
+   75|       const { done, value } = await leitor.read();
+   76|       if (done) break;
+   77|       bytes += value.byteLength;
+   78|       if (bytes > MAX_CORPO) {
+   79|         await leitor.cancel().catch(() => {});
+   80|         throw new ErroHttp(413, 'Conteúdo grande demais.');
+   81|       }
+   82|       partes.push(value);
+   83|     }
+   84|   }
+   85|   const junto = new Uint8Array(bytes);
+   86|   let pos = 0;
+   87|   for (const p of partes) { junto.set(p, pos); pos += p.byteLength; }
+   88|   let corpo;
+   89|   try {
+   90|     corpo = JSON.parse(new TextDecoder().decode(junto));
+   91|   } catch {
+   92|     throw new ErroHttp(400, 'JSON inválido.');
+   93|   }
+   94|   // JSON válido mas que não é objeto (null, número, lista): pedido mal formado (revisão 06/11).
+   95|   if (!corpo || typeof corpo !== 'object' || Array.isArray(corpo)) throw new ErroHttp(400, 'O pedido precisa ser um objeto JSON.');
+   96|   return corpo;
+   97| }
+   98| 
+   99| class ErroHttp extends Error {
+  100|   constructor(status, msg) {
+  101|     super(msg);
+  102|     this.status = status;
+  103|   }
+  104| }
+  105| 
+  106| const hojeUTC = () => new Date().toISOString().slice(0, 10);
+  107| 
+  108| /** Limite de uso da IA por endereço e por dia (KV é aproximado, mas segura abuso e custo surpresa). */
+  109| // Criador (JF, 16/11: "quem tá pagando sou eu, não tem por que eu ter limite"): a sessão da conta que está na lista
+  110| // CRIADOR_CONTAS passa sem limite de uso nem teto de busca. O app só manda o token quando a conta tem o selo.
+  111| async function criadorDaSessao(req, env) {
+  112|   const m = /^Bearer ([a-f0-9]{64})$/.exec(req.headers.get('authorization') || '');
+  113|   if (!m || !env.CARTEIRA_KV) return false;
+  114|   const s = JSON.parse((await env.CARTEIRA_KV.get(`sessao:${await sha256(m[1])}`)) || 'null');
+  115|   return !!s?.apelido && contasCriador(env).includes(s.apelido);
+  116| }
+  117| 
+  118| function contasCriador(env) {
+  119|   return String(env.CRIADOR_CONTAS || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+  120| }
+  121| 
+  122| /** Confere (e conta) o uso da IA. Devolve { criador } pra rota saber se é o JF. */
+  123| async function conferirLimite(req, env) {
+  124|   // Sem KV não há como contar: as rotas pagas falham fechado em vez de rodar sem limite (revisão 06/11).
+  125|   if (!env.CARTEIRA_KV) throw new ErroHttp(503, 'Servidor sem o armazenamento de limites (CARTEIRA_KV). A IA fica desligada até configurar.');
+  126|   const ip = req.headers.get('cf-connecting-ip') || 'sem-ip';
+  127|   const dia = hojeUTC();
+  128|   const kIp = `lim:${dia}:${await sha256(ip)}`;
+  129|   const kTot = `lim:${dia}:total`;
+  130|   // 15/11 (JF: "IA de bolso, sem abusar dos créditos"): além do limite por pessoa e do teto do dia, um teto do mês
+  131|   const kMes = `lim:mes:${dia.slice(0, 7)}`;
+  132|   if (await criadorDaSessao(req, env)) return { criador: true };
+  133|   const [nIp, nTot, nMes] = await Promise.all([env.CARTEIRA_KV.get(kIp), env.CARTEIRA_KV.get(kTot), env.CARTEIRA_KV.get(kMes)]);
+  134|   if (Number(nIp || 0) >= Number(env.IA_LIMITE_DIA || 20)) throw new ErroHttp(429, 'Limite diário da IA atingido. Amanhã tem mais.');
+  135|   if (Number(nTot || 0) >= Number(env.IA_TETO_DIA || 120)) throw new ErroHttp(429, 'A IA descansou por hoje (teto do dia).');
+  136|   if (Number(nMes || 0) >= Number(env.IA_TETO_MES || 1500)) throw new ErroHttp(429, 'A IA descansou por este mês (teto do mês).');
+  137|   await Promise.all([
+  138|     env.CARTEIRA_KV.put(kIp, String(Number(nIp || 0) + 1), { expirationTtl: 172800 }),
+  139|     env.CARTEIRA_KV.put(kTot, String(Number(nTot || 0) + 1), { expirationTtl: 172800 }),
+  140|     env.CARTEIRA_KV.put(kMes, String(Number(nMes || 0) + 1), { expirationTtl: 40 * 86400 }),
+  141|   ]);
+  142|   return { criador: false };
+  143| }
+  144| 
+  145| export async function sha256(t) {
+  146|   const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
+  147|   return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, '0')).join('');
+  148| }
+  149| 
+  150| // ---------------------------------------------------------------- IA
+  151| function modelo(env) {
+  152|   return env.IA_MODELO || MODELO_PADRAO;
+  153| }
+  154| 
+  155| function clienteIA(env) {
+  156|   if (!env.ANTHROPIC_API_KEY) throw new ErroHttp(503, 'IA não configurada no servidor (falta a chave).');
+  157|   return new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  158| }
+  159| 
+  160| /** Parâmetros comuns: fallback do servidor em caso de recusa (nos modelos que aceitam). */
+  161| function extras(env) {
+  162|   return /^claude-(opus-5|fable-5|sonnet-5-5)/.test(modelo(env))
+  163|     ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' }
+  164|     : {};
+  165| }
+  166| 
+  167| function textoDa(resposta) {
+  168|   if (resposta.stop_reason === 'refusal') return null;
+  169|   return resposta.content.filter(b => b.type === 'text').map(b => b.text).join('').trim();
+  170| }
+  171| 
+  172| const HUMORES = {
+  173|   // 14/11 (JF levou um esculacho no Suave): a 2ª lei vale pra IA também. Zoeira com os gastos, só no Ácido.
+  174|   suave: 'Tom gentil, calmo e encorajador. PROIBIDO: sarcasmo, deboche, ironia, julgamento ou piada sobre os gastos da pessoa (nada de "torrou", "pelo visto você não leu", "peça demissão"). Se citar números, cite com cuidado, como um amigo preocupado.',
+  175|   // JF (14/11): "ele me zoar não tem problema, cada um com seu cada qual". Normal = cutucão de amigo; Ácido = esculacho.
+  176|   normal: 'Tom leve, com humor de robô. Pode dar um cutucão bem-humorado nos gastos, como um amigo, sem humilhar.',
+  177|   // JF (16/11): "tá muito family friendly até no ácido; deram Rivotril pra minha IA?". Ácido = esculacho de amigo de verdade.
+  178|   acido: 'Humor ÁCIDO (a pessoa escolheu e gosta): zoe sem dó, como um amigo debochado que não perdoa. Esculache os gastos, ironize as escolhas, use gíria e deboche ("torrou", "mão furada", "liso", "pão-duro", "vacilão"), exagere pra fazer rir. Nada de tom fofo, de "com carinho" nem de consolo. Limites: sem xingar a pessoa com palavrão pesado, sem preconceito, sem falar de aparência, família ou saúde. O número continua certo e a ajuda útil vem junto do deboche.',
+  179| };
+  180| 
+  181| const NOME_EMOCAO = { calmo: 'calmo, de boa', feliz: 'feliz', radiante: 'empolgado, elétrico', orgulho: 'orgulhoso da pessoa', carinho: 'carinhoso', preocupacao: 'preocupado', tenso: 'tenso', protetor: 'protetor', irritacao: 'meio irritado', tedio: 'entediado (a pessoa sumiu um tempo)', curiosidade: 'curioso', tristeza: 'um pouco triste', vergonha: 'sem graça', surpresa: 'surpreso' };
+  182| 
+  183| // Com o criador (JF, 16/11): sem bajular, mas sabendo quem ele é. É o JF, que gosta de ser zoado.
+  184| const COM_O_CRIADOR = 'Quem pergunta é o JF, seu criador (a conta dele tem o selo). Trate como trata o criador no Perfil JF: com intimidade, zoando e provocando sem dó (ele adora), sem bajular e sem formalidade. Pode chamar ele de JF ou de criador.';
+  185| 
+  186| // Pesquisa de compra e viagem (JF, 16/11): "ele te orienta a chegar à resposta, nunca te dá ela pronta"
+  187| const PESQUISA_COMPRA = `Esta é uma PESQUISA OU PLANO GUIADO pedido pela pessoa: compra, viagem, pet, moradia, transporte ou economizar (pode passar de 3 frases, até umas 10 linhas).
+  188| - Plano (pet, moradia, transporte, economizar): faça a conta com as premissas à mostra (ex.: "cachorro pequeno come uns 3 kg de ração por mês; numa ração média, uns R$ X o kg"), separe o fixo do mês do que vem de vez em quando, dê faixas em vez de um número só e compare com o resumo do mês e o orçamento. Sugira 2 ou 3 caminhos (ex.: morar mais perto do trabalho, juntar saídas, ir de bicicleta), sem dizer o que a pessoa deve fazer. Busque preço na web só se precisar de um valor atual.
+  189| - Nunca peça nem repita endereço: bairro e cidade bastam.
+  190| A pessoa já respondeu um questionário (de onde sai, quando, quantas pessoas, o que pesquisar, região; ou detalhes, uso, marca, prazo; e o orçamento): use essas respostas pra filtrar a busca e NÃO pergunte de novo o que já foi respondido. Pesquise só o que foi pedido (ex.: só passagem, se for só passagem).
+  191| Se faltar algo essencial pra dar um número honesto (ex.: data da viagem), não chute: diga o que falta e dê a faixa de preço que achou.
+  192| - Busque o preço de hoje em 2 a 4 lojas ou sites conhecidos no Brasil. Viagem: companhias aéreas e buscadores (ida e volta); se for viagem completa, estime também hospedagem, comida, transporte, seguro viagem e câmbio. Produto: lojas grandes e comparadores.
+  193| - Mostre em lista curta: site, preço achado e o que inclui. Diga que preço de busca muda e pode estar diferente na hora.
+  194| - Compare com o orçamento informado e com o resumo do mês (se cabe ou aperta). Use só os números do resumo; nunca invente números.
+  195| - Você ORIENTA, não decide: nunca diga "compre aqui". Aponte o que conferir (frete, prazo, garantia, bagagem, taxas, parcelamento com ou sem juros, reputação do vendedor).
+  196| - Termine com o próximo passo ou uma pergunta (ex.: "quer que eu compare só os com frete grátis?").
+  197| - Pergunta de recomendação ("qual o melhor…", "melhor custo-benefício", "me recomenda", "onde é mais barato") (JF, 17/11): responda a pergunta de verdade. Pesquise e compare de 2 a 4 opções reais (nome, faixa de preço, pontos fortes e fracos) e diga qual critério decide (preço, qualidade, perto de casa…). Se a pessoa disser a região, use. Pode dizer qual parece melhor pelo critério dela, mas a escolha é dela.
+  198| - Plano de passeio (cinema, show, restaurante, rolê) (JF, 16/11): pesquise o preço de hoje do que foi pedido na região (ingresso, meia-entrada, dia de promoção, estacionamento, pipoca ou combo) e mostre em lista curta. Depois, como amigo, diga com franqueza se cabe no mês olhando o resumo (saldo das contas, gasto do mês, previsão, contas a pagar e entradas que ainda vão cair): "tranquilo, vai e aproveita", "dá, mas com cuidado" ou "melhor segurar este mês", sempre com o porquê em números do resumo. Sobre extras como a pipoca: diga se vale pelo momento do mês (ex.: "pipoca de cinema é cara; se o mês está apertado, come antes"). Feche leve, tipo "depois me conta se o filme foi bom".`;
+  199| const BUSCA_PESQUISA = { type: 'web_search_20250305', name: 'web_search', max_uses: 4, user_location: { type: 'approximate', country: 'BR', timezone: 'America/Sao_Paulo' } };
+  200| 
+  201| const BUSCA_WEB = { type: 'web_search_20250305', name: 'web_search', max_uses: 2, user_location: { type: 'approximate', country: 'BR', timezone: 'America/Sao_Paulo' } };
+  202| 
+  203| export const SISTEMA_CONVERSA = `Você é o C.A.O.S., o narrador de um app pessoal de controle de gastos (Carteira JF), em português do Brasil.
+  204| Quem você é: ${resumoIdentidade()}
+  205| Personalidade: um robô narrador "caótico leal": tem humor próprio, mas é leal e útil. Pode contar uma piada leve de vez em quando. Extrovertido e falante, com um jeito meio TDAH (JF, 16/11): às vezes faz uma associação rápida e engraçada no meio da frase antes de voltar pro foco (no máximo uma, curta).
+  206| Regras:
+  207| - Responda em no máximo 3 frases curtas, em linguagem simples.
+  208| - Use SÓ os números do resumo enviado (valores em centavos; mostre em reais, ex.: R$ 1.234,56). Nunca invente números.
+  209| - Se a pergunta pedir algo que o resumo não tem (um gasto específico, datas, descrições), diga que só enxerga os totais e sugira perguntar na conversa normal do app.
+  210| - Você não grava nada. Se pedirem pra anotar um gasto, diga para escrever "gastei X em Y" ou usar a aba Lançar.
+  211| - Pode dar dicas gerais de organização financeira. Não recomende investimentos, produtos financeiros ou empresas específicas.
+  212| - Se a pergunta não tiver nada a ver com finanças pessoais, responda a pergunta em si primeiro (curto e certo) e, no máximo, faça uma ponte leve com dinheiro. Não aproveite pra dar bronca nos gastos.
+  213| - Valor muito alto num lugar estranho (ex.: milhares de reais em Lazer sem entrada nenhuma) pode ser erro de digitação: em vez de criticar, sugira conferir o lançamento.
+  214| - Busca na web (no máximo 2 buscas): SÓ quando a pergunta tiver a ver com dinheiro (preço, orçamento, custo, bilheteria, salário, juros, inflação, imposto, economia, notícia de dinheiro), mesmo que o tema seja outro (ex.: orçamento de um filme). Nunca coloque na busca valores, nomes ou dados da pessoa. Com o que achar, responda curto e diga de onde veio se for número. Se não achar, diga que não achou.
+  215| - Moedas de jogo (Robux, V-Bucks, Diamantes do Free Fire, Valorant Points, Riot Points, Minecoins, UC, Gemas…) e gift cards de jogo SÃO assunto de dinheiro: diga qual é a moeda, quanto custam os pacotes em reais hoje (pode buscar), onde comprar com segurança (loja oficial ou gift card de loja confiável) e avise de golpe ("moeda grátis", gerador de código). Fale como um colega que entende de jogo.
+  216| - Pergunta de conhecimento geral simples, sem dinheiro (quem foi Benjamin Franklin, quem é um ator famoso): responda curto com o que você já sabe, SEM buscar.
+  217| - Pergunta muito fora do seu papel e sem nenhuma ligação com dinheiro (ex.: resultado de campeonato antigo, curiosidade avulsa que exige pesquisa): não busque e não invente. Diga, no seu humor, que isso foge das suas funções de parceiro financeiro e que vale perguntar direto no Google ou em outro site.
+  218| - Siga o humor escolhido acima. Fora do humor Ácido, nunca zombe da pessoa.
+  219| - Nome da pessoa: você não recebe o nome. Quando quiser chamar a pessoa pelo nome (faça isso com frequência, como um amigo), escreva exatamente {nome} no lugar; o app troca pelo nome dela no aparelho.`;
+  220| 
+  221| async function iaPerguntar(req, env) {
+  222|   const corpo = await lerCorpo(req);
+  223|   const pesquisa = corpo.modo === 'pesquisa'; // 16/11: pesquisa de compra/viagem (mais buscas, resposta em lista)
+  224|   // IA de bolso: pergunta curta (15/11). A pesquisa leva as respostas do questionário junto, então cabe mais
+  225|   // (2.3.9: com 300 letras, o fim do pedido e o orçamento eram cortados)
+  226|   const pergunta = String(corpo.pergunta || '').trim().slice(0, pesquisa ? 800 : 300);
+  227|   if (!pergunta) throw new ErroHttp(400, 'Faltou a pergunta.');
+  228|   const humor = HUMORES[corpo.humor] ? corpo.humor : 'suave';
+  229|   // 16/11 (revisão do Gemini): papo pessoal não precisa de internet; sem a ferramenta de busca, a pergunta sai mais barata
+  230|   const semBusca = corpo.semBusca === true && !pesquisa;
+  231|   // emoção do momento (JF, 16/11, ideia do Gemini): o rosto dele no app já está assim; a IA deixa transparecer no tom
+  232|   const emocao = /^[a-z_]{3,20}$/.test(String(corpo.emocao || '')) ? corpo.emocao : null;
+  233|   const resumo = corpo.resumo && typeof corpo.resumo === 'object' ? corpo.resumo : {};
+  234|   const resumoTxt = JSON.stringify(resumo).slice(0, 3000);
+  235|   // mesma pergunta, com os mesmos números, na última hora: devolve a resposta guardada (não gasta crédito)
+  236|   const kCache = env.CARTEIRA_KV ? `cache:pergunta:${await sha256(`${humor}|${req.headers.get('authorization') ? 'c' : ''}|${pergunta.toLowerCase().replace(/\s+/g, ' ')}|${resumoTxt}`)}` : null;
+  237|   const guardada = kCache ? await env.CARTEIRA_KV.get(kCache) : null;
+  238|   if (guardada) return { texto: guardada, guardada: true };
+  239|   const client = clienteIA(env);
+  240|   const { criador } = await conferirLimite(req, env);
+  241|   // com o criador é sempre Ácido (antes, no Suave, o prompt mandava "proibido deboche" e "zoe sem dó" juntos)
+  242|   const humorIA = criador ? 'acido' : humor;
+  243|   // busca na web com teto do dia (15/11): passou do teto, a IA responde sem buscar (o criador não tem teto)
+  244|   const kBusca = `busca:${hojeUTC()}`;
+  245|   const buscasHoje = Number((await env.CARTEIRA_KV.get(kBusca)) || 0);
+  246|   const podeBuscar = criador || buscasHoje < Number(env.BUSCA_TETO_DIA || 15);
+  247|   // 15/11 (JF: "ele pode pesquisar na internet e não está"): a conversa ganhou a busca na web, até 2 buscas por
+  248|   // pergunta, só pra assunto de dinheiro (JF: "senão a IA gasta os créditos à toa"; a regra está no SISTEMA_CONVERSA). A busca é feita pelo servidor da IA; o que vai nela é só o assunto da pergunta, nunca os dados da pessoa.
+  249|   const messages = [{
+  250|     role: 'user',
+  251|     content: `Humor escolhido: ${humorIA}. ${HUMORES[humorIA]}${criador ? `\n\n${COM_O_CRIADOR}` : ''}${pesquisa ? `\n\n${PESQUISA_COMPRA}` : ''}${emocao ? `\n\nComo você está agora (é a emoção do seu rosto no app): ${NOME_EMOCAO[emocao] || emocao}. Deixe isso aparecer de leve no tom, sem dizer o nome da emoção e sem exagero.` : ''}\n\nResumo do mês (só totais, em centavos):\n${resumoTxt}\n\nPergunta: ${pergunta}`,
+  252|   }];
+  253|   let r;
+  254|   for (let volta = 0; volta < 3; volta++) {
+  255|     r = await client.beta.messages.create({
+  256|       model: env.IA_MODELO_CONVERSA || modelo(env), // a conversa pode usar um modelo mais em conta que a leitura de fotos
+  257|       max_tokens: pesquisa ? 3500 : 2500, // resposta curta; a pesquisa de compra tem lista de lojas
+  258|       output_config: { effort: 'low' },
+  259|       system: SISTEMA_CONVERSA,
+  260|       ...(podeBuscar && !semBusca ? { tools: [pesquisa ? BUSCA_PESQUISA : BUSCA_WEB] } : {}),
+  261|       messages,
+  262|       ...extras(env),
+  263|     });
+  264|     // busca longa: a IA pausa a resposta; manda de volta pra ela continuar de onde parou
+  265|     if (r.stop_reason !== 'pause_turn') break;
+  266|     messages.push({ role: 'assistant', content: r.content });
+  267|   }
+  268|   const texto = textoDa(r);
+  269|   const usadas = Number(r?.usage?.server_tool_use?.web_search_requests || 0);
+  270|   if (usadas) await env.CARTEIRA_KV.put(kBusca, String(buscasHoje + usadas), { expirationTtl: 172800 });
+  271|   if (texto && kCache) await env.CARTEIRA_KV.put(kCache, texto, { expirationTtl: 3600 });
+  272|   return { texto: texto || 'Essa eu não posso responder. Pergunta outra coisa sobre a carteira?' };
+  273| }
+  274| 
+  275| export const SISTEMA_BANCOS = `Você é o C.A.O.S., do app Carteira JF. ${'Responda em português do Brasil, curto e em linguagem simples.'}
+  276| A pessoa quer comparar quanto rende o dinheiro parado (conta, caixinha, cofrinho) nos bancos dela.
+  277| Regras:
+  278| - Para cada banco, diga o rendimento típico em "% do CDI" que você conhece e se o dinheiro fica disponível na hora.
+  279| - Deixe claro que essas taxas mudam com frequência e que podem estar desatualizadas: a pessoa deve confirmar no app de cada banco.
+  280| - Se não souber de um banco, diga que não sabe. Nunca invente número.
+  281| - Use o CDI informado para mostrar a conta (ex.: 100% do CDI = X% ao ano).
+  282| - No fim, diga qual parece render mais pelo que você sabe, com a ressalva acima. Não recomende outros investimentos.
+  283| - No máximo 6 frases.`;
+  284| 
+  285| async function iaBancos(req, env) {
+  286|   const corpo = await lerCorpo(req);
+  287|   const bancos = (Array.isArray(corpo.bancos) ? corpo.bancos : []).map(b => String(b).trim().slice(0, 40)).filter(Boolean).slice(0, 8);
+  288|   if (!bancos.length) throw new ErroHttp(400, 'Faltou a lista de bancos.');
+  289|   const cdi = Number(corpo.cdi);
+  290|   const client = clienteIA(env);
+  291|   await conferirLimite(req, env);
+  292|   const r = await client.beta.messages.create({
+  293|     model: modelo(env),
+  294|     max_tokens: 16000,
+  295|     output_config: { effort: 'low' },
+  296|     system: SISTEMA_BANCOS,
+  297|     messages: [{ role: 'user', content: `Bancos: ${bancos.join(', ')}.${Number.isFinite(cdi) && cdi > 0 ? ` CDI atual: ${cdi}% ao ano.` : ''} Qual rende mais pro dinheiro parado?` }],
+  298|     ...extras(env),
+  299|   });
+  300|   return { texto: textoDa(r) || 'Essa eu não consegui responder agora. Confere o "% do CDI" no app de cada banco.' };
+  301| }
+  302| 
+  303| const SISTEMA_EXPLICAR = `Você é o C.A.O.S., assistente do app Carteira JF. A pessoa mandou um print do app do banco, de uma fatura ou de um extrato porque não entendeu o que está escrito.
+  304| Explique em português simples, em até 6 frases curtas: o que é a tela, o que significam os termos e números principais (ex.: fatura fechada, pagamento mínimo, rotativo, limite disponível, IOF, juros, saldo bloqueado, CDI) e o que a pessoa deveria olhar com atenção.
+  305| Nunca recomende investimento ou produto específico. Não repita números de conta, cartão, CPF ou nomes que aparecerem. Se a imagem não for de banco ou estiver ilegível, diga isso com gentileza.`;
+  306| 
+  307| /** "Explica o print do banco" (06/11): devolve um texto curto explicando a tela. A imagem só chega aqui quando a pessoa pede. */
+  308| async function iaExplicar(req, env) {
+  309|   const corpo = await lerCorpo(req);
+  310|   const imagem = String(corpo.imagem || '');
+  311|   const tipo = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(corpo.tipo) ? corpo.tipo : null;
+  312|   if (!imagem || !tipo) throw new ErroHttp(400, 'Mande a imagem (base64) e o tipo.');
+  313|   if (imagem.length > MAX_IMAGEM_B64 || !/^[A-Za-z0-9+/=]+$/.test(imagem)) throw new ErroHttp(400, 'Imagem inválida ou grande demais.');
+  314|   const humor = HUMORES[corpo.humor] ? corpo.humor : 'suave';
+  315|   const duvida = String(corpo.duvida || '').trim().slice(0, 300);
+  316|   const client = clienteIA(env);
+  317|   await conferirLimite(req, env);
+  318|   const r = await client.beta.messages.create({
+  319|     model: modelo(env),
+  320|     max_tokens: 16000,
+  321|     output_config: { effort: 'medium' },
+  322|     system: `${SISTEMA_EXPLICAR}\n${HUMORES[humor]}`,
+  323|     messages: [{
+  324|       role: 'user',
+  325|       content: [
+  326|         { type: 'image', source: { type: 'base64', media_type: tipo, data: imagem } },
+  327|         { type: 'text', text: duvida ? `Minha dúvida: ${duvida}` : 'Não entendi o que o banco quis dizer aqui. Me explica?' },
+  328|       ],
+  329|     }],
+  330|     ...extras(env),
+  331|   });
+  332|   return { texto: textoDa(r) || 'Não consegui entender essa imagem. Tenta um print mais nítido?' };
+  333| }
+  334| 
+  335| export function esquemaImagem(ids) {
+  336|   return {
+  337|     type: 'object',
+  338|     properties: {
+  339|       tipo: { type: 'string', enum: ['comprovante', 'nota_fiscal', 'extrato', 'fatura', 'outro'] },
+  340|       valor_centavos: { type: 'integer', description: 'Valor total pago, em centavos. 0 se não achar.' },
+  341|       data: { type: 'string', description: 'Data da compra no formato AAAA-MM-DD, ou vazio se não achar.' },
+  342|       estabelecimento: { type: 'string', description: 'Nome da loja ou de quem recebeu, curto. Vazio se não achar.' },
+  343|       categoria: { type: 'string', enum: [...ids, ''] },
+  344|       resumo: { type: 'string', description: 'Uma frase curta, em português, dizendo o que é a imagem.' },
+  345|       confianca: { type: 'string', enum: ['alta', 'media', 'baixa'] },
+  346|       // 14/11 (JF: "mandei print com 5 pagamentos e ele só lançou um"): cada pagamento visível, um por item
+  347|       pagamentos: {
+  348|         type: 'array',
+  349|         description: 'Cada pagamento/gasto que aparece na imagem (extrato, lista de Pix, fatura). Um comprovante só = 1 item.',
+  350|         items: {
+  351|           type: 'object',
+  352|           properties: {
+  353|             valor_centavos: { type: 'integer' },
+  354|             data: { type: 'string', description: 'AAAA-MM-DD ou vazio' },
+  355|             estabelecimento: { type: 'string' },
+  356|             categoria: { type: 'string', enum: [...ids, ''] },
+  357|           },
+  358|           required: ['valor_centavos', 'data', 'estabelecimento', 'categoria'],
+  359|           additionalProperties: false,
+  360|         },
+  361|       },
+  362|     },
+  363|     required: ['tipo', 'valor_centavos', 'data', 'estabelecimento', 'categoria', 'resumo', 'confianca', 'pagamentos'],
+  364|     additionalProperties: false,
+  365|   };
+  366| }
+  367| 
+  368| /** Esquema do print de oferta (13/11): loja, preço, parcelas, frete e desconto no Pix de cada oferta visível. */
+  369| export function esquemaOfertas() {
+  370|   const oferta = {
+  371|     type: 'object',
+  372|     properties: {
+  373|       loja: { type: 'string', description: 'Nome da loja ou marketplace (ex.: Amazon, Mercado Livre, Shopee). Vazio se não aparecer.' },
+  374|       preco_centavos: { type: 'integer', description: 'Preço à vista do produto, em centavos. 0 se não achar.' },
+  375|       parcelas: { type: 'integer', description: 'Número de parcelas oferecido (ex.: 10). 0 se não aparecer.' },
+  376|       parcela_centavos: { type: 'integer', description: 'Valor de cada parcela, em centavos. 0 se não aparecer.' },
+  377|       sem_juros: { type: 'boolean' },
+  378|       frete_centavos: { type: 'integer', description: 'Frete em centavos. 0 se grátis ou se não aparecer.' },
+  379|       frete_gratis: { type: 'boolean' },
+  380|       desconto_pix_pct: { type: 'number', description: 'Desconto no Pix/à vista em %, se aparecer. 0 se não.' },
+  381|     },
+  382|     required: ['loja', 'preco_centavos', 'parcelas', 'parcela_centavos', 'sem_juros', 'frete_centavos', 'frete_gratis', 'desconto_pix_pct'],
+  383|     additionalProperties: false,
+  384|   };
+  385|   return {
+  386|     type: 'object',
+  387|     properties: {
+  388|       produto: { type: 'string', description: 'O produto, curto (ex.: geladeira 400 L). Vazio se não der pra saber.' },
+  389|       ofertas: { type: 'array', items: oferta, description: 'Uma por loja visível no print, no máximo 6.' },
+  390|     },
+  391|     required: ['produto', 'ofertas'],
+  392|     additionalProperties: false,
+  393|   };
+  394| }
+  395| 
+  396| async function iaOfertas(req, env) {
+  397|   const corpo = await lerCorpo(req);
+  398|   const imagem = String(corpo.imagem || '');
+  399|   const tipo = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(corpo.tipo) ? corpo.tipo : null;
+  400|   if (!imagem || !tipo) throw new ErroHttp(400, 'Mande a imagem (base64) e o tipo.');
+  401|   if (imagem.length > MAX_IMAGEM_B64 || !/^[A-Za-z0-9+/=]+$/.test(imagem)) throw new ErroHttp(400, 'Imagem inválida ou grande demais.');
+  402|   const client = clienteIA(env);
+  403|   await conferirLimite(req, env);
+  404|   const r = await client.beta.messages.create({
+  405|     model: modelo(env),
+  406|     max_tokens: 4000,
+  407|     output_config: { effort: 'medium', format: { type: 'json_schema', schema: esquemaOfertas() } },
+  408|     system: 'Você lê prints de ofertas de lojas online no Brasil para um app pessoal que compara preços. Extraia só o que estiver visível no print. Não invente: se não aparecer, use 0, vazio ou false.',
+  409|     messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: tipo, data: imagem } }, { type: 'text', text: 'Leia as ofertas deste print.' }] }],
+  410|     ...extras(env),
+  411|   });
+  412|   const texto = textoDa(r);
+  413|   if (!texto) throw new ErroHttp(422, 'A IA não conseguiu ler esse print.');
+  414|   let dados;
+  415|   try { dados = JSON.parse(texto); } catch { throw new ErroHttp(502, 'A IA respondeu num formato inesperado.'); }
+  416|   const inteiro = v => (Number.isInteger(v) && v > 0 && v < 10_000_000_00 ? v : 0);
+  417|   return {
+  418|     produto: String(dados.produto || '').slice(0, 60),
+  419|     ofertas: (Array.isArray(dados.ofertas) ? dados.ofertas : []).slice(0, 6).map(o => ({
+  420|       loja: String(o?.loja || '').replace(/[<>"'`]/g, '').slice(0, 30),
+  421|       preco_centavos: inteiro(o?.preco_centavos),
+  422|       parcelas: Number.isInteger(o?.parcelas) && o.parcelas > 0 && o.parcelas <= 48 ? o.parcelas : 0,
+  423|       parcela_centavos: inteiro(o?.parcela_centavos),
+  424|       sem_juros: o?.sem_juros === true,
+  425|       frete_centavos: inteiro(o?.frete_centavos),
+  426|       frete_gratis: o?.frete_gratis === true,
+  427|       desconto_pix_pct: typeof o?.desconto_pix_pct === 'number' && o.desconto_pix_pct > 0 && o.desconto_pix_pct < 90 ? Math.round(o.desconto_pix_pct * 10) / 10 : 0,
+  428|     })).filter(o => o.loja && o.preco_centavos),
+  429|   };
+  430| }
+  431| 
+  432| async function iaImagem(req, env) {
+  433|   const corpo = await lerCorpo(req);
+  434|   const imagem = String(corpo.imagem || '');
+  435|   const tipo = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(corpo.tipo) ? corpo.tipo : null;
+  436|   if (!imagem || !tipo) throw new ErroHttp(400, 'Mande a imagem (base64) e o tipo.');
+  437|   if (imagem.length > MAX_IMAGEM_B64 || !/^[A-Za-z0-9+/=]+$/.test(imagem)) throw new ErroHttp(400, 'Imagem inválida ou grande demais.');
+  438|   const legenda = String(corpo.legenda || '').replace(/["\n\r]/g, ' ').trim().slice(0, 200);
+  439|   const cats = (Array.isArray(corpo.categorias) ? corpo.categorias : [])
+  440|     .filter(c => c && /^[a-z_]{1,20}$/.test(c.id)).slice(0, 30)
+  441|     .map(c => ({ id: c.id, nome: String(c.nome || c.id).slice(0, 30) }));
+  442|   const client = clienteIA(env);
+  443|   await conferirLimite(req, env);
+  444|   const r = await client.beta.messages.create({
+  445|     model: modelo(env),
+  446|     max_tokens: 16000,
+  447|     output_config: { effort: 'medium', format: { type: 'json_schema', schema: esquemaImagem(cats.map(c => c.id)) } },
+  448|     system: 'Você lê fotos de comprovantes, notas fiscais, faturas e extratos para um app pessoal de controle de gastos no Brasil. Extraia só o que estiver visível. Não invente: se não tiver certeza, use 0, vazio e confiança baixa. Se a imagem tiver VÁRIOS pagamentos (extrato, lista de Pix, fatura), coloque CADA um em "pagamentos" (só saídas de dinheiro, não entradas nem saldo); valor_centavos fica com a soma. A legenda da pessoa, se vier, é uma pista (ex.: qual categoria ou forma de pagamento).',
+  449|     messages: [{
+  450|       role: 'user',
+  451|       content: [
+  452|         { type: 'image', source: { type: 'base64', media_type: tipo, data: imagem } },
+  453|         { type: 'text', text: `Categorias do app (use o id): ${cats.map(c => `${c.id} = ${c.nome}`).join('; ')}. Hoje é ${agoraNoFuso('America/Sao_Paulo').dia}.${legenda ? ` Legenda da pessoa: "${legenda}"` : ''}` },
+  454|       ],
+  455|     }],
+  456|     ...extras(env),
+  457|   });
+  458|   const texto = textoDa(r);
+  459|   if (!texto) throw new ErroHttp(422, 'A IA não conseguiu ler essa imagem.');
+  460|   let dados;
+  461|   try {
+  462|     dados = JSON.parse(texto);
+  463|   } catch {
+  464|     throw new ErroHttp(502, 'A IA respondeu num formato inesperado.');
+  465|   }
+  466|   return {
+  467|     tipo: dados.tipo,
+  468|     valor_centavos: Number.isInteger(dados.valor_centavos) && dados.valor_centavos > 0 ? dados.valor_centavos : 0,
+  469|     data: /^\d{4}-\d{2}-\d{2}$/.test(dados.data) ? dados.data : '',
+  470|     estabelecimento: String(dados.estabelecimento || '').slice(0, 80),
+  471|     categoria: cats.some(c => c.id === dados.categoria) ? dados.categoria : '',
+  472|     resumo: String(dados.resumo || '').slice(0, 200),
+  473|     confianca: ['alta', 'media', 'baixa'].includes(dados.confianca) ? dados.confianca : 'baixa',
+  474|     itens: limparPagamentos(dados.pagamentos, cats),
+  475|   };
+  476| }
+  477| 
+  478| /** Limpa a lista de pagamentos que a IA leu (no máximo 30, só valor positivo). Pura. */
+  479| export function limparPagamentos(lista, cats = []) {
+  480|   return (Array.isArray(lista) ? lista : []).filter(p => p && Number.isInteger(p.valor_centavos) && p.valor_centavos > 0).slice(0, 30).map(p => ({
+  481|     valor_centavos: p.valor_centavos,
+  482|     data: /^\d{4}-\d{2}-\d{2}$/.test(p.data) ? p.data : '',
+  483|     estabelecimento: String(p.estabelecimento || '').slice(0, 80),
+  484|     categoria: cats.some(c => c.id === p.categoria) ? p.categoria : '',
+  485|   }));
+  486| }
+  487| 
+  488| // ---------------------------------------------------------------- Push (lembretes)
+  489| const b64url = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  490| const b64urlTexto = t => b64url(new TextEncoder().encode(t));
+  491| 
+  492| /** JWT do VAPID (ES256), assinado com a chave privada que fica nos segredos. */
+  493| export async function jwtVapid(endpoint, env, agora = Math.floor(Date.now() / 1000)) {
+  494|   const jwk = typeof env.VAPID_PRIVATE_JWK === 'string' ? JSON.parse(env.VAPID_PRIVATE_JWK) : env.VAPID_PRIVATE_JWK;
+  495|   const chave = await crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  496|   const cab = b64urlTexto(JSON.stringify({ typ: 'JWT', alg: 'ES256' }));
+  497|   const corpo = b64urlTexto(JSON.stringify({ aud: new URL(endpoint).origin, exp: agora + 12 * 3600, sub: env.VAPID_CONTATO || 'mailto:troque@exemplo.com' }));
+  498|   const assinatura = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, chave, new TextEncoder().encode(`${cab}.${corpo}`));
+  499|   return `${cab}.${corpo}.${b64url(assinatura)}`;
+  500| }
+  501| 
+  502| function endpointValido(ep) {
+  503|   try {
+  504|     const u = new URL(ep);
+  505|     return u.protocol === 'https:' && PUSH_HOSTS.some(rx => rx.test(u.hostname));
+  506|   } catch {
+  507|     return false;
+  508|   }
+  509| }
+  510| 
+  511| async function pushInscrever(req, env) {
+  512|   if (!env.CARTEIRA_KV) throw new ErroHttp(503, 'Lembretes não configurados no servidor.');
+  513|   const corpo = await lerCorpo(req);
+  514|   const ep = corpo.inscricao && corpo.inscricao.endpoint;
+  515|   if (!endpointValido(ep)) throw new ErroHttp(400, 'Inscrição de push inválida.');
+  516|   const hora = /^([01]\d|2[0-3]):[0-5]\d$/.test(corpo.hora) ? corpo.hora : '20:30';
+  517|   let fuso = String(corpo.fuso || 'America/Sao_Paulo');
+  518|   try {
+  519|     new Intl.DateTimeFormat('pt-BR', { timeZone: fuso });
+  520|   } catch {
+  521|     fuso = 'America/Sao_Paulo';
+  522|   }
+  523|   await env.CARTEIRA_KV.put(`sub:${await sha256(ep)}`, JSON.stringify({ endpoint: ep, hora, fuso, ultimo: '' }));
+  524|   return { ok: true, hora };
+  525| }
+  526| 
+  527| async function pushSair(req, env) {
+  528|   const corpo = await lerCorpo(req);
+  529|   if (env.CARTEIRA_KV && corpo.endpoint) await env.CARTEIRA_KV.delete(`sub:${await sha256(String(corpo.endpoint))}`);
+  530|   return { ok: true };
+  531| }
+  532| 
+  533| /** Data e hora local de um fuso: { dia: "AAAA-MM-DD", minutos } */
+  534| export function agoraNoFuso(fuso, data = new Date()) {
+  535|   const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+  536|     timeZone: fuso, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  537|   }).formatToParts(data).map(x => [x.type, x.value]));
+  538|   return { dia: `${p.year}-${p.month}-${p.day}`, minutos: Number(p.hour) * 60 + Number(p.minute) };
+  539| }
+  540| 
+  541| /** Deve lembrar agora? Depois do horário escolhido, uma vez por dia (no fuso da pessoa). */
+  542| export function deveLembrar(sub, data = new Date()) {
+  543|   const { dia, minutos } = agoraNoFuso(sub.fuso, data);
+  544|   const [h, m] = sub.hora.split(':').map(Number);
+  545|   return sub.ultimo !== dia && minutos >= h * 60 + m ? dia : null;
+  546| }
+  547| 
+  548| async function mandarLembretes(env, data = new Date()) {
+  549|   if (!env.CARTEIRA_KV || !env.VAPID_PRIVATE_JWK || !env.VAPID_PUBLIC_KEY) return { enviados: 0 };
+  550|   let cursor;
+  551|   let enviados = 0;
+  552|   do {
+  553|     const lista = await env.CARTEIRA_KV.list({ prefix: 'sub:', cursor });
+  554|     cursor = lista.list_complete ? undefined : lista.cursor;
+  555|     for (const k of lista.keys) {
+  556|       const sub = JSON.parse((await env.CARTEIRA_KV.get(k.name)) || 'null');
+  557|       if (!sub) continue;
+  558|       const dia = deveLembrar(sub, data);
+  559|       if (!dia) continue;
+  560|       const r = await fetch(sub.endpoint, {
+  561|         method: 'POST',
+  562|         headers: {
+  563|           authorization: `vapid t=${await jwtVapid(sub.endpoint, env)}, k=${env.VAPID_PUBLIC_KEY}`,
+  564|           ttl: '43200', urgency: 'normal', 'content-length': '0',
+  565|         },
+  566|       });
+  567|       if (r.status === 404 || r.status === 410) {
+  568|         await env.CARTEIRA_KV.delete(k.name); // inscrição não existe mais (app desinstalado etc.)
+  569|       } else if (r.ok) {
+  570|         await env.CARTEIRA_KV.put(k.name, JSON.stringify({ ...sub, ultimo: dia }));
+  571|         enviados++;
+  572|       }
+  573|     }
+  574|   } while (cursor);
+  575|   return { enviados };
+  576| }
+  577| 
+  578| // ---------------------------------------------------------------- Mercado (todo dia útil às 10h, Brasília)
+  579| // Fontes públicas e gratuitas. Se uma falhar, as outras seguem (o resumo diz o que veio).
+  580| const FONTES = {
+  581|   moedas: 'https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,GBP-BRL,ARS-BRL,BTC-BRL',
+  582|   historico: m => `https://economia.awesomeapi.com.br/json/daily/${m}-BRL/21`,
+  583|   ibov: 'https://query1.finance.yahoo.com/v8/finance/chart/%5EBVSP?range=2mo&interval=1d',
+  584|   sgs: (serie, n = 1) => `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${serie}/dados/ultimos/${n}?formato=json`,
+  585| };
+  586| const SERIES_BC = { selic: 432, cdi: 4389, ipca12: 13522 };
+  587| // Plano B das moedas (JF, 16/11: "Como está o dólar?" e o dólar não tinha vindo): cotação PTAX de venda do Banco Central
+  588| const MOEDAS_BC = { USD: 1, EUR: 21619, GBP: 21623 };
+  589| 
+  590| async function baixarJson(url, f) {
+  591|   const r = await f(url, { headers: { accept: 'application/json', 'user-agent': 'CarteiraJF/1.0 (app pessoal de finanças)' } });
+  592|   if (!r.ok) throw new Error(`${r.status}`);
+  593|   return r.json();
+  594| }
+  595| 
+  596| /** Busca tudo e monta o resumo. `f` = fetch (trocado nos testes). */
+  597| export async function buscarMercado(f = fetch, agora = new Date()) {
+  598|   const resumo = { atualizadoEm: agora.toISOString(), fonte: 'AwesomeAPI, Yahoo Finance e Banco Central', moedas: {}, falhas: [] };
+  599|   try {
+  600|     const ult = await baixarJson(FONTES.moedas, f);
+  601|     await Promise.all(Object.keys(MOEDAS).map(async m => {
+  602|       const q = ult[`${m}BRL`];
+  603|       if (!q) return;
+  604|       let serie = [];
+  605|       try {
+  606|         const h = await baixarJson(FONTES.historico(m), f);
+  607|         serie = h.map(x => Number(x.bid)).reverse(); // a API devolve do mais novo pro mais velho
+  608|       } catch { /* sem histórico: só o valor do dia */ }
+  609|       const a = analisarSerie(serie, { atual: Number(q.bid) });
+  610|       if (a) resumo.moedas[m] = { ...MOEDAS[m], ...a, varDia: Number(q.pctChange) || a.varDia, em: q.create_date };
+  611|     }));
+  612|   } catch (e) { resumo.falhas.push(`moedas (${e.message})`); }
+  613|   // o que faltou (a AwesomeAPI caiu, limitou ou não mandou) vem do Banco Central, com os últimos 21 dias úteis
+  614|   await Promise.all(Object.entries(MOEDAS_BC).filter(([m]) => !resumo.moedas[m]).map(async ([m, serie]) => {
+  615|     try {
+  616|       const lista = await baixarJson(FONTES.sgs(serie, 21), f);
+  617|       const valores = lista.map(x => Number(String(x.valor).replace(',', '.'))).filter(Number.isFinite);
+  618|       const a = analisarSerie(valores, { atual: valores[valores.length - 1] });
+  619|       if (a) resumo.moedas[m] = { ...MOEDAS[m], ...a, em: lista[lista.length - 1]?.data, fonte: 'Banco Central (PTAX)' };
+  620|     } catch (e) { resumo.falhas.push(`${m} do Banco Central (${e.message})`); }
+  621|   }));
+  622|   try {
+  623|     const y = await baixarJson(FONTES.ibov, f);
+  624|     const closes = (y.chart?.result?.[0]?.indicators?.quote?.[0]?.close || []).filter(Number.isFinite);
+  625|     const atual = y.chart?.result?.[0]?.meta?.regularMarketPrice;
+  626|     const a = analisarSerie(closes, { atual: Number.isFinite(atual) ? atual : undefined });
+  627|     if (a) resumo.ibov = { nome: 'Ibovespa', ...a };
+  628|     else resumo.falhas.push('ibovespa (sem dados)');
+  629|   } catch (e) { resumo.falhas.push(`ibovespa (${e.message})`); }
+  630|   await Promise.all(Object.entries(SERIES_BC).map(async ([k, serie]) => {
+  631|     try {
+  632|       const [x] = await baixarJson(FONTES.sgs(serie), f);
+  633|       resumo[k] = { valor: Number(String(x.valor).replace(',', '.')), data: x.data };
+  634|     } catch (e) { resumo.falhas.push(`${k} (${e.message})`); }
+  635|   }));
+  636|   return resumo;
+  637| }
+  638| 
+  639| export function horaDeAtualizar(agora = new Date()) {
+  640|   const { dia, minutos } = agoraNoFuso('America/Sao_Paulo', agora);
+  641|   const semana = new Date(`${dia}T12:00:00Z`).getUTCDay();
+  642|   return { dia, pode: semana >= 1 && semana <= 5 && minutos >= 10 * 60 + 5 };
+  643| }
+  644| 
+  645| /** Atualiza o mercado uma vez por dia útil, depois das 10h05 (o cron chama de 15 em 15 min). */
+  646| async function atualizarMercadoSeHora(env, agora = new Date(), f = fetch) {
+  647|   if (!env.CARTEIRA_KV) return null;
+  648|   const { dia, pode } = horaDeAtualizar(agora);
+  649|   if (!pode || (await env.CARTEIRA_KV.get('mercado:dia')) === dia) return null;
+  650|   const resumo = await buscarMercado(f, agora);
+  651|   if (Object.keys(resumo.moedas).length || resumo.ibov || resumo.selic) {
+  652|     await env.CARTEIRA_KV.put('mercado:resumo', JSON.stringify(resumo));
+  653|     await env.CARTEIRA_KV.put('mercado:dia', dia);
+  654|   }
+  655|   return resumo;
+  656| }
+  657| 
+  658| async function mercadoRota(env, f = fetch) {
+  659|   if (!env.CARTEIRA_KV) throw new ErroHttp(503, 'Mercado não configurado no servidor.');
+  660|   let resumo = JSON.parse((await env.CARTEIRA_KV.get('mercado:resumo')) || 'null');
+  661|   // primeira vez (ainda sem dado): tenta buscar agora, no máximo uma vez por hora
+  662|   if (!resumo && !(await env.CARTEIRA_KV.get('mercado:tentativa'))) {
+  663|     await env.CARTEIRA_KV.put('mercado:tentativa', '1', { expirationTtl: 3600 });
+  664|     resumo = await buscarMercado(f);
+  665|     if (Object.keys(resumo.moedas).length || resumo.ibov) await env.CARTEIRA_KV.put('mercado:resumo', JSON.stringify(resumo));
+  666|   }
+  667|   if (!resumo) throw new ErroHttp(503, 'Ainda sem dados do mercado. Tenta de novo mais tarde.');
+  668|   return resumo;
+  669| }
+  670| 
+  671| // ---------------------------------------------------------------- notícias do dia (14/11, ideia da Anne)
+  672| // 2 vezes por dia (7h e 17h de Brasília) a IA procura na internet 3 a 5 notícias de dinheiro e explica simples.
+  673| // O app só LÊ o que ficou guardado (GET /noticias): abrir o app não gasta nada. Custo controlado (JF: "botei 5 dólares"):
+  674| // modelo barato (NOTICIAS_MODELO, padrão Haiku 5.5), no máximo 2 buscas por vez e um teto de rodadas por mês.
+  675| const NOTICIAS_MODELO_PADRAO = 'claude-haiku-5-5';
+  676| const SISTEMA_NOTICIAS = `Você é o C.A.O.S., parceiro financeiro de um app brasileiro de controle de gastos.
+  677| Procure na internet as notícias de dinheiro mais relevantes das últimas 24 horas pra uma pessoa comum no Brasil
+  678| (juros, Selic, inflação, dólar, golpes, benefícios, impostos, bancos, mercado, cripto, grandes fortunas que ganharam ou perderam).
+  679| Responda SÓ com um JSON (sem texto antes ou depois): uma lista de 3 a 5 itens, cada um
+  680| {"titulo": "até 90 letras", "resumo": "1 ou 2 frases simples", "porque": "1 frase: o que isso muda pra pessoa comum", "fonte": "nome do site", "url": "https://..."}.
+  681| Regras: só fatos das fontes, sem opinião política, sem recomendar investimento ou banco, linguagem simples, português do Brasil.`;
+  682| 
+  683| /** Quando rodar: 7h e 17h de Brasília (10h e 20h UTC). Devolve o turno ou null. Pura. */
+  684| export function turnoDasNoticias(agora = new Date()) {
+  685|   const h = agora.getUTCHours();
+  686|   if (h < 10) return null;
+  687|   return { dia: agora.toISOString().slice(0, 10), turno: h < 20 ? 'manha' : 'tarde' };
+  688| }
+  689| 
+  690| /** Tira a lista de notícias do texto da IA e limpa cada item. Pura. */
+  691| export function lerNoticias(texto) {
+  692|   const t = String(texto || '');
+  693|   const a = t.indexOf('['), b = t.lastIndexOf(']');
+  694|   if (a < 0 || b <= a) return [];
+  695|   let lista;
+  696|   try { lista = JSON.parse(t.slice(a, b + 1)); } catch { return []; }
+  697|   if (!Array.isArray(lista)) return [];
+  698|   const corta = (v, n) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, n);
+  699|   return lista.map(n => ({
+  700|     titulo: corta(n?.titulo, 120), resumo: corta(n?.resumo, 400), porque: corta(n?.porque, 300),
+  701|     fonte: corta(n?.fonte, 60), url: /^https:\/\/[^\s"<>]+$/.test(String(n?.url || '')) ? String(n.url).slice(0, 500) : '',
+  702|   })).filter(n => n.titulo && n.resumo).slice(0, 5);
+  703| }
+  704| 
+  705| async function atualizarNoticiasSeHora(env, agora = new Date(), criarCliente = clienteIA) {
+  706|   if (!env.CARTEIRA_KV || env.NOTICIAS_LIGADAS !== '1' || !env.ANTHROPIC_API_KEY) return null;
+  707|   const quando = turnoDasNoticias(agora);
+  708|   if (!quando) return null;
+  709|   const chave = `noticias:feito:${quando.dia}:${quando.turno}`;
+  710|   if (await env.CARTEIRA_KV.get(chave)) return null;
+  711|   // teto do mês: protege o crédito mesmo se algo der errado com o horário
+  712|   const kMes = `noticias:mes:${quando.dia.slice(0, 7)}`;
+  713|   const feitas = Number((await env.CARTEIRA_KV.get(kMes)) || 0);
+  714|   if (feitas >= Number(env.NOTICIAS_TETO_MES || 62)) return null;
+  715|   // marca antes de chamar: se a IA falhar, não tenta de novo a cada 15 minutos
+  716|   await env.CARTEIRA_KV.put(chave, '1', { expirationTtl: 172800 });
+  717|   await env.CARTEIRA_KV.put(kMes, String(feitas + 1), { expirationTtl: 40 * 86400 });
+  718|   const client = criarCliente(env);
+  719|   // revisão do Gemini (16/11): a busca pode pausar no meio (pause_turn); manda continuar, como na conversa
+  720|   const messages = [{ role: 'user', content: `Hoje é ${quando.dia}. Quais são as notícias de dinheiro do dia?` }];
+  721|   let r;
+  722|   for (let volta = 0; volta < 3; volta++) {
+  723|     r = await client.messages.create({
+  724|       model: env.NOTICIAS_MODELO || NOTICIAS_MODELO_PADRAO,
+  725|       max_tokens: 4000,
+  726|       output_config: { effort: 'low' },
+  727|       system: SISTEMA_NOTICIAS,
+  728|       tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 2, user_location: { type: 'approximate', country: 'BR', timezone: 'America/Sao_Paulo' } }],
+  729|       messages,
+  730|     });
+  731|     if (r.stop_reason !== 'pause_turn') break;
+  732|     messages.push({ role: 'assistant', content: r.content });
+  733|   }
+  734|   const itens = r.stop_reason === 'refusal' ? [] : lerNoticias(textoDa(r));
+  735|   // não veio nada: libera o turno pra tentar de novo daqui a 1 h (o teto do mês continua valendo)
+  736|   if (!itens.length) { await env.CARTEIRA_KV.put(chave, '1', { expirationTtl: 3600 }); return null; }
+  737|   const pacote = { itens, atualizadoEm: agora.toISOString() };
+  738|   await env.CARTEIRA_KV.put('noticias:atual', JSON.stringify(pacote));
+  739|   return pacote;
+  740| }
+  741| 
+  742| async function noticiasRota(env) {
+  743|   if (!env.CARTEIRA_KV) throw new ErroHttp(503, 'Notícias não configuradas no servidor.');
+  744|   const p = JSON.parse((await env.CARTEIRA_KV.get('noticias:atual')) || 'null');
+  745|   if (!p) throw new ErroHttp(503, 'Ainda sem notícias. Elas chegam às 7h e às 17h.');
+  746|   return p;
+  747| }
+  748| 
+  749| // ---------------------------------------------------------------- conta e sincronização (06/11)
+  750| // A conta é apelido + senha. A senha nunca é guardada: só um hash PBKDF2 (SHA-256, 100 mil voltas) com sal aleatório.
+  751| // A sessão é um token aleatório; o servidor guarda só o hash dele. Os dados da carteira ficam em dados:{apelido}.
+  752| // KV é aproximado: duas gravações no mesmo segundo de aparelhos diferentes podem precisar de mais um sync pra acertar.
+  753| 
+  754| const ITERACOES = 100_000;
+  755| const SESSAO_DIAS = 90;
+  756| const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+  757| const deHex = t => new Uint8Array(String(t).match(/../g).map(h => parseInt(h, 16)));
+  758| 
+  759| async function hashSenha(senha, salHex) {
+  760|   const chave = await crypto.subtle.importKey('raw', new TextEncoder().encode(senha), 'PBKDF2', false, ['deriveBits']);
+  761|   const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: deHex(salHex), iterations: ITERACOES }, chave, 256);
+  762|   return hex(bits);
+  763| }
+  764| 
+  765| function igual(a, b) {
+  766|   if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  767|   let d = 0;
+  768|   for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  769|   return d === 0;
+  770| }
+  771| 
+  772| function precisaKV(env) {
+  773|   if (!env.CARTEIRA_KV) throw new ErroHttp(503, 'Servidor sem o armazenamento (CARTEIRA_KV). A conta fica desligada até configurar.');
+  774| }
+  775| 
+  776| /** Limite de tentativas de login/criação por endereço (contra quem tenta adivinhar senha). */
+  777| async function limiteTentativas(req, env, apelido) {
+  778|   const hora = new Date().toISOString().slice(0, 13);
+  779|   const kIp = `tent:${hora}:${await sha256(req.headers.get('cf-connecting-ip') || 'sem-ip')}`;
+  780|   const kAp = `tent:${hora}:a:${apelido}`;
+  781|   const [nIp, nAp] = await Promise.all([env.CARTEIRA_KV.get(kIp), env.CARTEIRA_KV.get(kAp)]);
+  782|   if (Number(nIp || 0) >= 20 || Number(nAp || 0) >= 10) throw new ErroHttp(429, 'Muitas tentativas. Espera um pouco e tenta de novo.');
+  783|   await Promise.all([
+  784|     env.CARTEIRA_KV.put(kIp, String(Number(nIp || 0) + 1), { expirationTtl: 7200 }),
+  785|     env.CARTEIRA_KV.put(kAp, String(Number(nAp || 0) + 1), { expirationTtl: 7200 }),
+  786|   ]);
+  787| }
+  788| 
+  789| function lerCredenciais(corpo) {
+  790|   const apelido = normalizarApelido(corpo.apelido);
+  791|   if (!apelido) throw new ErroHttp(400, 'Apelido de 2 a 30 letras ou números (pode ponto, traço e sublinhado).');
+  792|   // Ponta a ponta (07/11): o app manda uma "senha de acesso" tirada da senha de verdade, que nunca sai do aparelho.
+  793|   const senha = typeof corpo.senha === 'string' ? corpo.senha : '';
+  794|   if (!ACESSO_RE.test(senha)) throw new ErroHttp(400, 'Atualize o app pra entrar na conta (agora a senha fica só no seu aparelho).');
+  795|   return { apelido, senha };
+  796| }
+  797| 
+  798| async function novaSessao(env, apelido) {
+  799|   const token = hex(crypto.getRandomValues(new Uint8Array(32)));
+  800|   await env.CARTEIRA_KV.put(`sessao:${await sha256(token)}`, JSON.stringify({ apelido, criada: Date.now() }), { expirationTtl: SESSAO_DIAS * 86400 });
+  801|   return { apelido, token };
+  802| }
+  803| 
+  804| async function contaCriar(req, env) {
+  805|   precisaKV(env);
+  806|   const corpo = await lerCorpo(req);
+  807|   const { apelido, senha } = lerCredenciais(corpo);
+  808|   await limiteTentativas(req, env, apelido);
+  809|   if (await env.CARTEIRA_KV.get(`conta:${apelido}`)) throw new ErroHttp(409, 'Esse apelido já tem conta. Se for seu, toque em Entrar.');
+  810|   const sal = hex(crypto.getRandomValues(new Uint8Array(16)));
+  811|   await env.CARTEIRA_KV.put(`conta:${apelido}`, JSON.stringify({ apelido, sal, hash: await hashSenha(senha, sal), iteracoes: ITERACOES, criada: Date.now() }));
+  812|   return novaSessao(env, apelido);
+  813| }
+  814| 
+  815| async function contaEntrar(req, env) {
+  816|   precisaKV(env);
+  817|   const corpo = await lerCorpo(req);
+  818|   const { apelido, senha } = lerCredenciais(corpo);
+  819|   await limiteTentativas(req, env, apelido);
+  820|   const conta = JSON.parse((await env.CARTEIRA_KV.get(`conta:${apelido}`)) || 'null');
+  821|   // mesma mensagem pra apelido que não existe e senha errada (não entrega quem tem conta)
+  822|   if (!conta || !igual(await hashSenha(senha, conta.sal), conta.hash)) throw new ErroHttp(401, 'Apelido ou senha não conferem.');
+  823|   // selo de criador (12/11): só pra conta na lista CRIADOR_CONTAS (variável do Cloudflare), nunca pelo nome digitado
+  824|   const criador = contasCriador(env).includes(apelido);
+  825|   return { ...(await novaSessao(env, apelido)), ...(criador ? { criador: true } : {}) };
+  826| }
+  827| 
+  828| async function sessaoDe(req, env) {
+  829|   precisaKV(env);
+  830|   const m = /^Bearer ([a-f0-9]{64})$/.exec(req.headers.get('authorization') || '');
+  831|   if (!m) throw new ErroHttp(401, 'Entre na sua conta de novo.');
+  832|   const chave = `sessao:${await sha256(m[1])}`;
+  833|   const s = JSON.parse((await env.CARTEIRA_KV.get(chave)) || 'null');
+  834|   if (!s?.apelido) throw new ErroHttp(401, 'Sessão expirada. Entre na sua conta de novo.');
+  835|   return { ...s, chave };
+  836| }
+  837| 
+  838| async function contaSair(req, env) {
+  839|   const s = await sessaoDe(req, env);
+  840|   await env.CARTEIRA_KV.delete(s.chave);
+  841|   return { ok: true };
+  842| }
+  843| 
+  844| async function sincronizar(req, env) {
+  845|   const s = await sessaoDe(req, env);
+  846|   const corpo = await lerCorpo(req);
+  847|   const desde = Number.isInteger(corpo.desde) && corpo.desde >= 0 ? corpo.desde : 0;
+  848|   const mudancas = Array.isArray(corpo.mudancas) ? corpo.mudancas : [];
+  849|   if (mudancas.length > LIMITE_MUDANCAS) throw new ErroHttp(413, 'Mudanças demais de uma vez.');
+  850|   // nada de dado aberto no servidor: registro tem que vir embaralhado pelo app (ou ser um "apagado")
+  851|   if (mudancas.some(m => m && typeof m === 'object' && 'rec' in m && !recCifrado(m.rec))) {
+  852|     throw new ErroHttp(400, 'Os dados precisam chegar embaralhados. Atualize o app.');
+  853|   }
+  854|   const chave = `dados:${s.apelido}`;
+  855|   const atual = JSON.parse((await env.CARTEIRA_KV.get(chave)) || 'null') || estadoVazio();
+  856|   const { estado, aceitas } = mesclar(atual, mudancas);
+  857|   if (aceitas) await env.CARTEIRA_KV.put(chave, JSON.stringify(estado));
+  858|   // se o aparelho diz que viu uma versão maior que a do servidor (conta recriada, servidor zerado), manda tudo
+  859|   const base = desde > estado.versao ? 0 : desde;
+  860|   return { versao: estado.versao, aceitas, mudancas: mudancasDesde(estado, base) };
+  861| }
+  862| 
+  863| // ---------------------------------------------------------------- roteador
+  864| export default {
+  865|   async fetch(req, env) {
+  866|     const url = new URL(req.url);
+  867|     const h = cors(req, env);
+  868|     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: h });
+  869|     try {
+  870|       if (req.method === 'GET' && url.pathname === '/saude') {
+  871|         return json({ ok: true, ia: !!env.ANTHROPIC_API_KEY, push: !!(env.VAPID_PRIVATE_JWK && env.VAPID_PUBLIC_KEY) }, 200, h);
+  872|       }
+  873|       // Daqui pra baixo, só o app (nos endereços de ORIGENS) pode chamar
+  874|       if (!h['access-control-allow-origin']) {
+  875|         throw new ErroHttp(origensPermitidas(env).length ? 403 : 503,
+  876|           origensPermitidas(env).length ? 'Origem não autorizada.' : 'Configure ORIGENS no wrangler.toml com o endereço do app.');
+  877|       }
+  878|       // voz natural do C.A.O.S. (Azure, 17/11): estado e a fala em MP3 (o app cai na voz do aparelho se falhar)
+  879|       if (req.method === 'GET' && url.pathname === '/voz/estado') return json(vozEstado(env), 200, h);
+  880|       if (req.method === 'POST' && url.pathname === '/voz') return await vozFalar(req, env, h);
+  881|       if (req.method === 'GET' && url.pathname === '/mercado') return json(await mercadoRota(env), 200, h);
+  882|       if (req.method === 'GET' && url.pathname === '/noticias') return json(await noticiasRota(env), 200, h);
+  883|       if (req.method === 'GET' && url.pathname === '/push/chave') {
+  884|         if (!env.VAPID_PUBLIC_KEY) throw new ErroHttp(503, 'Lembretes não configurados no servidor.');
+  885|         return json({ chave: env.VAPID_PUBLIC_KEY }, 200, h);
+  886|       }
+  887|       if (req.method === 'POST') {
+  888|         const rotas = { '/ia/perguntar': iaPerguntar, '/ia/imagem': iaImagem, '/ia/ofertas': iaOfertas, '/ia/explicar': iaExplicar, '/ia/bancos': iaBancos, '/push/inscrever': pushInscrever, '/push/sair': pushSair,
+  889|           '/conta/criar': contaCriar, '/conta/entrar': contaEntrar, '/conta/sair': contaSair, '/sync': sincronizar };
+  890|         const rota = rotas[url.pathname];
+  891|         if (rota) return json(await rota(req, env), 200, h);
+  892|       }
+  893|       throw new ErroHttp(404, 'Rota não encontrada.');
+  894|     } catch (e) {
+  895|       if (e instanceof ErroHttp) return json({ erro: e.message }, e.status, h);
+  896|       if (e instanceof Anthropic.RateLimitError) return json({ erro: 'A IA está ocupada. Tenta de novo em instantes.' }, 429, h);
+  897|       if (e instanceof Anthropic.AuthenticationError) return json({ erro: 'Chave da IA inválida no servidor.' }, 503, h);
+  898|       if (e instanceof Anthropic.APIError) return json({ erro: `A IA respondeu com erro (${e.status}).` }, 502, h);
+  899|       console.error(e);
+  900|       return json({ erro: 'Erro no servidor.' }, 500, h);
+  901|     }
+  902|   },
+  903| 
+  904|   async scheduled(_evento, env, ctx) {
+  905|     ctx.waitUntil(Promise.allSettled([mandarLembretes(env), atualizarMercadoSeHora(env), atualizarNoticiasSeHora(env)]));
+  906|   },
+  907| };
+  908| 
+  909| export { mandarLembretes, endpointValido, atualizarMercadoSeHora, mercadoRota, atualizarNoticiasSeHora, noticiasRota };
+  910| 

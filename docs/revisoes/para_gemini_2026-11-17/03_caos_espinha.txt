@@ -1,0 +1,737 @@
+BLOCO: Espinha do C.A.O.S.: conversar, reagir, 2º balão, tangente, pergunta de amigo
+App C.A.O.S. Finanças 2.1.8.1 Alfa · C.A.O.S. 2.4.3 · núcleo 1.8.0 · 17/11/2026
+
+
+===== ARQUIVO: js/caos/index.js =====
+
+    1| // C.A.O.S. financeiro: a camada de narração. Junta espinha, emoções, gerador de falas e conversa.
+    2| // REGRA: o narrador NUNCA altera dados. Não importa db.js, não toca em DOM nem em storage.
+    3| // Recebe cópias congeladas e devolve { fala, memoria } novos; quem grava a memória é o app.
+    4| 
+    5| import { completarOfertas } from './ofertas.js';
+    6| import { BANKS, formatBRL, INCOME_SOURCES, daysInMonth, toISODate, idadeDe, faixaEtaria, ehAniversario } from '../engine.js';
+    7| import { congelar, protegido } from './espinha.js';
+    8| import { NUCLEO } from './nucleo.js';
+    9| import { sentir, emocaoEstavel, emocoesIniciais, intensidade, ROSTO } from './emocoes.js';
+   10| import { escolherRosto, memoriaRostoInicial, rostoAnalista, rostoEspantado, rostoDaEmo } from './rostos.js';
+   11| import { perguntaCuriosa, respostaCuriosa } from './curiosidade.js';
+   12| import { MOEDAS_JOGOS } from './moedas_jogos.js';
+   13| export { rostoEspantado, rostoDaEmo };
+   14| import { gerarFala } from './gerador.js';
+   15| import { GERADORES, SUGESTOES } from './falas.js';
+   16| import { entender, responder, PASSOS_PESQUISA, continuarPagamento, proximaPerguntaPagamento, seguirPagamento } from './conversa.js';
+   17| 
+   18| // Sobe sempre que o C.A.O.S. for mexido (regra do JF).
+   19| export const CAOS_VERSAO = '2.4.3'; // 2.4.3 (17/11, ideia do JF): frase do dia de manhã (pensadores, investidores, ditados), e no Chat "me motiva", "me conta um ditado", "me conta uma curiosidade". 2.4.2 2.4.2 (17/11, JF: "qual melhor shopping pra curtir um cinema?" respondia gasto em Compras): pergunta de recomendação (qual o melhor, custo-benefício, me recomenda, onde é mais barato) vai pra IA pesquisar; nome de categoria só vira "quanto gastei" em pergunta curta ou que fala de gasto. 2.4.1 2.4.1 (17/11, JF): avatar próprio pra tangente (Distraído), pergunta de amigo (Curioso), formiguinha e pesquisa; o tutorial tem o Guia Turístico. 2.4.0 2.4.0 (16/11, ok do JF): núcleo 1.8.0, a cabeça meio TDAH (tangente que volta pro foco) virou parte de quem ele é, nos dois projetos. 2.3.9 2.3.9 (16/11, testes do JF no cinema): plano de passeio (cinema, show, rolê) que diz se cabe no mês; pesquisa pedida com todas as letras, preço de ingresso ou pedido detalhado vão direto pra IA, sem questionário; pedido novo no meio do questionário não vira resposta; "conferir o saldo" junta por banco. 2.3.8 2.3.8 (16/11, pedido do JF): efeito formiguinha (aviso a cada 10 gastinhos de até R$ 30 e "quais meus gastinhos?"), pergunta curiosa depois do gasto ("valeu a pena?", lembra os impulsos do mês) e tangentes de TDAH sem internet (curiosidade de dinheiro num 2º balão). 2.3.7 2.3.7 (16/11, ok do JF): 2 balões (a cutucada ou um "ah, e…" vem num 2º balão), a emoção do momento vai pro tom da IA, núcleo 1.7.0; dar baixa pela conversa (fatura paga, amigo que pagou, conta fixa paga); foto de comprovante pergunta como pagou. 2.3.6 2.3.6 (16/11, revisão do Gemini conferida): corretor não troca mais gosto/gato/mesa/maio/parar/home; o Ácido não some depois de umas falas (gerador); nome não entra no silêncio nem põe banco em minúscula; maluco/doido como adjetivo não é apelido; VP, UC, jades e fragmentos; jogo vai pra Jogos; C6 não vira R$ 6; limite investido com parênteses; humor certo na IA. 2.3.5 2.3.5 (16/11): planos guiados também pra pet, moradia (aluguel), transporte (gasolina) e economizar, com o aviso de privacidade antes de pedir bairro; a lixeira do Chat limpa também a memória curta dele. 2.3.4 2.3.4 (16/11): a pesquisa de compra e viagem começa com um questionário sem IA (de onde, quando, quantos, o que pesquisar, região, orçamento; ou detalhes, uso, marca, prazo, orçamento), uma pergunta por vez com Pular. 2.3.3 2.3.3 (16/11): pesquisa de compra e viagem: pede o orçamento e a IA online compara 2 a 4 sites, orientando (não entrega a resposta pronta). 2.3.2 2.3.2 (16/11): núcleo 1.6.0 (ok do JF): marcos da vida na Carteira, entre eles o cérebro online (IA na nuvem, 13/11). 2.3.1 2.3.1 (16/11): chama a pessoa pelo nome (uma resposta sim, outra não); Ácido de verdade (cutucada no fim, 6 em 10), e com o criador sempre; a IA online também chama pelo nome ({nome}, trocado no aparelho). 2.3.0 2.3.0 (16/11): "qual a cotação?" depois de falar de Robux segue no jogo (não vira Ibovespa); dólar sem dado vai pra IA online, sem "Fiz as contas". 2.2.9 2.2.9 (15/11): "vou receber 500 dia 20" vira entrada prevista; aviso de saldo abaixo do saudável (R$ 100) nas contas sem piso. 2.2.8 2.2.8 (15/11): categoria Jogos (Robux, skins…) com dica de gift card × crédito, e o avatar Gamer pras moedas de jogo. 2.2.7 2.2.7 (15/11): entende moedas de jogo (Robux, V-Bucks, Diamantes, VP…): qual é a moeda, onde comprar, preço por 100 de um pacote e dica contra golpe; preço de hoje vai pra IA online. 2.2.6 2.2.6 (15/11): pergunta fora do papel (esporte, horóscopo, receita…) ele responde sem chamar a IA e manda pro Google. 2.2.5 2.2.5 (15/11): conversa de filme, série, jogo, time… (sem falar do próprio dinheiro) vai pra IA online, e não cai em orçamento. 2.2.4 2.2.4 (15/11): papo pessoal ("como você se sente?", "o que acha da sua evolução?") vai pra IA online, e "internet" numa pergunta dessas não vira gasto em Contas. 2.2.3 2.2.3 (15/11): fato da semana (no lugar do troféu da ofensiva) e sugestão de orçamento quando uma categoria pesa. 2.2.2 2.2.2 (15/11): núcleo 1.5.0 (jeito de reagir; a emoção que manda segura mais no rosto). 2.2.1 2.2.1 (15/11): entende "oii", "oie" e "eaii" como oi. 2.2.0 2.2.0 (15/11): atualizou o saldo e não bate com o anotado, ele avisa (gasto ou entrada sem anotar). 2.1.9 2.1.9 (14/11): média de segurança dos bancos, quando estoura, sugestão de transferência, "posso comprar pelo banco X?". 2.1.8 2.1.8 (14/11): piso de segurança por banco, folga, dividir salário entre bancos, comparar salário/aumento, extras com descrição. 2.1.7 2.1.7 (14/11): hora não vira valor, dia da semana, corrigir data do último gasto, gasto sem "gastei" (só com o jeito de pagar), "não" cancela, pergunta em quê. 2.1.6 2.1.6 (14/11): cutucão em escada (brinca, cansa, se estressa) e categorias de lanche. 2.1.5 2.1.5 (14/11): sem "bem-vindo de volta" na abertura (Anne). 2.1.4 (14/11): entende apelido de amigo (corno, vagabundo) e xingamento junto com pergunta. 2.1.3 2.1.3 (13/11): rostinho de volta no balão, combinando com o avatar. 2.1.2: benefícios, bolsas, matemática
+   20| 
+   21| export const MOODS = Object.freeze({ suave: 'Suave', normal: 'Normal', acido: 'Ácido' });
+   22| export const DEFAULT_MOOD = 'suave';
+   23| export { SUGESTOES, ROSTO };
+   24| export { IDENTIDADE, resumoIdentidade } from './identidade.js';
+   25| 
+   26| // Prioridade: só uma fala por reação, a mais importante (para não virar spam).
+   27| const PRIORIDADE = {
+   28|   categoria_estourada: 50, compromisso_atrasado: 49, conta_negativa: 48, abaixo_do_piso: 48, perto_do_piso: 41, piso_geral_estourado: 47, piso_geral_perto: 42, cartao_limite: 47, mes_negativo: 46, cartao_vence: 45, compromisso_vence: 44,
+   29|   orcamento_80: 40, mes_verde: 35, plano_do_mes: 25, confira_banco: 9, auditor_assinatura: 9, meta_ritmo: 6,
+   30|   ritmo_alto: 30, semana_menos: 12, semana_mais: 13, categoria_pesando: 11, saldo_baixo: 14, saldo_sem_gasto: 35, saldo_sem_entrada: 33, ofensiva_marco: 28, racha_cadastrada: 27, a_receber: 22, delivery_repetido: 20, formiguinha: 19, frase_do_dia: 6, entrada_cadastrada: 15, gasto_cadastrado: 10, sem_registro: 8, boas_vindas: 5,
+   31| };
+   32| // Dias especiais (núcleo): todos com a mesma prioridade (logo acima das boas-vindas) e uma vez por dia
+   33| for (const { id } of NUCLEO.dias.especiais) PRIORIDADE[`dia_${id}`] = 7;
+   34| // Cooldown por tipo (ms). Alertas de orçamento e conta não têm: são úteis.
+   35| const COOLDOWN = {
+   36|   gasto_cadastrado: 3 * 60_000,
+   37|   entrada_cadastrada: 60_000,
+   38|   delivery_repetido: 12 * 3_600_000,
+   39|   formiguinha: 20 * 3_600_000, // efeito formiguinha (16/11): no máximo 1 vez por dia
+   40|   frase_do_dia: 20 * 3_600_000, // frase do dia (17/11): 1 vez por dia, de manhã
+   41|   ritmo_alto: 24 * 3_600_000,
+   42|   sem_registro: 24 * 3_600_000,
+   43|   mes_negativo: 12 * 3_600_000,
+   44|   boas_vindas: 6 * 3_600_000,
+   45|   ...Object.fromEntries(NUCLEO.dias.especiais.map(({ id }) => [`dia_${id}`, 20 * 3_600_000])),
+   46|   plano_do_mes: 24 * 3_600_000,
+   47|   cartao_limite: 12 * 3_600_000,
+   48|   cartao_vence: 12 * 3_600_000,
+   49|   confira_banco: 3 * 24 * 3_600_000,
+   50|   meta_ritmo: 2 * 24 * 3_600_000, // a cada 2 dias, no máximo
+   51|   auditor_assinatura: 7 * 24 * 3_600_000, // uma vez na semana do começo do mês
+   52|   a_receber: 24 * 3_600_000,
+   53|   semana_menos: 7 * 24 * 3_600_000,
+   54|   categoria_pesando: 3 * 24 * 3_600_000,
+   55|   saldo_baixo: 2 * 24 * 3_600_000, // saldo saudável (15/11): a cada 2 dias, no máximo // sugestão de orçamento: a cada 3 dias, no máximo // fato da semana (15/11): no máximo 1 vez por semana
+   56|   semana_mais: 7 * 24 * 3_600_000,
+   57| };
+   58| const RADAR_COOLDOWN = 6 * 3_600_000;
+   59| const PACIENCIA_ZERA = 30 * 60_000; // xingamento de mais de meia hora atrás não conta pra escalada
+   60| const SILENCIO_MS = 3 * 60_000; // quanto tempo ele fica quietinho depois da última resposta
+   61| const LIMITES_INTERVALO = 6 * 60 * 60 * 1000; // "1 vez por conversa ou assunto" (núcleo 1.4.0)
+   62| const ALERTAS = new Set(['cartao_limite', 'cartao_vence', 'categoria_estourada', 'orcamento_80', 'delivery_repetido', 'formiguinha', 'ritmo_alto', 'mes_negativo', 'conta_negativa', 'abaixo_do_piso', 'perto_do_piso', 'piso_geral_estourado', 'piso_geral_perto', 'compromisso_vence', 'compromisso_atrasado', 'a_receber']);
+   63| 
+   64| export function memoriaInicial(now = Date.now()) {
+   65|   return { versao: CAOS_VERSAO, gerador: {}, emocoes: emocoesIniciais(now), lastAt: {}, lastMonthClosed: null, rosto: memoriaRostoInicial(), rostoUltimo: null, conversa: null };
+   66| }
+   67| 
+   68| function normalizarMem(m, now) {
+   69|   const base = memoriaInicial(now);
+   70|   if (!m || typeof m !== 'object') return base;
+   71|   return { ...base, ...m, gerador: m.gerador || {}, lastAt: m.lastAt || {}, emocoes: m.emocoes || base.emocoes, rosto: m.rosto || base.rosto };
+   72| }
+   73| 
+   74| const NOMES_DO_CRIADOR = new Set(['joao fernando', 'jf', 'tgp', 'jf77', 'tgp77']);
+   75| /**
+   76|  * Criador só com a conta confirmada pelo servidor (achado do Code, 12/11; foi o bug "Nick Protegido" do Perfil 1.9.5):
+   77|  * qualquer um podia digitar "JF" no primeiro acesso e virar criador. O selo vem do login (lista no servidor).
+   78|  */
+   79| export function ehCriador(perfil) {
+   80|   return !!perfil && perfil.seloCriador === true;
+   81| }
+   82| 
+   83| /** Só o nome parece o do criador (sem conta): ele trata como qualquer pessoa, no máximo brinca. */
+   84| export function pareceCriador(perfil) {
+   85|   const n = x => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+   86|   return !!perfil && [perfil.apelido, perfil.nome].some(x => NOMES_DO_CRIADOR.has(n(x)));
+   87| }
+   88| 
+   89| /**
+   90|  * Dia especial (núcleo único, 12/11): o calendário é o mesmo do Perfil (NUCLEO.dias); as falas são as da Carteira.
+   91|  * Prioridade do núcleo: aniversários, depois as datas especiais. Devolve o id (ex.: 'sexta13') ou null.
+   92|  */
+   93| export function diaEspecial(iso) {
+   94|   const d = new Date(`${iso}T12:00:00`);
+   95|   const md = iso.slice(5);
+   96|   const dt = NUCLEO.datas;
+   97|   const regras = [
+   98|     ['aniversarioCaos', md === dt.meuAniversario],
+   99|     ['aniversarioCriador', md === dt.aniversarioDoCriador],
+  100|     ['aniversarioCarteira', md === dt.aniversarioDaCarteira],
+  101|     ['aniversarioPerfil', md === dt.aniversarioDoPerfil],
+  102|     ['sexta13', d.getDay() === 5 && d.getDate() === 13],
+  103|     ['natal', md === '12-24' || md === '12-25'],
+  104|     ['anoNovo', md === '12-31' || md === '01-01'],
+  105|     ['halloween', md === '10-31'],
+  106|     ['criancas', md === '10-12'],
+  107|     ['namorados', md === '06-12'],
+  108|   ];
+  109|   return regras.find(([, sim]) => sim)?.[0] ?? null;
+  110| }
+  111| 
+  112| function periodo(h) {
+  113|   return h < 5 ? 'madrugada' : h < 12 ? 'manha' : h < 18 ? 'tarde' : 'noite';
+  114| }
+  115| 
+  116| /** Etiquetas de contexto para o gerador (hora, dia, humor, emoção, quem é a pessoa). */
+  117| /**
+  118|  * Humor que vai pra IA online (revisão do Gemini, 16/11): a 2ª lei vale lá também. Formal e criança nunca recebem o
+  119|  * Ácido; com o criador (selo da conta) é sempre Ácido, como no cérebro do celular.
+  120|  */
+  121| // respostas de número que podem ganhar o 2º balão de amigo ("ah, e…")
+  122| const EMENDA = new Set(['gasto_total', 'maior_gasto', 'saldo', 'orcamento', 'previsao', 'cabe', 'entradas', 'media', 'comparar', 'alertas']);
+  123| // tangente de TDAH (JF, 16/11): só em papo leve e consulta tranquila, nunca em alerta, proposta ou pergunta aberta
+  124| const TANGENTE = new Set([...EMENDA, 'saudacao', 'agradecimento', 'elogio', 'como_esta', 'dica', 'glossario', 'identidade', 'formiguinha']);
+  125| const TANGENTE_INTERVALO = 30 * 60_000;
+  126| const TANGENTE_CHANCE = 0.15;
+  127| 
+  128| export function humorParaIA(mood, perfil, now = Date.now()) {
+  129|   if (perfil?.tratamento === 'formal') return 'suave';
+  130|   const idade = idadeDe(perfil?.aniversario, toISODate(new Date(now)));
+  131|   if (idade != null && faixaEtaria(idade) === 'crianca') return mood === 'acido' ? 'normal' : (mood || 'suave');
+  132|   if (ehCriador(perfil)) return 'acido';
+  133|   return mood || 'suave';
+  134| }
+  135| 
+  136| export function contexto({ humor, emocao, now = Date.now(), perfil }) {
+  137|   const d = new Date(now);
+  138|   const tags = new Set([`humor_${humor}`, `emo_${emocao}`, `periodo_${periodo(d.getHours())}`]);
+  139|   if (perfil?.apelido) tags.add('temNome');
+  140|   // o JF é reconhecido como criador (João Fernando, JF, TGP, JF77, TGP77), comparando sem acento e em minúsculas
+  141|   if (ehCriador(perfil)) {
+  142|     tags.add('criador');
+  143|     // o JF pediu (06/11): com ele o C.A.O.S. é ácido como no Perfil, em qualquer humor
+  144|     tags.add('humor_acido');
+  145|   }
+  146|   if (perfil?.tratamento === 'formal') {
+  147|     tags.add('tratamento_formal');
+  148|     tags.delete('humor_acido'); // formal: sem zoeira
+  149|   }
+  150|   // Idade (06/11): a faixa vira balde de contexto. Criança nunca recebe zoeira (2ª lei, com cuidado redobrado).
+  151|   const hoje = toISODate(d);
+  152|   const idade = idadeDe(perfil?.aniversario, hoje);
+  153|   if (idade != null) {
+  154|     const faixa = faixaEtaria(idade);
+  155|     tags.add(`idade_${faixa}`);
+  156|     if (faixa === 'crianca') tags.delete('humor_acido');
+  157|   }
+  158|   if (ehAniversario(perfil?.aniversario, hoje)) tags.add('aniversario');
+  159|   if (d.getDay() === 0 || d.getDay() === 6) tags.add('fimDeSemana');
+  160|   const dia = d.getDate();
+  161|   const total = daysInMonth(toISODate(d).slice(0, 7));
+  162|   if (dia <= 5) tags.add('inicioDoMes');
+  163|   if (dia >= total - 4) tags.add('fimDoMes');
+  164|   // misturas contam como as emoções de base para escolher pedaços
+  165|   if (emocao === 'protetor' || emocao === 'tenso') tags.add('emo_preocupacao');
+  166|   if (emocao === 'radiante') tags.add('emo_orgulho');
+  167|   return tags;
+  168| }
+  169| 
+  170| function varsDoEvento(ev) {
+  171|   const r = v => (v != null ? formatBRL(v) : null);
+  172|   const fonte = ev.sourceId ? INCOME_SOURCES.find(s => s.id === ev.sourceId)?.name : null;
+  173|   return {
+  174|     categoria: ev.categoryName, valor: r(ev.amountCents ?? ev.valorCents), fonte, pct: ev.pct, resta: r(ev.leftCents),
+  175|     passou: r(ev.overCents), qtd: ev.count, dias: ev.days, total: r(ev.totalCents),
+  176|     mes: ev.monthName ? ev.monthName[0].toUpperCase() + ev.monthName.slice(1) : null,
+  177|     economia: r(ev.savedCents), previsto: r(ev.projectedCents), porDia: r(ev.perDayCents),
+  178|     orcamento: r(ev.budgetCents), entradas: r(ev.incomeCents), gastos: r(ev.totalCents),
+  179|     ano: r(ev.anoCents), quem: ev.quem, conta: ev.accountName ?? ev.nome, saldo: r(ev.balanceCents), piso: r(ev.pisoCents), dia: ev.dia, meta: ev.metaNome,
+  180|     quando: ev.type === 'compromisso_vence' || ev.type === 'cartao_vence'
+  181|       ? (ev.days === 0 ? 'hoje' : ev.days === 1 ? 'amanhã' : `em ${ev.days} dias (dia ${ev.dia})`) : null,
+  182|   };
+  183| }
+  184| 
+  185| function montar(gatilho, vars, { humor, emocao, mem, now, rng, perfil }) {
+  186|   const todas = { nome: perfil?.apelido || null, ...vars };
+  187|   const ctx = { tags: contexto({ humor, emocao, now, perfil }), vars: Object.fromEntries(Object.entries(todas).filter(([, v]) => v != null)) };
+  188|   const { texto, memoria } = gerarFala(GERADORES, gatilho, ctx, mem.gerador, { rng });
+  189|   return { texto, gerador: memoria };
+  190| }
+  191| 
+  192| function rostoDe(emocao) {
+  193|   return ROSTO[emocao] || ROSTO.calmo;
+  194| }
+  195| 
+  196| // Momentos fortes: o rosto vai direto, sem a escada (como no Perfil)
+  197| const ROSTO_LIVRE = new Set(['mes_verde', 'categoria_estourada', 'conta_negativa', 'piada', 'entrada_cadastrada']);
+  198| 
+  199| /** Rosto animado (sistema do Perfil) para o momento; devolve a memória nova. */
+  200| function rostoPara(mem, { emocao, evento, humor, now, rng, direto = false, texto = null, alerta = false }) {
+  201|   const { rosto, memoria } = escolherRosto({
+  202|     emocao, evento, humor, rng, intensidade: intensidade(mem.emocoes, emocao, now), texto, alerta,
+  203|     // reação direta a algo que a pessoa falou: rosto na hora; mudança de humor espontânea: pela escada
+  204|     memoria: mem.rosto, livre: direto || ROSTO_LIVRE.has(evento),
+  205|   });
+  206|   return { rosto, mem: { ...mem, rosto: memoria, rostoUltimo: rosto } };
+  207| }
+  208| 
+  209| /**
+  210|  * Reage a eventos do motor (gasto cadastrado, alertas, boas-vindas…).
+  211|  * @returns {{ fala: null | { texto, evento, alerta, emocao, rosto }, memoria }}
+  212|  */
+  213| function reagirBruto(eventos, { mood = DEFAULT_MOOD, memory, now = Date.now(), rng = Math.random, perfil = null } = {}) {
+  214|   const humor = MOODS[mood] ? mood : DEFAULT_MOOD;
+  215|   let mem = normalizarMem(memory, now);
+  216|   const evs = congelar(eventos || []);
+  217| 
+  218|   // Todo evento mexe nas emoções (mesmo os que não viram fala)
+  219|   let emocoes = mem.emocoes;
+  220|   for (const ev of evs) emocoes = sentir(emocoes, ev.type, now);
+  221|   mem = { ...mem, emocoes };
+  222| 
+  223|   const candidatos = evs
+  224|     .filter(ev => GERADORES[ev.type])
+  225|     .filter(ev => !(ev.type === 'mes_verde' && mem.lastMonthClosed === ev.month))
+  226|     .filter(ev => {
+  227|       // alerta vindo do radar (ao abrir o app) não se repete toda hora: no máximo 1 vez a cada 6 h
+  228|       const chave = ev.radar ? `radar:${ev.type}` : ev.type;
+  229|       const cd = ev.radar ? Math.max(COOLDOWN[ev.type] || 0, RADAR_COOLDOWN) : COOLDOWN[ev.type];
+  230|       const last = mem.lastAt[chave];
+  231|       return !cd || last == null || now - last >= cd;
+  232|     })
+  233|     .sort((a, b) => (PRIORIDADE[b.type] || 0) - (PRIORIDADE[a.type] || 0));
+  234| 
+  235|   if (!candidatos.length) return { fala: null, memoria: mem };
+  236|   const ev = candidatos[0];
+  237|   const est = emocaoEstavel(mem.emocoes, humor, now, mem.estab);
+  238|   mem = { ...mem, estab: est.estab };
+  239|   const emocao = est.emocao;
+  240|   const { texto, gerador } = montar(ev.type, varsDoEvento(ev), { humor, emocao, mem, now, rng, perfil });
+  241|   if (!texto) return { fala: null, memoria: mem };
+  242|   const r = rostoPara(mem, { emocao, evento: ev.type, humor, now, rng, texto, alerta: ALERTAS.has(ev.type) });
+  243|   const memoria = {
+  244|     ...r.mem, gerador,
+  245|     lastAt: { ...mem.lastAt, [ev.radar ? `radar:${ev.type}` : ev.type]: now },
+  246|     lastMonthClosed: ev.type === 'mes_verde' ? ev.month : mem.lastMonthClosed,
+  247|   };
+  248|   return { fala: { texto, evento: ev.type, alerta: ALERTAS.has(ev.type), emocao, rosto: r.rosto }, memoria };
+  249| }
+  250| 
+  251| const EVENTO_DA_INTENCAO = { elogio: 'elogio', xingamento: 'xingamento', desabafo: 'pergunta', agradecimento: 'agradecimento', piada: 'piada', identidade: 'carinho_conversa', apelido: 'carinho_conversa', nao_entendi: 'nao_entendi' };
+  252| 
+  253| /**
+  254|  * Conversa: responde a uma mensagem da pessoa com os números do motor.
+  255|  * @returns {{ fala: { texto, emocao, rosto, sugestoes, acao?, entendeu }, memoria }}
+  256|  */
+  257| function conversarBruto(texto, dados, { mood = DEFAULT_MOOD, memory, now = Date.now(), rng = Math.random, today, perfil = null } = {}) {
+  258|   const humor = MOODS[mood] ? mood : DEFAULT_MOOD;
+  259|   let mem = normalizarMem(memory, now);
+  260|   const d = congelar(dados);
+  261|   let intencao = entender(texto, { ...d, anterior: mem.conversa || null });
+  262|   // Paciência (JF, 13/11 à noite): xingou o C.A.O.S.? Ele escala aos poucos: calmo → firme → "vai pescar, filho" →
+  263|   // última resposta e fica quietinho uns minutos. Quando a pessoa volta, ele pergunta se passou a raiva.
+  264|   // Pedido de desculpa encerra na hora. No humor Suave a escalada é séria, sem zoeira (2ª lei).
+  265|   const pac = { n: 0, em: 0, silencioAte: 0, emburrou: false, ...(mem.paciencia || {}) };
+  266|   const txp = String(texto).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  267|   const desculpa = /\b(desculpa|desculpe|foi mal|perdao|me perdoa|sorry|nao foi por mal)\b/.test(txp);
+  268|   let assunto = null; // o que manda no avatar e no balde de fala (xingamento_2, silencio…)
+  269|   let passouRaiva = false;
+  270|   if (pac.n && now - pac.em > PACIENCIA_ZERA && !pac.emburrou) { pac.n = 0; }
+  271|   if (desculpa && (pac.n || pac.emburrou)) {
+  272|     intencao = { ...intencao, intent: 'xingamento', palpite: false };
+  273|     assunto = 'desculpa_aceita';
+  274|     Object.assign(pac, { n: 0, silencioAte: 0, emburrou: false });
+  275|   } else if (intencao.intent === 'xingamento') {
+  276|     pac.n += 1; pac.em = now;
+  277|     const forte = humor !== 'suave';
+  278|     if (pac.emburrou || pac.n >= 5) {
+  279|       assunto = forte ? 'xingamento_fim_forte' : 'xingamento_fim';
+  280|       Object.assign(pac, { silencioAte: now + SILENCIO_MS, emburrou: true });
+  281|     } else if (pac.n === 4) assunto = forte ? 'xingamento_3_forte' : 'xingamento_3';
+  282|     else if (pac.n >= 2) assunto = 'xingamento_2';
+  283|   } else if (intencao.xingouJunto && !pac.emburrou) {
+  284|     pac.n += 1; pac.em = now; // xingou junto com a pergunta: responde, mas a paciência conta
+  285|   } else if (pac.emburrou && now < pac.silencioAte) {
+  286|     intencao = { ...intencao, intent: 'xingamento', palpite: false };
+  287|     assunto = 'silencio';
+  288|   } else if (pac.emburrou) {
+  289|     passouRaiva = true;
+  290|     Object.assign(pac, { n: 0, silencioAte: 0, emburrou: false });
+  291|   }
+  292|   mem = { ...mem, paciencia: pac };
+  293|   // Esperando um valor (12/11): perguntou "quanto foi?" e a pessoa respondeu só o número
+  294|   const espera = mem.aguardando && now - (mem.aguardando.em || 0) < 15 * 60_000 ? mem.aguardando : null;
+  295|   if (espera?.tipo === 'valor_gasto' && intencao.valor && String(texto).trim().split(/\s+/).length <= 5
+  296|     && ['nao_entendi', 'registrar_gasto', 'gasto_sem_valor', 'cabe'].includes(intencao.intent)) {
+  297|     intencao = { ...intencao, intent: 'registrar_gasto', t: espera.t, categoria: intencao.categoria || espera.categoria, palpite: false };
+  298|   }
+  299|   // "esqueci de lançar" (12/11, achado do GPT): a resposta seguinte completa o rascunho, sem perguntar tudo de novo.
+  300|   // Pergunta ou pedido diferente não completa nada (o rascunho só cai fora).
+  301|   const tx = String(texto).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  302|   // "Não" sozinho também cancela (JF, 14/11: respondeu "Não" ao "Pagou como?" e caiu na IA)
+  303|   const cancela = /^(cancela|cancelar|deixa|deixa pra (la|depois)|esquece|nao quero|depois)\b/.test(tx) || /^(nao|n|nada|nenhum)[.!]*$/.test(tx);
+  304|   if (espera && ['esqueci', 'valor_gasto', 'desc_gasto', 'ofertas'].includes(espera.tipo) && cancela) {
+  305|     intencao = { ...intencao, intent: 'pagamento_resposta', resposta: { fato: 'Tranquilo, não anotei nada. Quando lembrar, é só me falar.', cru: true, sugestoes: [] }, palpite: false };
+  306|   } else if (espera?.tipo === 'esqueci' && ['nao_entendi', 'registrar_gasto', 'gasto_sem_valor'].includes(intencao.intent) && !/\?/.test(tx)) {
+  307|     const t2 = /^(gastei|paguei|comprei)\b/.test(intencao.t) ? intencao.t : `gastei ${intencao.t}`;
+  308|     // só o valor ("79,90"), sem dizer em quê (achado do GPT, 13/11): não inventa "Outros"; guarda o valor e pergunta
+  309|     const soValor = intencao.valor && !intencao.categoria && !/[a-z]{3,}/.test(tx.replace(/\b(r\$|reais|real|conto|pila|gastei|paguei|comprei|foi|uns?|umas?)\b/g, ''));
+  310|     if (soValor) {
+  311|       intencao = { ...intencao, intent: 'pagamento_resposta', palpite: false, resposta: {
+  312|         fato: `Guardei os ${formatBRL(intencao.valor)} aqui no rascunho. Foi em quê? Tipo "mercado", "uber" ou "farmácia". Se foi outro dia, junta a data: "farmácia ontem".`,
+  313|         cru: true, sugestoes: ['Mercado', 'Delivery', 'Transporte', 'Deixa pra depois'], aguardar: { tipo: 'desc_gasto', valor: intencao.valor } } };
+  314|     } else if (intencao.valor) intencao = { ...intencao, t: t2, intent: 'registrar_gasto', palpite: false };
+  315|     else if (intencao.categoria || intencao.intent !== 'nao_entendi') intencao = { ...intencao, t: t2, intent: 'gasto_sem_valor', palpite: false };
+  316|   } else if (espera?.tipo === 'desc_gasto' && !/\?/.test(tx)) {
+  317|     // resposta do "foi em quê?": junta com o valor guardado e vira a proposta (a pessoa ainda confirma)
+  318|     const reais = (espera.valor / 100).toFixed(2).replace('.', ',');
+  319|     const junto = entender(`gastei ${reais} em ${texto} ${espera.extra || ''}`.trim(), { ...d, anterior: null });
+  320|     if (junto.valor) intencao = { ...junto, intent: 'registrar_gasto', palpite: false };
+  321|   }
+  322|   // ofertas (13/11): "amazon 10x sem juros, shopee frete 80" completa a comparação que está aberta
+  323|   if (espera?.tipo === 'ofertas' && !cancela && intencao.intent !== 'comparar_ofertas') {
+  324|     const novas = completarOfertas(espera.ofertas, tx.replace(/%/g, ' porcento '));
+  325|     if (novas) intencao = { ...intencao, intent: 'comparar_ofertas', ofertas: novas, produto: espera.produto, palpite: false };
+  326|   }
+  327|   // pesquisa de compra (16/11): a resposta ao "qual o seu orçamento?" completa o pedido e vai pra IA online
+  328|   // questionário da pesquisa (16/11): cada resposta vai pro passo da vez; "pular" deixa em branco; pergunta nova
+  329|   // (com "?") sai do questionário; só "cancela"/"deixa pra depois" cancela ("não" pode ser resposta, tipo de marca)
+  330|   if (espera?.tipo === 'pesquisa' && /^(cancela|cancelar|deixa pra (la|depois)|esquece|nao quero|para|parar)\b/.test(tx)) {
+  331|     intencao = { ...intencao, intent: 'pagamento_resposta', resposta: { fato: 'Beleza, fica pra depois. Quando quiser, é só pedir de novo.', cru: true, sugestoes: [] }, palpite: false };
+  332|   } else if (espera?.tipo === 'pesquisa' && !/\?/.test(tx) && intencao.intent !== 'pesquisa_compra') { // 2.3.9: pedido novo de pesquisa não vira resposta
+  333|     const plano = espera.plano || (espera.viagem ? 'viagem' : 'produto');
+  334|     const p = PASSOS_PESQUISA[plano][espera.passo];
+  335|     const pulou = /^(pular|pula|pulo|nao sei|sei la|tanto faz|qualquer|sem preferencia|nenhum|nenhuma)\b/.test(tx);
+  336|     let v = pulou ? '' : String(texto).trim().slice(0, 80);
+  337|     if (p?.id === 'orcamento') v = intencao.valor || 0;
+  338|     intencao = { ...intencao, intent: 'pesquisa_compra', item: espera.item, tipo: plano, passo: espera.passo + 1,
+  339|       respostas: { ...espera.respostas, ...(p ? { [p.id]: v } : {}) }, palpite: false, categoria: null };
+  340|   }
+  341|   if (espera?.tipo === 'pagamento' && cancela) {
+  342|     intencao = { ...intencao, intent: 'pagamento_resposta', resposta: { fato: 'Beleza, não anotei nada.', cru: true, sugestoes: [] }, palpite: false };
+  343|   } else if (espera?.tipo === 'pagamento') {
+  344|     const resposta = continuarPagamento(espera.acao, texto, d);
+  345|     if (resposta) intencao = { ...intencao, intent: 'pagamento_resposta', resposta, palpite: false };
+  346|   }
+  347|   // pergunta curiosa depois do gasto (16/11): "foi planejado?" → reação de amigo; só a memória dele guarda a resposta
+  348|   if (espera?.tipo === 'curiosidade') {
+  349|     const rc = respostaCuriosa(texto, espera, mem, { now, rng, mes: (today || toISODate(new Date(now))).slice(0, 7) });
+  350|     if (rc) {
+  351|       mem = rc.memoria;
+  352|       intencao = { ...intencao, intent: 'pagamento_resposta', resposta: { fato: rc.fato, cru: true, sugestoes: [] }, palpite: false };
+  353|     }
+  354|   }
+  355|   mem = { ...mem, aguardando: null };
+  356|   // Memória (06/11): "e agora?", "já sabe responder?" voltam na última pergunta que ficou sem resposta
+  357|   let retomada = null;
+  358|   if (intencao.intent === 'retomar' && mem.semResposta) {
+  359|     const de_novo = entender(mem.semResposta, { ...d, anterior: null });
+  360|     if (de_novo.intent !== 'nao_entendi' && !de_novo.palpite && de_novo.intent !== 'retomar') { intencao = de_novo; retomada = mem.semResposta; }
+  361|   }
+  362|   mem = { ...mem, emocoes: sentir(mem.emocoes, EVENTO_DA_INTENCAO[intencao.intent] || 'pergunta', now) };
+  363|   const est = emocaoEstavel(mem.emocoes, humor, now, mem.estab);
+  364|   mem = { ...mem, estab: est.estab };
+  365|   const emocao = est.emocao;
+  366|   let resp = responder(intencao, { ...d, anterior: mem.conversa || null }, { today: today || toISODate(new Date(now)), emocao: rostoDe(emocao).nome, perfil, now });
+  367|   if (assunto) resp = { gatilho: assunto, sugestoes: assunto === 'silencio' ? ['Desculpa'] : [] };
+  368|   // gasto novo: pergunta como pagou antes de propor (pula o que a pessoa já disse)
+  369|   if (resp.pagamento && resp.acao) {
+  370|     const q = proximaPerguntaPagamento(resp.acao, d.accounts || []);
+  371|     if (q) resp = { ...resp, ...seguirPagamento(resp.acao, d), acao: null, fato: `Anotando ${formatBRL(resp.acao.amountCents)}. ${q.texto}`, gatilho: null };
+  372|     else resp = { ...resp, acao: seguirPagamento(resp.acao, d).acao };
+  373|   }
+  374|   if (resp.aguardar) mem = { ...mem, aguardando: { ...resp.aguardar, em: now } };
+  375|   // "manda o print" no meio de uma comparação: a comparação continua aberta pro print entrar nela
+  376|   if (intencao.intent === 'ofertas_print' && espera?.tipo === 'ofertas') mem = { ...mem, aguardando: { ...espera, em: now } };
+  377| 
+  378|   let fato = resp.fato;
+  379|   if (retomada && fato) fato = `Sobre aquela sua pergunta ("${retomada}"): ${fato}`;
+  380|   // Melhor palpite (1.6.0): responde o que achou que era e pergunta de volta, em vez de "não entendi"
+  381|   if (intencao.palpite && fato) fato = `Acho que você quis saber isto: ${fato} Se não for, me pergunta de outro jeito.`;
+  382|   // 2.0.5 (núcleo 1.4.0, "limites"): em pergunta de decisão (investir, parcelar, qual comprar) ele ajuda e termina com
+  383|   // o lembrete de que é IA de bolso e quem decide é a pessoa. No máximo 1 vez por assunto a cada 6 h, pra não virar
+  384|   // robô pedindo desculpa (cuidado pedido pelo Code). O mercado usa o mesmo controle com as falas dele.
+  385|   const tema = resp.aviso ? 'investimento' : resp.decisao || null;
+  386|   if (tema && fato && !(now - ((mem.limites || {})[tema] || 0) < LIMITES_INTERVALO)) {
+  387|     const av = montar(resp.aviso ? 'aviso_mercado' : 'lembrete_limites', {}, { humor, emocao, mem, now, rng, perfil });
+  388|     mem = { ...mem, gerador: av.gerador, limites: { ...(mem.limites || {}), [tema]: now } };
+  389|     fato = `${fato} ${av.texto}`;
+  390|   }
+  391|   if (resp.alertas && resp.alertas.length) {
+  392|     // o principal alerta vira fala completa do gerador; os outros viram lista curta
+  393|     const principal = montar(resp.alertas[0].type, varsDoEvento(resp.alertas[0]), { humor, emocao, mem, now, rng, perfil });
+  394|     mem = { ...mem, gerador: principal.gerador };
+  395|     fato = `${fato} ${principal.texto}`;
+  396|     if (resp.alertas.length > 1) fato += ` Também: ${resp.alertas.slice(1).map(nomeAlerta).join(', ')}.`;
+  397|   }
+  398| 
+  399|   let saida;
+  400|   if (fato && resp.cru) {
+  401|     saida = fato; // pergunta direta (ex.: "quanto foi?"), sem embrulho
+  402|   } else if (fato) {
+  403|     const r = montar('resposta', { fato }, { humor, emocao, mem, now, rng, perfil });
+  404|     saida = r.texto || fato;
+  405|     mem = { ...mem, gerador: r.gerador };
+  406|   } else {
+  407|     const varsR = intencao.intent === 'retomar' ? { pergunta: mem.semResposta ? `"${mem.semResposta}"` : null } : {};
+  408|     const gat = intencao.intent === 'retomar' ? (mem.semResposta ? 'retomar_nao' : 'retomar_vazio') : (resp.gatilho || 'nao_entendi');
+  409|     const r = montar(gat, { ...(resp.vars || {}), ...Object.fromEntries(Object.entries(varsR).filter(([, v]) => v != null)) }, { humor, emocao, mem, now, rng, perfil });
+  410|     saida = r.texto;
+  411|     mem = { ...mem, gerador: r.gerador };
+  412|   }
+  413| 
+  414|   if (resp.dica && saida) saida = `${saida} ${resp.dica}`;
+  415|   // Ácido de verdade (JF, 16/11: "tá muito family friendly até no ácido; deram Rivotril pra minha IA?"): no Ácido, e
+  416|   // sempre com o criador, ele fecha a resposta com uma cutucada (6 em cada 10). Quem não está no Ácido não recebe nada
+  417|   // (a cutucada só tem balde ácido e do criador). Desabafo, xingamento e papo sem resposta ficam de fora.
+  418|   // 2 balões (JF, 16/11, ideia do Gemini): como amigo no WhatsApp, o "ah, e…" vem num 2º balão logo depois.
+  419|   // No Ácido (e com o criador), a cutucada vira o 2º balão; no Suave e no Normal, às vezes um "ah, e…" de amigo.
+  420|   let posTexto = null;
+  421|   let posAssunto = null; // 2.4.1: a tangente troca o avatar pro Distraído no 2º balão
+  422|   const acidoAqui = humor === 'acido' || ehCriador(perfil);
+  423|   if (saida && !resp.aguardar && acidoAqui && !['xingamento', 'desabafo', 'apelido', 'nao_entendi', 'papo_pessoal', 'retomar'].includes(intencao.intent) && rng() < 0.6) {
+  424|     const z = montar('cutucada', {}, { humor, emocao, mem, now, rng, perfil });
+  425|     if (z.texto) { posTexto = z.texto; mem = { ...mem, gerador: z.gerador }; }
+  426|   } else if (saida && !resp.aguardar && !resp.acao && !acidoAqui && EMENDA.has(intencao.intent) && rng() < 0.25) {
+  427|     const z = montar('emenda', {}, { humor, emocao, mem, now, rng, perfil });
+  428|     if (z.texto) { posTexto = z.texto; mem = { ...mem, gerador: z.gerador }; }
+  429|   }
+  430|   // tangente de TDAH (JF, 16/11): sem 2º balão ainda, de vez em quando (no máximo 1 a cada 30 min) ele lembra de uma
+  431|   // curiosidade de dinheiro que não tem nada a ver, e volta pro foco. Sem internet.
+  432|   if (!posTexto && saida && !resp.aguardar && !resp.acao && !(resp.alertas && resp.alertas.length) && !assunto
+  433|     && TANGENTE.has(intencao.intent) && now - (mem.tangenteEm || 0) >= TANGENTE_INTERVALO && rng() < TANGENTE_CHANCE) {
+  434|     const z = montar('tangente', {}, { humor, emocao, mem, now, rng, perfil });
+  435|     if (z.texto) { posTexto = z.texto; posAssunto = 'tangente'; mem = { ...mem, gerador: z.gerador, tangenteEm: now }; }
+  436|   }
+  437|   // Pelo nome (JF, 16/11: "ele fala com a gente de modo indefinido, responderia qualquer usuário"): uma resposta sim,
+  438|   // outra não, ele chama a pessoa pelo apelido que ela deu, se o nome ainda não apareceu na fala.
+  439|   // Revisão do Gemini (16/11): sem nome no silêncio da paciência nem quando vem reação de apelido/palavrão na frente
+  440|   // (ficava "Fala, parceiro! JF, você…"), e sem pôr em minúscula nome próprio (ficava "JF, nubank: …").
+  441|   const apelido = perfil?.apelido;
+  442|   if (saida && apelido && assunto !== 'silencio' && !intencao.palavrao && !intencao.apelido) {
+  443|     const vez = (mem.nomeVez || 0) + 1;
+  444|     mem = { ...mem, nomeVez: vez };
+  445|     if (vez % 2 === 1 && !`${saida} ${posTexto || ''}`.toLowerCase().includes(String(apelido).toLowerCase())) {
+  446|       const oi = saida.match(/^(Oi|Olá|Opa|E aí|Eaí|Fala|Bom dia|Boa tarde|Boa noite)\b/);
+  447|       // só vira minúscula palavra comum de começo de frase; nome de banco, ativo ou jogo fica como está
+  448|       // 2.3.8: regra ao contrário (saía "Teste, Anotando R$ 50"): a 1ª palavra vira minúscula, menos nome próprio
+  449|       // (sigla como C6/CDI/JF, banco, jogo, ativo, e a palavra de quem já está na conta da pessoa)
+  450|       const comum = !nomeProprio(saida.split(/[\s,.:;!?]/)[0], d.accounts);
+  451|       if (oi) saida = `${oi[1]}, ${apelido}${saida.slice(oi[1].length)}`; // "Oi, JF! …" em vez de "JF, oi! …"
+  452|       else saida = `${apelido}, ${comum ? saida[0].toLowerCase() + saida.slice(1) : saida}`;
+  453|     }
+  454|   }
+  455|   // 2.0.9 (JF, 13/11): desabafo com palavrão no meio de um pedido ("krlh, gastei 500"): uma reação curta antes, sem
+  456|   // palavrão, e o pedido segue normal
+  457|   // 2.1.4 (JF, 14/11): "corno, quem te criou?" → apelido de amigo + pergunta; "burro, quanto gastei?" → xingou e
+  458|   // perguntou. Ele lê os dois: uma reação curta antes e a pergunta respondida.
+  459|   const prefixo = intencao.apelido ? 'apelido_curto' : intencao.xingouJunto ? 'xingou_junto' : 'desabafo_curto';
+  460|   if ((intencao.palavrao || intencao.apelido) && !['xingamento', 'desabafo', 'apelido'].includes(intencao.intent) && saida) {
+  461|     const dz = montar(prefixo, {}, { humor, emocao, mem, now, rng, perfil });
+  462|     if (dz.texto) { saida = `${dz.texto} ${saida}`; mem = { ...mem, gerador: dz.gerador }; }
+  463|   }
+  464|   if (passouRaiva) {
+  465|     const pr = montar('passou_raiva', {}, { humor, emocao, mem, now, rng, perfil });
+  466|     mem = { ...mem, gerador: pr.gerador };
+  467|     saida = ['nao_entendi', 'como_esta', 'saudacao', 'retomar'].includes(intencao.intent) || !saida ? pr.texto : `${pr.texto} ${saida}`;
+  468|     assunto = 'passou_raiva';
+  469|   }
+  470|   // Papo avulso demais seguido (06/11): na 5ª pergunta fora do dinheiro, ele chama de volta (sem bronca no Suave)
+  471|   const AVULSAS = new Set(['piada', 'identidade', 'significado', 'criador', 'origem', 'como_funciona', 'limites', 'elogio', 'xingamento', 'desabafo', 'como_esta', 'apelido', 'nao_entendi', 'sobre_jf', 'saudacao', 'agradecimento']);
+  472|   const avulsas = AVULSAS.has(intencao.intent) ? (mem.avulsas || 0) + 1 : 0;
+  473|   mem = { ...mem, avulsas };
+  474|   if (avulsas >= 5 && avulsas % 5 === 0 && saida && !assunto) { // na escalada da paciência, nada de "adoro conversar"
+  475|     const pd = montar('papo_demais', {}, { humor, emocao, mem, now, rng, perfil });
+  476|     if (pd.texto) { saida = `${saida} ${pd.texto}`; mem = { ...mem, gerador: pd.gerador }; }
+  477|   }
+  478| 
+  479|   const EVENTO_ROSTO = { piada: 'piada', identidade: 'identidade', significado: 'identidade', criador: 'identidade', origem: 'identidade',
+  480|     nao_entendi: 'nao_entendi', xingamento: 'xingamento', elogio: 'elogio', apelido: 'elogio', como_funciona: 'pensando', limites: 'pensando', sobre_jf: 'elogio' };
+  481|   const temAlerta = !!(resp.alertas && resp.alertas.some(a => ALERTAS.has(a.type)));
+  482|   // quando a pergunta já pede um rosto próprio (quem é você, o que pode fazer…), a frase não troca ele
+  483|   // ("o que você pode fazer?" saía preocupado por causa da palavra "aperta")
+  484|   const r = rostoPara(mem, { emocao, evento: EVENTO_ROSTO[intencao.intent], humor, now, rng, direto: !!EVENTO_ROSTO[intencao.intent], texto: EVENTO_ROSTO[intencao.intent] ? null : saida, alerta: temAlerta });
+  485|   mem = r.mem;
+  486|   // modo analista (13/11): ofertas e porcentagem ganham o rosto de óculos de analista
+  487|   if (['comparar_ofertas', 'oferta_unica', 'porcentagem', 'ofertas_print'].includes(intencao.intent)) {
+  488|     r.rosto = rostoAnalista(rng);
+  489|     mem = { ...mem, rostoUltimo: r.rosto };
+  490|   }
+  491|   // guarda a pergunta que ficou sem resposta (pra "e agora?"); some quando ela é respondida
+  492|   if (intencao.intent === 'nao_entendi') mem = { ...mem, semResposta: String(texto).trim().slice(0, 160) };
+  493|   else if (retomada) mem = { ...mem, semResposta: null };
+  494|   // lembra a última pergunta pra entender a próxima ("e no mês passado?")
+  495|   if (!['nao_entendi', 'retomar', 'explicar_melhor', 'gasto_sem_valor', 'pagamento_resposta'].includes(intencao.intent)) {
+  496|     mem = { ...mem, conversa: { intent: intencao.intent, categoryId: intencao.categoria?.id || null, periodo: intencao.periodo || 'mes', termo: intencao.termo?.termo || null, jogo: intencao.jogo?.jogo || null } };
+  497|   }
+  498|   return {
+  499|     fala: {
+  500|       texto: saida || 'Hmm.',
+  501|       posTexto, // 2º balão (16/11): o app mostra logo depois, com o "digitando…"
+  502|       posAssunto,
+  503|       emocao, rosto: r.rosto,
+  504|       sugestoes: resp.sugestoes || (intencao.intent === 'nao_entendi' ? SUGESTOES.slice(0, 5) : []),
+  505|       acao: resp.acao || null,
+  506|       fluxoMeta: resp.fluxoMeta || null,
+  507|       modoFoto: resp.modoFoto || null, // a próxima foto é pra explicar (não pra lançar) // "quero juntar pra…": o app conduz as perguntas e propõe a meta
+  508|       filaIA: resp.filaIA || null, // pergunta que precisa do servidor: o app responde agora ou guarda na fila
+  509|       entendeu: intencao.intent !== 'nao_entendi' && intencao.intent !== 'papo_pessoal' && !(intencao.intent === 'moeda_jogo' && intencao.precoDeHoje && !intencao.pacote) && !intencao.palpite && !(intencao.intent === 'retomar' && !retomada) && !resp.semDado
+  510|         && !resp.perguntaIA, // pesquisa pronta (questionário respondido): quem pesquisa é a IA
+  511|       // pra IA online, a continuação leva o assunto junto (ela não vê a conversa anterior)
+  512|       perguntaIA: resp.perguntaIA || (intencao.seguimento && intencao.jogo ? `Sobre ${intencao.jogo.moeda} do ${intencao.jogo.jogo}: ${String(texto).trim()}` : null),
+  513|       modoIA: resp.modoIA || null,
+  514|       palpite: !!intencao.palpite,
+  515|       intent: assunto || intencao.intent, // 2.0.8: o assunto da conversa (o app escolhe a forma do avatar com ele)
+  516|     },
+  517|     memoria: mem,
+  518|   };
+  519| }
+  520| 
+  521| // nome próprio no começo da frase não vira minúscula (2.3.8)
+  522| const PROPRIOS = new Set([
+  523|   ...BANKS.flatMap(b => b.split(/\s+/)), ...MOEDAS_JOGOS.flatMap(m => m.jogo.split(/\s+/)),
+  524|   'Ibovespa', 'Bitcoin', 'Ethereum', 'Selic', 'IPCA', 'Pix', 'Robux', 'V-Bucks', 'Tesouro', 'C.A.O.S.', 'Caos',
+  525| ].map(x => x.toLowerCase()));
+  526| function nomeProprio(palavra, accounts = []) {
+  527|   const w = String(palavra || '');
+  528|   if (!w || /\d/.test(w) || /^[A-ZÀ-Ú]{2,}/.test(w) || /[a-zà-ú][A-Z]/.test(w)) return true; // C6, CDI, JF, PicPay
+  529|   const lw = w.toLowerCase();
+  530|   return PROPRIOS.has(lw) || (accounts || []).some(a => String(a.bank || '').toLowerCase().split(/\s+/).includes(lw)
+  531|     || String(a.nickname || '').toLowerCase().split(/\s+/).includes(lw));
+  532| }
+  533| 
+  534| function nomeAlerta(a) {
+  535|   switch (a.type) {
+  536|     case 'categoria_estourada': return `${a.categoryName} estourada`;
+  537|     case 'orcamento_80': return `${a.categoryName} em ${a.pct}%`;
+  538|     case 'ritmo_alto': return 'ritmo acima do orçamento';
+  539|     case 'mes_negativo': return 'saindo mais do que entrando';
+  540|     case 'conta_negativa': return `${a.accountName} no negativo`;
+  541|     case 'abaixo_do_piso': return `${a.accountName} abaixo do piso (${formatBRL(a.balanceCents)} de ${formatBRL(a.pisoCents)})`;
+  542|     case 'saldo_baixo': return `saldo baixo (menos de R$ 100): ${(a.contas || []).map(c => `${c.nome} ${formatBRL(c.saldoCents)}`).join(', ')}`;
+  543|     case 'categoria_pesando': return `${a.categoryName} levou ${a.pct}% do mês`;
+  544|     case 'piso_geral_estourado': return `média de segurança estourada em ${formatBRL(a.overCents)}`;
+  545|     case 'piso_geral_perto': return `média de segurança acaba em ${a.days} ${a.days === 1 ? 'dia' : 'dias'}`;
+  546|     case 'perto_do_piso': return `${a.accountName} perto do piso: faltam ${formatBRL(a.leftCents)}`;
+  547|     case 'delivery_repetido': return `${a.count} deliveries na semana`;
+  548|     case 'formiguinha': return `${a.count} gastinhos somando ${formatBRL(a.totalCents)}`;
+  549|     case 'sem_registro': return `${a.days} dias sem anotar`;
+  550|     case 'compromisso_vence': return `${a.nome} vence ${a.days === 0 ? 'hoje' : a.days === 1 ? 'amanhã' : `em ${a.days} dias`}`;
+  551|     case 'compromisso_atrasado': return `${a.nome} venceu dia ${a.dia}`;
+  552|     case 'plano_do_mes': return `este mês tem ${a.nome}`;
+  553|     case 'confira_banco': return `conferir o saldo de ${a.accountName}`;
+  554|     case 'a_receber': return `${formatBRL(a.totalCents)} a receber`;
+  555|     case 'cartao_limite': return `${a.accountName} com ${a.pct}% do limite`;
+  556|     case 'auditor_assinatura': return `${a.nome} ainda vale a pena?`;
+  557|     case 'cartao_vence': return `fatura do ${a.accountName} vence ${a.days === 0 ? 'hoje' : a.days === 1 ? 'amanhã' : `em ${a.days} dias`}`;
+  558|     default: return a.type;
+  559|   }
+  560| }
+  561| 
+  562| export function emocaoDoMomento(memory, mood = DEFAULT_MOOD, now = Date.now()) {
+  563|   const m = normalizarMem(memory, now);
+  564|   const e = emocaoEstavel(m.emocoes, MOODS[mood] ? mood : DEFAULT_MOOD, now, m.estab).emocao; // só lê, não conta fala
+  565|   return { emocao: e, aparencia: rostoDe(e), rosto: m.rostoUltimo };
+  566| }
+  567| 
+  568| /** Rosto pra um momento sem fala (ex.: "pensando" enquanto a IA online responde). Não muda a memória. */
+  569| export function rostoAvulso(evento, { mood = DEFAULT_MOOD, memory, now = Date.now(), rng = Math.random, texto = null } = {}) {
+  570|   const m = normalizarMem(memory, now);
+  571|   return escolherRosto({ emocao: 'calmo', evento, humor: MOODS[mood] ? mood : DEFAULT_MOOD, memoria: m.rosto, rng, livre: true, texto }).rosto;
+  572| }
+  573| 
+  574| // 3ª lei: erro dentro do narrador vira silêncio, nunca trava o app.
+  575| export const reagir = protegido('reagir', reagirBruto, (ev, o = {}) => ({ fala: null, memoria: o.memory ?? memoriaInicial() }));
+  576| export const conversar = protegido('conversar', conversarBruto, (t, d, o = {}) => ({
+  577|   fala: { texto: 'Deu um curto aqui dentro. Tenta de novo?', emocao: 'calmo', rosto: null, sugestoes: SUGESTOES.slice(0, 3), acao: null, entendeu: false },
+  578|   memoria: o.memory ?? memoriaInicial(),
+  579| }));
+  580| export { nomeAlerta };
+  581| 
+  582| /**
+  583|  * Depois de um gasto confirmado (16/11): às vezes ele pergunta "valeu a pena?". Devolve { fala, memoria } ou fala null.
+  584|  * A resposta da pessoa volta pelo conversar() (memória "aguardando"); nada é gravado nos dados.
+  585|  */
+  586| export const curiosidadeDoGasto = protegido('curiosidadeDoGasto', (gasto, { memory, now = Date.now(), rng = Math.random } = {}) => {
+  587|   const mem = normalizarMem(memory, now);
+  588|   const p = perguntaCuriosa(congelar(gasto), mem, { now, rng });
+  589|   if (!p) return { fala: null, memoria: mem };
+  590|   return { fala: { texto: p.texto, sugestoes: p.sugestoes, intent: 'curiosidade' }, memoria: p.memoria };
+  591| }, (g, o = {}) => ({ fala: null, memoria: o.memory ?? memoriaInicial() }));
+  592| 
+  593| /** Fala avulsa de um gatilho (ex.: as perguntas do primeiro acesso). Devolve { texto, memoria }. */
+  594| export const falaAvulsa = protegido('falaAvulsa', (gatilho, vars = {}, { mood = DEFAULT_MOOD, memory, now = Date.now(), rng = Math.random, perfil = null } = {}) => {
+  595|   const humor = MOODS[mood] ? mood : DEFAULT_MOOD;
+  596|   const mem = normalizarMem(memory, now);
+  597|   const est = emocaoEstavel(mem.emocoes, humor, now, mem.estab);
+  598|   const emocao = est.emocao;
+  599|   const r = montar(gatilho, vars, { humor, emocao, mem, now, rng, perfil });
+  600|   return { texto: r.texto, memoria: { ...mem, estab: est.estab, gerador: r.gerador } };
+  601| }, (g, v, o = {}) => ({ texto: '', memoria: o.memory ?? memoriaInicial() }));
+  602| 
+
+===== ARQUIVO: js/caos/curiosidade.js =====
+
+    1| // Pergunta curiosa depois de um gasto (JF, 16/11): como amigo que repara, às vezes o C.A.O.S. pergunta "valeu a pena?"
+    2| // ou "foi planejado ou bateu a vontade?". A resposta não grava nada nos dados (1ª lei): só fica na memória dele, pra
+    3| // ele lembrar ("é o 3º impulso que você me conta este mês"). Funções puras, sem internet.
+    4| 
+    5| import { formatBRL } from '../engine.js';
+    6| 
+    7| // a cada quanto ele pode perguntar, e a chance (pra não virar interrogatório)
+    8| export const CURIOSIDADE_INTERVALO = 3 * 3_600_000;
+    9| export const CURIOSIDADE_CHANCE = 0.35;
+   10| 
+   11| const GRUPO_DA_CATEGORIA = {
+   12|   delivery: 'comida', restaurante: 'comida',
+   13|   lazer: 'lazer', jogos: 'lazer', streaming: 'lazer',
+   14|   compras: 'compra',
+   15|   mercado: 'mercado',
+   16| };
+   17| // fixos e obrigações não ganham pergunta (ninguém compra aluguel por impulso)
+   18| const SEM_PERGUNTA = new Set(['moradia', 'contas', 'saude', 'educacao', 'transporte']);
+   19| 
+   20| // 5 perguntas por grupo; cada uma com as respostas que viram botão (regra do 0 ou 5 vale pras listas de perguntas)
+   21| export const PERGUNTAS = Object.freeze({
+   22|   comida: [
+   23|     { texto: 'Curiosidade minha: foi fome de verdade ou preguiça de cozinhar?', sugestoes: ['Fome de verdade', 'Preguiça', 'Foi um mimo'] },
+   24|     { texto: 'E aí, tava bom pelo menos?', sugestoes: ['Valeu a pena', 'Mais ou menos', 'Me arrependi'] },
+   25|     { texto: 'Esse foi planejado ou bateu a vontade?', sugestoes: ['Planejado', 'Bateu a vontade'] },
+   26|     { texto: 'Pergunta de amigo: valeu cada centavo?', sugestoes: ['Valeu a pena', 'Mais ou menos', 'Me arrependi'] },
+   27|     { texto: 'Foi comemoração ou dia corrido?', sugestoes: ['Comemoração', 'Dia corrido', 'Preguiça'] },
+   28|   ],
+   29|   lazer: [
+   30|     { texto: 'E aí, valeu a pena?', sugestoes: ['Valeu a pena', 'Mais ou menos', 'Me arrependi'] },
+   31|     { texto: 'Isso tava nos planos ou foi no impulso?', sugestoes: ['Planejado', 'Bateu a vontade'] },
+   32|     { texto: 'Me conta: se divertiu?', sugestoes: ['Muito!', 'Mais ou menos', 'Me arrependi'] },
+   33|     { texto: 'Curiosidade: foi presente pra você mesmo?', sugestoes: ['Foi um mimo', 'Planejado', 'Bateu a vontade'] },
+   34|     { texto: 'Faria de novo?', sugestoes: ['Faria', 'Talvez', 'Me arrependi'] },
+   35|   ],
+   36|   compra: [
+   37|     { texto: 'Era coisa que você precisava ou que você queria?', sugestoes: ['Precisava', 'Queria', 'Os dois'] },
+   38|     { texto: 'Esse foi planejado ou bateu a vontade?', sugestoes: ['Planejado', 'Bateu a vontade'] },
+   39|     { texto: 'Pesquisou o preço antes ou foi direto?', sugestoes: ['Pesquisei', 'Fui direto'] },
+   40|     { texto: 'Valeu a pena?', sugestoes: ['Valeu a pena', 'Mais ou menos', 'Me arrependi'] },
+   41|     { texto: 'Faz tempo que você queria isso?', sugestoes: ['Planejado', 'Bateu a vontade'] },
+   42|   ],
+   43|   mercado: [
+   44|     { texto: 'Foi a compra do mês ou aquela passadinha rápida?', sugestoes: ['Compra do mês', 'Passadinha'] },
+   45|     { texto: 'Levou lista ou foi no improviso?', sugestoes: ['Com lista', 'No improviso'] },
+   46|     { texto: 'Entrou algum mimo no carrinho?', sugestoes: ['Só o necessário', 'Foi um mimo'] },
+   47|     { texto: 'Esse saiu como você esperava?', sugestoes: ['Saiu certinho', 'Passou um pouco'] },
+   48|     { texto: 'Foi a passadinha de "só vou pegar o pão"?', sugestoes: ['Passadinha', 'Compra do mês'] },
+   49|   ],
+   50|   geral: [
+   51|     { texto: 'Esse foi planejado ou bateu a vontade?', sugestoes: ['Planejado', 'Bateu a vontade'] },
+   52|     { texto: 'Valeu a pena?', sugestoes: ['Valeu a pena', 'Mais ou menos', 'Me arrependi'] },
+   53|     { texto: 'Precisava ou queria?', sugestoes: ['Precisava', 'Queria', 'Os dois'] },
+   54|     { texto: 'Curiosidade minha: faria de novo?', sugestoes: ['Faria', 'Talvez', 'Me arrependi'] },
+   55|     { texto: 'Esse doeu no bolso ou foi tranquilo?', sugestoes: ['Tranquilo', 'Doeu um pouco'] },
+   56|   ],
+   57| });
+   58| 
+   59| /**
+   60|  * Depois de um gasto confirmado, decide se pergunta algo (e o quê).
+   61|  * @returns {{ texto, sugestoes, memoria } | null}
+   62|  */
+   63| export function perguntaCuriosa(gasto, memoria, { now = Date.now(), rng = Math.random } = {}) {
+   64|   if (!gasto || gasto.compromissoId || SEM_PERGUNTA.has(gasto.categoryId)) return null;
+   65|   const mem = memoria || {};
+   66|   const ultima = mem.curiosidade?.em || 0;
+   67|   if (now - ultima < CURIOSIDADE_INTERVALO || rng() >= CURIOSIDADE_CHANCE) return null;
+   68|   const grupo = GRUPO_DA_CATEGORIA[gasto.categoryId] || 'geral';
+   69|   const lista = PERGUNTAS[grupo];
+   70|   const p = lista[Math.floor(rng() * lista.length)];
+   71|   return {
+   72|     texto: p.texto,
+   73|     sugestoes: [...p.sugestoes],
+   74|     memoria: {
+   75|       ...mem,
+   76|       curiosidade: { ...(mem.curiosidade || {}), em: now },
+   77|       aguardando: { tipo: 'curiosidade', grupo, categoryId: gasto.categoryId, valor: gasto.amountCents, em: now },
+   78|     },
+   79|   };
+   80| }
+   81| 
+   82| // o que a resposta quer dizer (texto já sem acento e em minúscula)
+   83| export function tipoDaResposta(tx) {
+   84|   if (/(arrepend|nao valeu|nem valeu|joguei fora|dinheiro jogado)/.test(tx)) return 'arrependi';
+   85|   if (/(impulso|bateu a vontade|vontade|nao resisti|queria\b|fui direto|improviso|passou um pouco|doeu)/.test(tx)) return 'impulso';
+   86|   if (/(preguica|dia corrido|cansad)/.test(tx)) return 'preguica';
+   87|   if (/(mimo|presente|comemora|merecia|mereco)/.test(tx)) return 'mimo';
+   88|   if (/(planejad|precisava|pesquisei|com lista|compra do mes|necessario|saiu certinho|tranquilo|nos planos)/.test(tx)) return 'planejado';
+   89|   if (/(valeu|muito|faria|gostei|amei|demais|bom\b|otimo|fome)/.test(tx)) return 'valeu';
+   90|   if (/(mais ou menos|talvez|sei la|os dois|passadinha)/.test(tx)) return 'meio';
+   91|   return null;
+   92| }
+   93| 
+   94| const REACOES = {
+   95|   planejado: ['Isso que eu gosto de ver: gasto que já tinha lugar no plano.', 'Planejado é outra coisa, né? Nem dói.', 'Boa! Gasto com plano é gasto tranquilo.', 'Anotado na minha cabeça: mais um com plano. Orgulho.', 'Assim que se faz. Sem susto no fim do mês.'],
+   96|   impulso: ['Acontece! O segredo é perceber, e você percebeu.', 'Sem julgamento. Só fica de olho se começar a repetir.', 'Vontade bate em todo mundo. O que conta é não virar rotina.', 'Tranquilo. Uma dica: esperar 24 horas antes de comprar tira muita vontade.', 'Valeu a sinceridade! Eu lembro disso pra te ajudar depois.'],
+   97|   arrependi: ['Poxa. Pelo menos agora você sabe pra próxima.', 'Acontece. Arrependimento também ensina.', 'Respira: um gasto não define o mês. Bora segurar os próximos.', 'Fica a lição, sem culpa. Você ainda está no controle.', 'Entendi. Se quiser, eu te lembro disso quando aparecer de novo.'],
+   98|   preguica: ['Dia corrido conta! Só vale ver quantas vezes isso rola na semana.', 'Normal. Uma comidinha congelada em casa salva esses dias.', 'Preguiça é humana. O bolso só pede que não seja todo dia.', 'Justo. Às vezes o descanso vale o preço.', 'Entendi. Se virar hábito, eu te aviso.'],
+   99|   mimo: ['Mimo também faz parte! Cuidar de você é importante.', 'Merecido! Só cabe no orçamento, que tá tudo certo.', 'Um mimo de vez em quando faz bem pra cabeça.', 'Adoro! Gasto que deixa feliz e cabe no mês é ótimo.', 'Tá liberado. Com moderação, mimo é saúde.'],
+  100|   valeu: ['Que bom! Gasto que vale a pena é o melhor tipo.', 'Ótimo! Dinheiro bem gasto é isso.', 'Fico feliz! É pra isso que o dinheiro serve.', 'Boa! Quando vale a pena, nem pesa.', 'Massa! Anotado e aprovado.'],
+  101|   meio: ['Entendi. Na próxima, vale pensar duas vezes.', 'Mais ou menos já é uma pista: talvez dê pra trocar por algo melhor.', 'Justo. Nem todo gasto é inesquecível.', 'Tranquilo. Às vezes é assim mesmo.', 'Anotado! Da próxima vez a gente avalia junto.'],
+  102| };
+  103| 
+  104| /**
+  105|  * Lê a resposta à pergunta curiosa. Não grava dado nenhum: só a memória dele (contagem do mês).
+  106|  * @returns {{ fato, memoria } | null} null = não era resposta (a conversa segue normal)
+  107|  */
+  108| export function respostaCuriosa(texto, espera, memoria, { now = Date.now(), rng = Math.random, mes } = {}) {
+  109|   const tx = String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  110|   if (!tx || /\?/.test(tx) || tx.split(/\s+/).length > 8) return null;
+  111|   const tipo = tipoDaResposta(tx);
+  112|   if (!tipo) return null;
+  113|   const mem = memoria || {};
+  114|   const atual = mem.curiosidade?.mes === mes ? mem.curiosidade : { mes, impulsos: 0, planejados: 0, arrependidos: 0, impulsoCents: 0 };
+  115|   const c = { ...atual, em: mem.curiosidade?.em || now };
+  116|   if (tipo === 'impulso') { c.impulsos += 1; c.impulsoCents += espera?.valor || 0; }
+  117|   if (tipo === 'planejado') c.planejados += 1;
+  118|   if (tipo === 'arrependi') c.arrependidos += 1;
+  119|   const lista = REACOES[tipo];
+  120|   let fato = lista[Math.floor(rng() * lista.length)];
+  121|   // a partir do 2º impulso do mês, ele lembra o número (alerta com número, sem bronca)
+  122|   if (tipo === 'impulso' && c.impulsos >= 2) fato += ` Esse é o ${c.impulsos}º impulso que você me conta este mês (${formatBRL(c.impulsoCents)} no total).`;
+  123|   if (tipo === 'planejado' && c.planejados >= 3) fato += ` Já são ${c.planejados} gastos planejados este mês!`;
+  124|   return { fato, tipo, memoria: { ...mem, curiosidade: c } };
+  125| }
+  126| 
