@@ -128,6 +128,7 @@ Mapa do cérebro: `docs/CAOS_Carteira.md`.
 - Chaves (`ANTHROPIC_API_KEY`, `VAPID_PRIVATE_JWK`) ficam **só nos segredos do Cloudflare**. Nunca no código, em arquivo
   do repositório ou no chat. O Code **nunca pede chave ao JF**; teste usa chave de mentira.
 - A IA online recebe só **totais agregados**; a foto só vai quando a pessoa toca em "Ler com IA". O push é vazio.
+  A voz natural (Azure, 17/11) recebe só o texto da fala do C.A.O.S. (o mesmo do balão); com voz desligada, nada vai.
 - Nada de identificador de modelo de IA em commit, PR ou texto do repositório fora da configuração do servidor.
 
 ## Publicação

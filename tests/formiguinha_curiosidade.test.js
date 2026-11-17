@@ -97,3 +97,12 @@ test('nome na frente: a 1ª palavra vira minúscula, menos banco e sigla (saía 
   }
   assert.ok(viu);
 });
+
+test('17/11: toda emoção da Carteira vira uma emoção que a voz do servidor conhece (nunca raiva)', async () => {
+  const { EMOCAO_DA_VOZ } = await import('../js/voz.js');
+  const { VOZ_EMOCOES } = await import('../servidor/voz.js');
+  for (const [de, para] of Object.entries(EMOCAO_DA_VOZ)) {
+    assert.ok(VOZ_EMOCOES[para], `${de} → ${para}`);
+    assert.ok(!['raiva', 'furia'].includes(para), de);
+  }
+});

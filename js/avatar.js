@@ -841,6 +841,17 @@ export function criarAvatar(el, { tamanho = 'pequeno', forma = 'calmo' } = {}) {
     else { q('rosto').classList.add('troca'); setTimeout(() => { desenharRosto(f); q('rosto').classList.remove('troca'); }, 150); }
   };
   a.falando = sim => { for (const b of [q('boca'), q('bigodeVivo')]) b?.classList.toggle('falando', !!sim && !parar()); };
+  // 2.1.7 (JF, 17/11: "seria muito legal se a boca dele mexesse quando a voz estivesse ligada"): com a voz natural, a
+  // boca abre na medida do volume da fala (0 a 1); null volta ao normal. "Menos movimento" deixa a boca parada.
+  a.nivel = x => {
+    const b = q('boca');
+    if (!b) return;
+    if (x == null || parar()) { b.style.scale = ''; return; }
+    b.classList.remove('falando');
+    b.style.transformBox = 'fill-box';
+    b.style.transformOrigin = 'center';
+    b.style.scale = `${(1 + x * 0.15).toFixed(3)} ${(0.5 + x * 1.1).toFixed(3)}`;
+  };
   a.destruir = () => { vivos.delete(a); el.innerHTML = ''; };
   a.mostrar(forma, { imediato: true });
   vivos.add(a);

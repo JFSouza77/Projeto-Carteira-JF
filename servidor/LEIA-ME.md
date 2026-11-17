@@ -20,6 +20,7 @@ lembretes no Android (pelo navegador). Com ele, o app também tem:
 | Pergunta livre | A pergunta e os **totais** do mês (por categoria, entradas, saldo somado) | Lista de gastos, descrições, datas, nome de banco |
 | Foto | A foto, só quando você toca em "Ler com IA" | Nada fica guardado no servidor |
 | Lembrete | A inscrição de push do aparelho e o horário | Nenhum dado financeiro: o servidor manda um "toque" vazio e o texto é montado no próprio celular |
+| Voz natural (17/11) | Só o texto da fala do C.A.O.S. (o mesmo do balão), pra Microsoft gerar o áudio | Lista de gastos, conta, senha; o áudio pronto fica em cache, sem dizer de quem é |
 | Mercado | Nada: o app só baixa o resumo público do dia | Seus dados não saem do aparelho |
 | Conta (opcional) | Gastos, entradas, contas etc. **embaralhados no aparelho** (AES-GCM, chave tirada da senha): o servidor vê só o tipo, o id e quando mudou | A senha (nem sai do aparelho; vai uma "senha de acesso" tirada dela, que o servidor ainda passa por hash), o conteúdo aberto dos registros e as fotos |
 
@@ -60,6 +61,25 @@ Mesma conta do Cloudflare do Perfil serve. Tudo dentro da pasta `servidor/`.
    ```
 8. No app: **Ajustes → IA online**, cole o endereço que o deploy mostrou (`https://carteira-jf.SEU-USUARIO.workers.dev`),
    ligue e toque em **Testar conexão**.
+
+## Voz natural do C.A.O.S. (Microsoft Azure, igual ao Perfil) — 17/11/2026
+
+Com isso, o C.A.O.S. fala com uma voz natural e a boca do avatar mexe no ritmo da fala. Sem isso, ele usa a voz do
+celular, como antes. Dá pra usar **a mesma conta do Azure do Perfil**.
+
+1. No **portal.azure.com**, abra o recurso **Speech services** que você já criou pro Perfil (ou crie outro, plano
+   **Free F0**, região **Brazil South**). Em **Chaves e ponto de extremidade**, copie a **Chave 1**.
+2. Na pasta `servidor`, rode um de cada vez (cola a chave quando pedir; ela fica só no Cloudflare):
+   - `npx.cmd wrangler secret put AZURE_SPEECH_KEY` → cola a Chave 1;
+   - `npx.cmd wrangler secret put AZURE_SPEECH_REGION` → escreve `brazilsouth`.
+3. Opcional, voz com emoção de verdade (MAI-Voice, paga, a mesma do Perfil): `AZURE_MAI_KEY` e `AZURE_MAI_REGION`
+   (ex.: `eastus`), do recurso **Microsoft Foundry**.
+4. `npx.cmd wrangler deploy`.
+5. Conferir: abrir `https://<seu servidor>/voz/estado` pelo app (ou testar a voz no Chat). Tem que dar `{"ligada":true}`.
+
+**Teto do mês:** `VOZ_TETO_MES` (padrão **100 mil letras** na Carteira). Com os 400 mil do Perfil, dá as 500 mil grátis
+do Azure, se a conta for a mesma. Falas repetidas voltam do cache (não gastam de novo). Passou do teto, ele fala com a
+voz do celular até o mês virar. O que vai pra Microsoft: só o texto da fala, o mesmo que aparece no balão.
 
 ## Custo e limites
 

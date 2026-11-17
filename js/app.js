@@ -19,7 +19,7 @@ import { fraseDoPrint, resumoDoPrint } from './caos/ofertas.js';
 import { corCategoria, corFonte, corForma, temaBanco } from './cores.js';
 import { NUCLEO } from './caos/nucleo.js';
 import { NOVIDADES, VERSAO_APP, temNovidade, partesDoItem } from './novidades.js';
-import { calar, falar, vozDisponivel, ditadoDisponivel, ouvir, pararDeOuvir, setVelocidade } from './voz.js';
+import { calar, falar, vozDisponivel, ditadoDisponivel, ouvir, pararDeOuvir, setVelocidade, definirServidorDaVoz, definirOuvinteDaFala, destravarAudio } from './voz.js';
 import * as imagens from './imagens.js';
 import * as ia from './ia.js';
 import * as lembretes from './notificacoes.js';
@@ -130,7 +130,30 @@ function ligarPalco() {
 
 /** Mexe a boca dos avatares por um tempinho (enquanto ele "fala"). */
 let falaTimer = null;
+// 2.1.7 (JF, 17/11): com a voz ligada, a boca acompanha a fala de verdade (do começo ao fim, e com a voz natural, no
+// volume de cada instante). O tempo fixo do avatarFala só vale com a voz desligada.
+let falandoVoz = false;
+const avataresQueFalam = () => ['caos', 'chat', 'painel', 'palco'].map(k => avatares[k]).filter(Boolean);
+function ligarBocaNaVoz() {
+  definirServidorDaVoz(() => (state.settings.aiOn && state.settings.aiUrl ? String(state.settings.aiUrl).replace(/\/+$/, '') : null));
+  definirOuvinteDaFala({
+    inicio: modo => {
+      falandoVoz = true;
+      clearTimeout(falaTimer);
+      for (const a of avataresQueFalam()) a.falando(modo !== 'nuvem'); // voz do aparelho: a boca mexe no ritmo de sempre
+    },
+    nivel: x => { for (const a of avataresQueFalam()) a.nivel?.(x); },
+    fim: () => {
+      falandoVoz = false;
+      for (const a of avataresQueFalam()) { a.falando(false); a.nivel?.(null); }
+    },
+  });
+  // iPhone: o som da voz natural só sai depois de um toque na tela
+  for (const ev of ['pointerdown', 'keydown']) document.addEventListener(ev, destravarAudio, { once: true, capture: true });
+}
+
 export function avatarFala(ms) {
+  if (falandoVoz) return;
   clearTimeout(falaTimer);
   for (const k of ['caos', 'chat', 'painel']) avatares[k]?.falando(true);
   falaTimer = setTimeout(() => { for (const k of ['caos', 'chat', 'painel']) avatares[k]?.falando(false); }, ms);
@@ -1519,6 +1542,7 @@ async function limparFotosOrfas() {
 async function init() {
   comecarAbertura();
   ligarAvatares();
+  ligarBocaNaVoz(); // 2.1.7: voz natural (Azure) e boca que mexe com a fala
   ligarPalco();
   ligarTeclado();
   bind();
