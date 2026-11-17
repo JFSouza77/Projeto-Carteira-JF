@@ -54,3 +54,21 @@ test('como investir tem resposta de verdade, sem indicar produto', () => {
 test('IA que não respondeu: fala leve de "acordando", com o jeito de resolver', () => {
   for (let i = 0; i < 5; i++) assert.match(respostaAcordando(() => i / 5), /(reinici|fecha e abre|abre o app)/);
 });
+
+// 2.3.3.6 (JF, prometido pra Dona Débora): apagar pela conversa, sempre com o Confirmar da pessoa
+test('apagar lançamento pela conversa: acha o certo e só propõe', () => {
+  const d = { expenses: [{ id: 'g1', amountCents: 3000, note: 'Mercado', categoryId: 'mercado', date: '2026-11-14', createdAt: 3 }, { id: 'g2', amountCents: 5000, note: 'Farmácia', categoryId: 'saude', date: '2026-11-15', createdAt: 5 }],
+    incomes: [{ id: 'e1', amountCents: 255000, sourceId: 'salario', date: '2026-11-04', createdAt: 4 }], accounts: [], categories: [{ id: 'mercado', name: 'Mercado' }, { id: 'saude', name: 'Saúde' }] };
+  const fala = f => conversar(f, d, { mood: 'suave', memory: null, now: Date.now(), perfil: { apelido: 'Ana' } }).fala;
+  const casos = { 'apaga a entrada que lancei errado': 'e1', 'lancei uma entrada errada': 'e1', 'remove o último gasto': 'g2', 'apaga o gasto de 30': 'g1', 'exclui o mercado': 'g1', 'apaga o salário': 'e1' };
+  for (const [f, id] of Object.entries(casos)) {
+    const r = fala(f);
+    assert.equal(r.acao?.tipo, 'apagar_lancamento', f);
+    assert.equal(r.acao.id, id, f);
+    assert.match(r.texto, /Confirmar/);
+  }
+  assert.ok(!fala('apaga a luz').acao); // nome que não existe: não propõe nada
+  assert.equal(fala('como apago um gasto?').intent, 'tutorial');
+  assert.equal(fala('você consegue apagar um gasto?').intent, 'tutorial');
+  assert.equal(fala('gastei 30 no mercado').intent, 'registrar_gasto');
+});

@@ -14,7 +14,7 @@ import { fraseDoPrint, resumoDoPrint } from '../caos/ofertas.js';
 import * as ia from '../ia.js';
 import * as imagens from '../imagens.js';
 import { MENOS_MOVIMENTO, avatarFala, formaDaMsg, guardarMemoria, ic, narrate, onboardingResposta, pintarRosto, renderPerfil, setRosto } from '../app.js';
-import { registrarEntrada, registrarGasto } from './lancar.js';
+import { onDelete, registrarEntrada, registrarGasto } from './lancar.js';
 import { guardarEmMeta, iniciarMeta, metaResposta, renderMes, salvarMetas } from './mes.js';
 import { renderContas } from './contas.js';
 
@@ -328,6 +328,14 @@ export async function confirmarAcao(i, ok) {
       state.accounts = state.accounts.map(x => (x.id === novo.id ? novo : x));
       renderContas(); renderizar();
       addMsg({ de: 'caos', texto: `Piso de ${accountLabel(novo)} salvo: ${formatBRL(a.pisoCents)}. Quando o saldo chegar perto, eu aviso.` });
+      return;
+    }
+    if (a.tipo === 'apagar_lancamento') {
+      // 2.3.3.6 (JF): o C.A.O.S. achou e propôs; a pessoa confirmou; o app apaga (o mesmo caminho do ×)
+      const lista = a.kind === 'entrada' ? state.incomes : state.expenses;
+      if (!lista.some(x => x.id === a.id)) { addMsg({ de: 'caos', texto: 'Esse lançamento já não está mais aqui. Talvez já tenha sido apagado.' }); return; }
+      await onDelete(a.id, a.kind, { jaConfirmou: true });
+      addMsg({ de: 'caos', texto: `Pronto, apaguei ${a.kind === 'entrada' ? 'a entrada' : 'o gasto'}. Os totais já foram atualizados.` });
       return;
     }
     if (a.tipo === 'editar_data') {

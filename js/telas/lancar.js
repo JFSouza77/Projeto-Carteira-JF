@@ -342,7 +342,8 @@ export async function salvarEdicao(ev) {
   }
 }
 
-export async function onDelete(id, kind) {
+// 2.3.3.6: { jaConfirmou } quando a pessoa já tocou em Confirmar no Chat (o C.A.O.S. propôs apagar)
+export async function onDelete(id, kind, { jaConfirmou = false } = {}) {
   if (kind === 'transf') {
     const t = state.transferencias.find(x => x.id === id);
     if (!t || !confirm(`Apagar a transferência de ${formatBRL(t.amountCents)}?`)) return;
@@ -353,7 +354,7 @@ export async function onDelete(id, kind) {
   }
   const lista = kind === 'entrada' ? state.incomes : state.expenses;
   const x = lista.find(i => i.id === id);
-  if (!x || !confirm(`Apagar ${formatBRL(x.amountCents)}${x.note ? ` (${x.note})` : ''}?`)) return;
+  if (!x || (!jaConfirmou && !confirm(`Apagar ${formatBRL(x.amountCents)}${x.note ? ` (${x.note})` : ''}?`))) return false;
   await db.remove(kind === 'entrada' ? db.STORES.incomes : db.STORES.expenses, id);
   if (x.imageId) await imagens.apagar(x.imageId).catch(() => {});
   // o que foi guardado no cofrinho por causa deste gasto sai junto (16/11)
@@ -365,6 +366,7 @@ export async function onDelete(id, kind) {
   else state.expenses = state.expenses.filter(i => i.id !== id);
   renderizar();
   toast(kind === 'entrada' ? 'Entrada apagada.' : 'Gasto apagado.');
+  return true;
 }
 
 export async function verFoto(id) {
