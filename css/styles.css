@@ -1485,35 +1485,36 @@ body.em-tour .me-ajuda { z-index: 1; }
 :root.menos-mov .tour-luz { animation: none; transition: none; }
 .tour-boas .link-btn, .tour .link-btn { background: none; border: 0; box-shadow: none; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
 
-/* ---------- 2.3.1 Início sem carnaval de cor (JF + Anne, 17/11) ----------
-   "Muitas cores, tudo muito neon; quem é de fora não sabe pra onde olhar." Regra da Marca JF: cada cor quer dizer
-   alguma coisa. Limão = ação principal (lançar, aba ativa, próximo passo); verde = sobra/positivo; laranja = alerta;
-   o resto fica neutro. Vale pro estilo Atual (o padrão); o Limpo e o Direto continuam ainda mais calmos. */
+/* ---------- 2.3.1 Início mais calmo (JF + Anne, 17/11), revisto na 2.3.2 (JF: "tirou cor de onde não precisava") ----------
+   Ficam neutros só o cartão do C.A.O.S. e o "Comece por aqui" (com o próximo passo aceso). As cores dos botões Gasto,
+   Entradas e Transferir, dos cartõezinhos (laranja, verde, azul), dos alertas e do botão de ajuda voltaram. */
 .caos { background: var(--card); border-color: var(--line); }
 .comece { border-color: var(--line); }
 .passo-n { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 2px var(--line); }
 .comece-lista li:not(.feito):first-of-type .passo-n, .comece-lista li.feito + li:not(.feito) .passo-n { background: var(--accent); color: var(--accent-ink); box-shadow: none; }
 li.feito .passo-n { background: transparent; color: var(--ok); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ok) 60%, transparent); }
 .comece-lista li:not(.feito) ~ li:not(.feito) .passo-n { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 2px var(--line); }
-.atalho.gasto, .atalho[aria-pressed="true"] { box-shadow: none; }
-.alertas-card { border-color: var(--line); background: var(--card); box-shadow: inset 3px 0 0 var(--warn); }
-.alertas-card h2 { color: var(--text); }
-.alertas-card h2 .ico { color: var(--warn); }
-.summary .gasto-titulo { color: var(--text); }
-.summary .gasto-titulo .ico { color: var(--muted); }
-#resumo-card[data-modo] .mini-stats > :is(:nth-child(1), :nth-child(2)) { background: var(--card-2); box-shadow: none; }
-#resumo-card[data-modo] .mini-stats > :is(:nth-child(1), :nth-child(2)) :is(small, .ico) { color: var(--muted); }
-#resumo-card[data-modo] .mini-stats > :is(:nth-child(1), :nth-child(2)) strong { color: var(--text); }
-.mini-stats #stat-net-box.sobra, .mini-stats #stat-net-box.deficit { background: var(--card-2); box-shadow: none; }
-.mini-stats #stat-net-box.sobra small, .mini-stats #stat-net-box.sobra small .ico,
-.mini-stats #stat-net-box.deficit small, .mini-stats #stat-net-box.deficit small .ico { color: var(--muted); }
-.mini-stats #stat-net-box.sobra strong { color: var(--ok); }
-.mini-stats #stat-net-box.deficit strong { color: var(--warn); }
-.pode-gastar { background: var(--card-2); border-color: var(--line); }
-.me-ajuda { border-color: var(--line); box-shadow: 0 6px 18px #0006; }
-.me-ajuda .ico { color: var(--text); }
-.big { text-shadow: none; }
 
 /* 2.3.1: o Foco da conversa tem 2 opções (o segmented foi feito pra 3 humores) */
 .segmented.dois { grid-template-columns: 1fr 1fr; display: grid; }
 .segmented.dois label span { white-space: nowrap; }
+
+/* ---------- 2.3.2 Início consolidado (JF, 17/11) ----------
+   As abas Gasto, Entradas e Transferir moram dentro do cartão; os cartõezinhos (semana, mês, sobra) aparecem quando a
+   pessoa toca no número grande ou em "Ver detalhes"; os alertas recolhem com um toque no título. */
+.resumo-abas { margin: -2px 0 14px; }
+.resumo-abas .atalho { min-height: 40px; font-size: .85rem; }
+#resumo-card .big, #resumo-card .label { cursor: pointer; }
+.resumo-mais { display: block; margin: 8px auto 0; padding: 6px 14px; border-radius: 99px; border: 1px solid var(--line);
+  background: transparent; color: var(--muted); font: inherit; font-size: .85rem; cursor: pointer; }
+.resumo-mais span { display: inline-block; transition: transform .2s; }
+#resumo-card.detalhes-abertos .resumo-mais span { transform: rotate(180deg); }
+#resumo-card:not(.detalhes-abertos) .mini-stats { display: none; }
+.alertas-toggle { all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 8px; cursor: pointer; color: inherit; font: inherit; }
+.alertas-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
+.alertas-conta { font-size: .9rem; opacity: .8; }
+.alertas-seta { margin-left: auto; transition: transform .2s; }
+.alertas-card.fechado .alertas-seta { transform: rotate(-90deg); }
+.alertas-card.fechado .alert-list { display: none; }
+.alertas-card.fechado h2 { margin-bottom: 0; }
+@media (prefers-reduced-motion: reduce) { .resumo-mais span, .alertas-seta { transition: none; } }
