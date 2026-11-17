@@ -78,6 +78,7 @@ Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o q
 | Conta de luz (kWh) | "minha conta deu 250 com 300 kwh" / "quanto gasta um chuveiro 20 minutos por dia" | Preço do kWh e quanto cada aparelho pesa no mês (15 aparelhos com potência típica) 🖥️ |
 | Trabalho e renda | "recebi 800 de plantão" / "qual o piso de enfermeiro?" / "qual o salário mínimo?" / "qual o PIB do Brasil?" / "como peço mesada?" | Plantão vira extra (e lembra de descansar se forem muitos) 🖥️; piso pesquisado 🌐; salário mínimo, PIB e mesada 🖥️ |
 | Foto com legenda | clipe no Chat + "comprei esse tênis por 250" | Comprovante: a IA lê; foto do que comprou: a legenda vira o lançamento, com a foto junto 🖥️ |
+| Fezinha (loteria) | "joguei 6 na mega" / "quais as chances da quina?" / "quanto tá o prêmio da Mega da Virada?" / "quanto gastei com fezinha?" | Anota em Lazer com o nome do jogo e o total do mês 🖥️; chance de verdade 🖥️; prêmio e sorteio 🌐 |
 | Moedas de jogo | "quanto tá valendo 100 robux?" | A moeda, onde comprar, preço de hoje e alerta de golpe 🖥️/🌐 |
 
 ## 4. Aprender

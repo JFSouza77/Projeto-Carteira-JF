@@ -19,6 +19,7 @@ import { textoTendencia, quandoFoi, mercadoVelho } from '../mercado.js';
 const norm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   .replace(/\bc\.\s?a\.\s?o\.\s?s\b\.?/g, 'caos') // "C.A.O.S." = "caos"
   .replace(/%/g, ' porcento ') // "1%" vira "1 porcento" (a calculadora de juros precisa)
+  .replace(/\braspadinha (de )?(gelo|morango|uva|limao|groselha|frutas?|maracuja|abacaxi)\b/g, 'sorvete de $2') // 2.3.0.1: essa raspadinha é de comer
   .replace(/[^\w\s,.$+*/×÷-]/g, ' ').replace(/\s+/g, ' ').trim(); // + * / × ÷ ficam: matemática básica (13/11)
 
 // Palavras que levam a cada categoria (além do próprio nome dela)
@@ -30,7 +31,9 @@ const SINONIMOS = {
   moradia: ['moradia', 'aluguel', 'condominio', 'iptu', 'casa'],
   contas: ['contas', 'conta de luz', 'luz', 'agua', 'internet', 'celular', 'telefone', 'gas', 'energia', 'boleto'],
   saude: ['saude', 'farmacia', 'remedio', 'medico', 'consulta', 'exame', 'dentista', 'plano de saude', 'academia'],
-  lazer: ['lazer', 'cinema', 'show', 'festa', 'viagem', 'passeio'],
+  lazer: ['lazer', 'cinema', 'show', 'festa', 'viagem', 'passeio',
+    // 2.3.0.1 (JF): as fezinhas (loteria) contam como Lazer
+    'mega sena', 'megasena', 'mega da virada', 'quina', 'lotofacil', 'lotomania', 'dupla sena', 'timemania', 'dia de sorte', 'super sete', 'loteria', 'loterica', 'raspadinha', 'raspadinhas', 'fezinha', 'bolao'],
   // revisão do Gemini (16/11): jogo tinha ficado em Lazer depois que a categoria Jogos nasceu (2.2.8)
   jogos: ['jogos', 'jogo', 'game', 'games', 'steam', 'psn', 'xbox', 'nintendo', 'skin', 'passe de batalha', 'robux', 'vbucks'],
   // Streaming (06/11, pedido do JF): fica explícito, separado de Lazer e de Contas
@@ -77,6 +80,29 @@ function acharPeriodo(t) {
   if (/semana|7 dias|sete dias/.test(t)) return 'semana';
   if (/\bano\b/.test(t)) return 'ano';
   return 'mes';
+}
+
+// ---------- Fezinha: loterias (2.3.0.1, JF 18/11) ----------
+// "Ele entende mega-sena, raspadinha (não o sorvete), quina, mega da virada... essas fezinhas." Chance é conta fixa
+// (combinação de números), então sai aqui sem IA; prêmio, sorteio e resultado mudam toda semana e vão pra IA pesquisar.
+const LOTERIA = /\b(mega ?sena|mega da virada|mega|quina|lotofacil|lotomania|dupla sena|timemania|dia de sorte|super sete|loteria|loterias|loterica|raspadinhas?|fezinhas?|bolao|boloes)\b/;
+const ehLoteriaNota = n => LOTERIA.test(norm(n || ''));
+// chance de acertar tudo na aposta mínima: combinações C(n, k)
+const CHANCES = Object.freeze([
+  { nome: 'Mega-Sena', re: /mega ?sena|mega da virada|\bmega\b/, um: 50063860, aposta: '6 números de 60' },
+  { nome: 'Quina', re: /quina/, um: 24040016, aposta: '5 números de 80' },
+  { nome: 'Lotofácil', re: /lotofacil/, um: 3268760, aposta: '15 números de 25' },
+  { nome: 'Lotomania', re: /lotomania/, um: 11372635, aposta: '50 números de 100, acertando 20' },
+  { nome: 'Dupla Sena', re: /dupla sena/, um: 15890700, aposta: '6 números de 50' },
+]);
+const milhoes = n => n.toLocaleString('pt-BR');
+/** Nome bonito da fezinha pra descrição do gasto ("joguei 10 no bolão da mega" → "Bolão da Mega-Sena"). */
+function nomeDaFezinha(t) {
+  const jogo = /mega da virada/.test(t) ? 'Mega da Virada' : /mega/.test(t) ? 'Mega-Sena' : /quina/.test(t) ? 'Quina'
+    : /lotofacil/.test(t) ? 'Lotofácil' : /lotomania/.test(t) ? 'Lotomania' : /dupla sena/.test(t) ? 'Dupla Sena'
+    : /timemania/.test(t) ? 'Timemania' : /raspadinha/.test(t) ? 'Raspadinha' : null;
+  if (/bolao/.test(t)) return jogo ? `Bolão da ${jogo}` : 'Bolão';
+  return jogo || 'Fezinha';
 }
 
 // ---------- Carro e casa: km por litro e kWh (2.1.9.3, JF 17/11) ----------
@@ -616,6 +642,13 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   const pergunta = /\b(quanto|qual|quais|onde|como|tive|teve|tenho|vai|posso|consigo|algum|alguma)\b|\?/.test(t);
 
   if (!t) return { ...r, intent: 'nao_entendi' };
+  // Fezinha (2.3.0.1): pergunta de loteria; "joguei 6 na mega" continua sendo gasto (vai pra Lazer)
+  if (LOTERIA.test(t) && !(r.valor && /\b(joguei|apostei|gastei|paguei|comprei|fiz)\b/.test(t)) && !/raspadinha de (gelo|morango|uva|limao|groselha|frutas?)/.test(t)) {
+    const oQueE = /^(o que (e|sao|significa)|me explica|explica|que e)\b/.test(t);
+    if (/(quanto (eu )?(gastei|gasto|ja gastei|torrei)|meus gastos?|gastei quanto)/.test(t)) return { ...r, categoria: null, intent: 'loteria', pede: 'gasto' };
+    if (/(chance|chances|probabilidade|possibilidade|dificil|facil de ganhar|quantas pessoas|vale a pena|compensa|da pra ganhar|como (eu )?ganh|ficar rico|estrategia|numeros? da sorte|melhor jogo|qual (a |e a )?melhor loteria)/.test(t)) return { ...r, categoria: null, intent: 'loteria', pede: 'chance' };
+    if (/(premio|acumul|resultado|sorteio|sorteados|quando (e|sai|vai ser)|que dia|ganhador|ganhou|valor da aposta|quanto custa|preco)/.test(t) && !oQueE) return { ...r, categoria: null, intent: 'loteria', pede: 'pesquisa' };
+  }
   // Trabalho e renda (2.3.0, JF 18/11): salário mínimo, PIB, piso de profissão e mesada
   if (!r.valor || /\bpib\b/.test(t)) {
     const oQueE = /^(o que (e|sao|significa)|me explica|explica|que e)\b/.test(t);
@@ -754,6 +787,8 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
     if (/\b(vou receber|vou ganhar|vai cair|vai entrar|tenho (a|pra|para) receber|vao me pagar|vai me pagar|vou ser pago)\b/.test(t)) return { ...r, intent: 'registrar_entrada', prevista: true };
     if (/\b(recebi|recebo|ganhei|ganho|entrou|caiu|recebemos|me pagaram)\b/.test(t)) return { ...r, intent: 'registrar_entrada' };
     if (/\b(gastei|paguei|comprei|torrei|saiu|pedi|abasteci|gasto de|gastamos|passei|deixei|foram|foi)\b/.test(t)) return { ...r, intent: 'registrar_gasto' };
+    // 2.3.0.1 (JF): "joguei 10 no bolão da mega", "fiz uma fezinha de 20 na quina" (aposta é gasto, em Lazer)
+    if (LOTERIA.test(t) && /\b(joguei|apostei|jogamos|apostamos|fiz|fizemos|entrei)\b/.test(t)) return { ...r, intent: 'registrar_gasto' };
     // Anotação curta, sem verbo, do jeito de quem anota num papel: "uber 30", "50 no posto" (achado do Gemini, 06/11)
     const curtinha = t.split(' ').length <= 5 && !pergunta && !/\b(meta|guardei|juntei|poupei|investi)\b/.test(t);
     if (curtinha && (r.categoria || descricaoDe(t) || /^[a-z]+ \d/.test(t) || /^\d+([.,]\d+)? [a-z]/.test(t))) return { ...r, intent: 'registrar_gasto' };
@@ -1224,10 +1259,16 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         gatilho: 'proposta_registro',
         dica: [avisoDaData(dataDoTexto(intencao.t, today), today), recorrente ? 'Isso parece conta de todo mês. Se for, cadastra em 📅 Mês → Contas fixas que eu passo a lembrar do vencimento e já entra no planejamento.' : null,
           // 15/11 (JF, que compra Robux): gasto com jogo ganha a dica de gift card × crédito
-          cat?.id === 'jogos' && !lerPagamento(intencao.t, dados.accounts).forma ? 'Dica de gamer: gift card ajuda a gastar só o que você separou pro jogo; no crédito é mais prático pra compra que se repete (passe, assinatura), mas aí vale ficar de olho na fatura.' : null].filter(Boolean).join(' ') || null,
+          cat?.id === 'jogos' && !lerPagamento(intencao.t, dados.accounts).forma ? 'Dica de gamer: gift card ajuda a gastar só o que você separou pro jogo; no crédito é mais prático pra compra que se repete (passe, assinatura), mas aí vale ficar de olho na fatura.' : null,
+          // 2.3.0.1 (JF): fezinha anotada; a partir de R$ 50 no mês, ele mostra o total, sem sermão
+          (() => {
+            if (!LOTERIA.test(intencao.t)) return null;
+            const tot = expenses.filter(e => e.date.slice(0, 7) === mes && ehLoteriaNota(e.note)).reduce((x, e) => x + e.amountCents, 0) + intencao.valor;
+            return tot >= 5000 ? `Com essa, a fezinha do mês vai a ${formatBRL(tot)}. Boa sorte! Só não deixa a sorte entrar no orçamento das contas.` : 'Boa sorte! 🍀';
+          })()].filter(Boolean).join(' ') || null,
         vars: { valor: formatBRL(intencao.valor), categoria: cat?.name ?? 'Outros' },
         acao: { tipo: 'registrar_gasto', amountCents: intencao.valor, categoryId: cat?.id ?? 'outros', date: dataDoTexto(intencao.t, today),
-          note: desc ? desc[0].toUpperCase() + desc.slice(1) : '', ...lerPagamento(intencao.t, dados.accounts) },
+          note: LOTERIA.test(intencao.t) ? nomeDaFezinha(intencao.t) : desc ? desc[0].toUpperCase() + desc.slice(1) : '', ...lerPagamento(intencao.t, dados.accounts) },
         aprendeu: !!aprendida,
         pagamento: true,
       };
@@ -1752,6 +1793,27 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         fato: `Este mês foram ${vezes} de até ${lim}, somando ${formatBRL(f.totalCents)} (${f.pct}% de tudo que você gastou). Onde mais aparecem: ${top}.${f.count >= 10 ? ' Escolher um deles pra segurar na semana já faz diferença.' : ''}`,
         sugestoes: ['Onde mais gastei?', 'Quanto gastei este mês?'],
       };
+    }
+    case 'loteria': {
+      // 2.3.0.1 (JF): fezinha é diversão; ele mostra a conta da chance e o quanto já foi no mês, sem sermão
+      const doMes = expenses.filter(e => e.date.slice(0, 7) === mes && ehLoteriaNota(e.note));
+      const totMes = doMes.reduce((x, e) => x + e.amountCents, 0);
+      if (intencao.pede === 'gasto') {
+        if (!totMes) return { fato: 'Nenhuma fezinha anotada este mês. Quando jogar, me fala tipo "joguei 6 na mega" que eu anoto em Lazer.', cru: true, sugestoes: ['Quais as chances da Mega-Sena?'] };
+        return { fato: `Este mês foram ${doMes.length === 1 ? '1 fezinha' : `${doMes.length} fezinhas`}, somando ${formatBRL(totMes)}. Num ano, nesse ritmo, dá uns ${formatBRL(totMes * 12)}. Se quiser, combina um teto por mês: aí a fezinha fica sendo diversão.`, cru: true, sugestoes: ['Quais as chances da Mega-Sena?'] };
+      }
+      if (intencao.pede === 'pesquisa') {
+        const perguntaIA = `Loteria. Pedido da pessoa: "${intencao.t}". Pesquise no site Loterias Caixa (ou notícia recente) o prêmio estimado, a data do próximo sorteio, o resultado ou o preço da aposta, conforme o pedido, com a data. Lembre de leve que é jogo de sorte e que a chance é pequena.`;
+        return { fato: 'Sem a IA online eu não sei o prêmio nem o resultado de hoje: isso muda toda semana. Confere no site ou app Loterias Caixa. O que eu sei sem internet: a chance de ganhar a Mega-Sena com 6 números é de 1 em 50.063.860.',
+          cru: true, perguntaIA: perguntaIA.slice(0, 600), modoIA: 'pesquisa', sugestoes: ['Quais as chances da Mega-Sena?', 'Quanto gastei com fezinha?'] };
+      }
+      const qual = CHANCES.find(c => c.re.test(intencao.t));
+      const lista = qual ? [qual] : CHANCES.slice(0, 3);
+      const linhas = lista.map(c => `${c.nome}: 1 em ${milhoes(c.um)} (aposta simples, ${c.aposta})`).join('; ');
+      const virada = /virada/.test(intencao.t) ? ' A Mega da Virada tem a mesma chance da Mega comum: o prêmio é maior, a chance não.' : '';
+      const mesTxt = totMes ? ` Este mês você já pôs ${formatBRL(totMes)} em fezinha.` : '';
+      return { fato: `A chance de levar o prêmio maior: ${linhas}.${virada} Pra ter ideia: na Mega, é como achar 1 bilhete premiado num estádio com 50 milhões de bilhetes. Bolão aumenta a chance do grupo, mas divide o prêmio. Fezinha é diversão, não plano: põe um teto que não faça falta.${mesTxt}`,
+        cru: true, sugestoes: ['Quanto gastei com fezinha?', 'O que é bolão?'] };
     }
     case 'pib': {
       // 2.3.0 (JF): número oficial com a data, sem IA (IBGE, divulgado em 03/03/2026)
