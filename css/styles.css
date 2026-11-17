@@ -1574,3 +1574,9 @@ li.feito .passo-n { background: transparent; color: var(--ok); box-shadow: inset
 #tela-ajustes details.card > p:not(:last-child) { margin-top: 0; }
 #tela-ajustes details.card > .field-label { margin-top: 4px; }
 #tela-ajustes details.card > .backup { margin-top: 0; }
+
+/* 2.3.4.1 (JF): aviso de novidade nos Alertas (o trabalho), com botão pra contar e "Agora não" */
+.alert-list li.novo-aviso { border-left-color: var(--caos); }
+.alert-list li.novo-aviso .ico { color: var(--caos); }
+.novo-aviso-botoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+.novo-aviso-botoes .link-btn { background: none; border: 0; color: var(--muted); text-decoration: underline; font: inherit; font-size: .88rem; min-height: 40px; cursor: pointer; }
