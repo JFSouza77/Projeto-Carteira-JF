@@ -686,7 +686,9 @@ export const PASSOS_PESQUISA = Object.freeze({
 });
 const NOME_DO_PLANO = { lazer: 'Plano de passeio', viagem: 'Pesquisa de viagem', produto: 'Pesquisa de compra', pet: 'Plano de pet', moradia: 'Plano de moradia', transporte: 'Plano de transporte', economizar: 'Plano pra economizar' };
 
-const LAZER = /\b(restaurante|restaurantes|lanchonete|pizzaria|hamburgueria|cinema|cinemark|cinepolis|kinoplex|filme no cinema|ingresso|ingressos|show|teatro|parque de diversao|balada|barzinho|rodizio|passeio|role|festival|estadio|boliche|escape room)\b/;
+const LAZER = /\b(restaurante|restaurantes|lanchonete|pizzaria|hamburgueria|cinema|cinemark|cinepolis|kinoplex|filme no cinema|ingresso|ingressos|show|shows|teatro|teatros|peca de teatro|peca|musical|stand ?up|comedia|opera|concerto|circo|museu|museus|exposicao|parque de diversao|parque de diversoes|parque aquatico|zoologico|balada|barzinho|rodizio|passeio|role|festival|estadio|jogo de futebol|partida de futebol|boliche|escape room|karaoke|trilha|evento|eventos)\b/;
+// 2.3.4.5 (JF, 17/11: "preço de notebook, celular, memória RAM… tem que estar ligado à IA"): tecnologia
+const TECH = /\b(computador|computadores|notebook|notebooks|pc|pc gamer|memoria ram|ram|placa de video|placa mae|ssd|hd externo|processador|monitor|teclado|mouse|headset|celular|celulares|smartphone|iphone|samsung|galaxy|xiaomi|motorola|redmi|tablet|ipad|macbook|playstation|ps5|ps4|xbox|nintendo switch|console|smartwatch|apple watch|tv|televisao|smart tv|airpods|fone bluetooth|camera|impressora|roteador|kindle|alexa)\b/;
 // pergunta de preço de algo de fora ("quanto tá um ingresso no cinemark?"): não é "quanto gastei" (2.3.9, JF)
 const PRECO_DE_FORA = /\b(quanto (ta|esta|custa|custam|sai|fica|anda|e|eh|ta custando|esta custando)|qual (o )?(preco|valor)|preco d[eoa]s?|valor d[eoa]s?|valores d[eoa]s?)\b/;
 // pesquisa pedida com todas as letras: vai direto pra IA, sem questionário (JF: "sou seu criador, me respeita")
@@ -712,7 +714,12 @@ export function acharPesquisa(t, valor) {
   if (/\b(juntar|guardar|poupar|meta|gastei|paguei|comprei|recebi|robux|v ?bucks|diamantes|quanto gastei|quanto gasto com|gasto com|gastando com)\b/.test(t)) return null;
   let tipo = null;
   const precoDeFora = PRECO_DE_FORA.test(t) && /\b(um|uma|o|a|os|as|no|na|do|da)\b/.test(t);
-  if (LAZER.test(t) && (PEDE.test(t) || precoDeFora || /\b(da pra (eu )?ir|posso ir|vale ir|recomenda|pesquis|valores?|precos?)\b/.test(t))) tipo = 'lazer';
+  if (LAZER.test(t) && (PEDE.test(t) || precoDeFora || /\b(da pra (eu )?ir|posso ir|vale ir|recomenda|pesquis|valores?|precos?|mais proxim\w*|perto( de mim| daqui)?|aqui perto|na minha cidade|tem (algum|alguma|algo)|bo[ma]s?|legal|programacao|em cartaz)\b/.test(t))) tipo = 'lazer';
+  // 2.3.4.5: preço de tecnologia (comprar ou vender usado) vai pra IA pesquisar
+  const venda = /\b(vender|vendo|revender|desapegar)\b/.test(t) && /\b(quanto (vale|consigo|da pra|posso|devo|cobro)|por quanto|preco|valor)\b/.test(t);
+  const vaiComprar = /\b(vale a pena comprar|compensa comprar|devo comprar|faco bem em comprar|e bom comprar)\b/.test(t);
+  if (!tipo && (venda || (TECH.test(t) && (precoDeFora || vaiComprar || /\b(quanto (vale|custa|sai|ta|esta)|preco|valor)\b/.test(t))))) tipo = 'produto';
+  if (!tipo && vaiComprar) tipo = 'produto';
   // recomendação: o assunto decide o plano; sem assunto conhecido, é compra
   const recomenda = RECOMENDA.test(t) && !DO_PROPRIO_DINHEIRO.test(t);
   if (!tipo && recomenda) tipo = LAZER.test(t) ? 'lazer' : PET.test(t) ? 'pet' : VIAGEM.test(t) ? 'viagem' : MORADIA.test(t) ? 'moradia' : TRANSPORTE.test(t) ? 'transporte' : 'produto';
@@ -730,7 +737,8 @@ export function acharPesquisa(t, valor) {
   // pergunta de preço curta ("quanto tá um ingresso no cinemark?") ou pedido já detalhado (o questionário só atrapalha)
   const palavras = t.split(/\s+/).filter(Boolean).length;
   // (pergunta de preço curta só pula no passeio: compra, pet e casa ainda ganham as perguntas, que poupam crédito)
-  const direto = PESQUISA_DIRETA.test(t) || recomenda || (tipo === 'lazer' && precoDeFora && palavras <= 12) || palavras >= 18;
+  const direto = PESQUISA_DIRETA.test(t) || recomenda || (tipo === 'lazer' && precoDeFora && palavras <= 12) || palavras >= 18
+    || (tipo === 'produto' && (venda || vaiComprar || (TECH.test(t) && palavras <= 12))); // 2.3.4.5: preço de tecnologia curto vai direto
   const orc = t.match(/\b(orcamento|ate|teto|no maximo|maximo)\b[^0-9]{0,15}(\d[\d.,]*)/);
   const orcamento = orc ? Math.round(Number(orc[2].replace(/\./g, '').replace(',', '.')) * 100) : undefined;
   const item = t.replace(/\b(pra mim|para mim|na internet|no google|na web|quais sao|qual e|qual|quanto (ta|esta|anda)|os valores|o valor|valores|valor|ve|ver|olha|olhar|busca|buscar)\b/g, ' ').replace(/\b(me ajuda a|me ajude a|ajuda a|ajude a|me ajuda|me ajude|caos|por favor|pesquisa|pesquisar|procura|procurar|acha|achar|encontra|encontrar|compara|comparar|quanto|custa|custaria|sai|sairia|fica|ficaria|o preco de|preco de|preco|onde (compro|comprar|acho)|quero comprar|quero fazer|quero|pretendo|penso em|calcular|planejar|considerando|pra eu|para eu|eu)\b/g, ' ')
@@ -738,7 +746,9 @@ export function acharPesquisa(t, valor) {
   // lazer: o que a pessoa já disse não vira pergunta de novo
   const respostas = tipo === 'lazer' ? respostasDoLazer(t) : {};
   const padrao = { lazer: 'esse passeio', viagem: 'essa viagem', produto: 'isso', pet: 'seu pet', moradia: 'sua moradia', transporte: 'seu transporte', economizar: 'onde economizar' }[tipo];
-  return { tipo, viagem: tipo === 'viagem', item: (item || padrao).slice(0, 80), direto, respostas,
+  const aparelho = (t.match(TECH) || [])[0];
+  const itemLimpo = (item || '').replace(/\b(vale a pena comprar|compensa comprar|devo comprar|vale a pena|tem (algum|alguma|algo)|bo[ma]s?|legal|vender|vendo|meu|minha|vale|quanto)\b/g, ' ').replace(/\s+/g, ' ').trim();
+  return { tipo, viagem: tipo === 'viagem', item: (venda ? `preço de usado pra vender: ${aparelho || itemLimpo || 'o aparelho'}` : (itemLimpo || padrao)).slice(0, 80), direto, respostas,
     orcamento: orcamento && orcamento > 0 ? orcamento : (valor && /\b(orcamento|ate)\b/.test(t) ? valor : undefined) };
 }
 
@@ -901,7 +911,8 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
       const item = demais[1].split(/\s+(?:na|no|da|do|em|nas|nos|esse|este|essa|esta|ultimamente|de novo)\b/)[0].replace(/\b(o|a|os|as|um|uma)\b/g, ' ').trim().split(/\s+/).slice(0, 3).join(' ');
       return { ...r, categoria: acharCategoria(item, categories) || acharCategoria(demais[1], categories), intent: 'gasto_demais', item };
     }
-    const custo = CUSTO_MEDIO.test(t) && !/\b(gastei|gastou|gastamos|meus? gastos?|minhas? (contas?|faturas?|gastos?)|meu orcamento|por dia|robux|v ?bucks|diamantes|ingresso|cinema|show|teatro|gasolina|etanol|diesel|kwh|chuveiro|mega|quina|loteria|piso|salario)\b/.test(t) && !LAZER.test(t);
+    // 2.3.4.5: tecnologia (notebook, celular, placa de vídeo) vai pra pesquisa de compra, não pro custo de taxa
+    const custo = CUSTO_MEDIO.test(t) && !TECH.test(t) && !/\b(gastei|gastou|gastamos|meus? gastos?|minhas? (contas?|faturas?|gastos?)|meu orcamento|por dia|robux|v ?bucks|diamantes|ingresso|cinema|show|teatro|gasolina|etanol|diesel|kwh|chuveiro|mega|quina|loteria|piso|salario)\b/.test(t) && !LAZER.test(t);
     // plano guiado (viagem pra um lugar, pet, casa, transporte) continua com as perguntas dele; a comparação curta
     // ("o que costuma ser mais barato, hotel ou pousada?") e o "quanto custa X" avulso ficam aqui
     const guiado = custo ? acharPesquisa(t, r.valor) : null;
@@ -943,7 +954,8 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
       return { ...r, categoria: null, intent: 'consumo_carro', cons };
     }
     const en = lerEnergia(t);
-    if (en.kwh || (en.wInformado && (en.horasDia || ENERGIA_PEDE.test(t))) || (en.aparelho && ENERGIA_PEDE.test(t) && !/\b(gastei|paguei|comprei)\b/.test(t))
+    if (en.kwh || (en.wInformado && (en.horasDia || ENERGIA_PEDE.test(t))) || (en.aparelho && ENERGIA_PEDE.test(t) && !/\b(gastei|paguei|comprei)\b/.test(t)
+      && !(TECH.test(t) && !/\b(luz|energia|kwh|consumo|consome|ligad\w*|por (dia|mes|hora)|watts?)\b/.test(t))) // 2.3.4.5: preço de notebook não é conta de luz
       || /(calcul\w* (o |a )?(kwh|consumo de (energia|luz)|conta de luz)|como (calculo|calcula|calcular) (o |a )?(kwh|conta de luz|consumo de energia)|preco do kwh)/.test(t)) {
       return { ...r, categoria: null, intent: 'energia', en };
     }
@@ -989,7 +1001,8 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   // Fora do tema (JF, 15/11: "VisionQuest teve o mesmo orçamento da série Lanterns?!" virava "você não definiu
   // orçamentos"): fala de filme, série, jogo, time, artista… sem falar do próprio dinheiro vai pra IA online
   // (sem ela, "ainda não sei responder"). Registro com valor ("gastei 40 no cinema") continua sendo registro.
-  if (FORA_DO_TEMA.test(t) && !r.valor && !/\b(eu|meu|minha|meus|minhas|gastei|paguei|comprei|assinei|assinatura|gasto|gastos|cartao|fatura)\b/.test(t)) return { ...r, categoria: null, intent: 'nao_entendi', foraDoTema: true };
+  // 2.3.4.5: "ingresso de jogo de futebol" é preço, não conversa de filme/jogo
+  if (FORA_DO_TEMA.test(t) && !r.valor && !/\b(eu|meu|minha|meus|minhas|gastei|paguei|comprei|assinei|assinatura|gasto|gastos|cartao|fatura|ingressos?|preco|precos|valor|quanto (custa|sai|ta|esta|e))\b/.test(t)) return { ...r, categoria: null, intent: 'nao_entendi', foraDoTema: true };
   // Matemática básica (JF, 13/11 à noite: "ele ensina matemática básica pra gente"): "quanto é 15 x 23?"
   const conta = lerConta(t);
   if (conta) return { ...r, intent: 'conta', conta };
@@ -2175,7 +2188,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       // nem indica loja, e pergunta se é plano da pessoa (aí vira meta). Sem IA, diz onde ver e oferece anotar.
       const item = intencao.item;
       const perguntaIA = `Custo médio. Pedido da pessoa: "${intencao.t}". Responda CURTO (2 ou 3 frases): a média ou faixa de preço no Brasil hoje, com a fonte e o mês; se for taxa de governo (Detran, cartório…), diga que muda por estado. Se for comparação (ex.: hotel ou pousada), diga qual costuma sair mais barato e por quê, em uma frase. Não explique o passo a passo nem indique loja. Termine perguntando se é um plano da pessoa e se ela quer que você anote ou ajude a juntar o dinheiro.`;
-      const detran = /\b(emplac\w*|placa|cnh|carteira de motorista|habilitacao|transferencia|transferir o carro|licenciamento|vistoria|multa\w*|detran|crlv)\b/.test(intencao.t);
+      const detran = /\b(emplac\w*|placa(?! de video| mae)|cnh|carteira de motorista|habilitacao|transferencia|transferir o carro|licenciamento|vistoria|multa\w*|detran|crlv)\b/.test(intencao.t);
       const hospeda = /\b(hotel|hoteis|pousada\w*|airbnb|hostel|hospedagem|aluguel por temporada)\b/.test(intencao.t);
       const semIA = hospeda
         ? 'Sem a IA online eu não sei os preços de hoje, mas a regra costuma ser: pousada sai mais em conta que hotel em praia e interior; hostel é o mais barato; e aluguel por temporada compensa pra família ou grupo (olha a taxa de limpeza). Compara sempre o preço total, com café e transporte.'

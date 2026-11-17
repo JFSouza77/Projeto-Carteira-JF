@@ -64,3 +64,22 @@ test('os 5 avatares da 2.3.4.4 e o tema da conversa', async () => {
   assert.equal(formaPara({ assunto: 'sair_dividas' }), 'salvavidas');
   assert.equal(formaPara({ assunto: 'energia' }), 'faztudo');
 });
+
+// 2.3.4.5 (JF): preço de tecnologia e lazer (teatro, museu, show, jogo) vão pra IA pesquisar, com o avatar certo
+test('tecnologia e lazer: pesquisa na IA e nada "sem rota"', async () => {
+  const { conversar } = await import('../js/caos/index.js');
+  const { DEFAULT_CATEGORIES } = await import('../js/engine.js');
+  const categories = DEFAULT_CATEGORIES.map(c => ({ ...c }));
+  const fala = f => conversar(f, { expenses: [], incomes: [], accounts: [{ id: 'c', tipo: 'corrente', name: 'Inter' }], categories }, { mood: 'suave', memory: null, now: Date.now(), perfil: { apelido: 'Ana' } }).fala;
+  for (const f of ['qual o preço de um iPhone 15?', 'quanto tá uma memória ram de 16gb?', 'quanto custa uma placa de vídeo?', 'quanto custa um notebook bom?', 'quero vender meu celular, quanto vale?', 'vale a pena comprar um celular novo?']) {
+    const r = fala(f);
+    assert.equal(r.intent, 'plano_produto', f);
+    assert.ok(r.perguntaIA, `${f} sem IA`);
+    assert.equal(r.avatar, 'ti', f);
+    assert.doesNotMatch(r.texto, /Detran/);
+  }
+  for (const f of ['quero ir no teatro', 'qual o teatro mais próximo?', 'quero ir no museu', 'tem alguma peça de teatro boa?', 'quero ir num stand up', 'quanto custa um ingresso de jogo de futebol?', 'quanto é o ingresso pro teatro?']) {
+    assert.equal(fala(f).intent, 'plano_lazer', f);
+  }
+  assert.equal(fala('quanto gasta de luz um notebook ligado 8 horas por dia?').intent, 'energia');
+});
