@@ -213,6 +213,53 @@ export function respostaPapoLivre(rng = Math.random) {
   return PAPO_LIVRE_FREIO[Math.floor(rng() * PAPO_LIVRE_FREIO.length) % PAPO_LIVRE_FREIO.length];
 }
 
+// ---------- Texto longo demais (2.3.4.2, JF 17/11) ----------
+// JF: "tem gente que manda uma redação do Enem pro C.A.O.S." (e ele mesmo digita muito). Texto enorme não vai pra
+// IA nem pro entendimento local (dá ruim e gasta crédito): ele pede, com bom humor, pra resumir e, se achar uma
+// palavra-chave, oferece o palpite como botão ("não sei se é isso que você quis dizer").
+const LONGO_PALAVRAS = 60, LONGO_LETRAS = 400;
+/** Texto longo demais pro chat? (mais de 60 palavras ou 400 letras) */
+export function textoLongoDemais(texto) {
+  const t = String(texto || '').trim();
+  return t.length > LONGO_LETRAS || t.split(/\s+/).length > LONGO_PALAVRAS;
+}
+// 5 jeitos de pedir resumo (regra do 0 ou 5)
+const PEDE_RESUMO = Object.freeze([
+  'Ih, foi mal: esse texto é longo demais pros meus processadores 😅. Me ajuda a te ajudar: em uma frase, o que você precisa?',
+  'Opa, você falou bastante, hein! Tem como dar uma resumida? Me diz numa frase o que você quer saber, que eu vou direto ao ponto.',
+  'Calma, parça, meus circuitos travaram no meio do caminho! 😵 Resume pra mim: o que você precisa exatamente?',
+  'Esse texto ficou do tamanho de uma redação do Enem! Me ajuda a te ajudar: qual é a pergunta principal?',
+  'Eita, é muita coisa pra eu processar de uma vez. Me fala de forma resumida: como eu posso te ajudar?',
+]);
+const PALPITES = [
+  [/\b(saldo|quanto tenho|minhas contas|no banco)\b/, 'Quanto tenho nas contas?'],
+  [/\b(fatura|cartao)\b/, 'Como está minha fatura?'],
+  [/\b(meta|metas|juntar|objetivo)\b/, 'Como estão minhas metas?'],
+  [/\b(invest\w*|aplicar|render)\b/, 'Como faço pra investir?'],
+  [/\b(guardar|poupar|economizar|sobrar)\b/, 'Como começo a guardar dinheiro?'],
+  [/\b(divida|dividas|devendo|emprestimo|juros)\b/, 'Como saio das dívidas?'],
+  [/\b(apag\w*|errad[oa]|lancei errado)\b/, 'Apaga o último gasto'],
+  [/\b(gastei|gastando|gasto|gastos)\b/, 'Onde mais gastei este mês?'],
+];
+/** Pede pra resumir e, se der, sugere o que achou no texto (palpites como botões). */
+export function respostaTextoLongo(texto, categorias = [], rng = Math.random) {
+  const t = norm(texto);
+  const sug = [];
+  for (const [rx, q] of PALPITES) if (sug.length < 2 && rx.test(t) && !sug.includes(q)) sug.push(q);
+  // termos do glossário que aparecem no texto (o que já virou palpite não repete: "fatura")
+  const tt = ` ${t.replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ')} `;
+  const termos = GLOSSARIO.filter(g => g.chaves.some(k => k.length >= 3 && tt.includes(` ${norm(k)} `)))
+    .filter(g => !sug.some(q => norm(q).includes(norm(g.termo))));
+  if (termos[0] && sug.length < 3) sug.push(`O que é ${termos[0].termo}?`);
+  const cat = acharCategoria(t, categorias);
+  if (cat && sug.length < 3) sug.push(`Quanto gastei com ${cat.name}?`);
+  const base = PEDE_RESUMO[Math.floor(rng() * PEDE_RESUMO.length) % PEDE_RESUMO.length];
+  return {
+    texto: sug.length ? `${base} Pelo que eu peguei, pode ser uma destas aí embaixo. Não sei se é isso que você quis dizer; se não for, manda de novo, resumidinho.` : base,
+    sugestoes: sug,
+  };
+}
+
 // ---------- "Tô acordando" (2.3.3.5, JF 17/11) ----------
 // JF: quando a IA online não responde, em vez de mensagem técnica ele explica de um jeito leve, pra pessoa (a Dona
 // Débora, por exemplo) não estranhar: espera um pouquinho, fecha e abre o app e pergunta de novo.
@@ -795,6 +842,10 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
     if (/(quanto (eu )?(gastei|gasto|ja gastei|torrei)|meus gastos?|gastei quanto)/.test(t)) return { ...r, categoria: null, intent: 'loteria', pede: 'gasto' };
     if (/(chance|chances|probabilidade|possibilidade|dificil|facil de ganhar|quantas pessoas|vale a pena|compensa|da pra ganhar|como (eu )?ganh|ficar rico|estrategia|numeros? da sorte|melhor jogo|qual (a |e a )?melhor loteria)/.test(t)) return { ...r, categoria: null, intent: 'loteria', pede: 'chance' };
     if (/(premio|acumul|resultado|sorteio|sorteados|quando (e|sai|vai ser)|que dia|ganhador|ganhou|valor da aposta|quanto custa|preco)/.test(t) && !oQueE) return { ...r, categoria: null, intent: 'loteria', pede: 'pesquisa' };
+  }
+  // 2.3.4.2: "como saio das dívidas?" (era palpite do texto longo e caía no "não entendi")
+  if (!r.valor && /((sair|saio|sai) d[ae]s? (minhas? )?dividas?|(sair|saio) do vermelho|quitar (minhas? |as )?dividas?|pagar (minhas? |as )?dividas?|tô endividad|to endividad|estou endividad|endividad[oa]|limpar (meu )?nome|nome sujo|negociar (a |minha |as |minhas )?dividas?|organizar (minhas |as )?dividas)/.test(t)) {
+    return { ...r, categoria: null, intent: 'sair_dividas' };
   }
   // Métodos de poupar (2.3.3, JF 17/11): 50/30/20, pague-se primeiro, 52 semanas, envelopes; pra criança, 3 cofrinhos
   if (!r.valor && /\b((metodos?|jeitos?|tecnicas?|formas?|dicas?|regras?) (de|pra|para) (poupar|guardar|juntar)( dinheiro)?|como (eu )?(faco|fazer|comeco|comecar|posso|consigo|aprendo|aprender) (a |uma )?(poupar|poupanca|guardar dinheiro|juntar dinheiro|ter uma poupanca)|como (se )?(poupa|guarda dinheiro|junta dinheiro)|me ensina a (poupar|guardar|juntar)|(comecar|comeco) a (poupar|guardar dinheiro|juntar dinheiro|fazer uma poupanca)|quanto (eu )?devo guardar|quanto (do meu salario|da mesada) (eu )?(guardo|devo guardar|separo))\b/.test(t)) {
@@ -2038,6 +2089,11 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         sugestoes: ['Onde mais gastei?', 'Quanto gastei este mês?'],
       };
     }
+    case 'sair_dividas':
+      return {
+        fato: 'Dá pra sair, passo a passo. 1) Lista todas as dívidas: quanto falta, a parcela e os juros de cada uma. 2) Ataca primeiro a de juros mais altos (rotativo do cartão e cheque especial são os piores), pagando o mínimo nas outras. 3) Negocia: banco e loja costumam dar desconto grande pra quitar, e tem feirão no Serasa Limpa Nome e no Desenrola. 4) Troca dívida cara por uma mais barata, se der (consignado ou portabilidade), sempre comparando o CET. 5) Enquanto isso, nada de dívida nova: guarda o cartão de crédito na gaveta. Quer que eu te ajude a montar o plano? Me fala quanto entra por mês.',
+        cru: true, sugestoes: ['O que é rotativo do cartão?', 'O que é CET?', 'O que é portabilidade?'],
+      };
     case 'metodos_poupar': {
       // 2.3.3 (JF): os métodos mais falados, com a conta feita na entrada da pessoa; criança ganha os 3 cofrinhos
       const idade = idadeDe(perfil?.aniversario, today);
