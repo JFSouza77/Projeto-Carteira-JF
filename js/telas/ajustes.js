@@ -113,7 +113,7 @@ export function renderBudgets() {
 
 export const FOCO_DESC = Object.freeze({
   financas: 'Ele só responde o que for de dinheiro: gastos, contas, preços, metas e planos. O resto ele manda pro Google, com jeitinho.',
-  livre: 'Ele também conversa sobre outros assuntos com a IA online, sempre puxando pro lado do dinheiro quando dá.',
+  livre: 'Ele também bate papo sobre outros assuntos com a IA online. Pesquisa de curiosidade (filme, futebol, capital…) ele indica o ChatGPT, o Gemini, o Copilot ou o Claude: é uma IA de bolso.',
 });
 
 export async function renderSettings() {

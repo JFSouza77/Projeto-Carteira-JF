@@ -101,7 +101,7 @@ const FORA_DO_FOCO = Object.freeze([
   'Boa pergunta, mas eu sou do time das finanças. Pergunta pro Google que ele sabe. Enquanto isso: quer ver como está o seu mês?',
   'Aí você me pegou fora da minha área! Eu cuido do seu dinheiro: gastos, contas, metas e planos. Pra essa, melhor uma busca na internet.',
   'Eu até queria saber, mas meu cérebro é todo de finanças. Pra essa, vale o Google. Se tiver algo de dinheiro no meio, me conta que eu ajudo.',
-  'Isso não é bem a minha praia: eu sou o parceiro do seu bolso. Se quiser que eu responda de tudo um pouco, liga o "Papo livre" em Ajustes. Fora isso, bora pras contas?',
+  'Isso não é bem a minha praia: eu sou o parceiro do seu bolso. Se quiser só bater papo comigo, liga o "Papo livre" em Ajustes. Fora isso, bora pras contas?',
 ]);
 /** Resposta sem IA pra pergunta fora do foco. Desabafo ganha acolhimento, não "pergunta pro Google". */
 export function respostaForaDoFoco(texto, rng = Math.random) {
@@ -109,6 +109,33 @@ export function respostaForaDoFoco(texto, rng = Math.random) {
     return 'Poxa, sinto muito. Eu não sou bom de conselho do coração, mas tô aqui. Se o peso estiver grande, o CVV atende de graça no 188, a qualquer hora. E uma dica de amigo: nada de decisão de dinheiro no calor da emoção (compra por impulso, pagar coisa por alguém). Quando quiser, a gente cuida das finanças junto.';
   }
   return FORA_DO_FOCO[Math.floor(rng() * FORA_DO_FOCO.length) % FORA_DO_FOCO.length];
+}
+
+// ---------- Papo livre com freio (2.3.3.4, JF 17/11) ----------
+// JF: "papo livre não é ficar respondendo filme em cartaz, times de futebol, capital de país: gasta crédito à toa e
+// ele perde o foco". No Papo livre ele conversa (como você está, desabafo, opinião, brincadeira), mas pergunta de
+// curiosidade/pesquisa sem nada de dinheiro não vai pra IA: ele indica um chat de uso geral e volta pro bolso.
+// pergunta direta (qual, quem, onde…) conta como pesquisa, menos quando é sobre ele ("qual sua comida favorita?" é papo)
+const INTERROGA = /\b(qual|quais|quem|onde|quando|quantos|quantas|que horas|que dia|em que ano)\b/;
+const SOBRE_ELE = /\b(voce|vc|seu|sua|seus|suas|tu|te|caos)\b/;
+const PESQUISA_GERAL = /\b(capita(l|is)|pais|paises|estado|cidade|distancia|km de|filmes?|cartaz|cinema|series?|novelas?|episodio|temporada|atores?|atriz|elenco|diretor|produtor\w*|musicas?|cantor\w*|banda|album|letra da|times?|futebol|campeonato|brasileirao|copa|jogo de ontem|placar|escalacao|jogador\w*|tabela|classificacao|receita de|como (se )?(faz|fazer|cozinha)|historia d[aoe]|guerra|presidente|governador|prefeito|eleic\w*|traduz\w*|traducao|em ingles|significa|significado|definicao|previsao do tempo|clima|temperatura|horoscopo|signo|curiosidade sobre|me (conta|fala|explica) (sobre|quem|o que|como)|o que (e|eh|foi|aconteceu)|por que o|porque o|resumo d[aoe]|livro|autor|planeta|universo|animal|doenca|sintoma|remedio|codigo|programa(r|cao)|python|javascript)\b/;
+/** No Papo livre: é pergunta de pesquisa geral (sem dinheiro), daquelas que um chat comum responde melhor? */
+export function perguntaDePesquisaGeral(texto) {
+  const t = norm(texto);
+  const pesquisa = PESQUISA_GERAL.test(t) || (INTERROGA.test(t) && !SOBRE_ELE.test(t));
+  return pesquisa && !assuntoDeDinheiro(texto) && !SENTIMENTO.test(t);
+}
+// 5 jeitos de indicar outro chat (regra do 0 ou 5)
+const PAPO_LIVRE_FREIO = Object.freeze([
+  'Gosto do papo, mas nessa eu não sou o melhor guia: sou só uma IA de bolso, feita pras suas finanças. Pra esse tipo de pergunta, o ChatGPT, o Gemini, o Copilot ou o Claude (que é excelente nisso) resolvem bem. Se tiver dinheiro no meio, volta aqui!',
+  'Ih, essa é de enciclopédia! Eu sou uma IA de bolso, meu forte é o seu dinheiro. Pra curiosidade assim, vai de ChatGPT, Gemini, Copilot ou Claude. Enquanto isso, quer ver como está o seu mês?',
+  'Eu até bato papo, mas pesquisa de tudo um pouco não é comigo: gastaria crédito à toa e eu perderia o foco. Pergunta pro ChatGPT, pro Gemini, pro Copilot ou pro Claude. O que for de bolso, pode mandar pra mim!',
+  'Boa pergunta, mas eu sou só uma IA de bolso, aqui pra cuidar das suas finanças. Pra isso, um chat de uso geral (ChatGPT, Gemini, Copilot ou Claude) te ajuda muito melhor. Tem gasto pra anotar?',
+  'Nessa eu passo a bola: quem manda bem é o ChatGPT, o Gemini, o Copilot ou o Claude. Eu sou o parceiro do seu bolso e prefiro guardar a energia pras suas contas. Bora?',
+]);
+/** Resposta sem IA pra pergunta de pesquisa geral no Papo livre. */
+export function respostaPapoLivre(rng = Math.random) {
+  return PAPO_LIVRE_FREIO[Math.floor(rng() * PAPO_LIVRE_FREIO.length) % PAPO_LIVRE_FREIO.length];
 }
 
 // ---------- Fezinha: loterias (2.3.0.1, JF 17/11) ----------

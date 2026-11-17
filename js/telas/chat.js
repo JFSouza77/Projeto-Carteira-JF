@@ -7,7 +7,7 @@ import { FORMAS, formaPara, rostoDaForma } from '../avatar.js';
 import { IDENTIDADE, SUGESTOES, comoChamar, conversar, curiosidadeDoGasto, humorParaIA, emocaoDoMomento, rostoAvulso } from '../caos/index.js';
 import { accountLabel, createTransferencia, depoisDoSaldo, marcarRecebido, editarConta, editarLancamento, formatBRL, sugerirCategoria, toISODate } from '../engine.js';
 import * as conta from '../conta.js';
-import { assuntoDeDinheiro, lerPagamento, respostaForaDoFoco, seguirPagamento } from '../caos/conversa.js';
+import { assuntoDeDinheiro, lerPagamento, perguntaDePesquisaGeral, respostaForaDoFoco, respostaPapoLivre, seguirPagamento } from '../caos/conversa.js';
 import * as db from '../db.js';
 import { falar, falaTerminou } from '../voz.js';
 import { fraseDoPrint, resumoDoPrint } from '../caos/ofertas.js';
@@ -126,8 +126,11 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
   // 2.3.1 (JF, 17/11: "o pessoal pode perder o foco e usar o C.A.O.S. como chatbot comum"): no foco "Só finanças"
   // (padrão), pergunta sem nada de dinheiro não vai pra IA; ele responde aqui e puxa de volta pro bolso. A pesquisa que
   // o próprio C.A.O.S. montou (planos, combustível, piso…) segue normal.
-  if (!fala.entendeu && !fala.perguntaIA && focoAtual() === 'financas' && !assuntoDeDinheiro(t)) {
-    const texto = respostaForaDoFoco(t);
+  // 2.3.3.4 (JF, 17/11): no "Papo livre" ele conversa, mas pesquisa de tudo um pouco (filme em cartaz, time, capital)
+  // não vai pra IA: gasta crédito à toa e tira o foco. Ele indica um chat de uso geral e volta pro bolso.
+  const foraDoFoco = !fala.entendeu && !fala.perguntaIA && (focoAtual() === 'financas' ? !assuntoDeDinheiro(t) : perguntaDePesquisaGeral(t));
+  if (foraDoFoco) {
+    const texto = focoAtual() === 'financas' ? respostaForaDoFoco(t) : respostaPapoLivre();
     await respiro(texto);
     addMsg({ de: 'caos', texto, sugestoes: ['Quanto gastei este mês?', 'Me dá uma dica', 'O que é juros compostos?'], rosto: fala.rosto, assunto: 'fora_do_foco' });
     pintarRosto(fala.rosto);
