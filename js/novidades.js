@@ -8,6 +8,7 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.3.1 Alfa',
+    ate: '2.3.1.1',
     data: '17/11/2026',
     nome: 'Foco',
     t: 'O C.A.O.S. fica no que importa: o seu dinheiro. E o Início ficou mais calmo de olhar.',
@@ -17,7 +18,11 @@ export const NOVIDADES = Object.freeze([
       '🫂 Dia difícil: num desabafo, ele acolhe e lembra de não decidir dinheiro no calor da emoção.',
       '🎨 Início mais calmo: menos cor e menos brilho. A cor agora só aparece no que importa: alerta, sobra e o próximo passo.',
     ],
-    qol: [],
+    qol: [
+      '💲 Quanto custa: no Chat, pergunte "em média quanto custa tirar a CNH?". Ele responde curto e pergunta se é plano seu.',
+      '☕ Gastando demais: no Chat, diga "tô gastando demais com cafezinho" e ele mostra quantas vezes e quanto foi no mês.',
+      '🚗 Trânsito no glossário: multa, CNH, emplacamento, transferência de veículo e hospedagem de viagem.',
+    ],
   },
   {
     v: '2.3.0 Alfa',

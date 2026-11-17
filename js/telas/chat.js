@@ -150,7 +150,8 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
       await anotarUso(ia.motivoDaIA(fala));
       iaRecentes.set(chaveIA, { texto: resposta, em: Date.now() });
       state.chat = state.chat.filter(m => !m.temp);
-      addMsg({ de: 'caos', texto: resposta, ia: true, sugestoes: SUGESTOES.slice(0, 5), rosto: fala.rosto });
+      // 2.3.2: depois da média pesquisada, os botões de "quer juntar pra isso?" / "só curiosidade"
+      addMsg({ de: 'caos', texto: resposta, ia: true, sugestoes: fala.intent === 'custo_medio' ? fala.sugestoes : SUGESTOES.slice(0, 5), rosto: fala.rosto });
       pintarRosto(fala.rosto);
       if (state.settings.voice) falar(trocarNome(resposta, state.perfil?.apelido).replace(/\*\*/g, ''));
       return;
