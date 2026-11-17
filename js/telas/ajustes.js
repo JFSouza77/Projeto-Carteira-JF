@@ -11,6 +11,7 @@ import * as db from '../db.js';
 import { ditadoDisponivel, vozDisponivel } from '../voz.js';
 import { formatBRL, parseAmount, toISODate, validarBackup, zerarSaldos } from '../engine.js';
 import * as lembretes from '../notificacoes.js';
+import { focoAtual } from './chat.js';
 import { descreverUsoIA } from '../ia.js';
 import { prepararFormCompromisso, renderMetas } from './mes.js';
 import { renderInvestimentos } from './contas.js';
@@ -110,11 +111,20 @@ export function renderBudgets() {
     </li>`).join('');
 }
 
+export const FOCO_DESC = Object.freeze({
+  financas: 'Ele só responde o que for de dinheiro: gastos, contas, preços, metas e planos. O resto ele manda pro Google, com jeitinho.',
+  livre: 'Ele também conversa sobre outros assuntos com a IA online, sempre puxando pro lado do dinheiro quando dá.',
+});
+
 export async function renderSettings() {
   prepararFormCompromisso();
   $('#mood-options').innerHTML = Object.entries(MOODS).map(([id, label]) => `
     <label><input type="radio" name="mood" value="${id}" ${state.settings.mood === id ? 'checked' : ''}><span>${label}</span></label>`).join('');
   $('#voice-toggle').checked = state.settings.voice;
+  // 2.3.1 (JF): foco da conversa
+  const foco = focoAtual();
+  for (const r of document.querySelectorAll('input[name="iafoco"]')) r.checked = r.value === foco;
+  $('#iafoco-desc').textContent = FOCO_DESC[foco];
   for (const r of document.querySelectorAll('input[name="letra"]')) r.checked = r.value === (state.settings.letra || 'normal');
   for (const r of document.querySelectorAll('input[name="tema"]')) r.checked = r.value === (state.settings.tema || 'auto');
   for (const r of document.querySelectorAll('input[name="estilo"]')) r.checked = r.value === (state.settings.estilo || 'atual');

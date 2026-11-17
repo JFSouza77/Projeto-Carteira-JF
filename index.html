@@ -649,6 +649,15 @@
           <legend>Humor</legend>
           <div class="segmented" id="mood-options"></div>
         </fieldset>
+        <!-- 2.3.1 (JF, 17/11): foco da conversa. "Só finanças" é o padrão; "Papo livre" deixa a IA responder de tudo um pouco -->
+        <fieldset class="mood">
+          <legend>Foco da conversa</legend>
+          <div class="segmented dois">
+            <label><input type="radio" name="iafoco" value="financas"><span>💰 Só finanças</span></label>
+            <label><input type="radio" name="iafoco" value="livre"><span>💬 Papo livre</span></label>
+          </div>
+          <p class="muted small" id="iafoco-desc"></p>
+        </fieldset>
         <label class="switch"><input type="checkbox" id="voice-toggle"><span>Voz do C.A.O.S.</span></label>
         <!-- 2.1.7 (JF, 17/11): voz natural da Microsoft (Azure), igual ao Perfil -->
         <p class="muted small">Com a IA online ligada, ele fala com uma voz natural (Microsoft), e a boca mexe junto. Pro servidor vai só o texto da fala. Sem internet, ele usa a voz do celular.</p>

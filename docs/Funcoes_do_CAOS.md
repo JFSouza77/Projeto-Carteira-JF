@@ -79,6 +79,7 @@ Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o q
 | Trabalho e renda | "recebi 800 de plantão" / "qual o piso de enfermeiro?" / "qual o salário mínimo?" / "qual o PIB do Brasil?" / "como peço mesada?" | Plantão vira extra (e lembra de descansar se forem muitos) 🖥️; piso pesquisado 🌐; salário mínimo, PIB e mesada 🖥️ |
 | Foto com legenda | clipe no Chat + "comprei esse tênis por 250" | Comprovante: a IA lê; foto do que comprou: a legenda vira o lançamento, com a foto junto 🖥️ |
 | Fezinha (loteria) | "joguei 6 na mega" / "quais as chances da quina?" / "quanto tá o prêmio da Mega da Virada?" / "quanto gastei com fezinha?" | Anota em Lazer com o nome do jogo e o total do mês 🖥️; chance de verdade 🖥️; prêmio e sorteio 🌐 |
+| Foco da conversa | Ajustes → C.A.O.S. → "Só finanças" (padrão) ou "Papo livre" | No foco, pergunta sem dinheiro não vai pra IA: ele responde amigável e manda pro Google; desabafo ganha acolhimento + CVV 188 🖥️ |
 | Moedas de jogo | "quanto tá valendo 100 robux?" | A moeda, onde comprar, preço de hoje e alerta de golpe 🖥️/🌐 |
 
 ## 4. Aprender
