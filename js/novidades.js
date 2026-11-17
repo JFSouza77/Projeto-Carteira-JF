@@ -7,6 +7,19 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.1.8 Alfa',
+    data: '17/11/2026',
+    nome: 'Sabedoria',
+    t: 'Todo dia de manhã, uma frase de quem entende de dinheiro, e ditados e curiosidades no Chat.',
+    itens: [
+      '🌅 Frase do dia: de manhã, ao abrir o app, o C.A.O.S. traz no Início uma frase de um pensador ou investidor.',
+      '💪 Me motiva: no Chat, peça "me manda uma frase de motivação" e ele traz uma de gente como Buffett ou Sêneca.',
+      '👴 Ditados: no Chat, peça "me conta um ditado" e ele explica o que o ditado quer dizer pro seu bolso.',
+      '💡 Curiosidades: no Chat, peça "me conta uma curiosidade" e aprenda de onde veio o cofrinho de porco, o Pix e mais.',
+    ],
+    qol: [],
+  },
+  {
     v: '2.1.7 Alfa',
     ate: '2.1.7.2',
     data: '17/11/2026',

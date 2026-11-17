@@ -719,6 +719,100 @@ export const GERADORES = {
     },
   },
 
+  // Frase do dia, ditados e curiosidades (JF, 17/11: "todo dia de manhã uma frase de motivação de um pensador,
+  // investidor ou milionário; e no Chat, me conta um ditado, um provérbio, uma curiosidade. Pra criança aprender de modo
+  // lúdico"). Só frase que a pessoa disse ou escreveu; quando a autoria é incerta, ele diz "atribuída a".
+  frase_do_dia: {
+    moldes: ['{abre} {frase}'],
+    abre: {
+      geral: ['Frase do dia:', 'Pra começar o dia:', 'Um pensamento pra hoje:', 'Pra levar no bolso hoje:', 'Bom dia! Olha essa:'],
+    },
+    frase: {
+      geral: [
+        "“Regra número 1: nunca perca dinheiro. Regra número 2: nunca esqueça a regra número 1.” (Warren Buffett, investidor)",
+        "“Preço é o que você paga. Valor é o que você leva.” (Warren Buffett, investidor)",
+        "“Não poupe o que sobra depois de gastar: gaste o que sobra depois de poupar.” (frase muito atribuída a Warren Buffett)",
+        "“Cuidado com as pequenas despesas: um pequeno vazamento afunda um grande navio.” (Benjamin Franklin, inventor e escritor)",
+        "“Quem compra o que não precisa logo vai vender o que precisa.” (Benjamin Franklin, inventor e escritor)",
+        "“Investir em conhecimento rende os melhores juros.” (atribuída a Benjamin Franklin)",
+        "“Não é pobre quem tem pouco, mas quem deseja mais.” (Sêneca, filósofo romano)",
+        "“Se quer fazer alguém rico, não aumente o dinheiro dele: diminua os desejos dele.” (Epicuro, filósofo grego)",
+        "“O dinheiro é um ótimo empregado, mas um péssimo patrão.” (atribuída a Francis Bacon, filósofo inglês)",
+        "“Não importa quanto dinheiro você ganha, e sim quanto você guarda.” (Robert Kiyosaki, autor de Pai Rico, Pai Pobre)",
+        "“Riqueza é o que você não vê”: o carro que não comprou, o dinheiro que ficou guardado. (ideia de Morgan Housel, em A Psicologia Financeira)",
+        "“Os juros compostos são a oitava maravilha do mundo.” Dizem que foi Einstein, mas nunca acharam prova. Verdade ou não, a ideia vale ouro.",
+        "“A bolsa transfere dinheiro dos impacientes para os pacientes.” (atribuída a Warren Buffett)",
+        "“Uma parte de tudo o que você ganha é sua pra guardar.” (O Homem Mais Rico da Babilônia, de George Clason)",
+        "“Quem é rico? Quem se contenta com o que tem.” (Ética dos Pais, texto judaico antigo)",
+      ],
+    },
+  },
+  motivacao: {
+    moldes: ['{abre} {frase}'],
+    abre: {
+      geral: ['Toma essa:', 'Guarda essa:', 'Uma frase que eu adoro:', 'Olha que bonita:', 'Essa vale ouro:'],
+    },
+    frase: {
+      geral: [
+        "“Regra número 1: nunca perca dinheiro. Regra número 2: nunca esqueça a regra número 1.” (Warren Buffett, investidor)",
+        "“Preço é o que você paga. Valor é o que você leva.” (Warren Buffett, investidor)",
+        "“Não poupe o que sobra depois de gastar: gaste o que sobra depois de poupar.” (frase muito atribuída a Warren Buffett)",
+        "“Cuidado com as pequenas despesas: um pequeno vazamento afunda um grande navio.” (Benjamin Franklin, inventor e escritor)",
+        "“Quem compra o que não precisa logo vai vender o que precisa.” (Benjamin Franklin, inventor e escritor)",
+        "“Investir em conhecimento rende os melhores juros.” (atribuída a Benjamin Franklin)",
+        "“Não é pobre quem tem pouco, mas quem deseja mais.” (Sêneca, filósofo romano)",
+        "“Se quer fazer alguém rico, não aumente o dinheiro dele: diminua os desejos dele.” (Epicuro, filósofo grego)",
+        "“O dinheiro é um ótimo empregado, mas um péssimo patrão.” (atribuída a Francis Bacon, filósofo inglês)",
+        "“Não importa quanto dinheiro você ganha, e sim quanto você guarda.” (Robert Kiyosaki, autor de Pai Rico, Pai Pobre)",
+        "“Riqueza é o que você não vê”: o carro que não comprou, o dinheiro que ficou guardado. (ideia de Morgan Housel, em A Psicologia Financeira)",
+        "“Os juros compostos são a oitava maravilha do mundo.” Dizem que foi Einstein, mas nunca acharam prova. Verdade ou não, a ideia vale ouro.",
+        "“A bolsa transfere dinheiro dos impacientes para os pacientes.” (atribuída a Warren Buffett)",
+        "“Uma parte de tudo o que você ganha é sua pra guardar.” (O Homem Mais Rico da Babilônia, de George Clason)",
+        "“Quem é rico? Quem se contenta com o que tem.” (Ética dos Pais, texto judaico antigo)",
+      ],
+    },
+  },
+  ditado: {
+    moldes: ['{abre} {ditado}'],
+    abre: {
+      geral: ['Lá vai um ditado:', 'Como dizia a vovó:', 'O povo já sabia:', 'Ditado bom de dinheiro:', 'Esse é antigo, mas é ouro:'],
+    },
+    ditado: {
+      geral: [
+        "\"De grão em grão, a galinha enche o papo.\" Um pouquinho guardado todo dia vira muito no fim do ano.",
+        "\"O barato sai caro.\" O mais barato que quebra logo acaba custando duas vezes.",
+        "\"Dinheiro não dá em árvore.\" Cada real vem do seu tempo e do seu trabalho: gasta com carinho.",
+        "\"Não ponha todos os ovos na mesma cesta.\" Dividir o dinheiro em lugares diferentes diminui o risco.",
+        "\"Mais vale um pássaro na mão do que dois voando.\" O dinheiro certo de hoje vale mais que a promessa de amanhã.",
+        "\"Tempo é dinheiro.\" Quem escreveu isso foi Benjamin Franklin, em 1748, num conselho pra um jovem comerciante.",
+        "\"Devagar se vai ao longe.\" Guardar pouco, mas sempre, ganha de guardar muito uma vez só.",
+        "\"Quem guarda, tem.\" A reserva é o que te salva quando o imprevisto aparece.",
+        "\"Cautela e caldo de galinha não fazem mal a ninguém.\" Pensar um dia antes de comprar nunca fez mal a ninguém.",
+        "\"Quem não tem cão, caça com gato.\" Não dá pra guardar 500? Guarda 10. O hábito vale mais que o valor.",
+      ],
+    },
+  },
+  curiosidade_fin: {
+    moldes: ['{abre} {fato}'],
+    abre: {
+      geral: ['Sabia que…', 'Curiosidade:', 'Olha que legal:', 'Essa você vai contar pros outros:', 'Fato curioso:'],
+    },
+    fato: {
+      geral: [
+        "Warren Buffett, um dos homens mais ricos do mundo, comprou a primeira ação aos 11 anos. Começar cedo e com pouco faz diferença!",
+        "Silvio Santos começou como camelô nas ruas do Rio de Janeiro, vendendo capinhas pra título de eleitor. Ninguém começa grande.",
+        "A Amazon começou em 1994, numa garagem, vendendo só livros pela internet.",
+        "Pra abrir a Apple, em 1976, Steve Jobs vendeu a Kombi dele e Steve Wozniak vendeu a calculadora. Às vezes o começo é o que dá.",
+        "A moeda mais antiga que se conhece veio da Lídia, onde hoje é a Turquia, uns 600 anos antes de Cristo.",
+        "A história mais contada é que a palavra \"salário\" vem do sal, que valia muito na Roma antiga e ajudava a conservar a comida.",
+        "O Pix chegou em novembro de 2020 e, em poucos anos, virou o jeito de pagar mais usado do Brasil.",
+        "O Real nasceu em julho de 1994. Em 1993, os preços no Brasil subiram mais de 2.000% num ano só!",
+        "O cofrinho tem cara de porco por causa de um barro antigo chamado \"pygg\", usado pra fazer potes de guardar moeda.",
+        "Guardando R$ 100 por mês, rendendo 0,8% ao mês, em 30 anos você junta mais de R$ 200 mil, e só R$ 36 mil saíram do seu bolso. É a mágica dos juros compostos.",
+      ],
+    },
+  },
+
   // Efeito formiguinha (JF, 16/11): a cada 10 gastinhos de até R$ 30 no mês, o aviso com o total (o número assusta mais
   // que cada gasto). Alerta leve: traz o número e um empurrão útil.
   formiguinha: {

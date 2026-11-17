@@ -1,7 +1,7 @@
 # Funções do C.A.O.S. (pra revisar)
 
 Lista feita pelo Wally em 16/11/2026, tirada do código (`js/caos/conversa.js`, função `entender()`).
-App 2.1.5 Alfa · C.A.O.S. 2.4.0 · núcleo 1.8.0. São **69 jeitos de entender** uma frase, em 7 grupos.
+App 2.1.5 Alfa · C.A.O.S. 2.4.3 · núcleo 1.8.0. São **69 jeitos de entender** uma frase, em 7 grupos.
 
 Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o que ele faz.
 - 🖥️ = responde sem internet (no próprio celular).
@@ -108,6 +108,9 @@ Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o q
 | --- | --- | --- |
 | Oi / obrigado / elogio | "oi", "valeu", "você é demais" | Responde no seu humor 🖥️ |
 | Piada | "conta uma piada" | Piada de finanças 🖥️ |
+| Frase de motivação | "me motiva", "me manda uma frase de motivação" | Frase de pensador ou investidor (e uma por dia, de manhã, no Início) 🖥️ |
+| Ditado | "me conta um ditado" | Ditado popular e o que ele quer dizer pro bolso 🖥️ |
+| Curiosidade | "me conta uma curiosidade" | Curiosidade de dinheiro (cofrinho, Pix, Buffett…) 🖥️ |
 | Apelido de amigo | "fala, corno" | Entende como carinho 🖥️ |
 | Xingamento | "burro" | Reage, com paciência em escada; se tiver pergunta junto, responde 🖥️ |
 | Desabafo | "krlh, tô sem grana" | Acolhe 🖥️ |
