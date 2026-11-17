@@ -8,15 +8,19 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.3.5 Alfa',
+    ate: '2.3.5.1',
     data: '17/11/2026',
     nome: 'Pé no Chão',
     t: 'O C.A.O.S. deixa claro o que pesquisa, quanto pesquisa por dia e o que fica com você.',
     itens: [
-      '🎚️ Pesquisa em níveis: preço rápido até 5 por dia; tecnologia, viagem e link de loja, 1 por dia.',
+      '🎚️ Pesquisa em níveis: preço rápido até 7 por dia; tecnologia, passagem e link de loja, 1 por dia.',
       '❓ Pergunte os limites: no Chat, diga "o que você pode pesquisar?" e ele explica o que faz e o que não faz.',
       '🏋️ Academia no Chat: diga "quero me inscrever numa academia" e ele pergunta tipo, bairro e orçamento.',
     ],
-    qol: [],
+    qol: [
+      '✈️ Viagem no ponto: no Chat, ele acha a passagem que cabe no seu bolso e ensina o caminho pro hotel.',
+      '😏 Humor com tempero: no Normal e no Ácido ele implica antes de ajudar; no Suave, só gentileza.',
+    ],
   },
   {
     v: '2.3.4 Alfa',
