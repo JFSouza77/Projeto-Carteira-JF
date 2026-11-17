@@ -7,6 +7,21 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.2.0 Alfa',
+    data: '17/11/2026',
+    nome: 'Carro e Casa',
+    t: 'O C.A.O.S. agora faz a conta do km por litro do carro e do kWh da conta de luz.',
+    itens: [
+      '🚗 Km por litro: no Chat, diga "rodei 400 km com 40 litros a 6,20" e veja o consumo e o custo de cada km.',
+      '🔧 Hora do mecânico: se o carro estiver bebendo demais, o C.A.O.S. avisa quanto isso custa e o que olhar.',
+      '📅 Custo do mês: no Chat, diga "rodei 1200 km este mês" e ele soma os abastecimentos que você anotou.',
+      '💡 Conta de luz: no Chat, diga "minha conta deu 250 com 300 kwh" e ele mostra quanto custa cada kWh.',
+      '🚿 Quanto gasta: no Chat, pergunte "quanto gasta um chuveiro 20 minutos por dia" e veja o kWh e os reais do mês.',
+      '📖 Glossário novo: gasolina comum, aditivada, Grid, premium, diesel, etanol, kWh e mais, pra adulto e criança.',
+    ],
+    qol: [],
+  },
+  {
     v: '2.1.9 Alfa',
     ate: '2.1.9.2',
     data: '17/11/2026',

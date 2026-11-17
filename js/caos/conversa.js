@@ -79,6 +79,77 @@ function acharPeriodo(t) {
   return 'mes';
 }
 
+// ---------- Carro e casa: km por litro e kWh (2.1.9.3, JF 17/11) ----------
+// "Recomenda ir ao mecânico caso o carro esteja gastando muito; ajuda a calcular a quilometragem por litro ao longo do
+// mês ou da semana; e o kWh nas contas de energia da casa." Contas feitas aqui, sem IA.
+const NUM = '(\\d+(?:[.,]\\d+)?)';
+const num = x => Number(String(x).replace(/\.(?=\d{3}\b)/g, '').replace(',', '.'));
+/** "rodei 400 km com 40 litros a 6,20" → { km, litros, kml, precoLitro, gasto, tipo, moto } (centavos no preço e no gasto). */
+export function lerConsumo(t) {
+  const kmlM = t.match(new RegExp(`${NUM}\\s*km\\s*(?:/|por)\\s*(?:l|lt|litro)\\b`));
+  const precoM = t.match(/(\d{1,2}[.,]\d{2,3})\s*(?:reais\s*)?(?:o|no|por|cada)\s*litro|litro\s*(?:a|por|de|custa|custou|ta|esta|saiu)?\s*(?:r\$\s*)?(\d{1,2}[.,]\d{2,3})/);
+  const semKml = kmlM ? t.replace(kmlM[0], ' ') : t;
+  // "40 litros a 6,20": com litros no texto, um número com centavos depois de "a/por/de" é o preço do litro
+  const precoSolto = !precoM && /\d\s*(l|lt|lts|litros?)\b/.test(t) ? t.match(/\b(?:a|por)\s*(?:r\$\s*)?(\d{1,2}[.,]\d{2,3})\b/) : null;
+  const kmM = semKml.match(new RegExp(`${NUM}\\s*(?:km|kms|quilometros?)\\b`));
+  const litrosM = semKml.match(new RegExp(`${NUM}\\s*(?:l|lt|lts|litros?)\\b`));
+  let resto = t;
+  for (const m of [kmlM, precoM, precoSolto, kmM, litrosM]) if (m) resto = resto.replace(m[0], ' ');
+  const gasto = /(gastei|paguei|abasteci|coloquei|botei|r\$|reais|\bde gasolina|\bde etanol)/.test(resto) ? acharValor(resto) : null;
+  return {
+    km: kmM ? num(kmM[1]) : null, litros: litrosM ? num(litrosM[1]) : null, kml: kmlM ? num(kmlM[1]) : null,
+    precoLitro: precoM ? Math.round(num(precoM[1] || precoM[2]) * 100) : precoSolto ? Math.round(num(precoSolto[1]) * 100) : null, gasto: gasto || null,
+    tipo: /\b(etanol|alcool)\b/.test(t) ? 'etanol' : /\bdiesel\b/.test(t) ? 'diesel' : 'gasolina', moto: /\bmotos?\b/.test(t),
+  };
+}
+const CONSUMO_PEDE = /(km por litro|km\/l\b|km l\b|quantos km (o |meu |ele )?(carro |moto )?(faz|anda|roda)|consumo (do|da|de) (meu |minha )?(carro|moto)|(carro|moto) (ta |esta )?(gastando|bebendo|consumindo|puxando) (muito|demais)|calcul\w* (o |a )?(consumo|media|quilometragem)|media de consumo|quanto (meu |o )?(carro|moto) (faz|gasta|consome) por (km|quilometro|litro)|custo por (km|quilometro))/;
+// referência de km/l abaixo da qual vale olhar o carro (carro de passeio comum; moto bem mais)
+const KML_MINIMO = { gasolina: 8, etanol: 5.5, diesel: 7 };
+
+// Aparelhos de casa: potência típica (W) ou consumo fixo no mês (kWh, os que ficam sempre ligados). 15 itens.
+export const APARELHOS = Object.freeze([
+  { nome: 'chuveiro', re: /chuveiro/, w: 5500 },
+  { nome: 'ar-condicionado', re: /ar ?condicionado|\bar\b.*\bbtus?\b|split/, w: 1000 },
+  { nome: 'aquecedor', re: /aquecedor/, w: 1500 },
+  { nome: 'micro-ondas', re: /micro ?-?ondas/, w: 1200 },
+  { nome: 'forno elétrico', re: /forno eletrico|forno/, w: 1500 },
+  { nome: 'air fryer', re: /air ?fryer|fritadeira/, w: 1500 },
+  { nome: 'ferro de passar', re: /ferro( de passar)?/, w: 1000 },
+  { nome: 'secador', re: /secador/, w: 1200 },
+  { nome: 'máquina de lavar', re: /maquina de lavar|lava ?roupas?|lavadora/, w: 500 },
+  { nome: 'geladeira', re: /geladeira|refrigerador/, kwhMes: 35 },
+  { nome: 'freezer', re: /freezer/, kwhMes: 45 },
+  { nome: 'TV', re: /\btv\b|televisao|televisor/, w: 100 },
+  { nome: 'computador', re: /computador|\bpc\b|videogame|playstation|xbox/, w: 250 },
+  { nome: 'notebook', re: /notebook|laptop/, w: 60 },
+  { nome: 'ventilador', re: /ventilador/, w: 80 },
+]);
+const TARIFA_EXEMPLO = 85; // centavos por kWh: média de exemplo, com impostos (cada conta tem a sua)
+/** "chuveiro de 5500w 20 minutos por dia", "minha conta deu 250 com 300 kwh" → números da conta de energia. */
+export function lerEnergia(t) {
+  const kwhM = t.match(new RegExp(`${NUM}\\s*(?:kwh|kw ?/ ?h|kw h|quilowatts? ?hora|kilowatts? ?hora)\\b`));
+  const kwM = t.match(new RegExp(`${NUM}\\s*(?:kw|quilowatts?|kilowatts?)\\b(?!\\s*/?\\s*h)`));
+  const wM = t.match(new RegExp(`${NUM}\\s*(?:w|watts?)\\b`));
+  const btuM = t.match(/(\d{1,2}(?:\.?\d{3}))\s*btus?\b/);
+  const hM = t.match(new RegExp(`${NUM}\\s*(?:h|hs|horas?)\\b`));
+  const minM = t.match(/(\d{1,3})\s*(?:min|mins|minutos?)\b/);
+  const diasM = t.match(/(\d{1,2})\s*dias\b/);
+  const tarifaM = t.match(/(\d[.,]\d{1,3})\s*(?:reais\s*)?(?:o|por|cada|no|de)?\s*(?:kwh|kw ?\/ ?h|kw h)\b|tarifa (?:de |e |eh |ta |esta )?(?:r\$\s*)?(\d[.,]\d{1,3})/);
+  let resto = t;
+  for (const m of [tarifaM, kwhM, kwM, wM, btuM, hM, minM, diasM]) if (m) resto = resto.replace(m[0], ' ');
+  const aparelho = APARELHOS.find(a => a.re.test(t)) || null;
+  let w = kwM ? num(kwM[1]) * 1000 : wM ? num(wM[1]) : btuM ? Math.round(num(btuM[1]) * 0.09) : aparelho?.w ?? null;
+  const horasDia = hM ? num(hM[1]) : minM ? num(minM[1]) / 60 : null;
+  return {
+    kwh: kwhM ? num(kwhM[1]) : null, w, wInformado: !!(kwM || wM || btuM), horasDia, dias: diasM ? Number(diasM[1]) : 30,
+    tarifa: tarifaM ? Math.round(num(tarifaM[1] || tarifaM[2]) * 100) : null, aparelho,
+    conta: /(conta|paguei|deu|veio|gastei|r\$|reais)/.test(resto) ? acharValor(resto) : null,
+  };
+}
+const ENERGIA_PEDE = /(quanto (gasta|consome|custa|puxa|pesa)|gasta muito|consome muito|consumo|na conta de luz|conta de luz|energia|por mes|quanto sai|quanto fica|ligad[oa])/;
+const fmtKwh = v => `${Number(v.toFixed(1)).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} kWh`;
+const fmtKm = v => Number(v.toFixed(1)).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+
 // ---------- Professor de finanças: calculadoras (13/11) ----------
 
 /** "juros compostos de 1000 a 1% por 12 meses" → { tipo, valor, taxa (fração ao mês), meses }. */
@@ -545,6 +616,23 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   const pergunta = /\b(quanto|qual|quais|onde|como|tive|teve|tenho|vai|posso|consigo|algum|alguma)\b|\?/.test(t);
 
   if (!t) return { ...r, intent: 'nao_entendi' };
+  // Carro e casa (2.1.9.3, JF 17/11): termo de combustível/energia é glossário; km por litro e kWh, conta aqui.
+  {
+    const termoCE = acharTermo(t);
+    const ehCE = termoCE && /^(Gasolina|Diesel|Etanol|Consumo do carro|Hodômetro|kWh|Potência)/.test(termoCE.termo);
+    if (ehCE && !/\d/.test(t.replace(/\bs(10|500)\b/g, ' ')) && /(o que (e|sao|significa|quer dizer)|\bque (e|sao)\b|diferenca|explica|me ensina|como funciona|serve|vale a pena|compensa|e melhor|faz bem|faz mal|ouvi falar|nunca entendi)/.test(t)) {
+      return { ...r, categoria: null, intent: 'glossario', termo: termoCE, quem: null };
+    }
+    const cons = lerConsumo(t);
+    if ((cons.km && cons.litros) || cons.kml || (cons.km && /\b(rodei|andei|percorri|rodo|ando|rodamos|andamos)\b/.test(t)) || CONSUMO_PEDE.test(t)) {
+      return { ...r, categoria: null, intent: 'consumo_carro', cons };
+    }
+    const en = lerEnergia(t);
+    if (en.kwh || (en.wInformado && (en.horasDia || ENERGIA_PEDE.test(t))) || (en.aparelho && ENERGIA_PEDE.test(t) && !/\b(gastei|paguei|comprei)\b/.test(t))
+      || /(calcul\w* (o |a )?(kwh|consumo de (energia|luz)|conta de luz)|como (calculo|calcula|calcular) (o |a )?(kwh|conta de luz|consumo de energia)|preco do kwh)/.test(t)) {
+      return { ...r, categoria: null, intent: 'energia', en };
+    }
+  }
   // Combustível (JF, 17/11: "análise de preço de gasolina, se vai subir ou descer, se estou pagando caro"): pergunta de
   // preço ou de rumo vai pra IA pesquisar (ANP, Petrobras, petróleo e dólar). "Abasteci 200" continua sendo gasto;
   // "gasto muito com gasolina" continua no plano de transporte; "etanol 4,10 gasolina 6,20" ele calcula aqui.
@@ -1624,6 +1712,77 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         fato: `Este mês foram ${vezes} de até ${lim}, somando ${formatBRL(f.totalCents)} (${f.pct}% de tudo que você gastou). Onde mais aparecem: ${top}.${f.count >= 10 ? ' Escolher um deles pra segurar na semana já faz diferença.' : ''}`,
         sugestoes: ['Onde mais gastei?', 'Quanto gastei este mês?'],
       };
+    }
+    case 'consumo_carro': {
+      // 2.1.9.3 (JF, 17/11): km por litro, custo por km, projeção (a calculadora) e o empurrão pro mecânico
+      const c = intencao.cons;
+      const veic = c.moto ? 'a moto' : 'o carro';
+      let kml = c.kml || (c.km && c.litros ? c.km / c.litros : null);
+      let litros = c.litros || (c.gasto && c.precoLitro ? c.gasto / c.precoLitro : null);
+      if (!kml && c.km && litros) kml = c.km / litros;
+      let gasto = c.gasto || (litros && c.precoLitro ? Math.round(litros * c.precoLitro) : null);
+      let doPeriodo = '';
+      // só os km ("rodei 1200 km este mês"): soma o combustível anotado no período
+      if (c.km && !gasto && !c.litros) {
+        const de = intencao.periodo ? range : periodRange('mes', today);
+        const comb = expenses.filter(e => e.date >= de.from && e.date <= de.to && (/(gasolina|etanol|alcool|diesel|combustivel|posto|abastec|gnv)/i.test(String(e.note || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''))));
+        const soma = comb.reduce((x, e) => x + e.amountCents, 0);
+        if (soma) { gasto = soma; doPeriodo = ` (somei ${comb.length === 1 ? '1 abastecimento anotado' : `${comb.length} abastecimentos anotados`} ${de.label})`; }
+      }
+      const partes = [];
+      if (kml) partes.push(`${veic[0].toUpperCase() + veic.slice(1)} fez ${fmtKm(kml)} km por litro${c.km && litros ? ` (${fmtKm(c.km)} km ÷ ${fmtKm(litros)} litros)` : ''}.`);
+      const porKm = gasto && c.km ? gasto / c.km : kml && c.precoLitro ? c.precoLitro / kml : null;
+      if (porKm) {
+        partes.push(`Cada km sai uns ${formatBRL(Math.round(porKm))}${doPeriodo}; a cada 100 km, ${formatBRL(Math.round(porKm * 100))}.`);
+        if (c.km && /\b(semana|semanal)\b/.test(intencao.t)) partes.push(`Nesse ritmo, dá uns ${formatBRL(Math.round(porKm * c.km * 52 / 12))} por mês.`);
+        else if (c.km && (doPeriodo || /\b(mes|mensal)\b/.test(intencao.t))) partes.push(`Num ano, nesse ritmo: uns ${formatBRL(Math.round(porKm * c.km * 12))}.`);
+      }
+      if (!kml && !porKm) {
+        const pediu = /(gastando|bebendo|consumindo|puxando) (muito|demais)/.test(intencao.t);
+        const falta = c.km ? ` Não achei abastecimento anotado ${intencao.periodo ? 'nesse período' : 'este mês'}: me diz quantos litros ou quanto gastou.` : '';
+        return { fato: `${falta ? falta.trim() + ' ' : ''}Pra saber quanto ${veic} faz: enche o tanque, zera o hodômetro parcial e roda normal. No próximo abastecimento, enche de novo e divide os km rodados pelos litros que entraram. Me manda tipo "rodei 400 km com 40 litros a 6,20" que eu faço a conta, e o custo por km.${pediu ? ' Se ele começou a beber mais de repente, vale uma ida ao mecânico: pneu murcho, filtro de ar sujo, vela gasta e bico injetor sujo aumentam o consumo.' : ''}`,
+          cru: true, sugestoes: ['O que é gasolina aditivada?', 'Etanol ou gasolina?'] };
+      }
+      const minimo = c.moto ? 20 : KML_MINIMO[c.tipo];
+      if (kml && kml < minimo) {
+        const ref = c.moto ? 30 : minimo + 3;
+        const extra = c.precoLitro ? ` Comparando com ${fmtKm(ref)} km/l, são uns ${formatBRL(Math.round(c.precoLitro * (1000 / kml - 1000 / ref)))} a mais a cada 1.000 km.` : '';
+        partes.push(`Tá abaixo do comum (${c.moto ? 'moto costuma fazer bem mais de 20' : `carro de passeio costuma passar de ${minimo} km/l ${c.tipo === 'gasolina' ? 'na gasolina' : c.tipo === 'etanol' ? 'no etanol' : 'no diesel'}`}).${extra} Vale passar no mecânico: pneu calibrado, filtro de ar, vela e bico injetor. A revisão costuma sair mais barata que o combustível a mais no ano.`);
+      } else if (kml) {
+        partes.push('Tá num consumo normal. Anota de novo daqui a uns tanques: se cair do nada, é sinal pra levar no mecânico.');
+      }
+      // gasto dito junto ("gastei 300 de gasolina e rodei 600 km"): oferece anotar, sem anotar sozinho (1ª lei)
+      const anotar = c.gasto ? [`Gastei ${(c.gasto / 100).toFixed(2).replace('.', ',').replace(',00', '')} de ${c.tipo}`] : [];
+      return { fato: partes.join(' '), cru: true, sugestoes: [...anotar, 'Etanol ou gasolina?', 'Quanto gastei com transporte?'] };
+    }
+    case 'energia': {
+      // 2.1.9.3 (JF, 17/11): kWh da conta de luz e quanto cada aparelho pesa; tarifa de exemplo quando a pessoa não diz
+      const e = intencao.en;
+      const precoKwhConta = e.conta && e.kwh ? e.conta / e.kwh : null;
+      const tarifa = e.tarifa || (precoKwhConta && !(e.w && e.horasDia) ? null : precoKwhConta) || null;
+      const tarifaUsada = tarifa || TARIFA_EXEMPLO;
+      const avisoTarifa = tarifa ? '' : ` (usei ${formatBRL(TARIFA_EXEMPLO)} o kWh de exemplo; o seu é o total da conta ÷ os kWh dela)`;
+      if (precoKwhConta && !(e.w && e.horasDia)) {
+        return { fato: `Sua energia saiu a ${formatBRL(Math.round(precoKwhConta))} por kWh (${formatBRL(e.conta)} ÷ ${fmtKwh(e.kwh)}), com imposto e bandeira já dentro. Guarda esse número: com ele eu calculo quanto cada aparelho pesa. Tipo "chuveiro 20 minutos por dia a ${(precoKwhConta / 100).toFixed(2).replace('.', ',')} o kwh".`,
+          cru: true, sugestoes: ['O que é bandeira tarifária?', 'Quanto gasta um chuveiro?'] };
+      }
+      const nome = e.aparelho?.nome || 'o aparelho';
+      if (e.aparelho?.kwhMes && !e.wInformado) {
+        const v = Math.round(e.aparelho.kwhMes * tarifaUsada);
+        return { fato: `${nome[0].toUpperCase() + nome.slice(1)} fica ligad${nome === 'geladeira' ? 'a' : 'o'} o tempo todo: uma comum gasta uns ${fmtKwh(e.aparelho.kwhMes)} por mês, uns ${formatBRL(v)}${avisoTarifa}. Modelo antigo pode gastar o dobro; olha o selo Procel na etiqueta. Porta bem fechada e borracha boa ajudam.`, cru: true, sugestoes: ['O que é kWh?'] };
+      }
+      if (e.w && e.horasDia) {
+        const kwhMes = e.w / 1000 * e.horasDia * e.dias;
+        const v = Math.round(kwhMes * tarifaUsada);
+        const tempo = e.horasDia < 1 ? `${Math.round(e.horasDia * 60)} minutos` : `${fmtKm(e.horasDia)} ${e.horasDia === 1 ? 'hora' : 'horas'}`;
+        const dica = e.aparelho?.nome === 'chuveiro' ? ' Tirar 5 minutos do banho, ou usar no morno, já mexe na conta.' : e.aparelho?.nome === 'ar-condicionado' ? ' Deixar em 23 °C e o filtro limpo economiza.' : '';
+        return { fato: `${e.wInformado ? `${fmtKm(e.w)} W` : `${nome[0].toUpperCase() + nome.slice(1)} (uns ${fmtKm(e.w)} W)`} ligado ${tempo} por dia: ${fmtKm(e.w / 1000)} kW × ${fmtNum(e.horasDia)} h × ${e.dias} dias = ${fmtKwh(kwhMes)} no mês, uns ${formatBRL(v)}${avisoTarifa}.${dica}`, cru: true, sugestoes: ['O que é kWh?', 'Quanto gasta uma geladeira?'] };
+      }
+      if (e.kwh) {
+        return { fato: `${fmtKwh(e.kwh)} a ${formatBRL(tarifaUsada)} o kWh dão uns ${formatBRL(Math.round(e.kwh * tarifaUsada))}${tarifa ? '' : ' (preço de exemplo; o seu está na conta)'}. Conta de luz = kWh do mês × preço do kWh, com imposto e bandeira.`, cru: true, sugestoes: ['O que é bandeira tarifária?'] };
+      }
+      return { fato: `Faço a conta! A fórmula é: watts ÷ 1.000 × horas por dia × dias = kWh no mês; vezes o preço do kWh, dá o valor. ${e.aparelho ? `Quanto tempo por dia ${nome === 'o aparelho' ? 'ele' : `o ${nome}`} fica ligado? Me diz tipo "${e.aparelho.nome} 30 minutos por dia".` : 'Me diz o aparelho e o tempo, tipo "chuveiro 20 minutos por dia". E se mandar sua conta ("deu 250 com 300 kwh"), eu acho o preço do seu kWh.'}`,
+        cru: true, sugestoes: ['O que é kWh?'] };
     }
     case 'etanol_ou_gasolina': {
       // 17/11 (JF): a regra dos 70% (o etanol rende uns 30% menos por litro): conta feita aqui, sem IA

@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 2.2.0 Alfa | 17/11/2026 | Carro e Casa (ideia do JF): km por litro, custo por km e projeção (mês/semana somando os abastecimentos anotados), aviso de mecânico quando o consumo está abaixo do comum; kWh da conta de luz (preço do kWh, quanto cada aparelho gasta, 15 aparelhos com potência típica); glossário 100 → 110 (combustíveis, Grid, diesel S10/S500, km/l, hodômetro, kWh, watts). Sem IA. C.A.O.S. 2.4.6. |
 | 2.1.9.2 Alfa | 17/11/2026 | (JF: "ao abrir, pisca e recarrega") a versão nova do service worker não assume mais sozinha: espera e a troca é feita quando o app vai pro fundo (recarrega escondido). Testado no navegador com versão nova de mentira. |
 | 2.1.9.1 Alfa | 17/11/2026 | Avatares (pedido do JF): Frentista (combustível), Pet Lover (plano de pet), Corretor de Imóveis (plano de moradia), Turista (viagem) e Chef (delivery repetido, escolha do Wally). 50 → 55 avatares. Plano de compra agora passa o assunto pro avatar. C.A.O.S. 2.4.5. |
 | 2.1.9 Alfa | 17/11/2026 | Posto (ideia do JF): combustível no Chat; preço e rumo da gasolina/petróleo vão pra IA (ANP, Petrobras, Brent, dólar; sem prometer número), "tá caro?" compara o litro com a média, etanol x gasolina calculado sem IA (70%). Servidor: regra do combustível (precisa deploy). C.A.O.S. 2.4.4. |

@@ -74,6 +74,8 @@ Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o q
 | Pesquisa direta | "pesquisa na internet o preço de…" | Vai direto pra IA, sem questionário (também quando o pedido já vem detalhado) 🌐 |
 | Pesquisa de compra ou viagem | "quanto custaria uma viagem pros EUA?" / "me ajuda a achar uma geladeira" | Faz um questionário rápido sem IA (de onde, quando, quantos, região, orçamento; ou detalhes, uso, marca, prazo), com Pular; depois a IA compara 2 a 4 sites e diz o que conferir (frete, bagagem…). Ele orienta, não decide 🌐 (sem IA: o caminho das pedras 🖥️) |
 | Combustível | "a gasolina vai subir?" / "paguei 6,29 no litro, tá caro?" / "etanol 4,10 gasolina 6,20" | Pesquisa preço (ANP) e o que mexe nele, sem prometer número 🌐; etanol x gasolina na hora 🖥️ |
+| Km por litro | "rodei 400 km com 40 litros a 6,20" / "rodei 1200 km este mês" / "meu carro tá bebendo muito" | Consumo, custo por km e projeção (soma os abastecimentos anotados); abaixo do comum, sugere mecânico 🖥️ |
+| Conta de luz (kWh) | "minha conta deu 250 com 300 kwh" / "quanto gasta um chuveiro 20 minutos por dia" | Preço do kWh e quanto cada aparelho pesa no mês (15 aparelhos com potência típica) 🖥️ |
 | Moedas de jogo | "quanto tá valendo 100 robux?" | A moeda, onde comprar, preço de hoje e alerta de golpe 🖥️/🌐 |
 
 ## 4. Aprender

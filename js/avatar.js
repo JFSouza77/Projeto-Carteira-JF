@@ -32,7 +32,8 @@ const POR_ASSUNTO = Object.freeze({
   // paciência (13/11): firme → decepcionado → cartão vermelho → sem reação (quietinho) → de volta
   xingamento: 'parceiro', xingamento_2: 'desconfiado', xingamento_3: 'decepcionado', xingamento_3_forte: 'decepcionado',
   xingamento_fim: 'chocado', xingamento_fim_forte: 'vermelho', silencio: 'chocado', passou_raiva: 'anjinho', desculpa_aceita: 'parceiro',
-  moeda_jogo: 'gamer', // 15/11 (JF): moedas de jogo
+  moeda_jogo: 'gamer',
+  consumo_carro: 'frentista', energia: 'contador', // 2.1.9.3 (JF): km por litro e kWh // 15/11 (JF): moedas de jogo
   combustivel: 'frentista', etanol_ou_gasolina: 'frentista', // 17/11 (JF): combustível
   plano_pet: 'petlover', plano_moradia: 'corretor', plano_viagem: 'turista', plano_transporte: 'frentista', plano_economizar: 'economista', plano_produto: 'pesquisador', plano_lazer: 'pesquisador',
   motivacao: 'treinador', frase_do_dia: 'treinador', ditado: 'vovo', curiosidade_fin: 'professor', // 17/11 (JF)
