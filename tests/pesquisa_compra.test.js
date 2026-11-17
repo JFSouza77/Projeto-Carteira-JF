@@ -122,3 +122,22 @@ test('geladeira e impressora: questionário mesmo detalhado; camisa: só anotar;
     assert.match(r.texto, /anoto em Compras/, f);
   }
 });
+
+// 2.3.5 (JF): pesquisa em níveis: média (preço rápido) e pesada (tecnologia, viagem, link); academia é plano guiado
+test('níveis da pesquisa e academia', async () => {
+  const { conversar } = await import('../js/caos/index.js');
+  const { MEDIA_POR_DIA, MEDIA_ESGOTADA } = await import('../js/caos/conversa.js');
+  const d = { expenses: [], incomes: [], accounts: [], categories: [] };
+  const fala = f => conversar(f, d, { mood: 'suave', memory: null, now: Date.now(), perfil: { apelido: 'Ana' } }).fala;
+  assert.equal(fala('quanto é o ingresso pro teatro?').nivelIA, 'media');
+  assert.equal(fala('esse preço tá bom? https://loja.com.br/x').nivelIA, 'pesada');
+  assert.equal(fala('quanto custa em média um corte de cabelo?').nivelIA, 'media');
+  assert.equal(MEDIA_POR_DIA, 5);
+  assert.equal(MEDIA_ESGOTADA.length % 5, 0);
+  assert.equal(fala('quero me inscrever numa academia').intent, 'plano_academia');
+  assert.match(fala('o que você pode pesquisar?').texto, /1 por dia/);
+  let mem = null; let r;
+  for (const f of ['quanto custa a smart fit?', 'Musculação', 'Jardim da Penha', 'Noite', 'até 130']) { r = conversar(f, d, { mood: 'suave', memory: mem, now: Date.now(), perfil: { apelido: 'Ana' } }); mem = r.memoria; }
+  assert.equal(r.fala.nivelIA, 'media');
+  assert.match(r.fala.perguntaIA, /De rede \(smart fit\)/);
+});

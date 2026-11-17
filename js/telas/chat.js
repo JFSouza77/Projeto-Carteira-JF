@@ -7,7 +7,7 @@ import { FORMAS, formaPara, rostoDaForma } from '../avatar.js';
 import { IDENTIDADE, SUGESTOES, comoChamar, conversar, curiosidadeDoGasto, humorParaIA, emocaoDoMomento, rostoAvulso } from '../caos/index.js';
 import { accountLabel, createTransferencia, depoisDoSaldo, marcarRecebido, editarConta, editarLancamento, formatBRL, sugerirCategoria, toISODate } from '../engine.js';
 import * as conta from '../conta.js';
-import { assuntoDeDinheiro, lerPagamento, perguntaDePesquisaGeral, PESADA_ESGOTADA, PESADA_USADA, respostaAcordando, respostaTextoLongo, textoLongoDemais, respostaForaDoFoco, respostaPapoLivre, seguirPagamento } from '../caos/conversa.js';
+import { assuntoDeDinheiro, lerPagamento, perguntaDePesquisaGeral, MEDIA_ESGOTADA, MEDIA_POR_DIA, PESADA_ESGOTADA, PESADA_USADA, respostaAcordando, respostaTextoLongo, textoLongoDemais, respostaForaDoFoco, respostaPapoLivre, seguirPagamento } from '../caos/conversa.js';
 import * as db from '../db.js';
 import { falar, falaTerminou } from '../voz.js';
 import { fraseDoPrint, resumoDoPrint } from '../caos/ofertas.js';
@@ -162,6 +162,19 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
       return;
     }
   }
+  // 2.3.5 (JF): pesquisa média (preço rápido) até MEDIA_POR_DIA por dia por aparelho; o criador sem limite
+  if (fala.nivelIA === 'media' && state.settings.aiOn && state.settings.aiUrl && !state.perfil?.seloCriador) {
+    const m = await db.getMeta('pesquisaMedia', null);
+    if (m?.dia === toISODate() && m.n >= MEDIA_POR_DIA) {
+      const texto = `${MEDIA_ESGOTADA[Math.floor(Math.random() * MEDIA_ESGOTADA.length)]} ${fala.caminho || 'Compare o preço em 2 ou 3 lugares e veja se cabe no mês antes de fechar.'}`;
+      await respiro(texto);
+      addMsg({ de: 'caos', texto, sugestoes: ['Dá pra gastar quanto até o salário?', 'Me dá uma dica'], rosto: fala.rosto, assunto: 'sonolento' });
+      pintarRosto(fala.rosto);
+      if (state.settings.voice) falar(texto, fala.emocao);
+      await anotarUso('local');
+      return;
+    }
+  }
   const usoIA = await usoDaIAHoje();
   // o criador não tem limite no aparelho (JF, 16/11: "quem tá pagando sou eu"); o servidor também libera pelo selo da conta
   const iaCansada = !fala.entendeu && state.settings.aiOn && state.settings.aiUrl && usoIA.n >= IA_POR_DIA && !state.perfil?.seloCriador;
@@ -181,6 +194,10 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
       addMsg({ de: 'caos', texto: resposta, ia: true, sugestoes: fala.intent === 'custo_medio' ? fala.sugestoes : SUGESTOES.slice(0, 5), rosto: fala.rosto, assunto: fala.avatar || null });
       pintarRosto(fala.rosto, fala.avatar || null);
       if (state.settings.voice) falar(trocarNome(resposta, comoChamar(state.perfil)).replace(/\*\*/g, ''));
+      if (fala.nivelIA === 'media') { // 2.3.5: conta a pesquisa média do dia
+        const m = await db.getMeta('pesquisaMedia', null);
+        await db.setMeta('pesquisaMedia', { dia: toISODate(), n: (m?.dia === toISODate() ? m.n : 0) + 1 });
+      }
       // 2.3.4.6: marcou a pesquisa pesada do dia e avisa, num 2º balão, que pra ir além vale outra IA
       if (fala.pesada && !state.perfil?.seloCriador) {
         await db.setMeta('pesquisaPesada', { dia: toISODate() });

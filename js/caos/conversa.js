@@ -644,13 +644,15 @@ const SO_CHAMADO = /^(e ai|eai|fala|oi|ola|opa|salve|bom dia|boa tarde|boa noite
 // pesquisa só, certeira, sem inventar número. O orçamento é sempre o último.
 const PRIVACIDADE = 'Fica tranquilo: esta conversa fica só no seu celular. Pra IA vai só o necessário, sem seu nome, e o servidor do app não guarda sua pergunta. Quer apagar? A lixeira do Chat limpa a conversa e a minha memória dela. ';
 // 2.3.4.6 (JF): pesquisa de tecnologia é "pesada" (vai muito além de uma IA de bolso): uma por dia
-const PESADA = new Set(['ram', 'peca', 'tech', 'eletro']);
+// 2.3.5 (JF, 17/11: "definir o que é pesquisa leve, média e pesada"): pesada = várias buscas e comparação de lojas
+const PESADA = new Set(['ram', 'peca', 'tech', 'eletro', 'viagem']);
 // o caminho das pedras de cada plano, pra quando não tem IA (ou a pesada do dia já foi)
 export const CAMINHO_PLANO = Object.freeze({
   viagem: 'Compare em 2 ou 3 lugares: o site das companhias (Azul, Gol, Latam) e um buscador (Google Voos, Decolar); pra hotel, Booking ou Airbnb filtrando a região. Confira se é ida e volta, bagagem, taxas, horário e escala. Numa viagem completa, some passagem, hospedagem, comida, transporte, seguro viagem e, se for pra fora, o câmbio.',
   produto: 'Compare em 2 ou 3 lojas (Mercado Livre, Amazon, Magalu) ou num comparador (Buscapé, Zoom). Confira frete, prazo, garantia, parcelamento e a reputação do vendedor.',
   ram: 'Pra memória: confira na placa-mãe (site do fabricante) o tipo (DDR3, DDR4 ou DDR5), a frequência máxima e quantos pentes cabem; notebook usa SO-DIMM. Dois pentes iguais (dual channel) rendem mais que um grande. Compare em 2 ou 3 lojas (Kabum, Pichau, Terabyte, Amazon) ou no Buscapé e no Zoom, e fique de olho no frete.',
   peca: 'Pra peça de PC: confira a compatibilidade antes (soquete do processador, tipo de memória, espaço no gabinete e a fonte em watts pra placa de vídeo). Sites como o PCPartPicker ajudam a checar. Compare em 2 ou 3 lojas (Kabum, Pichau, Terabyte, Amazon) e no Buscapé, e veja garantia e frete.',
+  academia: 'Pra academia: compare a mensalidade junto com a matrícula e a anuidade (rede costuma cobrar), veja se tem fidelidade e multa pra cancelar, e peça uma aula experimental antes. Se a empresa oferece Wellhub (antigo Gympass) ou TotalPass, pode sair mais barato.',
   eletro: 'Pra eletrodoméstico ou impressora: defina o tamanho e o que precisa ter, confira a voltagem (110, 220 ou bivolt) e o selo Procel de consumo de energia. Na impressora, veja o preço do cartucho ou da tinta, que pesa mais que a própria impressora (tanque de tinta sai mais barato por página). Compare em 2 ou 3 lojas e no Buscapé, com frete e garantia.',
   tech: 'Pra aparelho: defina o mínimo que você precisa (memória, armazenamento, bateria) e compare 2 ou 3 modelos parecidos. Veja o histórico de preço (Zoom ou Buscapé), garantia e se a loja é oficial. Recondicionado com garantia pode sair bem mais barato.',
   pet: 'Some o fixo do mês (ração, areia ou tapete, antipulgas) e reserve pro que vem de vez em quando (vacinas, vermífugo, veterinário, banho e tosa). Uma reserva pra emergência do bicho evita susto. Adotar sai bem mais em conta que comprar.',
@@ -667,6 +669,17 @@ export const PESADA_ESGOTADA = Object.freeze([
   'Pesquisa assim pesa no meu bolso de IA, então é uma por dia, e a de hoje já foi. Um chat de uso geral (ChatGPT, Gemini, Copilot, Claude, DeepSeek, Grok) te atende melhor agora. Pra não sair de mãos vazias:',
   'Ih, minha pesquisa pesada de hoje já foi usada. Se precisar agora, vai de ChatGPT, Gemini, Copilot, Claude, DeepSeek ou Grok. E fica com essa:',
 ]);
+// 2.3.5: pesquisa média (preço de ingresso, academia, custo médio…): até 5 por dia
+export const MEDIA_POR_DIA = 5;
+export const MEDIA_ESGOTADA = Object.freeze([
+  'Hoje eu já fiz as minhas pesquisas de preço do dia. Amanhã eu volto! Enquanto isso, o caminho das pedras:',
+  'Minhas pesquisas de preço de hoje acabaram: sou uma IA de bolso e economizo pra não pesar no bolso de ninguém. Pra agora:',
+  'Essa vai ter que esperar até amanhã: já usei as pesquisas de preço do dia. Mas uma dica eu dou:',
+  'Por hoje deu de pesquisa! Se precisar agora, o Google ou um chat de uso geral resolvem. E fica com essa:',
+  'Já pesquisei bastante hoje e preciso descansar os circuitos. 😴 Amanhã tem mais. Por enquanto:',
+]);
+// "o que você pode pesquisar?": os limites, em palavras simples
+export const TEXTO_LIMITES_PESQUISA = 'Eu sou uma IA de bolso, então divido assim. Sem limite (aqui no celular): seus gastos, saldo, metas, contas, glossário, cálculos, dicas e conferir um preço que você me passar. Pesquisa de preço rápida (até 5 por dia): ingresso de cinema, teatro ou show, academia, custo médio de algo, piso salarial. Pesquisa pesada (1 por dia): tecnologia (celular, notebook, peça de PC), eletrodoméstico, impressora, viagem e conferir o link de uma loja. O que eu não faço: escolher roupa ou coisa pessoal, procurar loja por você, comprar ou reservar no seu lugar e responder curiosidade que não é de dinheiro. Pra isso, o Google ou um chat de uso geral são melhores.';
 // e o recado depois de usar a pesada do dia
 export const PESADA_USADA = 'Essa foi a minha pesquisa pesada de hoje: vai muito além de uma IA de bolso. Pra continuar se aprofundando, o ChatGPT, o Gemini, o Copilot, o Claude, o DeepSeek ou o Grok vão ser mais úteis que eu. O que for de bolso, eu tô aqui!';
 
@@ -709,6 +722,14 @@ export const PASSOS_PESQUISA = Object.freeze({
     { id: 'marca', rotulo: 'Marca', q: 'Tem preferência de marca, ou alguma que você não quer?', chips: ['Tanto faz'] },
     { id: 'voltagem', rotulo: 'Voltagem', q: 'Na sua casa é 110 ou 220? (Bivolt serve nos dois.)', chips: ['110V', '220V', 'Bivolt', 'Não sei'] },
     { id: 'orcamento', rotulo: 'Orçamento', q: 'E já sabe mais ou menos quanto quer gastar? Tipo "até 3000". Se não tiver, diz "sem orçamento".', chips: ['Sem orçamento'] },
+  ],
+  // 2.3.5 (JF: "quero me inscrever numa academia → tem preferência? de bairro ou franquia, tipo Smart Fit?")
+  academia: [
+    { id: 'tipo', rotulo: 'Tipo', q: 'Tem preferência? Academia de bairro ou de rede, tipo Smart Fit, Bluefit ou Selfit?', chips: ['De bairro', 'De rede', 'Tanto faz'] },
+    { id: 'modalidade', rotulo: 'Modalidade', q: 'Pra fazer o quê? Musculação, natação, crossfit, pilates, luta, dança…', chips: ['Musculação', 'Natação', 'Crossfit', 'Pilates'] },
+    { id: 'regiao', rotulo: 'Cidade e bairro', q: 'Em que cidade e bairro? Só o bairro, nada de endereço.' },
+    { id: 'horario', rotulo: 'Horário', q: 'Vai treinar em que horário?', chips: ['Manhã', 'Tarde', 'Noite'] },
+    { id: 'orcamento', rotulo: 'Até por mês', q: 'Quanto dá pra pagar por mês? Tipo "até 120". Se não souber, diz "sem orçamento".', chips: ['Sem orçamento'] },
   ],
   tech: [
     { id: 'aparelho', rotulo: 'Aparelho', q: 'Qual aparelho e, se já tiver de olho, qual modelo?' },
@@ -754,7 +775,7 @@ export const PASSOS_PESQUISA = Object.freeze({
     { id: 'prazo', rotulo: 'Prazo', q: 'Em quanto tempo quer ver o resultado?', chips: ['1 mês', '3 meses', '6 meses'] },
   ],
 });
-const NOME_DO_PLANO = { eletro: 'Pesquisa de eletrodoméstico ou impressora', ram: 'Pesquisa de memória RAM (compatível com o PC da pessoa)', peca: 'Pesquisa de peça de computador (compatível com o PC da pessoa)', tech: 'Pesquisa de tecnologia', lazer: 'Plano de passeio', viagem: 'Pesquisa de viagem', produto: 'Pesquisa de compra', pet: 'Plano de pet', moradia: 'Plano de moradia', transporte: 'Plano de transporte', economizar: 'Plano pra economizar' };
+const NOME_DO_PLANO = { academia: 'Plano de academia', eletro: 'Pesquisa de eletrodoméstico ou impressora', ram: 'Pesquisa de memória RAM (compatível com o PC da pessoa)', peca: 'Pesquisa de peça de computador (compatível com o PC da pessoa)', tech: 'Pesquisa de tecnologia', lazer: 'Plano de passeio', viagem: 'Pesquisa de viagem', produto: 'Pesquisa de compra', pet: 'Plano de pet', moradia: 'Plano de moradia', transporte: 'Plano de transporte', economizar: 'Plano pra economizar' };
 
 const LAZER = /\b(restaurante|restaurantes|lanchonete|pizzaria|hamburgueria|cinema|cinemark|cinepolis|kinoplex|filme no cinema|ingresso|ingressos|show|shows|teatro|teatros|peca de teatro|peca|musical|stand ?up|comedia|opera|concerto|circo|museu|museus|exposicao|parque de diversao|parque de diversoes|parque aquatico|zoologico|balada|barzinho|rodizio|passeio|role|festival|estadio|jogo de futebol|partida de futebol|jogo de beisebol|beisebol|baseball|jogo de basquete|jogo de volei|boliche|pista de patinacao|patinacao|patinacao no gelo|rinque|kart|paintball|airsoft|tiro esportivo|stand de tiro|clube de tiro|laser tag|fliperama|escape room|karaoke|trilha|evento|eventos)\b/; // 2.3.4.7 (JF): beisebol, boliche, patinação; 2.3.4.8: airsoft, tiro esportivo
 // 2.3.4.5 (JF, 17/11: "preço de notebook, celular, memória RAM… tem que estar ligado à IA"): tecnologia
@@ -820,6 +841,15 @@ export function acharPesquisa(t, valor) {
     }
     if (tipo === 'tech') { const ap = (t.match(TECH) || [])[0]; if (ap) respTech.aparelho = ap; }
   }
+  // 2.3.5: academia (me inscrever, quanto custa, qual é boa) vira plano guiado (pesquisa média)
+  if (!tipo && /\b(academia|academias|smart ?fit|bluefit|selfit|crossfit|pilates|natacao|musculacao|hidroginastica)\b/.test(t)
+    && /\b(quero|me inscrever|inscrever|matricular|entrar|comecar|quanto|preco|mensalidade|indica|recomenda|qual|vale a pena|boa|perto)\b/.test(t)) tipo = 'academia';
+  if (tipo === 'academia') {
+    const rede = t.match(/\b(smart ?fit|bluefit|selfit|bodytech|bio ritmo|panobianco)\b/);
+    if (rede) respTech.tipo = `De rede (${rede[1]})`;
+    const mod = t.match(/\b(musculacao|natacao|crossfit|pilates|hidroginastica)\b/);
+    if (mod) respTech.modalidade = mod[1];
+  }
   // 2.3.4.9: eletrodoméstico e impressora (comum, scanner, 3D) → questionário "vamos por partes"; roupa e coisa pessoal
   // (camisa, sapato, perfume…) não é com ele, nem com pedido de pesquisa: ele ajuda a anotar e a ver se cabe
   const querSaber = PEDE.test(t) || precoDeFora || pedidaTxt || vaiComprar;
@@ -846,7 +876,7 @@ export function acharPesquisa(t, valor) {
     .replace(/\b(orcamento|ate|teto|no maximo|maximo)\b[^0-9]{0,15}\d[\d.,]*( reais| mil)?/g, ' ').replace(/[?!.,;]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^((qual|o|a|os|as|da|do|de|pra|para|que|e)\s+)+/, '');
   // lazer: o que a pessoa já disse não vira pergunta de novo
   const respostas = tipo === 'lazer' ? respostasDoLazer(t) : respTech;
-  const padrao = { eletro: 'esse aparelho', ram: 'a memória RAM', peca: 'essa peça', tech: 'esse aparelho', lazer: 'esse passeio', viagem: 'essa viagem', produto: 'isso', pet: 'seu pet', moradia: 'sua moradia', transporte: 'seu transporte', economizar: 'onde economizar' }[tipo];
+  const padrao = { academia: 'a academia', eletro: 'esse aparelho', ram: 'a memória RAM', peca: 'essa peça', tech: 'esse aparelho', lazer: 'esse passeio', viagem: 'essa viagem', produto: 'isso', pet: 'seu pet', moradia: 'sua moradia', transporte: 'seu transporte', economizar: 'onde economizar' }[tipo];
   const aparelho = (t.match(TECH) || [])[0];
   const itemLimpo = (item || '').replace(/\b(vale a pena comprar|compensa comprar|devo comprar|vale a pena|tem (algum|alguma|algo)|bo[ma]s?|legal|vender|vendo|meu|minha|vale|quanto)\b/g, ' ').replace(/\s+/g, ' ').trim();
   // 2.3.4.8 (JF): "compra o ingresso pra mim" → ele não compra (não sai do app), mas ajuda a ver preço e se cabe
@@ -1223,6 +1253,8 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   // "quanto sobra do orçamento de mercado?" é orçamento, não "cabe no mês" (achado do Gemini, 06/11)
   if (/(orcamento|limite)/.test(t) && /(sobra|resta|falta|quanto (ainda )?posso)/.test(t) && !/cabe no/.test(t)) return { ...r, intent: 'orcamento' };
   // Pesquisa de compra e viagem (JF, 16/11): "quanto custaria uma viagem pros EUA?", "me ajuda a achar uma geladeira".
+  // 2.3.5: "o que você pode pesquisar?" / "quantas pesquisas você faz?"
+  if (/((o que|quais coisas|que tipo de coisa|que coisas) (voce|vc|tu) (pode|consegue|sabe) (pesquisar|buscar|procurar)|limites? de pesquisa|quantas pesquisas|pesquisa pesada|pesquisa media|o que (voce|vc) (nao )?pesquisa)/.test(t)) return { ...r, categoria: null, intent: 'limites_pesquisa' };
   // 2.3.4.8 (JF: "quero ir no shopping, o que eu posso comprar lá?" → "é um shopping, né"): resposta curta, sem IA
   if (/\bshopping\b/.test(t) && /(o que (eu )?(posso|da pra|consigo|devo|vou) comprar|o que (tem|vende|comprar)|o que fazer)/.test(t)) return { ...r, categoria: null, intent: 'shopping_vago' };
   // Ele pede o orçamento e a IA online pesquisa 2 a 4 sites; ele orienta, não entrega a resposta pronta.
@@ -2510,6 +2542,8 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         cru: true, sugestoes: ['Onde posso economizar?', 'Onde mais gastei?', 'O que tenho pra pagar?'],
       };
     }
+    case 'limites_pesquisa':
+      return { fato: TEXTO_LIMITES_PESQUISA, cru: true, sugestoes: ['O que você pode fazer?', 'Quanto gastei este mês?'] };
     case 'shopping_vago':
       return { fato: 'É um shopping, né? Dá pra comprar quase tudo! 😄 Me ajuda a te ajudar: o que você tá procurando, e quanto quer gastar? Uma dica de guia: vai com a lista e o teto definidos, que shopping foi feito pra gente sair com o que não foi buscar.',
         cru: true, assunto: 'shopping_vago', sugestoes: ['Dá pra gastar quanto até o salário?', 'Quero ir no cinema do shopping', 'Me dá uma dica'] };
@@ -2564,8 +2598,9 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       const linhas = passos.filter(p => respostas[p.id]).map(p => (p.id === 'orcamento' ? `${p.rotulo}: ${formatBRL(respostas.orcamento)}` : `${p.rotulo}: ${respostas[p.id]}`));
       if (temOrcamento && !respostas.orcamento) linhas.push('Orçamento: não informado');
       // 2.3.4.6: o que a pessoa não soube responder vai junto, pra IA explicar como descobrir e dar a faixa de cada opção
-      const naoSabe = PESADA.has(tipo) ? passos.filter(p => p.id !== 'orcamento' && !respostas[p.id] && !(p.id === 'detalhe' && item.split(' ').length > 3)).map(p => p.rotulo.toLowerCase()) : [];
-      const extraTech = PESADA.has(tipo) ? ` ${naoSabe.length ? `A pessoa não sabe: ${naoSabe.join(', ')}; explique em uma frase como descobrir e dê a faixa de preço de cada opção. ` : ''}Avise o que precisa ser compatível. Resposta curta, focada em preço e onde comparar.` : '';
+      const ehTechPlano = ['ram', 'peca', 'tech', 'eletro'].includes(tipo); // a viagem é pesada, mas tem o seu jeito
+      const naoSabe = ehTechPlano ? passos.filter(p => p.id !== 'orcamento' && !respostas[p.id] && !(p.id === 'detalhe' && item.split(' ').length > 3)).map(p => p.rotulo.toLowerCase()) : [];
+      const extraTech = ehTechPlano ? ` ${naoSabe.length ? `A pessoa não sabe: ${naoSabe.join(', ')}; explique em uma frase como descobrir e dê a faixa de preço de cada opção. ` : ''}Avise o que precisa ser compatível. Resposta curta, focada em preço e onde comparar.` : '';
       const perguntaIA = `${NOME_DO_PLANO[tipo]}: ${item}. ${linhas.join('. ')}.${tipo === 'lazer' ? ' Diga se cabe no mês pelo resumo e se os extras valem a pena.' : ''}${extraTech}`.slice(0, 700);
       // sem a IA online (ou sem internet), ele dá o caminho das pedras
       const CAMINHO = CAMINHO_PLANO[tipo];
