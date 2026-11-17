@@ -420,12 +420,16 @@
   <section class="tela" id="tela-mes" data-tela="mes" hidden>
     <header class="topbar"><h1 id="mes-titulo">Planejamento do mês</h1></header>
     <main>
-      <section class="card summary plan-resumo">
+      <section class="card summary plan-resumo" id="plan-resumo">
         <h2 class="titulo-destaque">Previsão do mês</h2>
         <p class="label">Quanto deve sobrar até o fim do mês</p>
         <p class="big vazio" id="plan-sobra">Lance sua entrada pra eu calcular</p>
-        <ul class="plan-linhas" id="plan-linhas"></ul>
-        <p class="caos-dica" id="plan-caos"></p>
+        <!-- 2.3.2.2 (JF): as linhas e a conta do C.A.O.S. ficam guardadas; tocar no número ou em "Ver detalhes" abre -->
+        <button type="button" class="resumo-mais" id="plan-mais" aria-expanded="false" aria-controls="plan-detalhes">Ver detalhes <span aria-hidden="true">▾</span></button>
+        <div class="plan-detalhes" id="plan-detalhes">
+          <ul class="plan-linhas" id="plan-linhas"></ul>
+          <p class="caos-dica" id="plan-caos"></p>
+        </div>
       </section>
 
       <!-- 15/11 (Anne): a Análise do mês mora no Mês -->

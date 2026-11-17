@@ -700,22 +700,45 @@ function posicionarMeAjuda() {
   // JF, 16/11: nem em cima do cabeçalho e da barra do relógio (o limite era 8px da borda e ele foi parar no relógio)
   const cabecalho = [...document.querySelectorAll('.topbar')].map(t => t.getBoundingClientRect()).find(r => r.height > 0);
   const topo = Math.max(8, cabecalho ? cabecalho.bottom + 8 : 0, 56);
-  const y = Math.min(Math.max(topo, p.y * innerHeight), fundo - h - 8);
+  let y = Math.min(Math.max(topo, p.y * innerHeight), fundo - h - 8);
+  // 2.3.2.2 (JF: "o botão de ajuda cobrindo o Lançar pode dar problema"): a bola do Lançar sobe acima da barra; se o
+  // botão cair em cima dela, ele sobe pra ficar logo acima
+  const bola = document.querySelector('.tab-inicio-bola')?.getBoundingClientRect();
+  if (bola && bola.width && x < bola.right + 8 && x + w > bola.left - 8 && y + h > bola.top - 8) y = Math.max(topo, bola.top - h - 12);
   Object.assign(b.style, { left: `${x}px`, top: `${y}px`, right: 'auto', bottom: 'auto' });
 }
 
-function fecharAjudaMenu() { $('#ajuda-menu').hidden = true; $('#me-ajuda').setAttribute('aria-expanded', 'false'); }
+// 2.3.2.2 (JF): o menu abre e fecha com animação, saindo do botão
+let fechandoMenu = null;
+function fecharAjudaMenu() {
+  const m = $('#ajuda-menu'), b = $('#me-ajuda');
+  b.setAttribute('aria-expanded', 'false');
+  b.classList.remove('aberto');
+  for (const x of m.querySelectorAll('.escolhido')) x.classList.remove('escolhido');
+  if (m.hidden) return;
+  if (MENOS_MOVIMENTO.matches) { m.hidden = true; return; }
+  m.classList.remove('abrindo');
+  m.classList.add('fechando');
+  clearTimeout(fechandoMenu);
+  fechandoMenu = setTimeout(() => { m.hidden = true; m.classList.remove('fechando'); }, 160);
+}
 
 function abrirAjudaMenu() {
   const b = $('#me-ajuda'), m = $('#ajuda-menu');
+  clearTimeout(fechandoMenu);
+  m.classList.remove('fechando');
   m.hidden = false;
   b.setAttribute('aria-expanded', 'true');
+  b.classList.add('aberto');
   // abre pro lado que tem espaço: em cima se o botão está embaixo, e alinhado ao lado mais perto da borda
   const r = b.getBoundingClientRect(), mw = m.offsetWidth, mh = m.offsetHeight;
   const top = r.top > innerHeight / 2 ? r.top - mh - 8 : r.bottom + 8;
   const left = r.left + r.width / 2 > innerWidth / 2 ? r.right - mw : r.left;
   Object.assign(m.style, { top: `${Math.max(8, top)}px`, left: `${Math.min(Math.max(8, left), innerWidth - mw - 8)}px` });
-  m.querySelector('button')?.focus();
+  // a animação cresce a partir do canto onde está o botão
+  m.style.transformOrigin = `${left > innerWidth / 2 - mw / 2 ? 'right' : 'left'} ${top < r.top ? 'bottom' : 'top'}`;
+  m.classList.remove('abrindo'); void m.offsetWidth; m.classList.add('abrindo');
+  m.querySelector('button')?.focus({ preventScroll: true });
 }
 
 function ligarMeAjuda() {
@@ -726,6 +749,17 @@ function ligarMeAjuda() {
     ? `<button type="button" role="menuitem" data-guia="${a.guia}" data-ajuda style="--cor-item:${a.cor}">${ic(a.ic)}<span>${esc(a.t)}</span></button>`
     : `<button type="button" role="menuitem" data-q="${esc(a.q)}" style="--cor-item:${a.cor}">${ic(a.ic)}<span>${esc(a.q)}</span></button>`).join('')
     + `<button type="button" role="menuitem" data-q="" class="ajuda-tudo">${ic('i-livro')}<span>Ver toda a ajuda</span></button>`;
+  // 2.3.2.2 (JF: "evitar os curiosos passeando sem rumo"): no toque, o 1º escolhe (fica aceso, com "toque de novo pra
+  // abrir") e o 2º abre. Pelo teclado (Enter/espaço) abre direto. Fica na fase de captura pra segurar os outros cliques.
+  m.insertAdjacentHTML('afterbegin', '<p class="ajuda-dica" aria-hidden="true">Toque pra escolher, toque de novo pra abrir</p>');
+  m.addEventListener('click', e => {
+    const it = e.target.closest('button');
+    if (!it || e.detail === 0 || it.classList.contains('escolhido')) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    for (const x of m.querySelectorAll('.escolhido')) x.classList.remove('escolhido');
+    it.classList.add('escolhido');
+  }, true);
   let ini = null, arrastou = false;
   b.addEventListener('pointerdown', e => {
     if (telaGrande() || e.button > 0) return;
@@ -1146,6 +1180,10 @@ function bind() {
   const alternarDetalhes = () => { state.resumoAberto = !state.resumoAberto; aplicarRecolhidos(); };
   $('#resumo-mais').addEventListener('click', alternarDetalhes);
   $('#resumo-card').addEventListener('click', e => { if (e.target.closest('.big, .label')) alternarDetalhes(); });
+  // 2.3.2.2 (JF): a Previsão do mês também recolhe
+  const alternarPlano = () => { state.planAberto = !state.planAberto; aplicarRecolhidos(); };
+  $('#plan-mais').addEventListener('click', alternarPlano);
+  $('#plan-sobra').addEventListener('click', alternarPlano);
   $('#alertas-toggle').addEventListener('click', () => {
     state.settings.alertasFechado = !state.settings.alertasFechado;
     saveSettings();
@@ -1713,6 +1751,10 @@ function aplicarRecolhidos() {
   $('#resumo-card').classList.toggle('detalhes-abertos', aberto);
   $('#resumo-mais').setAttribute('aria-expanded', String(aberto));
   $('#resumo-mais').firstChild.textContent = aberto ? 'Esconder detalhes ' : 'Ver detalhes ';
+  const planAberto = !!state.planAberto;
+  $('#plan-resumo').classList.toggle('detalhes-abertos', planAberto);
+  $('#plan-mais').setAttribute('aria-expanded', String(planAberto));
+  $('#plan-mais').firstChild.textContent = planAberto ? 'Esconder detalhes ' : 'Ver detalhes ';
   const fechado = !!state.settings.alertasFechado;
   $('#alerts-card').classList.toggle('fechado', fechado);
   $('#alertas-toggle').setAttribute('aria-expanded', String(!fechado));

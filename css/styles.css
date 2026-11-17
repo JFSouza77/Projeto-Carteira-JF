@@ -1518,3 +1518,30 @@ li.feito .passo-n { background: transparent; color: var(--ok); box-shadow: inset
 .alertas-card.fechado .alert-list { display: none; }
 .alertas-card.fechado h2 { margin-bottom: 0; }
 @media (prefers-reduced-motion: reduce) { .resumo-mais span, .alertas-seta { transition: none; } }
+
+/* ---------- 2.3.2.2 (JF, 17/11) ---------- */
+/* Previsão do mês recolhível e com um tom pelo resultado */
+#plan-resumo:not(.detalhes-abertos) .plan-detalhes { display: none; }
+#plan-resumo #plan-sobra { cursor: pointer; }
+#plan-resumo.detalhes-abertos #plan-mais span { transform: rotate(180deg); }
+#plan-resumo #plan-mais span { display: inline-block; transition: transform .2s; }
+.plan-resumo.pos { background: linear-gradient(160deg, color-mix(in srgb, var(--ok) 14%, var(--card)), var(--card) 70%); border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+.plan-resumo.neg { background: linear-gradient(160deg, color-mix(in srgb, var(--danger) 14%, var(--card)), var(--card) 70%); border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
+/* Alertas recolhidos: maiores e no centro, pra dar destaque */
+.alertas-card.fechado { padding-top: 16px; padding-bottom: 16px; }
+.alertas-card.fechado .alertas-toggle { justify-content: center; font-size: 1.2rem; }
+.alertas-card.fechado .alertas-seta { margin-left: 4px; }
+/* Menu de ajuda: abre e fecha com animação; o 1º toque escolhe, o 2º abre */
+.ajuda-menu.abrindo { animation: ajudaAbre .18s ease-out; }
+.ajuda-menu.fechando { animation: ajudaFecha .16s ease-in forwards; pointer-events: none; }
+@keyframes ajudaAbre { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
+@keyframes ajudaFecha { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(.6); } }
+.me-ajuda { transition: transform .18s ease; }
+.me-ajuda.aberto { transform: scale(1.08); }
+.ajuda-dica { margin: 0 0 4px; padding: 2px 6px; font-size: .78rem; color: var(--muted); text-align: center; }
+.ajuda-menu button.escolhido { background: color-mix(in srgb, var(--cor-item, var(--caos)) 20%, var(--card)); box-shadow: inset 0 0 0 1px var(--cor-item, var(--caos)); }
+.ajuda-menu button.escolhido::after { content: 'toque de novo ›'; margin-left: auto; font-size: .75rem; color: var(--cor-item, var(--caos)); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) {
+  .ajuda-menu.abrindo, .ajuda-menu.fechando { animation: none; }
+  .me-ajuda, #plan-resumo #plan-mais span { transition: none; }
+}
