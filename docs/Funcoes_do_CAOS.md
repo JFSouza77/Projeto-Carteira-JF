@@ -76,6 +76,8 @@ Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o q
 | Combustível | "a gasolina vai subir?" / "paguei 6,29 no litro, tá caro?" / "etanol 4,10 gasolina 6,20" | Pesquisa preço (ANP) e o que mexe nele, sem prometer número 🌐; etanol x gasolina na hora 🖥️ |
 | Km por litro | "rodei 400 km com 40 litros a 6,20" / "rodei 1200 km este mês" / "meu carro tá bebendo muito" | Consumo, custo por km e projeção (soma os abastecimentos anotados); abaixo do comum, sugere mecânico 🖥️ |
 | Conta de luz (kWh) | "minha conta deu 250 com 300 kwh" / "quanto gasta um chuveiro 20 minutos por dia" | Preço do kWh e quanto cada aparelho pesa no mês (15 aparelhos com potência típica) 🖥️ |
+| Trabalho e renda | "recebi 800 de plantão" / "qual o piso de enfermeiro?" / "qual o salário mínimo?" / "qual o PIB do Brasil?" / "como peço mesada?" | Plantão vira extra (e lembra de descansar se forem muitos) 🖥️; piso pesquisado 🌐; salário mínimo, PIB e mesada 🖥️ |
+| Foto com legenda | clipe no Chat + "comprei esse tênis por 250" | Comprovante: a IA lê; foto do que comprou: a legenda vira o lançamento, com a foto junto 🖥️ |
 | Moedas de jogo | "quanto tá valendo 100 robux?" | A moeda, onde comprar, preço de hoje e alerta de golpe 🖥️/🌐 |
 
 ## 4. Aprender

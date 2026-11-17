@@ -45,7 +45,7 @@ const SINONIMOS = {
 
 const FONTES = {
   salario: ['salario', 'pagamento', 'holerite', 'vale'],
-  freela: ['freela', 'freelance', 'bico', 'extra', 'servico', 'trampo'],
+  freela: ['freela', 'freelance', 'bico', 'extra', 'servico', 'trampo', 'plantao', 'plantoes', 'hora extra', 'horas extras'], // 2.3.0: plantão é extra
   rendimento: ['rendimento', 'rendimentos', 'juros', 'dividendo', 'dividendos', 'investimento', 'cdb', 'poupanca', 'tesouro'],
   presente: ['presente', 'pix', 'me deu', 'ganhei', 'mesada'],
   outros: ['outros', 'outro'],
@@ -616,6 +616,25 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   const pergunta = /\b(quanto|qual|quais|onde|como|tive|teve|tenho|vai|posso|consigo|algum|alguma)\b|\?/.test(t);
 
   if (!t) return { ...r, intent: 'nao_entendi' };
+  // Trabalho e renda (2.3.0, JF 18/11): salário mínimo, PIB, piso de profissão e mesada
+  if (!r.valor || /\bpib\b/.test(t)) {
+    const oQueE = /^(o que (e|sao|significa)|me explica|explica|que e)\b/.test(t);
+    if (/((qual|quanto) (e |eh |ta |esta |vai ser |sera |fica )?(o )?(valor (do|de) )?salario minimo|salario minimo (atual|hoje|de hoje|agora|de 20\d\d|desse ano|deste ano|esse ano|este ano|ta|esta|e quanto))/.test(t)) {
+      return { ...r, categoria: null, intent: 'glossario', termo: GLOSSARIO.find(g => g.termo === 'Salário mínimo'), quem: null };
+    }
+    // "piso" sozinho no app é o saldo mínimo do banco ("meu piso no Banestes"); "piso salarial" é do trabalho
+    if (oQueE && /piso (salarial|da categoria|nacional|regional)/.test(t)) return { ...r, categoria: null, intent: 'glossario', termo: GLOSSARIO.find(g => g.termo === 'Piso salarial'), quem: null };
+    if (/\bpib\b|produto interno bruto/.test(t) && !oQueE && /(qual|quanto|atual|hoje|brasil|cresceu|caiu|ultimo|desse ano|deste ano|do pais)/.test(t)) return { ...r, categoria: null, intent: 'pib' };
+    const prof = t.match(/\bpiso (?:salarial |nacional |regional )?(?:de |do |da |dos |das |pra |para )(?:um |uma )?([a-z ]{3,40})|\bquanto ganha (?:um |uma |o |a )([a-z ]{3,40})|\bsalario (?:medio )?(?:de |do |da )(?:um |uma )([a-z ]{3,40})/);
+    if (prof && !oQueE) {
+      const profissao = (prof[1] || prof[2] || prof[3]).replace(/\b(no|na|em|hoje|atual|agora|por mes|em 20\d\d)\b.*$/, '').trim();
+      if (profissao && !/^(mes|ano|dezembro|janeiro|minimo)$/.test(profissao)) return { ...r, categoria: null, intent: 'piso_salarial', profissao };
+    }
+    if (/\b(mesada|semanada)\b/.test(t) && !/\b(recebi|ganhei|caiu|entrou|gastei)\b/.test(t)
+      && /(como (eu )?(peco|pedir|consigo|consegui|ganho|ganhar|convenco|convencer|falo|falar|converso|conversar)|quero (ganhar |receber |ter )?(uma )?(mesada|semanada)|(meus pais|minha mae|meu pai|minha familia)( nao)? (me )?(da|dao|deixa|quer)|nao (ganho|recebo|tenho) mesada|pedir (uma )?(mesada|semanada)|ter (uma )?mesada|ajuda.*mesada|mesada.*(pais|mae|pai))/.test(t)) {
+      return { ...r, categoria: null, intent: 'pedir_mesada' };
+    }
+  }
   // Carro e casa (2.1.9.3, JF 17/11): termo de combustível/energia é glossário; km por litro e kWh, conta aqui.
   {
     const termoCE = acharTermo(t);
@@ -810,7 +829,11 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   if (termo && (contexto || /(o que (e|sao|significa|quer dizer)|\bque (e|sao)\b|me explica|explica|me ensina|como funciona|ouvi falar|vi falar|nunca entendi|nao entendo|nao sei o que)/.test(t))) {
     return { ...r, intent: 'glossario', termo, quem: contexto ? contexto[2] : null };
   }
-  const ativo = /\b(dolar|dolares|usd)\b/.test(t) ? 'USD' : /\beuros?\b/.test(t) ? 'EUR' : /\blibras?\b/.test(t) ? 'GBP'
+  // 2.3.0 (JF): iene, dólar canadense, franco suíço, yuan e rublo ("rubra" também, do jeito que o JF escreveu)
+  const ativo = /\b(dolar(es)? canadense(s)?|cad)\b/.test(t) ? 'CAD' : /\b(ienes?|yen|yenes|jpy)\b/.test(t) ? 'JPY'
+    : /\b(francos? suicos?|chf)\b/.test(t) ? 'CHF' : /\b(yuan|yuans|iuane?s?|renminbi|cny)\b/.test(t) ? 'CNY'
+    : /\b(rublos?|rubra|rub)\b/.test(t) ? 'RUB'
+    : /\b(dolar|dolares|usd)\b/.test(t) ? 'USD' : /\beuros?\b/.test(t) ? 'EUR' : /\blibras?\b/.test(t) ? 'GBP'
     : /\b(bitcoin|btc)\b/.test(t) ? 'BTC' : /peso argentino/.test(t) ? 'ARS' : /\b(bolsa|ibovespa|ibov|b3|acoes)\b/.test(t) ? 'IBOV'
     : /\bselic\b/.test(t) ? 'SELIC' : /\bcdi\b/.test(t) ? 'CDI' : /\b(ipca|inflacao)\b/.test(t) ? 'IPCA' : null;
   if (/((qual|quais|que) (banco|conta|desses|dessas)[a-z ]*(rende|rendimento))|rende mais|melhor rendimento|rendimento (do|da|dos|das|de|nos|nas) (banco|bancos|conta|contas|meu|minha|nubank|picpay|inter|mercado pago|c6|itau|bradesco|caixa|santander|pagbank)|onde (eu )?(deixo|guardo|coloco) (o |meu )?dinheiro|comparar (os )?bancos/.test(t)) return { ...r, intent: 'bancos' };
@@ -921,10 +944,11 @@ const TUTORIAL = {
 
 const fmtPct = v => `${String(Math.round(v * 100) / 100).replace('.', ',')}%`;
 const sinal = v => (v == null ? '' : `${v > 0 ? '+' : ''}${fmtPct(v)}`);
-const fmtReal = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: v >= 1000 ? 0 : 2 });
+// moeda que vale centavos (iene, rublo, peso): 4 casas, senão vira "R$ 0,04" pra tudo (2.3.0)
+const fmtReal = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: v < 1 ? 4 : 2, maximumFractionDigits: v >= 1000 ? 0 : v < 1 ? 4 : 2 });
 
 /** Uma linha com o número, a variação e a tendência, mostrando a conta (base de cálculo). */
-const NOME_ATIVO = { USD: 'dólar', EUR: 'euro', GBP: 'valor da libra', BTC: 'bitcoin', ARS: 'peso argentino', IBOV: 'Ibovespa', SELIC: 'valor da Selic', CDI: 'CDI', IPCA: 'IPCA' };
+const NOME_ATIVO = { JPY: 'iene', CAD: 'dólar canadense', CHF: 'franco suíço', CNY: 'yuan', RUB: 'rublo', USD: 'dólar', EUR: 'euro', GBP: 'valor da libra', BTC: 'bitcoin', ARS: 'peso argentino', IBOV: 'Ibovespa', SELIC: 'valor da Selic', CDI: 'CDI', IPCA: 'IPCA' };
 
 function textoAtivo(m, a) {
   if (a === 'SELIC') return m.selic ? `Selic: ${fmtPct(m.selic.valor)} ao ano${m.ipca12 ? `; com a inflação em 12 meses em ${fmtPct(m.ipca12.valor)}, o juro real fica perto de ${fmtPct(m.selic.valor - m.ipca12.valor)}` : ''}.` : '';
@@ -934,7 +958,9 @@ function textoAtivo(m, a) {
   if (!x) return '';
   const valor = a === 'IBOV' ? `${Math.round(x.atual).toLocaleString('pt-BR')} pontos` : fmtReal(x.atual);
   const media = x.media20 != null ? ` A média dos últimos ${Math.min(20, x.dias)} dias é ${a === 'IBOV' ? `${Math.round(x.media20).toLocaleString('pt-BR')} pontos` : fmtReal(x.media20)}, e ele está ${x.atual >= x.media20 ? 'acima' : 'abaixo'} dela: ${textoTendencia(x.tendencia)}.` : '';
-  return `${x.nome || 'Ibovespa'}: ${valor}${x.varDia != null ? ` (${sinal(x.varDia)} no dia` : ''}${x.var5 != null ? `, ${sinal(x.var5)} em 5 dias)` : x.varDia != null ? ')' : ''}.${media}`;
+  // moeda miúda (iene, rublo): o jeito de entender é em 100 unidades (2.3.0)
+  const cem = a !== 'IBOV' && x.atual < 0.5 ? ` Ou seja, 100 ${x.nome.split(' ')[0].toLowerCase()}s = ${fmtReal(x.atual * 100)}.` : '';
+  return `${x.nome || 'Ibovespa'}: ${valor}${x.varDia != null ? ` (${sinal(x.varDia)} no dia` : ''}${x.var5 != null ? `, ${sinal(x.var5)} em 5 dias)` : x.varDia != null ? ')' : ''}.${cem}${media}`;
 }
 
 function textoSobra(a) {
@@ -1143,7 +1169,9 @@ function notaDaEntrada(t, fonte, accounts = []) {
 }
 
 export function descricaoDe(t) {
-  const m = String(t).match(/\b(?:no|na|nos|nas|em|de|do|da|com|pro|pra)\s+([a-z0-9 ]{2,40})$/);
+  // 2.3.0 (JF, foto com legenda): "comprei esse tênis por 250", "gastei 80 nessa camisa" → "tenis", "camisa"
+  const m = String(t).match(/\b(?:no|na|nos|nas|em|de|do|da|com|pro|pra|num|numa|nesse|nessa|neste|nesta)\s+([a-z0-9 ]{2,40})$/)
+    || String(t).match(/\bcomprei\s+(?:(?:um|uma|uns|umas|esse|essa|este|esta|esses|essas|o|a|os|as|meu|minha|meus|minhas)\s+)?([a-z ]{2,30}?)\s+(?:por|de|a|em|no|na|pelo|pela)?\s*(?:r\$\s*)?\d/);
   if (!m) return '';
   // número fica na descrição ("no 99", "padaria 2 irmãos"); palavra vazia sai (achado do Gemini, 12/11)
   return m[1].split(/\s+/).filter(w => /^\d{1,4}$/.test(w) || palavrasDe(w).length).slice(0, 3).join(' ');
@@ -1351,11 +1379,23 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
           data = toISODate(new Date(ay, am - 1, ad + ((alvo - hojeSem + 7) % 7)));
         } else data = data < today ? today : data;
       }
+      // 2.3.0 (JF, 18/11): plantão é extra (anotado como "Plantão"); muitos no mês, ele sugere descansar, sem mandar
+      const ehPlantao = /\bplant(ao|oes|onista)\b/.test(intencao.t);
+      let dicaPlantao = null;
+      if (ehPlantao && !intencao.prevista) {
+        const nPlant = d => (dados.incomes || []).filter(i => i.date > d && i.date <= today && /plant/.test(norm(i.note || ''))).length + 1;
+        const mesN = nPlant(toISODate(new Date(new Date(`${today}T12:00:00`).getTime() - 30 * 86_400_000)));
+        const semN = nPlant(toISODate(new Date(new Date(`${today}T12:00:00`).getTime() - 7 * 86_400_000)));
+        if (semN >= 3 || mesN >= 8) {
+          dicaPlantao = `${semN >= 3 ? `É o ${semN}º plantão em 7 dias` : `É o ${mesN}º plantão em 30 dias`}. O extra ajuda muito, e quem decide é você: só não esquece de descansar. Cansado, a gente gasta mais (delivery, corrida de app, compra por impulso) e o extra vai embora.`;
+        }
+      }
       return {
+        ...(dicaPlantao ? { dica: dicaPlantao } : {}),
         gatilho: 'proposta_registro',
         vars: { valor: formatBRL(intencao.valor), categoria: intencao.prevista ? `entrada prevista pra ${data.slice(8, 10)}/${data.slice(5, 7)} (${fonte.name})` : `entrada (${fonte.name})` },
         // "recebi 1500 de salário no nubank": a entrada cai na conta (achado do Gemini); cartão nunca recebe entrada
-        acao: { tipo: 'registrar_entrada', amountCents: intencao.valor, sourceId: fonte.id, date: data, note: notaDaEntrada(intencao.t, fonte, dados.accounts), ...(intencao.prevista ? { prevista: true } : {}),
+        acao: { tipo: 'registrar_entrada', amountCents: intencao.valor, sourceId: fonte.id, date: data, note: ehPlantao ? 'Plantão' : notaDaEntrada(intencao.t, fonte, dados.accounts), ...(intencao.prevista ? { prevista: true } : {}),
           accountId: lerPagamento(intencao.t, (dados.accounts || []).filter(a => a.tipo !== 'cartao')).accountId || null },
       };
     }
@@ -1712,6 +1752,30 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         fato: `Este mês foram ${vezes} de até ${lim}, somando ${formatBRL(f.totalCents)} (${f.pct}% de tudo que você gastou). Onde mais aparecem: ${top}.${f.count >= 10 ? ' Escolher um deles pra segurar na semana já faz diferença.' : ''}`,
         sugestoes: ['Onde mais gastei?', 'Quanto gastei este mês?'],
       };
+    }
+    case 'pib': {
+      // 2.3.0 (JF): número oficial com a data, sem IA (IBGE, divulgado em 03/03/2026)
+      return { fato: 'O último PIB anual do Brasil é o de 2025: R$ 12,7 trilhões, com alta de 2,3% (IBGE, divulgado em março de 2026). Dividindo por pessoa, dá uns R$ 59.687 no ano, perto de R$ 4.974 por mês. O de 2026 sai em março de 2027; os números de cada trimestre saem no site do IBGE. PIB é a soma de tudo que o país produziu: crescendo, costuma vir mais emprego.',
+        cru: true, sugestoes: ['O que é PIB?', 'O que é inflação?', 'Qual a Selic?'] };
+    }
+    case 'piso_salarial': {
+      // 2.3.0 (JF: "sabe o piso de várias profissões pra ajudar a ordenar salário, gastos e plantões"): piso muda por
+      // lei, estado e sindicato, então vai pra IA pesquisar; sem ela, o caminho pra achar
+      const p = intencao.profissao;
+      const perguntaIA = `Piso salarial. Pedido da pessoa: "${intencao.t}". Profissão: ${p}. Diga o piso nacional por lei, se existir, ou o piso estadual/da convenção coletiva mais comum, com a fonte e a data, e avise que muda por estado e sindicato. Se fizer sentido, dê uma dica curta de como organizar o salário (contas fixas no salário; extra e plantão pra reserva).`;
+      return { fato: `Sem a IA online eu não pesquiso o piso de ${p}. Onde achar: algumas profissões têm piso nacional por lei (professor da rede pública, enfermagem); a maioria segue a convenção coletiva do sindicato da sua cidade, e alguns estados têm piso regional. O piso nunca fica abaixo do salário mínimo (R$ 1.621 em 2026). Dica pra organizar: paga as contas fixas com o salário e usa extra e plantão pra reserva.`,
+        cru: true, perguntaIA: perguntaIA.slice(0, 600), modoIA: 'pesquisa', sugestoes: ['O que é piso salarial?', 'Qual o salário mínimo?'] };
+    }
+    case 'pedir_mesada': {
+      // 2.3.0 (JF: "te ajuda a conversar com os pais pra ver se consegue mesada; ele dá dicas e sugere falas, mas é só
+      // um amigo tentando ajudar"): nunca joga a criança contra os pais e respeita o "não"
+      const idade = idadeDe(perfil?.aniversario, today);
+      const crianca = idade != null && faixaEtaria(idade) === 'crianca';
+      const fala = crianca
+        ? '"Mãe, pai, posso falar uma coisa? Eu queria aprender a cuidar do meu dinheiro. Será que eu podia ganhar uma mesada pequena? Eu anoto tudo no app e daqui a um mês a gente vê se deu certo."'
+        : '"Queria conversar sobre uma coisa: quero aprender a me virar com dinheiro. Que tal uma mesada pequena, combinando o que ela cobre (lanche, transporte, um jogo)? Eu anoto tudo no app e a gente revê em um mês."';
+      return { fato: `Bora pensar juntos! Umas dicas de amigo: 1) escolhe uma hora tranquila, não no meio da correria nem logo depois de pedir outra coisa; 2) mostra que tem plano: pra que quer e que vai anotar tudo aqui; 3) propõe um mês de teste, com um valor pequeno, e aceita negociar (pode ser por semana); 4) se der, oferece ajudar mais em casa, mas sem transformar tudo em pagamento. Uma ideia de como começar: ${fala} Se disserem que agora não dá, tudo bem: dinheiro de casa às vezes está apertado. Agradece e tenta de novo mais pra frente.`,
+        cru: true, sugestoes: ['O que é mesada?', 'Como eu começo a guardar dinheiro?'] };
     }
     case 'consumo_carro': {
       // 2.1.9.3 (JF, 17/11): km por litro, custo por km, projeção (a calculadora) e o empurrão pro mecânico

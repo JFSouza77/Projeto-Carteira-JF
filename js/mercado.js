@@ -8,6 +8,12 @@ export const MOEDAS = Object.freeze({
   GBP: { nome: 'Libra', simbolo: '£' },
   ARS: { nome: 'Peso argentino', simbolo: 'ARS' },
   BTC: { nome: 'Bitcoin', simbolo: 'BTC' },
+  // 2.3.0 (JF, 18/11: "cotação de outras moedas como euro, iene, dólar canadense, rublo"): +5, fechando 10
+  JPY: { nome: 'Iene', simbolo: '¥' },
+  CAD: { nome: 'Dólar canadense', simbolo: 'C$' },
+  CHF: { nome: 'Franco suíço', simbolo: 'CHF' },
+  CNY: { nome: 'Yuan chinês', simbolo: '¥' },
+  RUB: { nome: 'Rublo russo', simbolo: '₽' },
 });
 
 const media = xs => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);

@@ -7,6 +7,21 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.3.0 Alfa',
+    data: '18/11/2026',
+    nome: 'Trabalho e Renda',
+    t: 'Plantão, piso, salário mínimo, PIB, mais moedas, mesada e foto com legenda no Chat.',
+    itens: [
+      '📸 Foto do que comprou: no Chat, toque no clipe, escolha a foto e escreva "comprei esse tênis por 250". Ele anota com a foto.',
+      '🩺 Plantão: no Chat, diga "recebi 800 de plantão". Ele anota como extra e, se forem muitos, lembra de descansar.',
+      '💼 Piso da profissão: no Chat, pergunte "qual o piso de enfermeiro?" e, com a IA ligada, ele pesquisa.',
+      '🌍 Mais moedas: no Chat, pergunte do iene, dólar canadense, franco suíço, yuan ou rublo.',
+      '🧒 Pedir mesada: no Chat, pergunte "como peço mesada?" e ele dá dicas e uma ideia de como conversar.',
+      '📖 Mais palavras no glossário: salário mínimo de 2026, PIB, piso salarial, plantão, hora extra e mesada.',
+    ],
+    qol: [],
+  },
+  {
     v: '2.2.0 Alfa',
     data: '17/11/2026',
     nome: 'Carro e Casa',
