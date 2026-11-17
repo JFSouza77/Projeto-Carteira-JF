@@ -1,4 +1,4 @@
-// 2.3.0 (JF, 18/11): plantão, piso, salário mínimo, PIB, mesada, moedas novas e descrição do item comprado.
+// 2.3.0 (JF, 17/11): plantão, piso, salário mínimo, PIB, mesada, moedas novas e descrição do item comprado.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { entender, responder, descricaoDe } from '../js/caos/conversa.js';

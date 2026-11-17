@@ -82,7 +82,7 @@ function acharPeriodo(t) {
   return 'mes';
 }
 
-// ---------- Fezinha: loterias (2.3.0.1, JF 18/11) ----------
+// ---------- Fezinha: loterias (2.3.0.1, JF 17/11) ----------
 // "Ele entende mega-sena, raspadinha (não o sorvete), quina, mega da virada... essas fezinhas." Chance é conta fixa
 // (combinação de números), então sai aqui sem IA; prêmio, sorteio e resultado mudam toda semana e vão pra IA pesquisar.
 const LOTERIA = /\b(mega ?sena|mega da virada|mega|quina|lotofacil|lotomania|dupla sena|timemania|dia de sorte|super sete|loteria|loterias|loterica|raspadinhas?|fezinhas?|bolao|boloes)\b/;
@@ -649,7 +649,7 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
     if (/(chance|chances|probabilidade|possibilidade|dificil|facil de ganhar|quantas pessoas|vale a pena|compensa|da pra ganhar|como (eu )?ganh|ficar rico|estrategia|numeros? da sorte|melhor jogo|qual (a |e a )?melhor loteria)/.test(t)) return { ...r, categoria: null, intent: 'loteria', pede: 'chance' };
     if (/(premio|acumul|resultado|sorteio|sorteados|quando (e|sai|vai ser)|que dia|ganhador|ganhou|valor da aposta|quanto custa|preco)/.test(t) && !oQueE) return { ...r, categoria: null, intent: 'loteria', pede: 'pesquisa' };
   }
-  // Trabalho e renda (2.3.0, JF 18/11): salário mínimo, PIB, piso de profissão e mesada
+  // Trabalho e renda (2.3.0, JF 17/11): salário mínimo, PIB, piso de profissão e mesada
   if (!r.valor || /\bpib\b/.test(t)) {
     const oQueE = /^(o que (e|sao|significa)|me explica|explica|que e)\b/.test(t);
     if (/((qual|quanto) (e |eh |ta |esta |vai ser |sera |fica )?(o )?(valor (do|de) )?salario minimo|salario minimo (atual|hoje|de hoje|agora|de 20\d\d|desse ano|deste ano|esse ano|este ano|ta|esta|e quanto))/.test(t)) {
@@ -1420,7 +1420,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
           data = toISODate(new Date(ay, am - 1, ad + ((alvo - hojeSem + 7) % 7)));
         } else data = data < today ? today : data;
       }
-      // 2.3.0 (JF, 18/11): plantão é extra (anotado como "Plantão"); muitos no mês, ele sugere descansar, sem mandar
+      // 2.3.0 (JF, 17/11): plantão é extra (anotado como "Plantão"); muitos no mês, ele sugere descansar, sem mandar
       const ehPlantao = /\bplant(ao|oes|onista)\b/.test(intencao.t);
       let dicaPlantao = null;
       if (ehPlantao && !intencao.prevista) {

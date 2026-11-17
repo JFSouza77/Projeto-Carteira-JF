@@ -1,4 +1,4 @@
-// 2.3.0.1 (JF, 18/11): "ele entende mega-sena, raspadinha (não o sorvete), quina, mega da virada... essas fezinhas".
+// 2.3.0.1 (JF, 17/11): "ele entende mega-sena, raspadinha (não o sorvete), quina, mega da virada... essas fezinhas".
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { entender, responder } from '../js/caos/conversa.js';

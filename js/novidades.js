@@ -9,7 +9,7 @@ export const NOVIDADES = Object.freeze([
   {
     v: '2.3.0 Alfa',
     ate: '2.3.0.1',
-    data: '18/11/2026',
+    data: '17/11/2026',
     nome: 'Trabalho e Renda',
     t: 'Plantão, piso, salário mínimo, PIB, mais moedas, mesada e foto com legenda no Chat.',
     itens: [
