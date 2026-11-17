@@ -382,6 +382,12 @@ const PESQUISA_DIRETA = /\b(pesquisa|pesquisar|busca|buscar|procura|procurar|ve|
 // as perguntas"). Fica de fora o que é do próprio dinheiro (banco, cartão, investimento…), que tem resposta aqui.
 const RECOMENDA = /\b((qual|quais) (e |eh |seria |sao )?(o |a |os |as )?melhor(es)?|(o|a) melhor (tipo de |marca de |lugar pra |opcao )?\w+ (pra|para)|melhor custo.?beneficio|custo.?beneficio|vale mais a pena|compensa mais|(me )?recomenda(r|ria)?|(me )?indica(r|ria)?|onde (e|eh|fica|sai|compro) mais barat[oa]|qual (e |eh )?(o |a )?mais barat[oa]|o que (e|eh) melhor)\b/;
 const DO_PROPRIO_DINHEIRO = /\b(banco|bancos|conta|contas|cartao|cartoes|fatura|investimento|investimentos|investir|cdb|tesouro|rende|rendimento|poupanca|orcamento|categoria|gasto|gastos|gastei|meta|metas|saldo|salario|juros|cofrinho|caixinha|dica|app|aplicativo|economizar|economia|poupar)\b/;
+const COMBUSTIVEL = /\b(gasolina|etanol|alcool|diesel|combustivel|combustiveis|petroleo|petrobras|gnv)\b/;
+// "etanol 4,10 e gasolina 6,20" → preço de cada um (centavos)
+function lerPrecosCombustivel(t) {
+  const pega = nome => { const m = t.match(new RegExp(`\\b${nome}\\b[^0-9]{0,15}(\\d{1,2}[.,]\\d{1,3})`)); return m ? Math.round(Number(m[1].replace(',', '.')) * 100) : null; };
+  return { etanol: pega('(?:etanol|alcool)'), gasolina: pega('gasolina') };
+}
 const VIAGEM = /\b(viagem|viajar|passagem|passagens|voo|voos|hotel|hospedagem|pacote de viagem)\b/;
 const PET = /\b(pet|pets|cachorro|cachorrinho|cao|gato|gatinho|gata|filhote|pinscher|pincher|calopsita|passaro|hamster|coelho|peixe|aquario|vira lata)\b/;
 const MORADIA = /\b(aluguel|apartamento|ape|casa propria|me mudar|mudar de casa|mudar de apartamento|mudanca|morar sozinh[oa]|condominio|financiar (uma |a )?(casa|ape))\b/;
@@ -539,6 +545,18 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   const pergunta = /\b(quanto|qual|quais|onde|como|tive|teve|tenho|vai|posso|consigo|algum|alguma)\b|\?/.test(t);
 
   if (!t) return { ...r, intent: 'nao_entendi' };
+  // Combustível (JF, 17/11: "análise de preço de gasolina, se vai subir ou descer, se estou pagando caro"): pergunta de
+  // preço ou de rumo vai pra IA pesquisar (ANP, Petrobras, petróleo e dólar). "Abasteci 200" continua sendo gasto;
+  // "gasto muito com gasolina" continua no plano de transporte; "etanol 4,10 gasolina 6,20" ele calcula aqui.
+  if (COMBUSTIVEL.test(t)) {
+    const precos = lerPrecosCombustivel(t);
+    if (precos.etanol && precos.gasolina) return { ...r, categoria: null, intent: 'etanol_ou_gasolina', precos };
+    const registro = /\b(abasteci|gastei|paguei|coloquei|botei|enchi)\b/.test(t) && !/\b(litro|caro|cara|barato|barata)\b|\?/.test(t);
+    const doBolso = /\b(quanto gastei|gastei quanto|gasto com|gastando|gasto muito|gastei muito|economiz)/.test(t);
+    if (!registro && !doBolso && /\b(preco|precos|valor|quanto (ta|esta|custa)|caro|cara|barato|barata|sub(ir|indo|iu)|sobe|aument\w*|reajuste|baix(ar|ou|ando)|desc(e|er|eu)|ca(ir|iu|indo)|reducao|previsao|tendencia|como (ta|esta|anda)|litro|vale a pena abastecer|compensa|petroleo|petrobras)\b|etanol ou gasolina|gasolina ou etanol|alcool ou gasolina/.test(t)) {
+      return { ...r, categoria: null, intent: 'combustivel', precoLitro: /\blitro\b/.test(t) ? r.valor : null };
+    }
+  }
   // Papo pessoal com ele (JF, 15/11: "como vc se sente tendo acesso à internet?" virava gasto em Contas, por causa da
   // palavra "internet"): pergunta sobre o que ele sente, acha ou gosta vai pra IA online quando está ligada; sem ela,
   // ele responde como está. Não pega pergunta de dinheiro ("o que você acha de eu comprar 300?").
@@ -1606,6 +1624,21 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         fato: `Este mês foram ${vezes} de até ${lim}, somando ${formatBRL(f.totalCents)} (${f.pct}% de tudo que você gastou). Onde mais aparecem: ${top}.${f.count >= 10 ? ' Escolher um deles pra segurar na semana já faz diferença.' : ''}`,
         sugestoes: ['Onde mais gastei?', 'Quanto gastei este mês?'],
       };
+    }
+    case 'etanol_ou_gasolina': {
+      // 17/11 (JF): a regra dos 70% (o etanol rende uns 30% menos por litro): conta feita aqui, sem IA
+      const { etanol, gasolina } = intencao.precos;
+      const pct = Math.round(etanol * 100 / gasolina);
+      const vence = pct <= 70 ? 'o etanol compensa' : 'a gasolina compensa';
+      return { fato: `Etanol a ${formatBRL(etanol)} é ${pct}% da gasolina a ${formatBRL(gasolina)}. ${pct <= 70 ? 'Até 70%' : 'Acima de 70%'}, ${vence}: o etanol rende uns 30% menos por litro, então só vale se for bem mais barato. Isso pra carro flex; confira no manual se o seu é.`,
+        sugestoes: ['A gasolina vai subir?', 'Quanto gastei com transporte?'] };
+    }
+    case 'combustivel': {
+      // 17/11 (JF): preço e rumo do combustível vão pra IA pesquisar; sem ela, as dicas que valem sempre
+      const regiao = respostasDoLazer(intencao.t).regiao;
+      const perguntaIA = `Combustível. Pedido da pessoa: "${intencao.t}".${intencao.precoLitro ? ` Ela pagou ${formatBRL(intencao.precoLitro)} o litro.` : ''}${regiao ? ` Região: ${regiao}.` : ''}`;
+      return { fato: 'Sem a IA online eu não sei o preço de hoje. O que vale sempre: o etanol compensa quando custa até 70% da gasolina; aplicativo de posto e programa de fidelidade dão desconto; e calibrar o pneu e evitar arrancadas economizam combustível.',
+        cru: true, perguntaIA: perguntaIA.slice(0, 600), modoIA: 'pesquisa', sugestoes: ['Etanol ou gasolina?', 'Quanto gastei com transporte?'] };
     }
     case 'a_receber': {
       const r = aReceber(expenses);

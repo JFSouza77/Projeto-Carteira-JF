@@ -1,7 +1,7 @@
 # Funções do C.A.O.S. (pra revisar)
 
 Lista feita pelo Wally em 16/11/2026, tirada do código (`js/caos/conversa.js`, função `entender()`).
-App 2.1.5 Alfa · C.A.O.S. 2.4.3 · núcleo 1.8.0. São **69 jeitos de entender** uma frase, em 7 grupos.
+App 2.1.5 Alfa · C.A.O.S. 2.4.4 · núcleo 1.8.0. São **69 jeitos de entender** uma frase, em 7 grupos.
 
 Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o que ele faz.
 - 🖥️ = responde sem internet (no próprio celular).
@@ -73,6 +73,7 @@ Como ler: cada linha é uma coisa que ele entende, com um exemplo de frase e o q
 | Plano de passeio | "quanto tá um ingresso no cinema?" / "dá pra ir ao cinema esse mês?" | Pesquisa ingresso, estacionamento e pipoca e diz se cabe no mês (tranquilo, com cuidado ou melhor esperar) 🌐 (sem IA: dicas pra sair mais barato 🖥️) |
 | Pesquisa direta | "pesquisa na internet o preço de…" | Vai direto pra IA, sem questionário (também quando o pedido já vem detalhado) 🌐 |
 | Pesquisa de compra ou viagem | "quanto custaria uma viagem pros EUA?" / "me ajuda a achar uma geladeira" | Faz um questionário rápido sem IA (de onde, quando, quantos, região, orçamento; ou detalhes, uso, marca, prazo), com Pular; depois a IA compara 2 a 4 sites e diz o que conferir (frete, bagagem…). Ele orienta, não decide 🌐 (sem IA: o caminho das pedras 🖥️) |
+| Combustível | "a gasolina vai subir?" / "paguei 6,29 no litro, tá caro?" / "etanol 4,10 gasolina 6,20" | Pesquisa preço (ANP) e o que mexe nele, sem prometer número 🌐; etanol x gasolina na hora 🖥️ |
 | Moedas de jogo | "quanto tá valendo 100 robux?" | A moeda, onde comprar, preço de hoje e alerta de golpe 🖥️/🌐 |
 
 ## 4. Aprender

@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 2.1.9 Alfa | 17/11/2026 | Posto (ideia do JF): combustível no Chat; preço e rumo da gasolina/petróleo vão pra IA (ANP, Petrobras, Brent, dólar; sem prometer número), "tá caro?" compara o litro com a média, etanol x gasolina calculado sem IA (70%). Servidor: regra do combustível (precisa deploy). C.A.O.S. 2.4.4. |
 | 2.1.8.1 Alfa | 17/11/2026 | Revisão da madrugada: áudio destrava em todo toque (iPhone trava de novo no fundo e pede o destrave no touchend: suspeito forte da voz robótica); boas-vindas não aparecem pra quem traz o perfil da nuvem; propriedade repetida no avatar. Testes simulados em iPhone 11, 13 e 15 (claro e escuro). |
 | 2.1.8 Alfa | 17/11/2026 | Sabedoria (ideia do JF): frase do dia de manhã no Início (15 frases conferidas, autoria incerta avisada), e no Chat frase de motivação, ditado (10, com o que quer dizer) e curiosidade de dinheiro (10). Sem IA. C.A.O.S. 2.4.3. |
 | 2.1.7.2 Alfa | 17/11/2026 | (JF) boca parada: a "respiração" da boca (.oscila) ganhava da animação de falar no CSS; agora a fala manda. Pergunta de recomendação vai pra IA pesquisar; categoria sozinha não vira "quanto gastei". Servidor: regra de recomendação no prompt (precisa deploy). C.A.O.S. 2.4.2. |
