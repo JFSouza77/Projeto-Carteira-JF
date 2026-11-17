@@ -102,6 +102,9 @@
       <symbol id="i-olho" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
       <symbol id="i-olho-fechado" viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 5.1A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.2M6.6 6.6C3.8 8.4 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 4.4-1.1M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
       <symbol id="i-ok" viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7"/></symbol>
+      <!-- 2.3.3.2 (prints do JF): ícones próprios pra "Adicionar conta" e "Calculadora", que repetiam o do vizinho -->
+      <symbol id="i-mais" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></symbol>
+      <symbol id="i-calc" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7h7M9 12h.01M12 12h.01M15 12h.01M9 15.5h.01M12 15.5h.01M15 15.5h.01M9 19h.01"/></symbol>
     </defs>
   </svg>
   <!-- ============ INÍCIO ============ -->
@@ -526,7 +529,7 @@
         <button type="button" class="link-btn recomecar-link" id="ir-recomecar">Zerar os saldos ou começar do zero</button>
       </details>
       <details class="card bloco tile-bloco" id="add-conta-card" data-bloco="add-conta">
-        <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#i-contas"/></svg><span class="bloco-tit">Adicionar conta</span></summary>
+        <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#i-mais"/></svg><span class="bloco-tit">Adicionar conta</span></summary>
         <form id="account-form" autocomplete="off" novalidate>
           <label class="field"><span>Banco</span><select id="bank-select" aria-label="Banco"></select></label>
           <label class="field"><span>O que é?</span><select id="bank-subtipo" aria-label="Tipo de conta">
@@ -592,7 +595,7 @@
         </details>
       </details>
       <details class="card bloco tile-bloco calc-bloco" id="calc-card" data-bloco="calc">
-        <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#e-rendimento"/></svg><span class="bloco-tit">Calculadora de juros</span><span class="bloco-res">simples × compostos</span></summary>
+        <summary class="bloco-topo"><svg class="ico" aria-hidden="true"><use href="#i-calc"/></svg><span class="bloco-tit">Calculadora de juros</span><span class="bloco-res">simples × compostos</span></summary>
         <p class="muted small">Mexa nos valores e veja quanto o dinheiro cresce (ou a dívida aumenta) com juros simples e com juros compostos.</p>
         <div class="calc-grid">
           <label class="field"><span>Valor (R$)</span><input id="calc-valor" type="text" inputmode="decimal" value="1.000,00"></label>

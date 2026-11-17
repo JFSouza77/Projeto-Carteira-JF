@@ -645,9 +645,8 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .check { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0; }
 .check[hidden] { display: none; }
 
-/* "Me ajuda" não tampa nada (12/11): a tela ganha espaço no fim pra rolar o conteúdo pra cima dele,
-   e enquanto rola ele vira só um "?" redondo */
-.tela main { padding-bottom: calc(env(safe-area-inset-bottom) + 150px); }
+/* "Me ajuda" não tampa nada (12/11): o espaço no fim da tela pra rolar o conteúdo pra cima dele já vem do
+   padding do body. 2.3.3.2 (prints do JF): aqui somava de novo e sobrava uns 220 px vazios em toda aba. */
 
 /* Pagou como? e parcelas (P8, 12/11) */
 .parcelas-box { display: grid; gap: 6px; }
@@ -1559,3 +1558,12 @@ li.feito .passo-n { background: transparent; color: var(--ok); box-shadow: inset
   :root[data-idade="senior"] .me-ajuda { width: auto; height: 52px; padding: 0 16px; border-radius: 99px; gap: 6px; }
   :root[data-idade="senior"] .me-ajuda .me-ajuda-txt { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
 }
+
+/* 2.3.3.2 (prints do JF, 17/11): telas mais redondinhas. A foto do comprovante ocupa a linha como os outros
+   botões do formulário; "Refazer apresentação" também; o lápis e o × dos lançamentos ficam mais juntos pra
+   sobrar lugar pro nome e a data */
+.photo-row .file-btn { flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; border-radius: 12px; font-weight: 600; }
+.photo-row .file-btn .ico { width: 20px; height: 20px; }
+#perfil-refazer { width: 100%; }
+.exp-list .icon-btn.edit, .exp-list .icon-btn.del { width: 32px; }
