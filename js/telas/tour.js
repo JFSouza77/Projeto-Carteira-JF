@@ -28,10 +28,12 @@ async function marcarVisto() {
  * Tela "Você é novo por aqui?". `depois` roda quando a pessoa termina ou pula (no 1º acesso, a conversa de
  * apresentação do C.A.O.S. começa depois do tutorial).
  */
-export async function abrirBoasVindas({ depois = null, primeiraVez = false } = {}) {
+export async function abrirBoasVindas({ depois = null, primeiraVez = false, desistirSe = null } = {}) {
   // espera a abertura (o C.A.O.S. com o slogan) sair da tela
   // (sem limite: na 1ª vez com o servidor, a abertura espera a pessoa escolher entrar, criar ou continuar sem conta)
   while (document.getElementById('abertura')) await espera(300);
+  // quem entrou na conta num celular novo traz o perfil da nuvem: não é novo por aqui (17/11, revisão da madrugada)
+  if (desistirSe?.()) return;
   fecharBoasVindas();
   const el = document.createElement('div');
   el.className = 'tour-boas';

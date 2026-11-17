@@ -8,6 +8,7 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.1.8 Alfa',
+    ate: '2.1.8.1',
     data: '17/11/2026',
     nome: 'Sabedoria',
     t: 'Todo dia de manhã, uma frase de quem entende de dinheiro, e ditados e curiosidades no Chat.',
@@ -17,7 +18,10 @@ export const NOVIDADES = Object.freeze([
       '👴 Ditados: no Chat, peça "me conta um ditado" e ele explica o que o ditado quer dizer pro seu bolso.',
       '💡 Curiosidades: no Chat, peça "me conta uma curiosidade" e aprenda de onde veio o cofrinho de porco, o Pix e mais.',
     ],
-    qol: [],
+    qol: [
+      '🔊 Voz no iPhone: a voz natural agora volta a funcionar depois que o app vai pro fundo e você toca na tela.',
+      '📱 Celular novo: quem entra na conta num aparelho novo não vê mais a tela de quem acabou de chegar.',
+    ],
   },
   {
     v: '2.1.7 Alfa',

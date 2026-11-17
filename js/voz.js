@@ -135,11 +135,13 @@ function audioCtx() {
   return ctx;
 }
 /** iPhone: o som só sai depois de um toque. O app chama isto no primeiro toque na tela. */
+// 2.1.7.3: o app chama em TODO toque (o iPhone pede o destrave quando o dedo sai da tela, e trava de novo quando o app
+// vai pro fundo); com o som já rodando, não faz nada
 export function destravarAudio() {
   const c = audioCtx();
-  if (!c) return;
+  if (!c || c.state === 'running') return;
   try {
-    if (c.state !== 'running') c.resume();
+    c.resume();
     const b = c.createBuffer(1, 1, 22050);
     const s = c.createBufferSource();
     s.buffer = b; s.connect(c.destination); s.start(0);
