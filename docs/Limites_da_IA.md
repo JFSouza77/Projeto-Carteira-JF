@@ -1,0 +1,22 @@
+# Limites da IA do C.A.O.S. (JF, 17/11/2026)
+
+O C.A.O.S. é uma **IA de bolso de finanças**, não um buscador. Pra não virar "IA faz tudo" e não pesar no bolso do JF
+(a IA online é paga por uso), toda pergunta cai num destes níveis. Quando o app crescer (lojas, renda), os números
+sobem; a regra continua.
+
+| Nível | O que é | Exemplos | Limite (por aparelho) | Onde está no código |
+| --- | --- | --- | --- | --- |
+| **Sem IA** | Tudo que o app sabe sozinho | gastos, saldo, metas, contas, glossário, cálculos, dicas, apagar/corrigir, conferir um preço que a pessoa digitou, questionários dos planos | sem limite | `js/caos/` (conversa local) |
+| **Leve** | Conversa com a IA, sem pesquisa de preço | desabafo, papo (no Papo livre), pergunta de finanças que ele não sabe sozinho | dentro do total de 20 por dia | `fala.nivelIA = 'leve'` |
+| **Média** | Pesquisa de preço rápida, resposta curta | ingresso (cinema, teatro, show, jogo), academia, custo médio, piso salarial, plano de pet/moradia/transporte | **5 por dia** | `nivelIA = 'media'`, `MEDIA_POR_DIA` |
+| **Pesada** | Várias buscas, compara lojas ou compatibilidade | tecnologia (celular, notebook, RAM, peça de PC), eletrodoméstico, impressora, viagem, conferir link de loja, venda de usado, compra que a pessoa pediu pra pesquisar | **1 por dia** | `fala.pesada`, `PESADA` |
+| **Não faz** | Fora do papel de parceiro financeiro | escolher roupa ou coisa pessoal, "o que comprar no shopping", procurar loja sem pedido, comprar ou reservar por você, curiosidade sem dinheiro (filme, futebol, capital) | nunca: indica Google ou outra IA, e ajuda no que é de dinheiro | `BALCONISTA`, `respostaForaDoFoco`, `respostaPapoLivre` |
+
+Regras de convivência:
+
+- **Antes de pesquisar, filtra** ("me ajuda a te ajudar"): os planos fazem perguntas no celular, sem gastar IA, e só
+  então fazem UMA pesquisa certeira.
+- Acabou o limite: ele avisa com bom humor, indica outro chat (ChatGPT, Gemini, Copilot, Claude, DeepSeek, Grok) e dá
+  o caminho das pedras (`CAMINHO_PLANO`). Nunca deixa a pessoa na mão.
+- O criador (selo da conta) não tem esses limites, como no resto da IA.
+- "O que você pode pesquisar?" no Chat mostra este resumo pra pessoa (`TEXTO_LIMITES_PESQUISA`).
