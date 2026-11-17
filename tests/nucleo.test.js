@@ -93,8 +93,8 @@ test('núcleo 1.6.0: marcos da Carteira na vida (cérebro online) e a vida fecha
 });
 
 // Núcleo 1.7.0 (JF, 16/11): jeito de falar com 2 balões, emoção no tom (também online) e chamar pelo nome
-test('núcleo 1.9.0: jeito de reagir fecha em 5 e tem o 2º balão, a emoção no tom e a cabeça meio TDAH', () => {
-  assert.equal(NUCLEO.versao, '1.9.0');
+test('núcleo 1.9.0+: jeito de reagir fecha em 5 e tem o 2º balão, a emoção no tom e a cabeça meio TDAH', () => {
+  assert.ok(NUCLEO.versao >= '1.9.0');
   // 1.9.0 (JF, 17/11): o jeito de tratar acompanha a idade, cada casa com o seu motor
   assert.match(NUCLEO.fala.porIdade, /60/);
   assert.match(NUCLEO.fala.porIdade, /cada casa/i);
@@ -102,4 +102,17 @@ test('núcleo 1.9.0: jeito de reagir fecha em 5 e tem o 2º balão, a emoção n
   assert.equal(NUCLEO.jeitoDeReagir.length % 5, 0);
   assert.ok(NUCLEO.jeitoDeReagir.some(x => /segundo balão/.test(x)));
   assert.ok(NUCLEO.jeitoDeReagir.some(x => /emoção do momento/.test(x)));
+});
+
+// Núcleo 2.0.0 (JF, 17/11): o bordão do criador, "Rapaz…", virou jeito de falar do C.A.O.S.
+test('núcleo 2.0.0: o bordão "Rapaz…" do criador', async () => {
+  assert.equal(NUCLEO.versao, '2.0.0');
+  assert.match(NUCLEO.fala.bordao, /Rapaz…/);
+  const { conversar } = await import('../js/caos/index.js');
+  let mem = null; let viu = false;
+  for (let i = 0; i < 8 && !viu; i++) {
+    const r = conversar('o que você pode fazer?', { expenses: [], incomes: [], categories: [] }, { memory: mem, now: Date.now(), perfil: { apelido: 'Ana' } });
+    mem = r.memoria; viu = /^Rapaz…/.test(r.fala.texto);
+  }
+  assert.ok(viu, 'em algumas respostas ele abre com "Rapaz…"');
 });

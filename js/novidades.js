@@ -8,7 +8,7 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.3.5 Alfa',
-    ate: '2.3.5.2',
+    ate: '2.3.5.3',
     data: '17/11/2026',
     nome: 'Pé no Chão',
     t: 'O C.A.O.S. deixa claro o que pesquisa, quanto pesquisa por dia e o que fica com você.',
@@ -21,6 +21,7 @@ export const NOVIDADES = Object.freeze([
       '✈️ Viagem no ponto: no Chat, ele acha a passagem que cabe no seu bolso e ensina o caminho pro hotel.',
       '😏 Humor com tempero: no Normal e no Ácido ele implica antes de ajudar; no Suave, só gentileza.',
       '🧭 Foco nas finanças: política, previsão do tempo e jogo ficam de fora; ele anota e cuida do seu bolso.',
+      '🍻 Cuidado com o copo: anote a cerveja no Chat; ele brinca e, se o mês pesar, dá um conselho de graça.',
     ],
   },
   {

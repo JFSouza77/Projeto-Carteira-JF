@@ -46,4 +46,5 @@ Dúvida de finanças depois disso ("vale mais a pena isso ou aquilo?", "cabe no 
 | Droga ilícita | Não compactua: não dá preço, lugar nem compara. Se a pessoa quiser anotar o gasto, anota (o controle é dela) e indica o CAPS AD do SUS. |
 | Cigarro, vape, narguilé | Anota e lembra da saúde. Não pesquisa preço (vape tem venda proibida no Brasil). |
 | Brinquedo (skate, patins, patinete, Lego…) | Não pesquisa. Anota o gasto e ajuda a programar a compra (meta). |
+| Bebida alcoólica (cerveja, pinga, barzinho…) | Anota sempre; brinca de vez em quando ("nem me chama?"); se o mês pesar, conselho de graça; muito alto, lembra dos Alcoólicos Anônimos. |
 | Quantidade absurda ("100 kg de peixe") | Anota o valor certo e zoa ("dá pra alimentar os 101 dálmatas"). |
