@@ -359,6 +359,9 @@ export function render() {
   $('#alerts-card').hidden = !alertas.length;
   $('#alert-list').innerHTML = alertas.map(a => `
     <li class="${a.severity}">${ic(ICONE_ALERTA[a.type] || 'i-alerta')}<span>${esc(cap(nomeAlerta(a)))}</span></li>`).join('');
+  // 2.3.2 (JF): os alertas recolhem com um toque; fechado, fica só o título com a quantidade
+  $('#alertas-conta').textContent = alertas.length ? `(${alertas.length})` : '';
+  aplicarRecolhidos();
 
   const rows = s.rows.filter(r => r.spentCents > 0 || r.budgetCents > 0).sort((a, b) => b.spentCents - a.spentCents);
   // Modo Entradas (15/11): com o filtro "Entradas", a Análise vira o relatório das entradas, no mesmo formato
@@ -1139,6 +1142,15 @@ function bind() {
   }
   for (const b of document.querySelectorAll('[data-atalho]')) b.addEventListener('click', () => atalho(b.dataset.atalho));
   for (const b of document.querySelectorAll('[data-resumo]')) b.addEventListener('click', () => { state.resumoModo = b.dataset.resumo; renderResumoEntradas(); });
+  // 2.3.2 (JF): "clicou na área grande, aparecem os botõezinhos menores". Os detalhes começam fechados.
+  const alternarDetalhes = () => { state.resumoAberto = !state.resumoAberto; aplicarRecolhidos(); };
+  $('#resumo-mais').addEventListener('click', alternarDetalhes);
+  $('#resumo-card').addEventListener('click', e => { if (e.target.closest('.big, .label')) alternarDetalhes(); });
+  $('#alertas-toggle').addEventListener('click', () => {
+    state.settings.alertasFechado = !state.settings.alertasFechado;
+    saveSettings();
+    aplicarRecolhidos();
+  });
   // Recebi (15/11): a prevista vira entrada de verdade, com a data de hoje (é quando o dinheiro caiu)
   $('#previstas-lista').addEventListener('click', async e => {
     const b = e.target.closest('[data-recebi]');
@@ -1693,6 +1705,17 @@ async function init() {
       recarregar();
     });
   }
+}
+
+/** 2.3.2 (JF): aplica o "recolhido" do cartão de resumo (detalhes) e dos alertas. */
+function aplicarRecolhidos() {
+  const aberto = !!state.resumoAberto;
+  $('#resumo-card').classList.toggle('detalhes-abertos', aberto);
+  $('#resumo-mais').setAttribute('aria-expanded', String(aberto));
+  $('#resumo-mais').firstChild.textContent = aberto ? 'Esconder detalhes ' : 'Ver detalhes ';
+  const fechado = !!state.settings.alertasFechado;
+  $('#alerts-card').classList.toggle('fechado', fechado);
+  $('#alertas-toggle').setAttribute('aria-expanded', String(!fechado));
 }
 
 // ---------- Abertura (JF, 13/11) ----------

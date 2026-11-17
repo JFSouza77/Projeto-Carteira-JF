@@ -130,18 +130,20 @@
         <ol class="comece-lista" id="comece-lista"></ol>
       </section>
 
-      <nav class="atalhos" aria-label="Lançar rápido">
-        <button type="button" class="atalho gasto" data-resumo="gasto" aria-pressed="true"><svg class="ico" aria-hidden="true"><use href="#i-gasto"/></svg> Gasto</button>
-        <button type="button" class="atalho entrada" data-resumo="entrada" aria-pressed="false" aria-label="Ver as entradas do mês"><svg class="ico" aria-hidden="true"><use href="#i-entrada"/></svg> Entradas</button>
-        <button type="button" class="atalho transf" data-resumo="transf" aria-pressed="false"><svg class="ico" aria-hidden="true"><use href="#i-transf"/></svg> Transferir</button>
-      </nav>
       <!-- 15/11 (Anne): alerta em cima do gasto do mês -->
       <section class="card alertas-card" id="alerts-card" hidden>
-        <h2><svg class="ico" aria-hidden="true"><use href="#i-alerta"/></svg> Alertas</h2>
+        <!-- 2.3.2 (JF): os alertas recolhem com um toque no título -->
+        <h2><button type="button" class="alertas-toggle" id="alertas-toggle" aria-expanded="true" aria-controls="alert-list"><svg class="ico" aria-hidden="true"><use href="#i-alerta"/></svg> Alertas <span class="alertas-conta" id="alertas-conta"></span><span class="alertas-seta" aria-hidden="true">▾</span></button></h2>
         <ul class="alert-list" id="alert-list"></ul>
       </section>
       <!-- 15/11 (JF + Anne): Gasto e Entradas são duas abas do mesmo cartão; Entradas mostra o que entrou, no mesmo estilo -->
       <section class="card summary" id="resumo-card" data-modo="gasto" aria-live="polite">
+        <!-- 2.3.2 (JF): Gasto, Entradas e Transferir viraram as abas do próprio cartão (antes ficavam soltos em cima) -->
+          <nav class="atalhos resumo-abas" aria-label="Ver gasto, entradas ou transferências">
+          <button type="button" class="atalho gasto" data-resumo="gasto" aria-pressed="true"><svg class="ico" aria-hidden="true"><use href="#i-gasto"/></svg> Gasto</button>
+          <button type="button" class="atalho entrada" data-resumo="entrada" aria-pressed="false" aria-label="Ver as entradas do mês"><svg class="ico" aria-hidden="true"><use href="#i-entrada"/></svg> Entradas</button>
+          <button type="button" class="atalho transf" data-resumo="transf" aria-pressed="false"><svg class="ico" aria-hidden="true"><use href="#i-transf"/></svg> Transferir</button>
+        </nav>
         <div id="resumo-entrada" hidden>
           <p class="label entrada-titulo"><svg class="ico" aria-hidden="true"><use href="#i-entrada"/></svg> Entrada no mês</p>
           <p class="big" id="entrada-total">R$ 0,00</p>
@@ -176,8 +178,10 @@
           <p class="muted small" id="pode-dia"></p>
         </div>
         </div>
+        <!-- 2.3.2 (JF): os cartõezinhos ficam guardados; tocar no número grande (ou aqui) mostra os detalhes -->
+        <button type="button" class="resumo-mais" id="resumo-mais" aria-expanded="false" aria-controls="resumo-detalhes">Ver detalhes <span aria-hidden="true">▾</span></button>
         <!-- 15/11 (JF, rascunho do GPT): a mesma fileira nas duas abas; mostra gastos ou entradas conforme a aba -->
-        <div class="mini-stats stats-ico">
+        <div class="mini-stats stats-ico" id="resumo-detalhes">
           <div><small><svg class="ico" aria-hidden="true"><use href="#i-mes"/></svg> <span id="stat-semana-tit">Gastos</span> <span class="sub">(semana)</span></small><strong class="num" id="stat-semana">R$ 0,00</strong></div>
           <button type="button" class="stat-olho" id="stat-mes-btn" aria-label="Ver o relatório do mês"><small><svg class="ico" aria-hidden="true"><use href="#e-rendimento"/></svg> <span id="stat-mes-tit">Gastos do mês</span></small><strong class="num" id="stat-mes">R$ 0,00</strong></button>
           <div id="stat-net-box"><small><svg class="ico" aria-hidden="true"><use href="#a-poupanca"/></svg> <span id="stat-net-tit">Sobra do mês</span></small><strong class="num" id="stat-net">R$ 0,00</strong></div>
