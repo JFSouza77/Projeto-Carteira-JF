@@ -33,7 +33,7 @@ const SINONIMOS = {
   saude: ['saude', 'farmacia', 'remedio', 'medico', 'consulta', 'exame', 'dentista', 'plano de saude', 'academia'],
   lazer: ['lazer', 'cinema', 'show', 'festa', 'viagem', 'passeio',
     // 2.3.0.1 (JF): as fezinhas (loteria) contam como Lazer
-    'mega sena', 'megasena', 'mega da virada', 'quina', 'lotofacil', 'lotomania', 'dupla sena', 'timemania', 'dia de sorte', 'super sete', 'loteria', 'loterica', 'raspadinha', 'raspadinhas', 'fezinha', 'bolao'],
+    'mega sena', 'megasena', 'mega da virada', 'mega', 'quina', 'lotofacil', 'lotomania', 'dupla sena', 'timemania', 'dia de sorte', 'super sete', 'loteria', 'loterica', 'raspadinha', 'raspadinhas', 'fezinha', 'bolao'],
   // revisão do Gemini (16/11): jogo tinha ficado em Lazer depois que a categoria Jogos nasceu (2.2.8)
   jogos: ['jogos', 'jogo', 'game', 'games', 'steam', 'psn', 'xbox', 'nintendo', 'skin', 'passe de batalha', 'robux', 'vbucks'],
   // Streaming (06/11, pedido do JF): fica explícito, separado de Lazer e de Contas
@@ -42,6 +42,10 @@ const SINONIMOS = {
     'youtube premium', 'star plus', 'telecine', 'assinatura de filme'],
   compras: ['compras', 'roupa', 'tenis', 'sapato', 'shopping', 'presente', 'eletronico', 'loja', 'shopee', 'amazon', 'mercado livre', 'shein', 'aliexpress'],
   // Educação (JF, 13/11): faculdade e bolsa de estudos
+  // 2.3.4 (JF, num pet center): o que é do bicho vai pra Pet (ganha de Saúde quando o remédio é dele)
+  pet: ['pet', 'petshop', 'pet shop', 'racao', 'petisco', 'areia de gato', 'areia do gato', 'tapete higienico', 'banho e tosa', 'tosa', 'veterinario', 'veterinaria', 'vet', 'vermifugo', 'antipulgas', 'antipulga', 'coleira', 'cobasi', 'petz', 'petlove', 'cachorro', 'cachorra', 'gato', 'gata', 'cao', 'filhote', 'remedio do cachorro', 'remedio do gato', 'remedio pro cachorro', 'remedio pro gato'],
+  // 2.3.4 (JF): aposta de verdade (bet, cassino, poker, bicho, cavalos). A fezinha de loteria continua em Lazer.
+  apostas: ['apostas', 'aposta', 'aposta esportiva', 'bet', 'bets', 'bet365', 'betano', 'sportingbet', 'betfair', 'pixbet', 'estrela bet', 'superbet', 'blaze', 'tigrinho', 'fortune tiger', 'aviator', 'cassino', 'casino', 'caca niquel', 'cacaniquel', 'roleta', 'poker', 'pocker', 'jogo do bicho', 'no bicho', 'corrida de cavalo', 'corrida de cavalos', 'turfe', 'jockey', 'joquei', 'bingo'],
   educacao: ['educacao', 'faculdade', 'mensalidade', 'curso', 'escola', 'colegio', 'material escolar', 'livro', 'apostila', 'matricula', 'pos graduacao', 'pos', 'ingles', 'idiomas', 'cursinho', 'universidade', 'fies'],
   outros: ['outros', 'outro', 'diversos'],
 };
@@ -65,7 +69,78 @@ function acharCategoria(t, categorias) {
       }
     }
   }
+  // 2.3.4 (JF): "remédio pro gato" é do bicho, não da pessoa
+  if (melhor?.c.id === 'saude' && PET_ANIMAL.test(t)) return categorias.find(c => c.id === 'pet') || melhor.c;
   return melhor ? melhor.c : null;
+}
+const PET_ANIMAL = /\b(cachorr\w*|gat[oa]s?|gatinh\w*|cao|caes|pet|pets|filhote|bichinho|bicho de estimacao|coelho|calopsita|passarinho|hamster|veterinari\w*|vet)\b/;
+const PET_SAUDE = /\b(remedio|remedios|vermifugo|antipulgas?|veterinari\w*|vet|vacina|vacinas|exame|exames|cirurgia|consulta|internacao|tratamento|pomada|antibiotico)\b/;
+const SAUDE_CUIDADO = /\b(farmacia|drogaria|remedio|remedios|medico|medica|consulta|exame|exames|hospital|pronto socorro|upa|dentista|tratamento|antibiotico)\b/;
+const APOSTA = /\b(apostas?|apostei|apostamos|bets?|bet365|betano|sportingbet|betfair|pixbet|superbet|blaze|tigrinho|fortune tiger|aviator|cassino|casino|caca ?niquel|roleta|poker|pocker|jogo do bicho|no bicho|corrida de cavalos?|turfe|jockey|joquei|bingo)\b/;
+// 5 jeitos de sugerir maneirar nas apostas, sem sermão (regra do 0 ou 5). {t} = total do mês
+const MANEIRAR_APOSTAS = Object.freeze([
+  'Com essa, as apostas do mês vão a {t}. Não tô aqui pra julgar, cada um cuida da sua vida, mas do seu dinheiro eu cuido junto: que tal dar uma maneirada até o mês virar?',
+  'Ó, as apostas já somam {t} este mês. Você não acha que vale segurar um pouquinho? Um teto por mês ajuda a aposta continuar sendo diversão.',
+  'Apostas no mês: {t}. Sem sermão, prometo. Só fica de olho: aposta é pra sobrar, nunca pra tirar das contas. Bora combinar um limite em Ajustes → Orçamentos?',
+  'Já foram {t} em apostas este mês, hein. Você manda na sua vida; eu só aviso do bolso: acho que vale dar uma pausa até o próximo mês.',
+  'Opa, {t} em apostas no mês. Tá tudo sob controle? Se começar a apertar, uma pausa ajuda. E se um dia sentir que perdeu o controle, os Jogadores Anônimos ajudam de graça.',
+]);
+// 5 jeitos de perguntar do bichinho (regra do 0 ou 5)
+const CUIDADO_PET = Object.freeze([
+  'Vi que os gastos com remédio e veterinário do seu pet subiram este mês ({t}). Tá tudo bem com o seu amiguinho? Se quiser trocar uma ideia, tô aqui. Espero que ele fique bem logo! 🐾',
+  'Já foram {t} com a saúde do seu bichinho este mês. Tá tudo bem com ele? Já levou no veterinário? Torcendo aqui pra ele melhorar! 🐾',
+  '{t} com remédio e veterinário do pet este mês. Ele tá melhor? Se precisar, a gente organiza o resto do mês pra caber o cuidado dele. 🐾',
+  'Percebi que a saúde do seu pet pesou este mês ({t}). Espero que esteja tudo bem com ele! Uma reservinha pra emergência do bicho ajuda nessas horas. 🐾',
+  'Seu amiguinho deu trabalho esse mês, né? Já são {t} de saúde dele. Tomara que ele fique bem logo! Se quiser, depois a gente monta uma reserva pet. 🐾',
+]);
+// 5 jeitos de perguntar como a pessoa está quando a farmácia/saúde sobe (regra do 0 ou 5)
+const CUIDADO_SAUDE = Object.freeze([
+  'Vi que os gastos com farmácia e saúde subiram este mês ({t}). Tá tudo bem com você? Como você está se sentindo? Se ainda não foi, vale passar num médico.',
+  'Ei, {t} com saúde este mês, mais que o costume. Você tá bem? Cuida de você primeiro; o dinheiro a gente ajeita junto.',
+  'Os gastos de farmácia e médico já somam {t} este mês. Tá tudo bem por aí? Se precisar, procura um médico, viu? Saúde vem antes de tudo.',
+  'Reparei que a saúde pesou mais este mês ({t}). Espero que você esteja bem! Se o remédio for de uso contínuo, vale ver o Farmácia Popular.',
+  '{t} em farmácia e saúde este mês. Como você está? Melhoras, se for o caso. E se precisar reorganizar o mês por causa disso, eu ajudo.',
+]);
+const umaDe = (lista, n, t) => lista[n % lista.length].replace('{t}', t);
+
+/**
+ * 2.3.4 (JF): o C.A.O.S. repara no que o gasto diz, sem sermão.
+ * Apostas: ao passar de R$ 200 no mês (e a cada +R$ 200), ou de 10% das entradas, sugere maneirar.
+ * Pet: remédio e veterinário do bicho passando de R$ 150 no mês, pergunta se está tudo bem com ele.
+ * Saúde da pessoa: farmácia e médico passando de R$ 200 e acima do mês passado (1,5×), pergunta como ela está.
+ * Avisa só quando cruza o degrau, pra não repetir a cada gasto.
+ */
+function cuidadosDoGasto(cat, intencao, expenses, incomes, mes) {
+  const v = intencao.valor || 0;
+  const doMes = e => String(e.date).slice(0, 7) === mes;
+  const soma = lista => lista.reduce((x, e) => x + (e.amountCents || 0), 0);
+  const out = [];
+  if (cat?.id === 'apostas' || APOSTA.test(intencao.t)) {
+    const antes = soma(expenses.filter(e => doMes(e) && (e.categoryId === 'apostas' || APOSTA.test(norm(e.note || '')))));
+    const depois = antes + v;
+    const entradas = soma(incomes.filter(doMes));
+    const degrau = x => Math.floor(x / 20000);
+    const passouPct = entradas > 0 && antes < entradas * 0.1 && depois >= entradas * 0.1;
+    if (degrau(depois) > degrau(antes) || passouPct) out.push(umaDe(MANEIRAR_APOSTAS, degrau(depois), formatBRL(depois)));
+    else if (depois >= 5000) out.push(`Com essa, as apostas do mês vão a ${formatBRL(depois)}.`);
+  }
+  if (cat?.id === 'pet' && PET_SAUDE.test(intencao.t)) {
+    const antes = soma(expenses.filter(e => doMes(e) && e.categoryId === 'pet' && PET_SAUDE.test(norm(e.note || ''))));
+    const depois = antes + v;
+    if (antes < 15000 && depois >= 15000) out.push(umaDe(CUIDADO_PET, Math.floor(depois / 1000), formatBRL(depois)));
+    else if (/\b(remedio|remedios|veterinari\w*|vet|cirurgia|internacao|antibiotico)\b/.test(intencao.t)) out.push('Melhoras pro seu amiguinho! 🐾');
+  }
+  if (cat?.id === 'saude' && SAUDE_CUIDADO.test(intencao.t)) {
+    const ehSaude = e => e.categoryId === 'saude' && !/\b(academia|plano)\b/.test(norm(e.note || ''));
+    const antes = soma(expenses.filter(e => doMes(e) && ehSaude(e)));
+    const depois = antes + v;
+    const [a, m] = mes.split('-').map(Number);
+    const mesAnt = m === 1 ? `${a - 1}-12` : `${a}-${String(m - 1).padStart(2, '0')}`;
+    const passado = soma(expenses.filter(e => String(e.date).slice(0, 7) === mesAnt && ehSaude(e)));
+    const limite = Math.max(20000, Math.round(passado * 1.5));
+    if (antes < limite && depois >= limite) out.push(umaDe(CUIDADO_SAUDE, Math.floor(depois / 1000), formatBRL(depois)));
+  }
+  return out;
 }
 
 function acharFonte(t) {
@@ -920,6 +995,8 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
     if (/\b(gastei|paguei|comprei|torrei|saiu|pedi|abasteci|gasto de|gastamos|passei|deixei|foram|foi)\b/.test(t)) return { ...r, intent: 'registrar_gasto' };
     // 2.3.0.1 (JF): "joguei 10 no bolão da mega", "fiz uma fezinha de 20 na quina" (aposta é gasto, em Lazer)
     if (LOTERIA.test(t) && /\b(joguei|apostei|jogamos|apostamos|fiz|fizemos|entrei)\b/.test(t)) return { ...r, intent: 'registrar_gasto' };
+    // 2.3.4 (JF): "apostei 50 na bet", "perdi 100 no tigrinho", "depositei 30 na betano" (gasto em Apostas)
+    if (APOSTA.test(t) && /\b(joguei|apostei|jogamos|apostamos|perdi|perdemos|depositei|coloquei|botei|fiz|entrei)\b/.test(t)) return { ...r, intent: 'registrar_gasto' };
     // Anotação curta, sem verbo, do jeito de quem anota num papel: "uber 30", "50 no posto" (achado do Gemini, 06/11)
     const curtinha = t.split(' ').length <= 5 && !pergunta && !/\b(meta|guardei|juntei|poupei|investi)\b/.test(t);
     if (curtinha && (r.categoria || descricaoDe(t) || /^[a-z]+ \d/.test(t) || /^\d+([.,]\d+)? [a-z]/.test(t))) return { ...r, intent: 'registrar_gasto' };
@@ -963,6 +1040,8 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   // Cartão de crédito (06/11): "como está meu cartão?", "quanto vem na fatura?", "quanto tenho de limite?"
   // "o que é limite do cartão?" é pergunta de glossário, não do seu cartão (revisão de 13/11 à noite)
   const perguntaDeSignificado = /^(o que (e|sao|significa|quer dizer)|me explica|explica|me ensina)\b/.test(t) && acharTermo(t);
+  // 2.3.4 (JF): "como funciona o cartão de crédito/débito?" é aula, não os cartões da pessoa
+  if (/como funciona(m)? (o |a |os |um )?(cartao|cartoes)/.test(t)) return { ...r, intent: 'glossario', termo: acharTermo(/debito/.test(t) ? 'debito' : 'credito'), quem: null, comMais: true };
   if (!perguntaDeSignificado && /(cartao|fatura|limite (do|no) cartao)/.test(t) && !/\b(como|onde|quero|preciso|queria)\b.*\b(cadastr|adicion|registr|coloc|ponho|crio|criar)/.test(t)) return { ...r, intent: 'cartao' };
   if (/((o que|quanto) (eu )?(ainda )?tenho (pra|para|de) pagar|falta pagar|contas? (do|deste|desse) mes|vencimento|quando vence|o que vence|tenho conta|compromissos?|minhas contas fixas|assinaturas)/.test(t)) return { ...r, intent: 'pagar' };
   const querFazer = /\b(quero|preciso|queria|gostaria de) (anotar|lancar|registrar|adicionar|cadastrar|colocar|planejar|fazer|ligar|instalar|mandar)\b/.test(t);
@@ -994,6 +1073,8 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
     return { ...r, intent: 'limite_investido' };
   }
   const termo = acharTermo(t);
+  // 2.3.4 (JF): "como faço um Pix?" e "como cadastro chave Pix?" ganham o passo a passo do glossário
+  if (/como (eu )?(faco|fazer|faz|mando|mandar|envio|enviar|transfiro) (um |o )?pix|como (eu )?(cadastro|cadastrar|crio|criar) (uma |a |minha )?chave( pix)?/.test(t)) return { ...r, intent: 'glossario', termo: acharTermo(/chave/.test(t) ? 'chave pix' : 'pix'), quem: null, comMais: true };
   const contexto = t.match(/\b(meu|minha) (pai|mae|chefe|amigo|amiga|irmao|irma|avo|tio|tia|namorad[oa]|esposa|marido|professor[a]?|colega)\b.*\b(falou|disse|comentou|mencionou|falaram)\b/);
   if (termo && (contexto || /(o que (e|sao|significa|quer dizer)|\bque (e|sao)\b|me explica|explica|me ensina|como funciona|ouvi falar|vi falar|nunca entendi|nao entendo|nao sei o que)/.test(t))) {
     return { ...r, intent: 'glossario', termo, quem: contexto ? contexto[2] : null };
@@ -1399,7 +1480,8 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
             if (!LOTERIA.test(intencao.t)) return null;
             const tot = expenses.filter(e => e.date.slice(0, 7) === mes && ehLoteriaNota(e.note)).reduce((x, e) => x + e.amountCents, 0) + intencao.valor;
             return tot >= 5000 ? `Com essa, a fezinha do mês vai a ${formatBRL(tot)}. Boa sorte! Só não deixa a sorte entrar no orçamento das contas.` : 'Boa sorte! 🍀';
-          })()].filter(Boolean).join(' ') || null,
+          })(),
+          ...cuidadosDoGasto(cat, intencao, expenses, incomes, mes)].filter(Boolean).join(' ') || null,
         vars: { valor: formatBRL(intencao.valor), categoria: cat?.name ?? 'Outros' },
         acao: { tipo: 'registrar_gasto', amountCents: intencao.valor, categoryId: cat?.id ?? 'outros', date: dataDoTexto(intencao.t, today),
           note: intencao.vaquinha ? 'Vaquinha (minha parte)' : LOTERIA.test(intencao.t) ? nomeDaFezinha(intencao.t) : desc ? desc[0].toUpperCase() + desc.slice(1) : '', ...lerPagamento(intencao.t, dados.accounts) },
@@ -1473,6 +1555,8 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       const abre = intencao.quem ? `Ah, ${intencao.quem === 'mae' ? 'sua mãe' : `seu ${intencao.quem.replace('mae', 'mãe')}`} falou de ${g.termo.toLowerCase()}? Explico. ` : '';
       const gov = g.governo ? ` Isso depende de regra do governo, que muda: o que eu sei é de ${ATUALIZADO_EM}. Confere no canal oficial.` : '';
       const def = (crianca ? g.crianca : g.adulto).replace(/^É /, 'é ');
+      // 2.3.4: pergunta de "como faz" ou "como funciona" já leva o passo a passo (o "mais")
+      if (intencao.comMais && g.mais && !crianca) return { fato: `${abre}${g.termo}: ${def} ${g.mais}${gov}`, cru: true, sugestoes: ['O que é chave Pix?', 'O que é rotativo do cartão?', 'Vale a pena parcelar?'] };
       return { fato: `${abre}${g.termo}: ${def}${gov} Quer que eu explique melhor? É só pedir.`, cru: true, sugestoes: ['Me explica melhor', 'O que é juros compostos?', 'Vale a pena parcelar?'] };
     }
     case 'calc_juros': {

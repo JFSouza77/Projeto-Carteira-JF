@@ -96,3 +96,20 @@ Formas que viram **funções** de verdade:
 
 Ordem recomendada: 1) E2EE antes do servidor ir pro ar · 2) Contas de hoje · 3) Simuladores (compras + sonhos) ·
 4) Nota fiscal fatiada · 5) Saúde da Carteira · 6) Carteira compartilhada.
+
+## Conta pessoal × conta da empresa (JF, 17/11) · plano do Wally
+
+O JF quer alternar entre "meu dinheiro" e "dinheiro da empresa" no mesmo app. É grande, então fica em etapas:
+
+1. **Espaços separados**: cada espaço (Pessoal, Empresa) com os seus próprios bancos, lançamentos, metas e orçamento.
+   Por baixo, um banco de dados por espaço (`carteira-jf` continua sendo o pessoal, pra ninguém perder nada) e um
+   seletor no topo do Início e em Ajustes. A sincronia da conta leva cada espaço separado.
+2. **Empresa tem outra cara**: em vez de "gastos do mês", entradas (vendas, serviços) × saídas (fornecedor, aluguel,
+   imposto, folha), **fluxo de caixa**, capital/caixa da empresa, **pró-labore** (o "salário" que vai pro pessoal) e
+   imposto do mês (MEI: DAS fixo). Categorias próprias de empresa.
+3. **O C.A.O.S. sabe em qual espaço está**: avisa quando a pessoa mistura ("isso foi da empresa ou seu?") e sugere o
+   pró-labore como transferência da empresa pro pessoal.
+
+Já entrou (2.3.4): a pergunta "você trabalha com quê?" guarda se a pessoa tem empresa e o ramo, e o glossário tem
+conta PJ, MEI e fluxo de caixa. Próximo passo quando o JF der o ok: a etapa 1.
+

@@ -9,7 +9,9 @@ export const DEFAULT_CATEGORIES = Object.freeze([
   { id: 'moradia', name: 'Moradia', emoji: '🏠', budgetCents: 0 },
   { id: 'contas', name: 'Contas', emoji: '💡', budgetCents: 0 },
   { id: 'saude', name: 'Saúde', emoji: '💊', budgetCents: 0 },
+  { id: 'pet', name: 'Pet', emoji: '🐾', budgetCents: 0 }, // 2.3.4 (JF, num pet center): ração, petshop, veterinário, remédio do bicho
   { id: 'lazer', name: 'Lazer', emoji: '🎟️', budgetCents: 0 },
+  { id: 'apostas', name: 'Apostas', emoji: '🎲', budgetCents: 0 }, // 2.3.4 (JF): bets, cassino, poker, jogo do bicho, cavalos (a fezinha de loteria continua em Lazer)
   { id: 'jogos', name: 'Jogos', emoji: '🎮', budgetCents: 0 }, // 15/11 (JF): moedas e gastos de jogo (Robux, V-Bucks, skins…)
   { id: 'streaming', name: 'Streaming', emoji: '📺', budgetCents: 0 },
   { id: 'compras', name: 'Compras', emoji: '🛍️', budgetCents: 0 },

@@ -294,7 +294,7 @@ export function barStyle(ratio) {
 
 // Ícones de traço no lugar dos emojis (JF, 12/11: "mais limpo"). Os símbolos ficam no <svg> do index.html.
 export const ic = id => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
-const CAT_COM_ICONE = new Set(['mercado', 'delivery', 'restaurante', 'transporte', 'moradia', 'contas', 'saude', 'lazer', 'jogos', 'streaming', 'compras', 'educacao', 'outros']);
+const CAT_COM_ICONE = new Set(['mercado', 'delivery', 'restaurante', 'transporte', 'moradia', 'contas', 'saude', 'pet', 'lazer', 'apostas', 'jogos', 'streaming', 'compras', 'educacao', 'outros']);
 const FONTE_COM_ICONE = new Set(['salario', 'freela', 'rendimento', 'presente', 'outros']);
 /** Ícone da categoria: as que vêm com o app têm desenho próprio; a criada pela pessoa mantém o emoji dela. */
 export const icCat = c => (c && CAT_COM_ICONE.has(c.id) ? ic(`c-${c.id}`) : esc(c?.emoji ?? '') || ic('c-outros'));
@@ -653,7 +653,7 @@ export function renderPerfil() {
   const p = state.perfil;
   const idade = idadeDe(p?.aniversario, toISODate());
   $('#perfil-resumo').textContent = p?.apelido
-    ? `O C.A.O.S. te chama de ${p.apelido}${p.nome && p.nome !== p.apelido ? ` (${p.nome})` : ''}, num jeito ${p.tratamento === 'formal' ? 'mais formal' : 'descontraído'}.${idade != null ? ` ${idade} anos.` : ''}${p.foco?.length ? ` Foco: ${p.foco.join(', ').toLowerCase()}.` : ''}`
+    ? `O C.A.O.S. te chama de ${p.apelido}${p.nome && p.nome !== p.apelido ? ` (${p.nome})` : ''}, num jeito ${p.tratamento === 'formal' ? 'mais formal' : 'descontraído'}.${idade != null ? ` ${idade} anos.` : ''}${p.foco?.length ? ` Foco: ${p.foco.join(', ').toLowerCase()}.` : ''}${p.trabalho ? ` Trabalho: ${p.trabalho}${p.empresaRamo ? ` (${p.empresaRamo})` : ''}.` : ''}`
     : 'O C.A.O.S. ainda não te conhece.';
   $('#perfil-aniversario').value = p?.aniversario || '';
   $('#perfil-aniversario').max = toISODate();
@@ -1000,12 +1000,66 @@ async function perguntarLembreteUmaVez() {
   const p = state.perfil;
   if (!p || p.pulou || !p.apelido || p.lembretePerguntado || state.onboarding) return false;
   const c = await lembretes.config().catch(() => null);
-  state.perfil = { ...p, lembretePerguntado: true };
+  state.perfil = { ...p, lembretePerguntado: true, lembreteEm: Date.now() };
   await db.setMeta('perfil', state.perfil);
   if (c?.ativo) return false;
   state.onboarding = { passo: 'lembrete', unico: true, dados: { foco: [] } };
   addMsg({ de: 'caos', texto: `${comoChamar(state.perfil)}, posso te avisar das contas pra vencer e do dinheiro pra receber? Que horário fica melhor pra você?`, sugestoes: ['De manhã (9h)', 'No almoço (12h)', 'À noite (20h30)', 'Agora não'] });
   return true;
+}
+
+// 2.3.4 (JF, 17/11): "o C.A.O.S. pode perguntar: você trabalha em quê? só pra te ajudar a organizar melhor".
+// Uma vez só, numa abertura depois do lembrete, com educação e com "Prefiro não dizer". Fica só no aparelho.
+const TRABALHOS = [
+  ['CLT', /\b(clt|carteira assinada|registrad[oa]|empregad[oa]|funcionari[oa])\b/i, 'Com salário fixo fica mais fácil planejar: o 50/30/20 encaixa bem, e o 13º e as férias dão pra adiantar metas.'],
+  ['Autônomo / freela', /\b(autonom\w*|freela\w*|bico|bicos|uber|motorista de app|diarista|prestador|conta propria)\b/i, 'Renda que varia pede um truque: nos meses bons, guarda a sobra pra cobrir os meses fracos. Me fala o que entra que eu te ajudo a achar a média.'],
+  ['Tenho empresa', /\b(empresa|empresari[oa]|dono|dona|mei|negocio proprio|meu negocio|loja|comercio|empreend\w*)\b/i, null],
+  ['Servidor público', /\b(servidor|servidora|concursad[oa]|funcionalismo|publico|publica)\b/i, 'Salário certinho é ótimo pra planejar. Só cuidado com o consignado: é fácil de pegar e a parcela sai antes de o dinheiro chegar.'],
+  ['Aposentado(a)', /\b(aposentad[oa]|pensionista|inss)\b/i, 'Fica de olho em ligação ou mensagem oferecendo consignado ou "revisão do benefício": é o golpe mais comum com aposentados. Na dúvida, me pergunta.'],
+  ['Estudante', /\b(estud\w*|faculdade|escola|universit\w*|estagi\w*)\b/i, 'Bora começar cedo! Mesmo pouquinho, guardar todo mês cria o hábito. Se tiver bolsa ou estágio, me fala o que entra que eu te ajudo a dividir.'],
+];
+// ordem de reconhecimento: "funcionária pública" é servidora, "dona de casa" não é dona de empresa
+const DO_LAR = ['Do lar', /\b(dona de casa|do lar|cuido da casa|cuido dos filhos)\b/i, 'Cuidar da casa é trabalho, e dos grandes! Se tiver um dinheiro que entra (pensão, ajuda, um extra), me fala que eu te ajudo a organizar.'];
+const ORDEM_TRABALHO = [DO_LAR, TRABALHOS[3], TRABALHOS[4], TRABALHOS[0], TRABALHOS[1], TRABALHOS[2], TRABALHOS[5]];
+async function perguntarTrabalhoUmaVez() {
+  const p = state.perfil;
+  if (!p || p.pulou || !p.apelido || p.trabalhoPerguntado || state.onboarding) return false;
+  const idade = idadeDe(p.aniversario, toISODate());
+  state.perfil = { ...p, trabalhoPerguntado: true };
+  await db.setMeta('perfil', state.perfil);
+  if (idade != null && faixaEtaria(idade) === 'crianca') return false; // criança não ganha essa pergunta
+  state.onboarding = { passo: 'trabalho', unico: true, dados: { foco: [] } };
+  addMsg({ de: 'caos', texto: `${comoChamar(state.perfil)}, posso te perguntar uma coisa, só pra te ajudar a organizar melhor? Você trabalha com quê?`, sugestoes: [...TRABALHOS.map(([n]) => n), 'Prefiro não dizer'] });
+  return true;
+}
+async function responderTrabalho(t, o) {
+  if (o.passo === 'empresa') {
+    const ramo = String(t || '').trim().slice(0, 60);
+    state.onboarding = null;
+    state.perfil = { ...state.perfil, empresaRamo: /^(prefiro|nao|não|pular)/i.test(ramo) ? null : ramo };
+    await db.setMeta('perfil', state.perfil);
+    renderPerfil();
+    addMsg({ de: 'caos', texto: 'Anotado! Uma dica de quem cuida de dinheiro: separa o dinheiro da empresa do seu (uma conta PJ pra ela e um pró-labore, um "salário", pra você). Aqui eu cuido do seu dinheiro pessoal; uma área só pra empresa está nos meus planos.', sugestoes: ['O que é conta PJ?', 'O que é MEI?', 'O que é fluxo de caixa?'] });
+    return;
+  }
+  if (/prefiro|nao quero|não quero|agora nao|agora não|pular/i.test(t)) {
+    state.onboarding = null;
+    addMsg({ de: 'caos', texto: 'Tudo bem, sem problema nenhum! Bora seguir.', sugestoes: SUGESTOES.slice(0, 6) });
+    return;
+  }
+  const semAcento = String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const achado = ORDEM_TRABALHO.find(([, rx]) => rx.test(semAcento));
+  const rotulo = achado ? achado[0] : String(t).trim().slice(0, 60);
+  state.perfil = { ...state.perfil, trabalho: rotulo === 'Tenho empresa' ? 'Empresa própria' : rotulo };
+  await db.setMeta('perfil', state.perfil);
+  renderPerfil();
+  if (achado?.[0] === 'Tenho empresa') {
+    o.passo = 'empresa';
+    addMsg({ de: 'caos', texto: 'Que massa! E a sua empresa é de quê?', sugestoes: ['Prefiro não dizer'] });
+    return;
+  }
+  state.onboarding = null;
+  addMsg({ de: 'caos', texto: `Valeu por contar! ${achado?.[2] || 'Me fala o que entra e o que sai que eu te ajudo a organizar do seu jeito.'}`, sugestoes: SUGESTOES.slice(0, 6) });
 }
 
 async function responderLembrete(t) {
@@ -1155,6 +1209,8 @@ export async function onboardingResposta(t) {
     }
     o.passo = 'tratamento';
     caosDiz('onb_tratamento', { nome: esc || d.apelido }, ['Descontraído', 'Mais formal']);
+  } else if (o.passo === 'trabalho' || o.passo === 'empresa') {
+    await responderTrabalho(t, o);
   } else if (o.passo === 'lembrete') {
     state.onboarding = null;
     await responderLembrete(t);
@@ -1782,6 +1838,8 @@ async function init() {
   else { await parabensSeForODia(); await perguntarAniversarioUmaVez(); if (!state.onboarding) await perguntarChamarUmaVez(); }
   // 2.3.3: o lembrete fica pra outra abertura (uma pergunta por vez, sem questionário)
   if (!state.onboarding && state.perfil?.chamarPerguntado && !state.perfil?.lembretePerguntado && state.perfil?.criadoEm && Date.now() - state.perfil.criadoEm > 60_000) await perguntarLembreteUmaVez();
+  // 2.3.4: a pergunta do trabalho fica pra outra abertura, depois da do lembrete (uma por vez)
+  else if (!state.onboarding && state.perfil?.lembretePerguntado && !state.perfil?.trabalhoPerguntado && (!state.perfil?.lembreteEm || Date.now() - state.perfil.lembreteEm > 3_600_000)) await perguntarTrabalhoUmaVez();
   $('#install-hint').textContent = installHint();
 
   const today = toISODate();

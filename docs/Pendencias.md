@@ -6,6 +6,9 @@ Atualizada pelo Wally a cada rodada.
 
 ## Aberto em 17/11 (madrugada)
 
+- **Conta da empresa (ideia do JF, 17/11):** alternar entre espaço Pessoal e Empresa. Plano em etapas em `docs/Ideias.md`
+  (fim do arquivo); esperando o ok do JF pra começar a etapa 1 (espaços separados).
+- Voz natural no iPhone: resolvido (print do JF, 17/11: "Funcionando: a voz MAI").
 - **Voz natural ainda robótica no iPhone:** o JF manda o print do "Testar a voz" (Ajustes → C.A.O.S.). A 2.1.8.1 já
   destrava o áudio em todo toque (suspeita forte). Se continuar, o print diz se é chave, região, teto ou som travado.
 - **Revisões:** blocos pro Gemini em `docs/revisoes/para_gemini_2026-11-17/` (o JF manda os 10 arquivos separados) e
