@@ -90,3 +90,4 @@ Depois de cada correção, escreva no Registro: o que o JF viu, a causa, o que m
 | 16/11 | Servidor cortava a pergunta da pesquisa em 300 letras | limite único pra conversa e pesquisa | pesquisa até 800 | `servidor` (publicar) |
 | 16/11 | (JF) 2º balão falava por cima do 1º | `falar()` cancelava a fala anterior | `falar()` devolve promessa; o 2º balão espera e entra na fila | Playwright |
 | 16/11 | (JF) "Algum alerta?" listava toda conta e cartão | `confira_banco` juntava todos os nomes | sem cartão; mais de 2 contas → "N contas (bancos)" | `tests/lazer_cinema.test.js` |
+| 17/11 | (JF) Voz ainda robótica e boca parada no iPhone | possíveis: áudio "interrupted" no iOS não voltava; AbortSignal.timeout ausente no iOS 15; onstart da voz do aparelho nem sempre chega; "Reduzir movimento" do iPhone para a boca | resume em qualquer estado ≠ running; tempoLimite próprio; boca começa no speak(); botão Testar a voz com o motivo | Playwright (Testar a voz: ok e 401) |
