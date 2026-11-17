@@ -7,7 +7,7 @@ import { FORMAS, formaPara, rostoDaForma } from '../avatar.js';
 import { IDENTIDADE, SUGESTOES, comoChamar, conversar, curiosidadeDoGasto, humorParaIA, emocaoDoMomento, rostoAvulso } from '../caos/index.js';
 import { accountLabel, createTransferencia, depoisDoSaldo, marcarRecebido, editarConta, editarLancamento, formatBRL, sugerirCategoria, toISODate } from '../engine.js';
 import * as conta from '../conta.js';
-import { assuntoDeDinheiro, lerPagamento, perguntaDePesquisaGeral, respostaForaDoFoco, respostaPapoLivre, seguirPagamento } from '../caos/conversa.js';
+import { assuntoDeDinheiro, lerPagamento, perguntaDePesquisaGeral, respostaAcordando, respostaForaDoFoco, respostaPapoLivre, seguirPagamento } from '../caos/conversa.js';
 import * as db from '../db.js';
 import { falar, falaTerminou } from '../voz.js';
 import { fraseDoPrint, resumoDoPrint } from '../caos/ofertas.js';
@@ -161,7 +161,11 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
     } catch (e) {
       state.chat = state.chat.filter(m => !m.temp);
       const guardou = fala.palpite ? false : await guardarPergunta(textoIA);
-      addMsg({ de: 'caos', texto: `${fala.texto}${guardou ? ' A IA online não respondeu agora, mas guardei sua pergunta e trago a resposta depois.' : ` (A IA online não respondeu: ${e.message})`}`, sugestoes: fala.sugestoes, rosto: fala.rosto });
+      // 2.3.3.5 (JF, 17/11): nada de mensagem técnica; ele diz que está "acordando" e ensina a reiniciar e perguntar de novo
+      console.warn('IA online não respondeu:', e?.message);
+      const texto = guardou ? `${respostaAcordando()} Se preferir esperar, guardei sua pergunta e trago a resposta depois.` : respostaAcordando();
+      addMsg({ de: 'caos', texto, sugestoes: fala.sugestoes, rosto: fala.rosto });
+      if (state.settings.voice) falar(texto, fala.emocao);
       pintarRosto(fala.rosto);
       return;
     }
