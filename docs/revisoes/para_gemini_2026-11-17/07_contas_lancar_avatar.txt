@@ -1,0 +1,1967 @@
+BLOCO: Lançar, Contas (guardar a cada compra, raio-X), IA do app e avatar
+App C.A.O.S. Finanças 2.1.8.1 Alfa · C.A.O.S. 2.4.3 · núcleo 1.8.0 · 17/11/2026
+
+
+===== ARQUIVO: js/telas/lancar.js =====
+
+    1| // Tela de Lançar (16/11, corte do app.js): formulário de gasto e entrada, parcelas, racha, foto, editar e apagar.
+    2| // Mudou só de arquivo. Quem grava continua sendo a UI (via db.js).
+    3| 
+    4| import { $, catById, centsToInput, esc, state, renderizar } from '../estado.js';
+    5| import { FORMAS_PAGAMENTO, INCOME_SOURCES, accountBalance, accountLabel, comReforco, createExpense, createIncome, createTransferencia, guardarACadaCompra, depoisDoSaldo, detectExpenseEvents, dividirIgual, editarLancamento, faturaDoCartao, formatBRL, juntarNomes, parseAmount, toISODate, valorForaDoComum, valorProprio } from '../engine.js';
+    6| import * as conta from '../conta.js';
+    7| import { corCategoria, corFonte, corForma } from '../cores.js';
+    8| import * as db from '../db.js';
+    9| import * as ia from '../ia.js';
+   10| import * as imagens from '../imagens.js';
+   11| import { opcoesDeConta, renderContas } from './contas.js';
+   12| import { rostoEspantado } from '../caos/index.js';
+   13| import { ICONE_FORMA, avatares, ic, icCat, icFonte, narrate, setRosto, toast } from '../app.js';
+   14| import { eventoOfensiva, ofensivaAgora } from './inicio.js';
+   15| 
+   16| // Valor fora do comum (13/11): o C.A.O.S. leva um susto (rosto espantado) e pergunta antes de gravar.
+   17| // Era um confirm() do navegador; o JF pediu o C.A.O.S. reagindo ("R$ 17 mil na Cacau Show?!").
+   18| export function confirmarEspanto(valorCents, ehGasto) {
+   19|   const dlg = $('#espanto-dialog');
+   20|   const nota = $('#note').value.trim();
+   21|   $('#espanto-titulo').textContent = `${formatBRL(valorCents)}?!`;
+   22|   $('#espanto-texto').textContent = `${ehGasto ? 'De gasto' : 'De entrada'}${nota ? ` em "${nota}"` : ''}? É bem mais que o seu normal. Confere se não faltou a vírgula dos centavos.`;
+   23|   setRosto($('#espanto-face'), rostoEspantado());
+   24|   avatares.espanto?.mostrar('surpreso', { imediato: true });
+   25|   return new Promise(resolve => {
+   26|     dlg.addEventListener('close', () => resolve(dlg.returnValue === 'ok'), { once: true });
+   27|     dlg.returnValue = '';
+   28|     dlg.showModal();
+   29|   });
+   30| }
+   31| 
+   32| export function perguntarContaDoPix(nome, valorCents) {
+   33|   const contas = state.accounts.filter(a => a.tipo !== 'cartao');
+   34|   const dlg = $('#pix-dialog');
+   35|   $('#pix-texto').textContent = `${nome} te pagou ${formatBRL(valorCents)}. Em qual conta o dinheiro caiu?`;
+   36|   $('#pix-conta').innerHTML = opcoesDeConta(a => a.tipo !== 'cartao').replace('Sem conta', 'Não sei / dinheiro vivo');
+   37|   if (contas.length) $('#pix-conta').value = contas[0].id;
+   38|   return new Promise(resolve => {
+   39|     dlg.addEventListener('close', () => resolve(dlg.returnValue === 'ok' ? $('#pix-conta').value : null), { once: true });
+   40|     dlg.returnValue = '';
+   41|     dlg.showModal();
+   42|   });
+   43| }
+   44| 
+   45| export function nomesDoRacha() {
+   46|   return $('#racha-nomes').value.split(/[,;\n]| e /).map(n => n.trim()).filter(Boolean);
+   47| }
+   48| 
+   49| export function previaRacha() {
+   50|   const nomes = nomesDoRacha();
+   51|   const total = parseAmount($('#amount').value);
+   52|   if (!nomes.length || !total) { $('#racha-previa').textContent = 'Digite o valor total que você pagou e os nomes. A conta é dividida por igual.'; return; }
+   53|   try {
+   54|     const partes = dividirIgual(total, nomes);
+   55|     const minha = total - partes.reduce((t, p) => t + p.valorCents, 0);
+   56|     $('#racha-previa').textContent = `${partes.length + 1} pessoas: cada amigo te paga ${formatBRL(partes[0].valorCents)}. No seu orçamento entra só a sua parte, ${formatBRL(minha)}.`;
+   57|   } catch (er) {
+   58|     $('#racha-previa').textContent = er.message;
+   59|   }
+   60| }
+   61| 
+   62| export function renderLancar() {
+   63|   const gasto = state.kind === 'gasto';
+   64|   const semConta = !state.accounts.some(a => a.tipo !== 'cartao');
+   65|   $('#lancar-trava').hidden = !semConta;
+   66|   $('#entry-form').closest('.card').hidden = semConta;
+   67|   $('#mes-sem-entrada').hidden = gasto;
+   68|   $('#dia-sem-gasto').hidden = !gasto;
+   69|   const opcoes = gasto ? state.categories : INCOME_SOURCES;
+   70|   const sel = gasto ? state.selectedCategory : state.selectedSource;
+   71|   $('#category-chips').setAttribute('aria-label', gasto ? 'Categoria' : 'De onde veio');
+   72|   $('#racha-box').hidden = !gasto;
+   73|   $('#prevista-field').hidden = gasto;
+   74|   $('#category-chips').innerHTML = opcoes.map(c => `
+   75|     <button type="button" class="chip colorido" style="--cor-chip:${gasto ? corCategoria(c.id) : corFonte(c.id)}" role="radio" aria-checked="${c.id === sel}" data-cat="${esc(c.id)}">${gasto ? icCat(c) : icFonte(c)} ${esc(c.name)}</button>`).join('');
+   76|   $('#cat-label').textContent = gasto ? 'Categoria' : 'De onde veio';
+   77|   $('#category-select').innerHTML = `<option value="">${gasto ? 'Escolha a categoria' : 'Escolha de onde veio'}</option>`
+   78|     + opcoes.map(c => `<option value="${esc(c.id)}"${c.id === sel ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
+   79|   $('#entry-form').dataset.kind = gasto ? 'gasto' : 'entrada';
+   80|   $('#submit-btn').textContent = gasto ? 'Adicionar gasto' : 'Adicionar entrada';
+   81|   // Pagou como? (P8): a forma escolhe que contas aparecem e o que mais perguntar
+   82|   const forma = gasto ? state.forma : null;
+   83|   $('#forma-field').hidden = !gasto;
+   84|   $('#forma-chips').innerHTML = Object.entries(FORMAS_PAGAMENTO).map(([id, nome]) =>
+   85|     `<button type="button" class="chip colorido" style="--cor-chip:${corForma(id)}" role="radio" aria-checked="${id === forma}" data-forma="${id}">${ic(ICONE_FORMA[id])} ${esc(nome.replace(/^\S+\s/, ''))}</button>`).join('');
+   86|   $('#forma-select').innerHTML = '<option value="">Escolha (opcional)</option>' + Object.entries(FORMAS_PAGAMENTO).map(([id, nome]) =>
+   87|     `<option value="${id}"${id === forma ? ' selected' : ''}>${esc(nome.replace(/^\S+\s/, ''))}</option>`).join('');
+   88|   const filtro = !gasto ? a => a.tipo !== 'cartao' // entrada não cai no cartão de crédito
+   89|     : forma === 'credito' ? a => a.tipo === 'cartao'
+   90|     : forma ? a => a.tipo !== 'cartao' : () => true;
+   91|   const cabem = state.accounts.filter(filtro);
+   92|   $('#account-field').hidden = cabem.length === 0;
+   93|   $('#account-label').textContent = forma === 'credito' ? 'Qual cartão?' : forma === 'pix' || forma === 'debito' ? 'De qual banco saiu?'
+   94|     : forma === 'dinheiro' ? 'Saiu de onde? (se quiser)' : 'Conta';
+   95|   const atual = $('#account-select').value;
+   96|   $('#account-select').innerHTML = opcoesDeConta(filtro);
+   97|   if (cabem.some(a => a.id === atual)) $('#account-select').value = atual;
+   98|   else if (forma === 'credito' && cabem.length === 1) $('#account-select').value = cabem[0].id;
+   99|   $('#parcelas-box').hidden = forma !== 'credito';
+  100|   if (!$('#parcelas-select').options.length) {
+  101|     $('#parcelas-select').innerHTML = '<option value="1">À vista (1x)</option>' +
+  102|       Array.from({ length: 23 }, (_, i) => `<option value="${i + 2}">Parcelado em ${i + 2}x</option>`).join('');
+  103|   }
+  104|   previaParcelas();
+  105|   $('#photo-ai').hidden = !(state.photo && state.settings.aiOn);
+  106| }
+  107| 
+  108| export function previaParcelas() {
+  109|   const n = Number($('#parcelas-select').value) || 1;
+  110|   $('#limite-modo-field').hidden = n < 2;
+  111|   const v = parseAmount($('#amount').value);
+  112|   if (n < 2 || !v) { $('#parcelas-previa').textContent = ''; return; }
+  113|   const parcela = Math.floor(v / n);
+  114|   const total = document.querySelector('input[name="limite-modo"]:checked')?.value !== 'parcela';
+  115|   $('#parcelas-previa').textContent = `${n}x de ${formatBRL(parcela)}. ` + (total
+  116|     ? `Agora o limite fica ${formatBRL(v)} menor e volta ${formatBRL(parcela)} a cada fatura paga.`
+  117|     : `Só ${formatBRL(parcela)} por mês ocupa o limite.`);
+  118| }
+  119| 
+  120| export function mostrarFoto() {
+  121|   const p = state.photo;
+  122|   $('#photo-preview').hidden = !p;
+  123|   if (p) $('#photo-img').src = p.url;
+  124|   $('#photo-ai').hidden = !(p && state.settings.aiOn);
+  125| }
+  126| 
+  127| export async function limparFoto({ apagar }) {
+  128|   if (state.photo) {
+  129|     URL.revokeObjectURL(state.photo.url);
+  130|     if (apagar) await imagens.apagar(state.photo.id).catch(() => {});
+  131|   }
+  132|   state.photo = null;
+  133|   $('#photo-input').value = '';
+  134|   mostrarFoto();
+  135| }
+  136| 
+  137| export async function registrarGasto({ amountCents, categoryId, note, date, accountId, imageId, compromissoId, rachaNomes = null, forma = null, parcelas = 1, limiteModo = 'total' }) {
+  138|   const ofAntes = ofensivaAgora();
+  139|   // escolheu um cartão sem dizer a forma: é crédito
+  140|   if (!forma && accountId && state.accounts.find(a => a.id === accountId)?.tipo === 'cartao') forma = 'credito';
+  141|   const expense = createExpense({ amountCents, categoryId, note, date, accountId, imageId, compromissoId, forma, parcelas, limiteModo }, { categories: state.categories });
+  142|   if (rachaNomes?.length) expense.racha = dividirIgual(amountCents, rachaNomes);
+  143|   const conta = accountId && state.accounts.find(a => a.id === accountId);
+  144|   const cartao = conta?.tipo === 'cartao';
+  145|   const antes = conta ? (cartao ? faturaDoCartao(comReforco(conta, state.accounts, state.expenses, state.incomes, state.transferencias), state.expenses, toISODate()).pct : accountBalance(conta, state.expenses, state.incomes, state.transferencias)) : null;
+  146|   await db.put(db.STORES.expenses, expense);
+  147|   avisarAntesDoSaldo(expense);
+  148|   state.expenses.push(expense);
+  149|   const events = detectExpenseEvents({ expenses: state.expenses, categories: state.categories, newExpense: expense });
+  150|   if (conta && cartao) {
+  151|     // passou de 80% ou de 100% do limite com esta compra: o C.A.O.S. avisa na hora
+  152|     const f = faturaDoCartao(comReforco(conta, state.accounts, state.expenses, state.incomes, state.transferencias), state.expenses, toISODate());
+  153|     if ((antes < 80 && f.pct >= 80) || (antes < 100 && f.pct >= 100)) {
+  154|       events.push({ type: 'cartao_limite', accountName: f.nome, pct: f.pct, amountCents: f.usadoCents, leftCents: f.disponivelCents, budgetCents: f.limiteCents });
+  155|     }
+  156|   } else if (conta) {
+  157|     const depois = accountBalance(conta, state.expenses, state.incomes, state.transferencias);
+  158|     if (antes >= 0 && depois < 0) events.push({ type: 'conta_negativa', accountName: accountLabel(conta), balanceCents: depois });
+  159|   }
+  160|   if (expense.racha) {
+  161|     const nomes = expense.racha.map(p => p.nome);
+  162|     events.push({ type: 'racha_cadastrada', amountCents: valorProprio(expense), totalCents: expense.amountCents - valorProprio(expense), count: nomes.length,
+  163|       quem: juntarNomes(nomes) });
+  164|   }
+  165|   events.push(...eventoOfensiva(ofAntes));
+  166|   // guardar a cada compra (JF, 16/11, como no Mercado Pago): o cofrinho recebe o valor combinado, saindo da conta
+  167|   // de origem. Fica ligado ao gasto (autoDe): apagar o gasto apaga o que foi guardado por causa dele.
+  168|   const guardas = guardarACadaCompra(expense, state.accounts, state.expenses, state.incomes, state.transferencias);
+  169|   if (guardas.length) {
+  170|     const novas = guardas.map(gd => ({ ...createTransferencia({ deId: gd.deId, paraId: gd.cofrinhoId, amountCents: gd.amountCents, date: expense.date,
+  171|       note: 'Guardado a cada compra' }, { accounts: state.accounts }), autoDe: expense.id }));
+  172|     state.transferencias = [...state.transferencias, ...novas];
+  173|     await db.setMeta('transferencias', state.transferencias);
+  174|     const nomes = guardas.map(gd => `${formatBRL(gd.amountCents)} em ${accountLabel(state.accounts.find(a => a.id === gd.cofrinhoId))}`).join(' e ');
+  175|     setTimeout(() => toast(`Guardei ${nomes}, como você combinou no banco.`), 1200);
+  176|   }
+  177|   state.viewMonth = expense.month;
+  178|   renderizar();
+  179|   return events;
+  180| }
+  181| 
+  182| export function avisarAntesDoSaldo(item) {
+  183|   const conta = item.accountId && state.accounts.find(a => a.id === item.accountId && a.tipo !== 'cartao');
+  184|   if (!conta || depoisDoSaldo(item, conta) || location.hash === '#conversa') return; // na conversa, o C.A.O.S. explica
+  185|   const dia = new Date(conta.balanceAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  186|   setTimeout(() => toast(`Anotado com a data certa. O saldo de ${accountLabel(conta)} que você informou em ${dia} já inclui esse valor, então o saldo não mudou.`), 900);
+  187| }
+  188| 
+  189| export async function registrarEntrada({ amountCents, sourceId, note, date, accountId, prevista = false }) {
+  190|   const ofAntes = ofensivaAgora();
+  191|   const income = createIncome({ amountCents, sourceId, note, date, accountId, prevista });
+  192|   await db.put(db.STORES.incomes, income);
+  193|   if (prevista) { // 15/11 (JF): fica na lista do "a receber" até a pessoa tocar em Recebi
+  194|     state.previstas.push(income);
+  195|     renderizar();
+  196|     toast(`Anotado como previsto: ${formatBRL(amountCents)} pra ${date.slice(8, 10)}/${date.slice(5, 7)}. Quando cair, toca em "Recebi" na aba Entradas.`);
+  197|     return [];
+  198|   }
+  199|   state.incomes.push(income);
+  200|   avisarAntesDoSaldo(income);
+  201|   state.viewMonth = income.month;
+  202|   renderizar();
+  203|   return [{ type: 'entrada_cadastrada', amountCents, sourceId }, ...eventoOfensiva(ofAntes)];
+  204| }
+  205| 
+  206| export async function onSubmit(ev) {
+  207|   ev.preventDefault();
+  208|   const err = $('#form-error');
+  209|   err.hidden = true;
+  210|   try {
+  211|     const amountCents = parseAmount($('#amount').value);
+  212|     if (!amountCents) throw new Error('Digite um valor, tipo 25,90.');
+  213|     // valor muito acima do normal (13/11): pergunta antes, pra um 124,50 não virar 12.450,00
+  214|     const ehGasto = state.kind === 'gasto';
+  215|     if (valorForaDoComum(amountCents, ehGasto ? state.expenses : state.incomes, { tipo: ehGasto ? 'gasto' : 'entrada' })
+  216|       && !(await confirmarEspanto(amountCents, ehGasto))) { $('#amount').focus(); return; }
+  217|     const base = { amountCents, note: $('#note').value, date: $('#date').value, accountId: $('#account-select').value || null };
+  218|     let events;
+  219|     if (state.kind === 'gasto') {
+  220|       if (!state.selectedCategory) throw new Error('Escolha uma categoria.');
+  221|       const rachaNomes = $('#racha-box').open ? nomesDoRacha() : null;
+  222|       if ($('#racha-box').open && !rachaNomes.length) throw new Error('Escreva o nome de quem vai te pagar, ou feche o "Dividir com amigos".');
+  223|       const forma = state.forma;
+  224|       const parcelas = forma === 'credito' ? Number($('#parcelas-select').value) || 1 : 1;
+  225|       const limiteModo = document.querySelector('input[name="limite-modo"]:checked')?.value || 'total';
+  226|       if (forma === 'credito' && !base.accountId && state.accounts.some(a => a.tipo === 'cartao')) throw new Error('Qual cartão? Escolha ali em cima.');
+  227|       events = await registrarGasto({ ...base, categoryId: state.selectedCategory, imageId: state.photo?.id, rachaNomes, forma, parcelas, limiteModo });
+  228|       $('#parcelas-select').value = '1';
+  229|       await limparFoto({ apagar: false });
+  230|       $('#racha-nomes').value = '';
+  231|       $('#racha-box').open = false;
+  232|       previaRacha();
+  233|     } else {
+  234|       if (!state.selectedSource) throw new Error('Escolha de onde veio o dinheiro.');
+  235|       const prevista = $('#entrada-prevista').checked;
+  236|       if (prevista && base.date < toISODate()) throw new Error('Entrada prevista é pra uma data que ainda vai chegar.');
+  237|       events = await registrarEntrada({ ...base, sourceId: state.selectedSource, prevista });
+  238|       $('#entrada-prevista').checked = false;
+  239|       await limparFoto({ apagar: true });
+  240|     }
+  241|     $('#amount').value = '';
+  242|     $('#note').value = '';
+  243|     state.catSugerida = false;
+  244|     state.selectedCategory = null; // o próximo lançamento começa livre pra o C.A.O.S. sugerir pela descrição
+  245|     $('#cat-sugestao').hidden = true;
+  246|     renderLancar();
+  247|     const fala = narrate(events);
+  248|     toast(fala ? fala.texto : 'Salvo!');
+  249|   } catch (e) {
+  250|     err.textContent = e.message || 'Não deu para salvar.';
+  251|     err.hidden = false;
+  252|   }
+  253| }
+  254| 
+  255| export async function onFoto(arquivo) {
+  256|   try {
+  257|     await limparFoto({ apagar: true });
+  258|     const img = await imagens.guardar(arquivo, 'comprovante');
+  259|     state.photo = { id: img.id, url: URL.createObjectURL(img.blob) };
+  260|     mostrarFoto();
+  261|     if (state.settings.aiOn) toast('Foto anexada. Toque em "Ler com IA" para preencher sozinho.');
+  262|   } catch (e) {
+  263|     toast(e.message || 'Não deu para anexar a foto.');
+  264|   }
+  265| }
+  266| 
+  267| export async function lerFotoComIA() {
+  268|   const btn = $('#photo-ai');
+  269|   try {
+  270|     btn.disabled = true;
+  271|     btn.textContent = 'Lendo…';
+  272|     const img = await imagens.pegar(state.photo.id);
+  273|     const r = await ia.lerImagem(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob), categorias: state.categories });
+  274|     if (r.valor_centavos > 0) $('#amount').value = centsToInput(r.valor_centavos);
+  275|     if (/^\d{4}-\d{2}-\d{2}$/.test(r.data || '')) $('#date').value = r.data;
+  276|     if (r.estabelecimento && !$('#note').value) $('#note').value = r.estabelecimento.slice(0, 120);
+  277|     if (r.categoria && catById(r.categoria)) {
+  278|       state.kind = 'gasto';
+  279|       document.querySelector('input[name="kind"][value="gasto"]').checked = true;
+  280|       state.selectedCategory = r.categoria;
+  281|     }
+  282|     renderLancar();
+  283|     toast(r.confianca === 'baixa' ? 'Li, mas com pouca certeza. Confere os campos!' : 'Pronto! Confere e toca em Adicionar.');
+  284|   } catch (e) {
+  285|     toast(e.message || 'Não consegui ler a foto.');
+  286|   } finally {
+  287|     btn.disabled = false;
+  288|     btn.innerHTML = `${ic('i-ia')} Ler com IA`;
+  289|   }
+  290| }
+  291| 
+  292| export async function editar(id, kind) {
+  293|   const entrada = kind === 'entrada';
+  294|   const x = (entrada ? state.incomes : state.expenses).find(i => i.id === id);
+  295|   if (!x) return;
+  296|   const dlg = $('#editar-dialog');
+  297|   $('#editar-titulo').textContent = entrada ? 'Editar entrada' : 'Editar gasto';
+  298|   $('#ed-valor').value = centsToInput(x.amountCents);
+  299|   const rachada = Array.isArray(x.racha) && x.racha.length > 0;
+  300|   $('#ed-valor').disabled = rachada;
+  301|   $('#ed-data').value = x.date;
+  302|   $('#ed-nota').value = x.note || '';
+  303|   $('#ed-cat-rotulo').textContent = entrada ? 'De onde veio' : 'Categoria';
+  304|   $('#ed-cat').innerHTML = (entrada ? INCOME_SOURCES : state.categories).map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+  305|   $('#ed-cat').value = entrada ? x.sourceId : x.categoryId;
+  306|   const avisos = [];
+  307|   if (rachada) avisos.push('Essa conta foi dividida com amigos: o valor fica travado (pra mudar, apague e lance de novo).');
+  308|   if (x.parcelas > 1) avisos.push(`Parcelado em ${x.parcelas}x: o valor é o total da compra.`);
+  309|   $('#ed-aviso').hidden = !avisos.length;
+  310|   $('#ed-aviso').textContent = avisos.join(' ');
+  311|   $('#ed-erro').hidden = true;
+  312|   dlg.dataset.id = id;
+  313|   dlg.dataset.kind = kind;
+  314|   dlg.returnValue = '';
+  315|   dlg.showModal();
+  316| }
+  317| 
+  318| export async function salvarEdicao(ev) {
+  319|   const dlg = $('#editar-dialog');
+  320|   if (ev.submitter?.value !== 'ok') return; // Cancelar fecha sozinho
+  321|   ev.preventDefault();
+  322|   const kind = dlg.dataset.kind === 'entrada' ? 'entrada' : 'gasto';
+  323|   const lista = kind === 'entrada' ? state.incomes : state.expenses;
+  324|   const id = dlg.dataset.id;
+  325|   const x = lista.find(i => i.id === id);
+  326|   if (!x) return dlg.close();
+  327|   try {
+  328|     const valor = $('#ed-valor').disabled ? x.amountCents : parseAmount($('#ed-valor').value);
+  329|     const novo = editarLancamento(x, {
+  330|       amountCents: valor ?? 0, note: $('#ed-nota').value, date: $('#ed-data').value,
+  331|       ...(kind === 'entrada' ? { sourceId: $('#ed-cat').value } : { categoryId: $('#ed-cat').value }),
+  332|     }, { kind, categories: state.categories });
+  333|     await db.put(kind === 'entrada' ? db.STORES.incomes : db.STORES.expenses, novo);
+  334|     if (kind === 'entrada') state.incomes = state.incomes.map(i => (i.id === id ? novo : i));
+  335|     else state.expenses = state.expenses.map(i => (i.id === id ? novo : i));
+  336|     dlg.close();
+  337|     renderizar();
+  338|     toast(kind === 'entrada' ? 'Entrada atualizada.' : 'Gasto atualizado.');
+  339|   } catch (e) {
+  340|     $('#ed-erro').textContent = e.message || 'Não deu para salvar.';
+  341|     $('#ed-erro').hidden = false;
+  342|   }
+  343| }
+  344| 
+  345| export async function onDelete(id, kind) {
+  346|   if (kind === 'transf') {
+  347|     const t = state.transferencias.find(x => x.id === id);
+  348|     if (!t || !confirm(`Apagar a transferência de ${formatBRL(t.amountCents)}?`)) return;
+  349|     state.transferencias = state.transferencias.filter(x => x.id !== id);
+  350|     await db.setMeta('transferencias', state.transferencias);
+  351|     renderizar(); renderContas();
+  352|     return toast('Transferência apagada.');
+  353|   }
+  354|   const lista = kind === 'entrada' ? state.incomes : state.expenses;
+  355|   const x = lista.find(i => i.id === id);
+  356|   if (!x || !confirm(`Apagar ${formatBRL(x.amountCents)}${x.note ? ` (${x.note})` : ''}?`)) return;
+  357|   await db.remove(kind === 'entrada' ? db.STORES.incomes : db.STORES.expenses, id);
+  358|   if (x.imageId) await imagens.apagar(x.imageId).catch(() => {});
+  359|   // o que foi guardado no cofrinho por causa deste gasto sai junto (16/11)
+  360|   if (kind !== 'entrada' && state.transferencias.some(t => t.autoDe === id)) {
+  361|     state.transferencias = state.transferencias.filter(t => t.autoDe !== id);
+  362|     await db.setMeta('transferencias', state.transferencias);
+  363|   }
+  364|   if (kind === 'entrada') state.incomes = state.incomes.filter(i => i.id !== id);
+  365|   else state.expenses = state.expenses.filter(i => i.id !== id);
+  366|   renderizar();
+  367|   toast(kind === 'entrada' ? 'Entrada apagada.' : 'Gasto apagado.');
+  368| }
+  369| 
+  370| export async function verFoto(id) {
+  371|   const img = await imagens.pegar(id);
+  372|   if (!img) return toast('Foto não encontrada.');
+  373|   const url = URL.createObjectURL(img.blob);
+  374|   $('#photo-dialog-img').src = url;
+  375|   const dlg = $('#photo-dialog');
+  376|   dlg.showModal();
+  377|   dlg.addEventListener('close', () => URL.revokeObjectURL(url), { once: true });
+  378| }
+  379| 
+
+===== ARQUIVO: js/telas/contas.js =====
+
+    1| // Tela de Contas (16/11, corte do app.js): bancos, contas, cartões, raio-X do banco, investimentos e transferência
+    2| // entre contas. Mudou só de arquivo, o jeito de funcionar é o mesmo.
+    3| 
+    4| import { $, centsToInput, esc, state, renderizar } from '../estado.js';
+    5| import { BANKS, TIPOS_CONTA, TIPOS_INVESTIMENTO, accountBalance, accountLabel, agruparPorBanco, atualizarInvestimento, comReforco, createAccount, createCartao, createExpense, createIncome, createInvestimento, createTransferencia, diferencaDoSaldo, editarConta, faturaDoCartao, folgaDoPiso, formatBRL, parseAmount, parseSignedAmount, raioXCartao, rendimentoEstimado, QUANDO_GUARDA, resumoInvestimentos, toISODate, totalBalance } from '../engine.js';
+    6| import * as db from '../db.js';
+    7| import { temaBanco } from '../cores.js';
+    8| import { ic, narrate, pintarOlhos, saldoTxt, saldoVisivel, toast } from '../app.js';
+    9| import { renderLancar } from './lancar.js';
+   10| 
+   11| export function renderTransf() {
+   12|   const contas = state.accounts.filter(a => a.tipo !== 'cartao' && !a.paraQuem); // dinheiro de outra pessoa não entra (achado do GPT, 13/11)
+   13|   $('#transf-card').hidden = contas.length < 2;
+   14|   const opts = opcoesDeConta(a => a.tipo !== 'cartao').replace('<option value="">Sem conta</option>', '');
+   15|   for (const sel of ['#transf-de', '#transf-para']) { const v = $(sel).value; $(sel).innerHTML = opts; if (contas.some(a => a.id === v)) $(sel).value = v; }
+   16|   if ($('#transf-de').value === $('#transf-para').value && contas[1]) $('#transf-para').value = contas[1].id;
+   17|   if (!$('#transf-data').value) $('#transf-data').value = toISODate();
+   18| }
+   19| 
+   20| export async function onTransferir(ev) {
+   21|   ev.preventDefault();
+   22|   const err = $('#transf-erro');
+   23|   err.hidden = true;
+   24|   try {
+   25|     const t = createTransferencia({ deId: $('#transf-de').value, paraId: $('#transf-para').value, amountCents: parseAmount($('#transf-valor').value) || 0, date: $('#transf-data').value },
+   26|       { accounts: state.accounts });
+   27|     const de = state.accounts.find(a => a.id === t.deId), para = state.accounts.find(a => a.id === t.paraId);
+   28|     if (!confirm(`Transferir ${formatBRL(t.amountCents)} de ${accountLabel(de)} para ${accountLabel(para)}?`)) return;
+   29|     state.transferencias = [...state.transferencias, t];
+   30|     await db.setMeta('transferencias', state.transferencias);
+   31|     $('#transf-valor').value = '';
+   32|     renderContas(); renderizar();
+   33|     toast(`Pronto, anotei: ${formatBRL(t.amountCents)} foram de ${accountLabel(de)} pra ${accountLabel(para)}.`);
+   34|   } catch (e) {
+   35|     err.textContent = e.message; err.hidden = false;
+   36|   }
+   37| }
+   38| 
+   39| export function renderContas() {
+   40|   renderInvestimentos();
+   41|   renderTransf();
+   42|   $('#bank-total').textContent = saldoTxt(totalBalance(state.accounts, state.expenses, state.incomes, state.transferencias));
+   43|   pintarOlhos();
+   44|   const gruposBanco = agruparPorBanco(state.accounts);
+   45|   $('#res-bancos').textContent = gruposBanco.length ? `${gruposBanco.length} ${gruposBanco.length === 1 ? 'banco' : 'bancos'}` : 'nenhum ainda';
+   46|   $('#account-list').innerHTML = gruposBanco.map(g => {
+   47|     const dinheiro = g.contas.filter(a => a.tipo !== 'cartao' && !a.paraQuem).reduce((t, a) => t + accountBalance(a, state.expenses, state.incomes, state.transferencias), 0);
+   48|     const temDinheiro = g.contas.some(a => a.tipo !== 'cartao');
+   49|     const tema = temaBanco(g.bank === 'Outro' ? (g.contas[0]?.nickname || 'Outro') : g.bank);
+   50|     return `
+   51|     <li class="banco-grupo" style="--banco-cor:${tema.cor};--banco-apoio:${tema.apoio};--banco-fundo:${tema.fundo};--banco-letra:${tema.letra}">
+   52|       <button type="button" class="banco-head" data-banco-abre="${esc(g.bank)}" aria-expanded="${bancosAbertos.has(g.bank)}">
+   53|         <strong><span class="banco-sigla" aria-hidden="true">${esc(tema.sigla)}</span>${esc(g.bank === 'Outro' ? 'Outros' : g.bank)}</strong>
+   54|         <span class="banco-dir">${temDinheiro ? `<span class="num muted">${saldoTxt(dinheiro)}</span>` : ''}<span class="rx-seta" aria-hidden="true">${bancosAbertos.has(g.bank) ? '▴' : '▾'}</span></span>
+   55|       </button>
+   56|       ${bancosAbertos.has(g.bank) ? `<button type="button" class="ghost small raiox-btn" data-raiox="${esc(g.bank)}" aria-expanded="${raioXAberto.has(g.bank)}">${raioXAberto.has(g.bank) ? 'Fechar o raio-X' : 'Ver por dentro (raio-X)'}</button>` : ''}
+   57|       ${bancosAbertos.has(g.bank) && raioXAberto.has(g.bank) ? raioXDoBanco(g) : ''}
+   58|       ${bancosAbertos.has(g.bank) && !raioXAberto.has(g.bank) ? `<ul class="banco-partes">${g.contas.map(a => (a.tipo === 'cartao' ? itemCartao(a) : itemConta(a))).join('')}</ul>` : ''}
+   59|     </li>`;
+   60|   }).join('');
+   61|   if (!$('#bank-select').options.length) {
+   62|     $('#bank-select').innerHTML = BANKS.map(b => `<option>${esc(b)}</option>`).join('');
+   63|     $('#card-bank').innerHTML = BANKS.filter(b => !/dinheiro vivo/.test(b)).map(b => `<option>${esc(b)}</option>`).join('');
+   64|   }
+   65|   renderFormConta();
+   66| }
+   67| 
+   68| export function renderInvestimentos() {
+   69|   const lista = state.investimentos || [];
+   70|   const r = resumoInvestimentos(lista);
+   71|   const el = $('#inv-resumo');
+   72|   $('#res-inv').textContent = lista.length ? `${lista.length} ${lista.length === 1 ? 'investimento' : 'investimentos'}` : 'nenhum';
+   73|   el.hidden = !lista.length;
+   74|   if (lista.length) {
+   75|     const cls = r.ganhoCents >= 0 ? 'ganho' : 'perda';
+   76|     el.innerHTML = `<p class="label">Total investido hoje</p><p class="big">${formatBRL(r.atualCents)}</p>
+   77|       <p class="small">Você aplicou ${formatBRL(r.aplicadoCents)} · <span class="${cls}">${r.ganhoCents >= 0 ? '+' : '−'}${formatBRL(Math.abs(r.ganhoCents))} (${r.rendimentoPct.toLocaleString('pt-BR')}%)</span></p>`;
+   78|   }
+   79|   const dia = ms => new Date(ms).toLocaleDateString('pt-BR');
+   80|   $('#inv-list').innerHTML = lista.map(i => {
+   81|     const g = i.atualCents - i.aplicadoCents;
+   82|     return `<li>
+   83|       <div class="account-head"><strong>${ic('e-rendimento')} ${esc(i.nome)}</strong><span class="num">${formatBRL(i.atualCents)}</span></div>
+   84|       <small class="muted">${esc(TIPOS_INVESTIMENTO[i.tipo] || 'Outro')}${i.instituicao ? ` · ${esc(i.instituicao)}` : ''} · aplicou ${formatBRL(i.aplicadoCents)} · <span class="${g >= 0 ? 'ganho' : 'perda'}">${g >= 0 ? '+' : '−'}${formatBRL(Math.abs(g))}</span> · valor de ${dia(i.valorEm)}</small>
+   85|       <div class="account-actions">
+   86|         <button class="ghost" data-inv-atualizar="${esc(i.id)}">Atualizar valor</button>
+   87|         <button class="ghost" data-inv-aporte="${esc(i.id)}">＋ Coloquei mais</button>
+   88|         <button class="ghost" data-inv-del="${esc(i.id)}">Remover</button>
+   89|       </div>
+   90|     </li>`;
+   91|   }).join('');
+   92|   if (!$('#inv-tipo').options.length) $('#inv-tipo').innerHTML = Object.entries(TIPOS_INVESTIMENTO).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('');
+   93| }
+   94| 
+   95| export async function salvarInvestimentos(lista) {
+   96|   state.investimentos = lista;
+   97|   await db.setMeta('investimentos', lista);
+   98|   renderInvestimentos();
+   99| }
+  100| 
+  101| export async function onAddInvestimento(ev) {
+  102|   ev.preventDefault();
+  103|   const err = $('#inv-error');
+  104|   err.hidden = true;
+  105|   try {
+  106|     const aplicado = parseAmount($('#inv-aplicado').value);
+  107|     const atualTxt = $('#inv-atual').value.trim();
+  108|     const atual = atualTxt ? parseSignedAmount(atualTxt) : null;
+  109|     const inv = createInvestimento({ nome: $('#inv-nome').value, tipo: $('#inv-tipo').value, instituicao: $('#inv-inst').value, aplicadoCents: aplicado, atualCents: atual });
+  110|     await salvarInvestimentos([...(state.investimentos || []), inv]);
+  111|     for (const id of ['#inv-nome', '#inv-inst', '#inv-aplicado', '#inv-atual']) $(id).value = '';
+  112|     toast(`${inv.nome} adicionado. Pergunte pro C.A.O.S.: "como estão meus investimentos?"`);
+  113|   } catch (e) {
+  114|     err.textContent = e.message;
+  115|     err.hidden = false;
+  116|   }
+  117| }
+  118| 
+  119| export async function acaoInvestimento(e) {
+  120|   const b = e.target.closest('[data-inv-atualizar],[data-inv-aporte],[data-inv-del]');
+  121|   if (!b) return;
+  122|   const id = b.dataset.invAtualizar || b.dataset.invAporte || b.dataset.invDel;
+  123|   const inv = state.investimentos.find(x => x.id === id);
+  124|   if (!inv) return;
+  125|   try {
+  126|     if (b.dataset.invDel) {
+  127|       if (!confirm(`Remover ${inv.nome} da lista? (Não mexe em nada no banco.)`)) return;
+  128|       return salvarInvestimentos(state.investimentos.filter(x => x.id !== id));
+  129|     }
+  130|     if (b.dataset.invAtualizar) {
+  131|       const r = prompt(`Quanto ${inv.nome} vale hoje? (olhe no app do banco)`, (inv.atualCents / 100).toFixed(2).replace('.', ','));
+  132|       if (r == null) return;
+  133|       const v = parseSignedAmount(r);
+  134|       if (v == null || v < 0) return toast('Valor inválido.');
+  135|       await salvarInvestimentos(state.investimentos.map(x => (x.id === id ? atualizarInvestimento(x, { atualCents: v }) : x)));
+  136|       return toast('Valor atualizado.');
+  137|     }
+  138|     const r = prompt(`Quanto você colocou a mais em ${inv.nome}?`);
+  139|     if (r == null) return;
+  140|     const v = parseAmount(r);
+  141|     if (!v) return toast('Valor inválido.');
+  142|     await salvarInvestimentos(state.investimentos.map(x => (x.id === id ? atualizarInvestimento(x, { atualCents: x.atualCents + v, aporteCents: v }) : x)));
+  143|     toast(`Aporte de ${formatBRL(v)} anotado.`);
+  144|   } catch (err) {
+  145|     toast(err.message);
+  146|   }
+  147| }
+  148| 
+  149| export function itemConta(a) {
+  150|   const bal = accountBalance(a, state.expenses, state.incomes, state.transferencias);
+  151|   const desde = new Date(a.balanceAt).toLocaleDateString('pt-BR');
+  152|   const reforca = a.reforcaCartaoId && state.accounts.find(c => c.id === a.reforcaCartaoId);
+  153|   // etiquetas (13/11): o que essa conta é, quanto rende, se aumenta limite, se o dinheiro é de outra pessoa
+  154|   const tags = [
+  155|     a.rendeCdiPct ? `<span class="tag rende">rende ${String(a.rendeCdiPct).replace('.', ',')}% do CDI</span>` : '',
+  156|     reforca ? `<span class="tag reforca">aumenta o limite do ${esc(accountLabel(reforca))}</span>` : '',
+  157|     a.paraQuem ? `<span class="tag outro">guardado pra ${esc(a.paraQuem)}</span>` : '',
+  158|     (() => { const p = folgaDoPiso(a, bal); if (!p) return '';
+  159|       return `<span class="tag ${p.abaixo ? 'piso-abaixo' : p.perto ? 'piso-perto' : 'piso-ok'}">${p.abaixo ? 'abaixo do piso' : `piso ${saldoVisivel() ? formatBRL(p.pisoCents) : '••••'}`}${!p.abaixo && saldoVisivel() ? ` · folga ${formatBRL(p.folgaCents)}` : ''}</span>`; })(),
+  160|   ].join('');
+  161|   return `
+  162|     <li class="${a.paraQuem ? 'de-outro' : ''}"><details class="conta-det"${contasAbertas.has(a.id) ? ' open' : ''} data-conta-det="${esc(a.id)}">
+  163|       <summary class="account-head"><strong>${iconeConta(a)} ${esc(accountLabel(a))}</strong><span class="num ${bal < 0 && saldoVisivel() ? 'bad' : ''}">${saldoTxt(bal)}</span></summary>
+  164|       ${tags ? `<div class="tags">${tags}</div>` : ''}
+  165|       <small class="muted">${saldoVisivel() ? `Saldo informado ${formatBRL(a.balanceCents)} em ${desde}${bal !== a.balanceCents ? ', mais os lançamentos desde então' : ''}.` : `Saldo atualizado em ${desde}. Toque no olhinho pra ver os valores.`}${a.paraQuem ? ' Não entra no seu saldo total.' : ''}</small>
+  166|       <div class="account-actions">
+  167|         <button class="ghost" data-acc-update="${esc(a.id)}">Atualizar saldo</button>
+  168|         <button class="ghost" data-acc-edit="${esc(a.id)}">Editar</button>
+  169|         <button class="ghost" data-acc-del="${esc(a.id)}">Remover</button>
+  170|       </div>
+  171|     </details></li>`;
+  172| }
+  173| 
+  174| // conta aberta continua aberta quando a lista é redesenhada
+  175| export const contasAbertas = new Set();
+  176| 
+  177| export const raioXAberto = new Set();
+  178| 
+  179| // 14/11 (Anne): banco fechado de começo; 1º toque mostra as contas dele, 2º abre a conta por dentro
+  180| export const bancosAbertos = new Set();
+  181| 
+  182| export function raioXDoBanco(g) {
+  183|   // CDI: o mais recente entre o que a pessoa digitou e o do servidor (mercado, atualizado todo dia útil)
+  184|   const manual = state.perfil?.cdiAnualPct ? { v: state.perfil.cdiAnualPct, em: state.perfil.cdiEm || 0 } : null;
+  185|   const doMercado = Number(state.mercado?.cdi?.valor) > 0 ? { v: Number(state.mercado.cdi.valor), em: Date.parse(state.mercado.atualizadoEm) || 0 } : null;
+  186|   const fonte = [manual, doMercado].filter(Boolean).sort((a, b) => b.em - a.em)[0] || null;
+  187|   const cdi = fonte?.v || null;
+  188|   // data do CDI (achado do GPT, 13/11): a taxa muda; depois de 30 dias avisa que pode estar velha
+  189|   const cdiEm = fonte?.em || null;
+  190|   const cdiVelho = !!(cdi && (!cdiEm || Date.now() - cdiEm > 30 * 864e5));
+  191|   const linhas = g.contas.map(a => {
+  192|     if (a.tipo === 'cartao') {
+  193|       const r = raioXCartao(a, state.accounts, state.expenses, state.incomes, state.transferencias);
+  194|       const f = faturaDoCartao(comReforco(a, state.accounts, state.expenses, state.incomes, state.transferencias), state.expenses, toISODate());
+  195|       return `<li class="rx-cartao"><strong>${ic('a-cartao')} ${esc(accountLabel(a))}</strong>
+  196|         <dl class="rx-conta">
+  197|           <dt>Limite do próprio cartão</dt><dd>${formatBRL(r.limiteCartaoCents)}</dd>
+  198|           ${r.cofrinhos.map(c => `<dt>+ do cofrinho ${esc(accountLabel(c.conta))}</dt><dd>${formatBRL(c.saldoCents)}</dd>`).join('')}
+  199|           <dt class="soma">= Limite que você vê</dt><dd class="soma">${formatBRL(r.limiteTotalCents)}</dd>
+  200|           <dt>Já usado</dt><dd>${formatBRL(f.usadoCents)}</dd>
+  201|           <dt>Livre agora</dt><dd>${formatBRL(f.disponivelCents)}</dd>
+  202|         </dl>
+  203|         ${r.cofrinhos.length ? `<small class="muted">Se tirar dinheiro do cofrinho, o limite diminui junto.</small>` : '<small class="muted">Nenhum cofrinho aumenta esse limite. Se um aumenta, toque em Editar no cofrinho.</small>'}</li>`;
+  204|     }
+  205|     const bal = accountBalance(a, state.expenses, state.incomes, state.transferencias);
+  206|     const rende = rendimentoEstimado(bal, a.rendeCdiPct, cdi);
+  207|     const reforca = a.reforcaCartaoId && state.accounts.find(c => c.id === a.reforcaCartaoId);
+  208|     return `<li><strong>${iconeConta(a)} ${esc(accountLabel(a))}</strong>
+  209|       <dl class="rx-conta">
+  210|         <dt>O que é</dt><dd>${esc(TIPOS_CONTA[a.subtipo || 'corrente'] || 'Conta')}</dd>
+  211|         <dt>Saldo</dt><dd>${formatBRL(bal)}</dd>
+  212|         <dt>Rendimento</dt><dd>${a.rendeCdiPct ? `${String(a.rendeCdiPct).replace('.', ',')}% do CDI${rende ? ` · ~${formatBRL(rende.mesCents)} por mês` : ''}` : '<span class="muted">não informado</span>'}</dd>
+  213|         ${reforca ? `<dt>Aumenta o limite de</dt><dd>${esc(accountLabel(reforca))}</dd>` : ''}
+  214|         ${a.guardaCompra ? `<dt>Guarda a cada compra</dt><dd>${formatBRL(a.guardaCompra.valorCents)} ${esc(QUANDO_GUARDA[a.guardaCompra.quando] || '')}</dd>` : ''}
+  215|         <dt>De quem é</dt><dd>${a.paraQuem ? `de ${esc(a.paraQuem)} (fora do seu saldo)` : 'seu'}</dd>
+  216|       </dl></li>`;
+  217|   }).join('');
+  218|   const temCdi = g.contas.some(a => a.rendeCdiPct);
+  219|   // 16/11 (JF): com o raio-X aberto, as linhas de sempre (cartão, saldo, botões) somem pra não repetir; o aviso diz como voltar
+  220|   return `<div class="raio-x" id="rx-${esc(g.bank)}">
+  221|     <ul class="rx-lista">${linhas}</ul>
+  222|     <p class="muted small rx-dica">Pra lançar, atualizar o saldo ou remover, feche o raio-X.</p>
+  223|     ${temCdi ? `<p class="rx-cdi muted${cdiVelho ? ' velho' : ''}">${cdi ? `Estimativa com o CDI de ${String(cdi).replace('.', ',')}% ao ano${cdiEm ? `, informado em ${new Date(cdiEm).toLocaleDateString('pt-BR')}` : ''}.${cdiVelho ? ' Faz mais de um mês: confira se mudou.' : ''}` : 'Pra eu estimar quanto rende, me diga o CDI de hoje.'} <button type="button" class="ghost small" data-cdi>${cdi ? 'Mudar o CDI' : 'Informar o CDI'}</button></p>` : ''}
+  224|   </div>`;
+  225| }
+  226| 
+  227| export function abrirEditarConta(id) {
+  228|   const a = state.accounts.find(x => x.id === id);
+  229|   if (!a) return;
+  230|   const dlg = $('#conta-dialog');
+  231|   dlg.dataset.id = id;
+  232|   $('#cd-titulo').textContent = `Editar ${accountLabel(a)}`;
+  233|   $('#cd-apelido').value = a.nickname || '';
+  234|   $('#cd-tipo').value = a.subtipo || 'corrente';
+  235|   const cartoes = state.accounts.filter(c => c.tipo === 'cartao');
+  236|   $('#cd-reforca').innerHTML = '<option value="">Não aumenta limite</option>' + cartoes.map(c => `<option value="${esc(c.id)}">${esc(accountLabel(c))}</option>`).join('');
+  237|   $('#cd-reforca').value = a.reforcaCartaoId || '';
+  238|   // guardar a cada compra (16/11): a conta de origem é do mesmo banco primeiro
+  239|   const origens = state.accounts.filter(c => c.tipo !== 'cartao' && c.id !== a.id && !c.paraQuem)
+  240|     .sort((x, y) => (y.bank === a.bank) - (x.bank === a.bank));
+  241|   $('#cd-guarda-origem').innerHTML = origens.map(c => `<option value="${esc(c.id)}">${esc(accountLabel(c))}</option>`).join('');
+  242|   $('#cd-guarda').checked = !!a.guardaCompra;
+  243|   $('#cd-guarda-valor').value = a.guardaCompra ? centsToInput(a.guardaCompra.valorCents) : '';
+  244|   if (a.guardaCompra) $('#cd-guarda-origem').value = a.guardaCompra.origemId;
+  245|   $('#cd-guarda-quando').value = a.guardaCompra?.quando || 'todas';
+  246|   $('#cd-cdi').value = a.rendeCdiPct ? String(a.rendeCdiPct).replace('.', ',') : '';
+  247|   $('#cd-piso').value = a.pisoCents ? centsToInput(a.pisoCents) : '';
+  248|   $('#cd-outro').checked = !!a.paraQuem;
+  249|   $('#cd-quem').value = a.paraQuem || '';
+  250|   $('#cd-erro').hidden = true;
+  251|   mostrarCamposConta();
+  252|   dlg.returnValue = '';
+  253|   dlg.showModal();
+  254| }
+  255| 
+  256| export function mostrarCamposConta() {
+  257|   $('#cd-reforca-campo').hidden = $('#cd-tipo').value !== 'cofrinho' || !state.accounts.some(c => c.tipo === 'cartao');
+  258|   $('#cd-guarda-campo').hidden = $('#cd-tipo').value !== 'cofrinho' || !$('#cd-guarda-origem').options.length;
+  259|   $('#cd-guarda-det').hidden = !$('#cd-guarda').checked;
+  260|   $('#cd-quem-campo').hidden = !$('#cd-outro').checked;
+  261| }
+  262| 
+  263| export async function salvarConta(ev) {
+  264|   if (ev.submitter?.value !== 'ok') return;
+  265|   ev.preventDefault();
+  266|   const dlg = $('#conta-dialog');
+  267|   const a = state.accounts.find(x => x.id === dlg.dataset.id);
+  268|   if (!a) return dlg.close();
+  269|   try {
+  270|     const cdiTxt = $('#cd-cdi').value.trim().replace(',', '.').replace('%', '');
+  271|     if (cdiTxt && !Number.isFinite(Number(cdiTxt))) throw new Error('Rendimento: só o número, ex.: 102.');
+  272|     if ($('#cd-outro').checked && !$('#cd-quem').value.trim()) throw new Error('De quem é esse dinheiro?');
+  273|     const pisoTxt = $('#cd-piso').value.trim();
+  274|     const piso = pisoTxt ? parseAmount(pisoTxt) : null;
+  275|     if (pisoTxt && piso == null) throw new Error('Piso: digite um valor, ex.: 2.000,00.');
+  276|     let guardaCompra = null;
+  277|     if ($('#cd-tipo').value === 'cofrinho' && $('#cd-guarda').checked) {
+  278|       const v = parseAmount($('#cd-guarda-valor').value.trim());
+  279|       if (v == null || v <= 0) throw new Error('Quanto guardar a cada compra? Ex.: 5,00.');
+  280|       guardaCompra = { valorCents: v, origemId: $('#cd-guarda-origem').value, quando: $('#cd-guarda-quando').value };
+  281|     }
+  282|     const novo = editarConta(a, {
+  283|       pisoCents: piso, guardaCompra,
+  284|       nickname: $('#cd-apelido').value, subtipo: $('#cd-tipo').value, reforcaCartaoId: $('#cd-reforca').value || null,
+  285|       rendeCdiPct: cdiTxt ? Number(cdiTxt) : null, paraQuem: $('#cd-outro').checked ? $('#cd-quem').value : '',
+  286|     }, { accounts: state.accounts });
+  287|     await db.put(db.STORES.accounts, novo);
+  288|     state.accounts = state.accounts.map(x => (x.id === novo.id ? novo : x));
+  289|     dlg.close();
+  290|     renderContas(); renderLancar(); renderizar();
+  291|     toast(`${accountLabel(novo)} atualizada.`);
+  292|   } catch (e) {
+  293|     $('#cd-erro').textContent = e.message;
+  294|     $('#cd-erro').hidden = false;
+  295|   }
+  296| }
+  297| 
+  298| export async function informarCdi() {
+  299|   const atual = state.perfil?.cdiAnualPct;
+  300|   const r = prompt('CDI de hoje, em % ao ano (ex.: 10,65). Confira no site do Banco Central ou no app do seu banco:', atual ? String(atual).replace('.', ',') : '');
+  301|   if (r == null) return;
+  302|   const v = Number(r.trim().replace(',', '.').replace('%', ''));
+  303|   if (!(v > 0 && v < 100)) return toast('Digite só o número, ex.: 10,65.');
+  304|   state.perfil = { ...(state.perfil || {}), cdiAnualPct: Math.round(v * 100) / 100, cdiEm: Date.now() };
+  305|   await db.setMeta('perfil', state.perfil);
+  306|   renderContas();
+  307|   toast(`CDI anotado: ${String(state.perfil.cdiAnualPct).replace('.', ',')}% ao ano.`);
+  308| }
+  309| 
+  310| export function itemCartao(a) {
+  311|   const f = faturaDoCartao(comReforco(a, state.accounts, state.expenses, state.incomes, state.transferencias), state.expenses, toISODate());
+  312|   const cls = f.pct >= 100 ? 'cheio' : f.pct >= 80 ? 'alto' : '';
+  313|   const dia = iso => `${iso.slice(8)}/${iso.slice(5, 7)}`;
+  314|   const sit = f.pct >= 100 ? ['critico', 'Limite crítico'] : f.pct >= 80 ? ['atencao', 'Atenção'] : ['saudavel', 'Saudável'];
+  315|   return `
+  316|     <li class="cartao-item">
+  317|       <div class="account-head"><strong>${ic('a-cartao')} ${esc(accountLabel(a))} <span class="sit-limite ${sit[0]}">${sit[1]}</span></strong><span class="num ${f.pct >= 100 ? 'bad' : ''}">${formatBRL(f.disponivelCents)} livre</span></div>${f.reforcoCents ? `<small class="muted">Limite ${formatBRL(a.limiteCents)} + ${formatBRL(f.reforcoCents)} do cofrinho.</small>` : ''}
+  318|       <div class="limite-bar ${cls}" role="img" aria-label="${f.pct}% do limite usado"><i style="width:${Math.min(100, Math.max(0, f.pct))}%"></i></div>
+  319|       <small class="muted">Usado ${formatBRL(f.usadoCents)} de ${formatBRL(f.limiteCents)} (${f.pct}%). Fatura aberta ${formatBRL(f.abertaCents)}, fecha ${dia(f.fechamento)}.${f.fechadaCents ? ` Fatura fechada ${formatBRL(f.fechadaCents)} vence ${dia(f.vencimento)}.` : ''}${f.futurasCents ? ` Parcelas das próximas faturas: ${formatBRL(f.futurasCents)}${f.presoFuturoCents ? ` (${formatBRL(f.presoFuturoCents)} preso no limite)` : ''}.` : ''}</small>
+  320|       ${f.atrasada ? `<small class="bad">A fatura de ${formatBRL(f.fechadaCents)} venceu dia ${dia(f.vencimento)}. Já pagou? Marca aqui que ela sai do limite.</small>` : ''}
+  321|       <div class="account-actions">
+  322|         <button class="ghost" data-compra-cartao="${esc(a.id)}">＋ Lançar compra neste cartão</button>
+  323|         ${f.fechadaCents > 0 ? `<button class="ghost" data-fatura-paga="${esc(a.id)}">Paguei a fatura</button>` : ''}
+  324|         <button class="ghost" data-acc-del="${esc(a.id)}">Remover</button>
+  325|       </div>
+  326|     </li>`;
+  327| }
+  328| 
+  329| export function compraNoCartao(id) {
+  330|   document.querySelector('input[name="kind"][value="gasto"]').checked = true;
+  331|   state.kind = 'gasto';
+  332|   state.forma = 'credito';
+  333|   location.hash = 'lancar';
+  334|   renderLancar();
+  335|   const sel = $('#account-select');
+  336|   if ([...sel.options].some(o => o.value === id)) sel.value = id;
+  337|   setTimeout(() => $('#amount').focus(), 50);
+  338| }
+  339| 
+  340| export async function marcarFaturaPaga(id) {
+  341|   const cartao = state.accounts.find(a => a.id === id);
+  342|   if (!cartao) return;
+  343|   const f = faturaDoCartao(comReforco(cartao, state.accounts, state.expenses, state.incomes, state.transferencias), state.expenses, toISODate());
+  344|   if (!confirm(`Marcar a fatura de ${formatBRL(f.fechadaCents)} do ${accountLabel(cartao)} como paga?`)) return;
+  345|   const novo = { ...cartao, faturaPagaAte: f.ultimoFechamento };
+  346|   await db.put(db.STORES.accounts, novo);
+  347|   state.accounts = state.accounts.map(a => (a.id === id ? novo : a));
+  348|   renderizar();
+  349|   toast(`Pronto, anotei: fatura do ${accountLabel(cartao)} paga.`);
+  350| }
+  351| 
+  352| export async function onAddCartao(ev) {
+  353|   ev.preventDefault();
+  354|   const err = $('#card-error');
+  355|   err.hidden = true;
+  356|   try {
+  357|     const limite = parseAmount($('#card-limite').value);
+  358|     if (!limite) throw new Error('Qual o limite do cartão?');
+  359|     const usado = $('#card-usado').value.trim() ? parseSignedAmount($('#card-usado').value) : 0;
+  360|     if (usado == null || usado < 0) throw new Error('O valor já usado está estranho.');
+  361|     const c = createCartao({ bank: $('#card-bank').value, nickname: $('#card-nick').value, limiteCents: limite, fechamentoDia: Number($('#card-fecha').value), vencimentoDia: Number($('#card-vence').value), usadoCents: usado });
+  362|     await db.put(db.STORES.accounts, c);
+  363|     state.accounts.push(c);
+  364|     for (const id of ['#card-nick', '#card-limite', '#card-fecha', '#card-vence', '#card-usado']) $(id).value = '';
+  365|     renderContas();
+  366|     renderLancar();
+  367|     renderizar();
+  368|     toast(`Cartão ${accountLabel(c)} adicionado. Ao lançar, escolha ele em "Conta".`);
+  369|   } catch (e) {
+  370|     err.textContent = e.message;
+  371|     err.hidden = false;
+  372|   }
+  373| }
+  374| 
+  375| export const ICONE_CONTA = { corrente: 'i-contas', poupanca: 'a-poupanca', cofrinho: 'e-outros', cartao: 'a-cartao' };
+  376| 
+  377| export const iconeConta = a => ic(ICONE_CONTA[a.tipo === 'cartao' ? 'cartao' : a.subtipo || 'corrente']);
+  378| 
+  379| export function opcoesDeConta(filtro = () => true) {
+  380|   return '<option value="">Sem conta</option>' + agruparPorBanco(state.accounts.filter(filtro)).map(g =>
+  381|     `<optgroup label="${esc(g.bank)}">${g.contas.map(a => `<option value="${esc(a.id)}">${esc(accountLabel(a))}</option>`).join('')}</optgroup>`).join('');
+  382| }
+  383| 
+  384| export function renderFormConta() {
+  385|   const cofrinho = $('#bank-subtipo').value === 'cofrinho';
+  386|   const cartoes = state.accounts.filter(a => a.tipo === 'cartao');
+  387|   $('#bank-reforco-field').hidden = !cofrinho || !cartoes.length;
+  388|   $('#bank-reforco-cartao').innerHTML = cartoes.map(a => `<option value="${esc(a.id)}">${esc(accountLabel(a))}</option>`).join('');
+  389|   const doBanco = cartoes.find(a => a.bank === $('#bank-select').value);
+  390|   if (doBanco) $('#bank-reforco-cartao').value = doBanco.id;
+  391| }
+  392| 
+  393| export async function onAddAccount(ev) {
+  394|   ev.preventDefault();
+  395|   const err = $('#account-error');
+  396|   err.hidden = true;
+  397|   try {
+  398|     const bal = parseSignedAmount($('#bank-balance').value);
+  399|     if (bal == null) throw new Error('Digite o saldo atual (pode ser 0).');
+  400|     const subtipo = $('#bank-subtipo').value;
+  401|     const reforcaCartaoId = subtipo === 'cofrinho' && $('#bank-reforco').checked ? $('#bank-reforco-cartao').value || null : null;
+  402|     const acc = createAccount({ bank: $('#bank-select').value, nickname: $('#bank-nick').value, balanceCents: bal, subtipo, reforcaCartaoId });
+  403|     await db.put(db.STORES.accounts, acc);
+  404|     state.accounts.push(acc);
+  405|     $('#bank-nick').value = '';
+  406|     $('#bank-balance').value = '';
+  407|     $('#bank-subtipo').value = 'corrente';
+  408|     $('#bank-reforco').checked = false;
+  409|     renderFormConta();
+  410|     renderContas();
+  411|     renderLancar();
+  412|     renderizar();
+  413|     toast(`Pronto, anotei: ${accountLabel(acc)}.`);
+  414|   } catch (e) {
+  415|     err.textContent = e.message;
+  416|     err.hidden = false;
+  417|   }
+  418| }
+  419| 
+  420| export async function onUpdateAccount(id) {
+  421|   const a = state.accounts.find(x => x.id === id);
+  422|   if (!a) return;
+  423|   const atual = accountBalance(a, state.expenses, state.incomes, state.transferencias);
+  424|   const r = prompt(`Saldo atual de ${accountLabel(a)} (como está no app do banco):`, centsToInput(atual) || '0');
+  425|   if (r == null) return;
+  426|   const bal = parseSignedAmount(r);
+  427|   if (bal == null) return toast('Valor inválido.');
+  428|   // 15/11 (JF): o saldo do banco não bate com o anotado? O C.A.O.S. avisa e oferece anotar a diferença.
+  429|   // A diferença é anotada ANTES do saldo novo, pra já ficar dentro dele (sem contar duas vezes).
+  430|   const dif = diferencaDoSaldo(atual, bal);
+  431|   let anotou = false;
+  432|   if (dif) {
+  433|     narrate([{ type: dif.tipo, accountName: accountLabel(a), valorCents: dif.valorCents }], { ignoreCooldown: true });
+  434|     const gasto = dif.tipo === 'saldo_sem_gasto';
+  435|     const pergunta = gasto
+  436|       ? `${accountLabel(a)} tem ${formatBRL(dif.valorCents)} a menos do que estava anotado. Pode ser um gasto que ficou sem anotar.\n\nQuer anotar ${formatBRL(dif.valorCents)} como gasto (em Outros)? Depois dá pra editar e escolher a categoria.`
+  437|       : `${accountLabel(a)} tem ${formatBRL(dif.valorCents)} a mais do que estava anotado. Pode ser uma entrada que ficou sem anotar.\n\nQuer anotar ${formatBRL(dif.valorCents)} como entrada (em Outros)? Depois dá pra editar.`;
+  438|     if (confirm(pergunta)) {
+  439|       const hoje = toISODate();
+  440|       if (gasto) {
+  441|         const e = createExpense({ amountCents: dif.valorCents, categoryId: 'outros', note: 'Gasto sem anotar (achado ao atualizar o saldo)', date: hoje, accountId: a.id }, { categories: state.categories });
+  442|         await db.put(db.STORES.expenses, e);
+  443|         state.expenses.push(e);
+  444|       } else {
+  445|         const i = createIncome({ amountCents: dif.valorCents, sourceId: 'outros', note: 'Entrada sem anotar (achada ao atualizar o saldo)', date: hoje, accountId: a.id });
+  446|         await db.put(db.STORES.incomes, i);
+  447|         state.incomes.push(i);
+  448|       }
+  449|       anotou = true;
+  450|     }
+  451|   }
+  452|   const upd = { ...a, balanceCents: bal, balanceAt: Date.now() };
+  453|   await db.put(db.STORES.accounts, upd);
+  454|   state.accounts = state.accounts.map(x => (x.id === id ? upd : x));
+  455|   renderContas();
+  456|   renderizar();
+  457|   toast(anotou ? 'Saldo atualizado, e a diferença ficou anotada.' : 'Saldo atualizado.');
+  458| }
+  459| 
+  460| export async function onRemoveAccount(id) {
+  461|   const a = state.accounts.find(x => x.id === id);
+  462|   if (!a || !confirm(`Remover ${accountLabel(a)}? Os lançamentos continuam, só deixam de contar no saldo.`)) return;
+  463|   await db.remove(db.STORES.accounts, id);
+  464|   state.accounts = state.accounts.filter(x => x.id !== id);
+  465|   // cartão removido: os cofrinhos que aumentavam o limite dele deixam de apontar pra ele (achado do GPT, 13/11)
+  466|   for (const c of state.accounts.filter(x => x.reforcaCartaoId === id)) {
+  467|     const solto = { ...c, reforcaCartaoId: null };
+  468|     await db.put(db.STORES.accounts, solto);
+  469|     state.accounts = state.accounts.map(x => (x.id === c.id ? solto : x));
+  470|   }
+  471|   renderContas();
+  472|   renderLancar();
+  473|   renderizar();
+  474| }
+  475| 
+
+===== ARQUIVO: js/ia.js =====
+
+    1| // IA online (opcional, desligada por padrão): conversa com o servidor do projeto (Cloudflare Worker).
+    2| // A chave da API fica SÓ no servidor. O app manda:
+    3| //  · na conversa: a pergunta e um RESUMO AGREGADO (totais por categoria), nunca a lista de gastos;
+    4| //  · na foto: a imagem, só quando a pessoa toca em "Ler com IA".
+    5| 
+    6| import { summarizeMonth, incomeIn, totalBalance, analyze, monthKey, toISODate, forecastMonth, situacaoCompromissos } from './engine.js';
+    7| 
+    8| // 2.3.9: total das contas fixas que ainda faltam pagar no mês (só o número vai pra IA)
+    9| const aPagarNoMes = (dados, today) => situacaoCompromissos(dados.compromissos || [], dados.expenses || [], today).reduce((t, c) => t + (c.faltaCents || 0), 0);
+   10| 
+   11| const TEMPO_MS = 45_000;
+   12| 
+   13| // Criador (JF, 16/11): com o selo de criador, o app manda o token da conta e o servidor libera o uso sem limite.
+   14| // Pra quem não é criador, nada de token: a pergunta segue sem dizer de quem é.
+   15| let tokenCriador = null;
+   16| export function definirCriador(token) { tokenCriador = token || null; }
+   17| 
+   18| async function chamar(base, rota, corpo) {
+   19|   if (!base) throw new Error('Configure o endereço do servidor em Ajustes → IA online.');
+   20|   const ctrl = new AbortController();
+   21|   const t = setTimeout(() => ctrl.abort(), TEMPO_MS);
+   22|   try {
+   23|     const r = await fetch(base.replace(/\/+$/, '') + rota, {
+   24|       method: corpo ? 'POST' : 'GET',
+   25|       headers: { ...(corpo ? { 'content-type': 'application/json' } : {}), ...(tokenCriador && rota.startsWith('/ia/') ? { authorization: `Bearer ${tokenCriador}` } : {}) },
+   26|       body: corpo ? JSON.stringify(corpo) : undefined,
+   27|       signal: ctrl.signal,
+   28|     });
+   29|     const j = await r.json().catch(() => ({}));
+   30|     if (!r.ok) throw new Error(j.erro || `O servidor respondeu ${r.status}.`);
+   31|     return j;
+   32|   } catch (e) {
+   33|     if (e.name === 'AbortError') throw new Error('O servidor demorou demais. Tenta de novo.');
+   34|     if (e instanceof TypeError) throw new Error('Sem conexão com o servidor da IA.');
+   35|     throw e;
+   36|   } finally {
+   37|     clearTimeout(t);
+   38|   }
+   39| }
+   40| 
+   41| /** Só totais: nada de descrição, data ou valor de lançamento individual. */
+   42| export function resumoAgregado(dados, today = toISODate()) {
+   43|   const mes = monthKey(today);
+   44|   const s = summarizeMonth(dados.expenses, dados.categories, mes);
+   45|   const f = forecastMonth(dados.expenses, mes, today, dados.compromissos || []);
+   46|   return {
+   47|     mes,
+   48|     dia: Number(today.slice(8, 10)),
+   49|     gastoTotalCentavos: s.totalCents,
+   50|     entradasCentavos: incomeIn(dados.incomes, mes),
+   51|     previsaoMesCentavos: f.projectedCents,
+   52|     saldoContasCentavos: dados.accounts.length ? totalBalance(dados.accounts, dados.expenses, dados.incomes, dados.transferencias || []) : null,
+   53|     categorias: s.rows.filter(r => r.spentCents || r.budgetCents)
+   54|       .map(r => ({ nome: r.name, gastoCentavos: r.spentCents, orcamentoCentavos: r.budgetCents })),
+   55|     alertas: analyze(dados, today).map(a => a.type),
+   56|     // 2.3.9 (JF: "dá pra eu ir ao cinema este mês?"): o que ainda sai e entra no mês, só o total
+   57|     contasAPagarNoMesCentavos: aPagarNoMes(dados, today),
+   58|     entradasPrevistasCentavos: (dados.previstas || []).filter(p => String(p.date || '').slice(0, 7) === mes).reduce((t, p) => t + (p.amountCents || 0), 0),
+   59|   };
+   60| }
+   61| 
+   62| export function saude(base) {
+   63|   return chamar(base, '/saude');
+   64| }
+   65| 
+   66| export async function perguntar(base, { pergunta, humor, dados, modo = null, semBusca = false, emocao = null }) {
+   67|   // modo 'pesquisa' (16/11): pesquisa de compra ou viagem, com mais buscas e resposta em lista
+   68|   const j = await chamar(base, '/ia/perguntar', { pergunta: String(pergunta).slice(0, modo === 'pesquisa' ? 800 : 500), humor, resumo: resumoAgregado(dados), ...(modo ? { modo } : {}), ...(semBusca ? { semBusca: true } : {}), ...(emocao ? { emocao } : {}) });
+   69|   return j.texto;
+   70| }
+   71| 
+   72| export async function lerImagem(base, { base64, categorias, legenda = '' }) {
+   73|   return chamar(base, '/ia/imagem', {
+   74|     imagem: base64, tipo: 'image/jpeg', legenda: String(legenda || '').slice(0, 200),
+   75|     categorias: categorias.map(c => ({ id: c.id, nome: c.name })),
+   76|   });
+   77| }
+   78| 
+   79| /** Lê ofertas num print (loja, preço, parcelas, frete). A imagem só vai quando a pessoa manda o print da oferta. */
+   80| export async function lerOfertas(base, { base64 }) {
+   81|   return chamar(base, '/ia/ofertas', { imagem: base64, tipo: 'image/jpeg' });
+   82| }
+   83| 
+   84| /** Explica um print do banco/fatura. A imagem só vai quando a pessoa pede ("explica esse print"). */
+   85| export async function explicarImagem(base, { base64, duvida, humor }) {
+   86|   const j = await chamar(base, '/ia/explicar', { imagem: base64, tipo: 'image/jpeg', duvida: String(duvida || '').slice(0, 300), humor });
+   87|   return j.texto;
+   88| }
+   89| 
+   90| export { chamar };
+   91| 
+   92| /** Resumo do mercado que o servidor atualiza todo dia útil às 10h (o app guarda pra usar offline). */
+   93| export function baixarMercado(base) {
+   94|   return chamar(base, '/mercado');
+   95| }
+   96| 
+   97| /** Notícias do dia (14/11): o servidor busca 2x por dia; aqui só baixa o que já está pronto (não gasta IA). */
+   98| export function baixarNoticias(base) {
+   99|   return chamar(base, '/noticias');
+  100| }
+  101| 
+  102| /** Comparação de rendimento entre bancos: só os NOMES dos bancos e o CDI vão pro servidor (nada de saldo). */
+  103| export async function perguntarBancos(base, { bancos, cdi }) {
+  104|   const j = await chamar(base, '/ia/bancos', { bancos, cdi });
+  105|   return j.texto;
+  106| }
+  107| 
+  108| // 2.1.3.1 (GPT, 16/11: "medir antes de cortar crédito"): conta no aparelho quantas respostas o cérebro local deu e por
+  109| // que a IA online foi chamada. Fica só no aparelho (meta/iaMes) e zera no mês novo. Funções puras.
+  110| export const MOTIVOS_IA = Object.freeze({
+  111|   papo: 'papo',
+  112|   pesquisa: 'pesquisa e planos',
+  113|   assunto: 'pergunta com assunto (mercado, moedas…)',
+  114|   duvida: 'frase que eu não entendi',
+  115| });
+  116| 
+  117| export function motivoDaIA(fala) {
+  118|   if (fala?.modoIA === 'pesquisa') return 'pesquisa';
+  119|   if (fala?.intent === 'papo_pessoal') return 'papo';
+  120|   if (fala?.perguntaIA) return 'assunto';
+  121|   return 'duvida';
+  122| }
+  123| 
+  124| // tipo: 'local' (o cérebro do aparelho respondeu), 'memoria' (resposta da IA reaproveitada, sem gastar) ou um motivo
+  125| export function contarUsoIA(uso, mes, tipo) {
+  126|   const u = uso && uso.mes === mes
+  127|     ? { ...uso, motivos: { ...(uso.motivos || {}) } }
+  128|     : { mes, local: 0, memoria: 0, ia: 0, motivos: {} };
+  129|   if (tipo === 'local') u.local += 1;
+  130|   else if (tipo === 'memoria') u.memoria += 1;
+  131|   else { u.ia += 1; u.motivos[tipo] = (u.motivos[tipo] || 0) + 1; }
+  132|   return u;
+  133| }
+  134| 
+  135| export function descreverUsoIA(uso, mes) {
+  136|   if (!uso || uso.mes !== mes || !(uso.local + uso.ia + uso.memoria)) return 'Este mês ainda não teve conversa.';
+  137|   const total = uso.local + uso.ia + uso.memoria;
+  138|   const pct = Math.round((uso.local + uso.memoria) * 100 / total);
+  139|   const motivos = Object.entries(uso.motivos || {}).sort((a, b) => b[1] - a[1])
+  140|     .map(([k, n]) => `${n} ${MOTIVOS_IA[k] || k}`).join(', ');
+  141|   return `Este mês: ${uso.local} ${uso.local === 1 ? 'resposta' : 'respostas'} aqui no aparelho, sem gastar crédito, e ${uso.ia} com a IA online${motivos ? ` (${motivos})` : ''}.`
+  142|     + `${uso.memoria ? ` ${uso.memoria} ${uso.memoria === 1 ? 'veio' : 'vieram'} da memória, sem gastar.` : ''} ${pct}% sem gastar crédito.`;
+  143| }
+  144| 
+
+===== ARQUIVO: js/avatar.js =====
+
+    1| // Avatar animado do C.A.O.S. (pedido do JF, 13/11: "cadê os avatares?").
+    2| // Veio do rascunho do Wally de 06/11 (caos-formas.html, mandado ao Perfil no PR #208), com as 44 formas: o C.A.O.S. é
+    3| // uma telinha neon que flutua, com pedacinhos do "caos" girando em volta; cada humor, momento ou reação vira uma FORMA
+    4| // (cor, acessórios, jeito do corpo, rosto e como os pedacinhos se mexem).
+    5| //
+    6| // Camada "navegador": só desenha. Quem decide a forma é o app (formaPara, logo abaixo, é função pura e tem teste).
+    7| // Cuidados do Code (13/11): um SVG só por lugar, trocando classes (não recria a cada fala); pausa quando a tela
+    8| // está escondida ou o avatar não aparece (bateria); "menos movimento" = parado. Um laço de animação só pra todos.
+    9| 
+   10| import { rostoDaEmo } from './caos/rostos.js';
+   11| 
+   12| // ---------- Que forma combina com o momento (função pura) ----------
+   13| // rosto do C.A.O.S. (emo dos rostinhos) → forma do avatar
+   14| const POR_ROSTO = Object.freeze({
+   15|   calmo: 'calmo', pensando: 'pensando', espiando: 'detetive', julgando: 'desconfiado', deboche: 'tentado',
+   16|   raiva: 'perturbado', recompondo: 'envergonhado', tedio: 'sonolento', ombros: 'pensando', preocupado: 'preocupado',
+   17|   triste: 'triste', orgulho: 'orgulhoso', festa: 'feliz', carinho: 'parceiro', surpresa: 'surpreso', alivio: 'anjinho',
+   18|   espantado: 'surpreso', analista: 'detetive',
+   19|   // misturas
+   20|   acuado: 'medo', 'riso sem graça': 'envergonhado', 'elogio contrariado': 'orgulhoso',
+   21| });
+   22| // o assunto pesa mais que a emoção: dica = professor, piada = humorista, conta vencendo = despertador…
+   23| const POR_ASSUNTO = Object.freeze({
+   24|   piada: 'humorista', dica: 'professor', tutorial: 'professor', ajuda: 'professor', explicar_melhor: 'professor',
+   25|   limites: 'anjinho', como_funciona: 'pensando', previsao: 'vidente', onde_mais: 'detetive', maiores_gastos: 'detetive',
+   26|   comparar_ofertas: 'simulador', oferta_unica: 'simulador', porcentagem: 'contador', vale_parcelar: 'simulador',
+   27|   a_receber: 'cobrador', ofensiva: 'treinador', meta_ritmo: 'amigao', mes_verde: 'feliz', mes_negativo: 'triste',
+   28|   categoria_estourada: 'bronca', orcamento_80: 'preocupado', cartao_limite: 'alerta', conta_negativa: 'recalculando',
+   29|   cartao_vence: 'lembrete', compromisso_vence: 'lembrete', compromisso_atrasado: 'alerta', delivery_repetido: 'nojinho',
+   30|   ritmo_alto: 'medo', fechamento: 'contador', resumo_mes: 'contador', meus_investimentos: 'investidor', mercado: 'investidor',
+   31|   investir: 'investidor', salario_caiu: 'rico', boas_vindas: 'anjinho',
+   32|   // paciência (13/11): firme → decepcionado → cartão vermelho → sem reação (quietinho) → de volta
+   33|   xingamento: 'parceiro', xingamento_2: 'desconfiado', xingamento_3: 'decepcionado', xingamento_3_forte: 'decepcionado',
+   34|   xingamento_fim: 'chocado', xingamento_fim_forte: 'vermelho', silencio: 'chocado', passou_raiva: 'anjinho', desculpa_aceita: 'parceiro',
+   35|   moeda_jogo: 'gamer', // 15/11 (JF): moedas de jogo
+   36|   motivacao: 'treinador', frase_do_dia: 'treinador', ditado: 'vovo', curiosidade_fin: 'professor', // 17/11 (JF)
+   37|   formiguinha: 'formiga', curiosidade: 'curioso', tangente: 'distraido', pesquisa_compra: 'pesquisador', // 16 e 17/11 (JF): avatares próprios
+   38|   desabafo: 'parceiro', limite_investido: 'banqueiro', bancos: 'investidor', conta: 'contador', glossario: 'professor', privacidade: 'anjinho', como_esta: 'calmo',
+   39| });
+   40| 
+   41| // forma do avatar → rostinho de texto que combina com ela (o balão mostra o rostinho, não emoji; JF, 13/11 à noite)
+   42| export const EMO_DA_FORMA = Object.freeze({
+   43|   calmo: 'calmo', anjinho: 'carinho', feliz: 'festa', orgulhoso: 'orgulho', pensando: 'pensando', triste: 'triste',
+   44|   tentado: 'deboche', perturbado: 'raiva', alerta: 'preocupado', professor: 'pensando', parceiro: 'carinho', bronca: 'julgando',
+   45|   lembrete: 'preocupado', chocado: 'ombros', economista: 'orgulho', rico: 'festa', decepcionado: 'triste', nojinho: 'julgando',
+   46|   medo: 'preocupado', desconfiado: 'espiando', amigao: 'carinho', humorista: 'festa', gerente: 'pensando', investidor: 'pensando',
+   47|   preocupado: 'preocupado', vidente: 'espiando', zen: 'alivio', detetive: 'analista', sobrevivente: 'ombros', desnorteado: 'surpresa',
+   48|   recalculando: 'preocupado', sonolento: 'tedio', envergonhado: 'recompondo', contador: 'analista', banqueiro: 'orgulho',
+   49|   ferias: 'alivio', simulador: 'analista', auditor: 'julgando', cobrador: 'julgando', surpreso: 'espantado', confiante: 'orgulho',
+   50|   vermelho: 'raiva', treinador: 'festa', vovo: 'ombros', gamer: 'festa',
+   51|   guia: 'carinho', curioso: 'pensando', distraido: 'surpresa', formiga: 'preocupado', pesquisador: 'analista',
+   52| });
+   53| 
+   54| // 2.1.3.2 (JF, 16/11: "os rostinhos não acompanham os avatares; avatar pensador com rostinho tímido não dá"):
+   55| // o AVATAR manda. Cada forma que não tinha um rostinho que combinasse ganhou o seu (2 quadros, que se alternam).
+   56| // As formas que ficam fora daqui usam o rostinho da emoção de EMO_DA_FORMA, que já combina com elas.
+   57| export const KAOMOJI_DA_FORMA = Object.freeze({
+   58|   anjinho: ['(◕‿◕✿)', '(◕ᴗ◕✿) ♡'],
+   59|   alerta: ['(⊙_⊙)!!', '(⊙△⊙)!!'],
+   60|   professor: ['(•_•)☝', '(•ᴗ•)☝ ✎'],
+   61|   parceiro: ['(っ◕‿◕)っ', '(っ◕ᴗ◕)っ♡'],
+   62|   bronca: ['(¬_¬)ノ▮', '(¬_¬)ノ▮ !'],
+   63|   lembrete: ['(•o•)⏰', '(•ᴗ•)⏰ !'],
+   64|   chocado: ['(・_・)', '( ・_・)'],
+   65|   economista: ['(•‿•)📈', '(•ᴗ•)📈 ✧'],
+   66|   rico: ['($‿$)', '($ᴗ$) ✧'],
+   67|   decepcionado: ['(-_-;)', '(-_-;) ...'],
+   68|   nojinho: ['(¬﹏¬)', '(¬﹏¬) ~'],
+   69|   medo: ['(((ﾟДﾟ;)))', '(((;ﾟДﾟ)))'],
+   70|   desconfiado: ['(¬_¬)', '(¬_¬ ) ?'],
+   71|   amigao: ['(•‿•)ゞ', '(•ᴗ•)👍'],
+   72|   humorista: ['(≧▽≦)', '(≧▽≦)ノ🎤'],
+   73|   gerente: ['(•_•)📋', '(•ᴗ•)📋'],
+   74|   investidor: ['(•‿•)💡', '(•ᴗ•)💡 ✧'],
+   75|   vidente: ['(☆_☆)🔮', '(✧_✧)🔮'],
+   76|   zen: ['(︶‿︶)', '(︶ᴗ︶) ~'],
+   77|   sobrevivente: ['(×_×)', '(×_×) ...'],
+   78|   desnorteado: ['(@_@)', '(@_@) ?!'],
+   79|   recalculando: ['(•_•)🧭', '(•_•) ↻'],
+   80|   sonolento: ['(－_－) zzZ', '(－.－) zZ'],
+   81|   envergonhado: ['(*/ω＼*)', '(⁄•⁄ω⁄•⁄)'],
+   82|   contador: ['(•_•)🧮', '(•ᴗ•)🧮'],
+   83|   banqueiro: ['(•‿•)🏦', '(•ᴗ•)💳'],
+   84|   ferias: ['(˘ᴗ˘)🏖', '(˘‿˘)🍹'],
+   85|   simulador: ['(・_・)🛒', '(・ᴗ・)🛒 ?'],
+   86|   auditor: ['(¬_¬)✂', '(¬_¬)✂ !'],
+   87|   cobrador: ['(¬‿¬)🧾', '(¬ᴗ¬)🧾 ~'],
+   88|   confiante: ['(⌐■‿■)', '(⌐■ᴗ■) ✧'],
+   89|   vermelho: ['(-_-メ)▮', '(-_-#)▮ !'],
+   90|   treinador: ['(ง •̀_•́)ง', '(ง •̀ᴗ•́)ง'],
+   91|   gamer: ['(•‿•)🎮', '(•ᴗ•)🎮 ✧'],
+   92|   guia: ['(•‿•)ノ🚩', '(•ᴗ•)ノ🧭'],
+   93|   curioso: ['(・o・)?', '(•ᴗ•)??'],
+   94|   distraido: ['(°▽°)~🦋', '(￣▽￣)🦋'],
+   95|   formiga: ['(・_・)🐜', '(¬_¬)🐜🐜'],
+   96|   pesquisador: ['(•_•)🔭', '(•ᴗ•)🔎'],
+   97|   vovo: ['(ᵔ_ᵔ)', '(ᵔᴗᵔ) ~'],
+   98| });
+   99| 
+  100| /**
+  101|  * Rostinho de texto que combina com a forma do avatar (função pura).
+  102|  * Forma com rostinho próprio: usa o dele. Senão, mantém o rosto da fala se for da mesma emoção (guarda a intensidade);
+  103|  * senão, o rostinho da emoção da forma. A emoção (cor, tremida) vem de EMO_DA_FORMA.
+  104|  */
+  105| export function rostoDaForma(forma, rosto = null, semente = 0) {
+  106|   const f = FORMAS[forma] ? forma : 'calmo';
+  107|   const emo = EMO_DA_FORMA[f] || 'calmo';
+  108|   const proprio = KAOMOJI_DA_FORMA[f];
+  109|   if (!proprio && rosto?.quadros && rosto.emo === emo) return rosto;
+  110|   const base = rostoDaEmo(emo, semente);
+  111|   return proprio ? { ...base, quadros: [...proprio], forma: f } : { ...base, forma: f };
+  112| }
+  113| 
+  114| /** Forma do avatar pro momento: o assunto (intenção ou evento) manda; senão, o rosto/emoção. */
+  115| export function formaPara({ rosto = null, assunto = null } = {}) {
+  116|   if (assunto && POR_ASSUNTO[assunto]) return POR_ASSUNTO[assunto];
+  117|   const r = rosto && (POR_ROSTO[rosto.nome] || POR_ROSTO[rosto.emo]);
+  118|   return r || 'calmo';
+  119| }
+  120| 
+  121| // ---------- As formas (do rascunho, sem as falas de exemplo) ----------
+  122| export const FORMAS = Object.freeze({
+  123|   anjinho:   { nome:'😇 Anjinho', quando:'calmo, carinhoso', cor:'#9fe8ff', modo:'lento',
+  124|     acc:['asas','aureola','bochechas'], corpo:'translateY(-6px)',
+  125|     olhoE:{ d:'M148 206 Q 161 196, 174 206', cheio:false }, olhoD:{ d:'M226 206 Q 239 196, 252 206', cheio:false },
+  126|     sob:'', boca:'M184 244 Q 200 256, 216 244', extra:'' },
+  127|   feliz:     { nome:'🥳 Festeiro', quando:'meta batida, mês no verde', cor:'#ffd24a', modo:'festa',
+  128|     acc:['chapeu','bochechas'], corpo:'translateY(-10px) scale(1.04)',
+  129|     olhoE:{ d:'M148 208 Q 161 186, 174 208', cheio:false }, olhoD:{ d:'M226 208 Q 239 186, 252 208', cheio:false },
+  130|     sob:'', boca:'M166 236 Q 200 276, 234 236 Z', extra:'' },
+  131|   orgulhoso: { nome:'🎩 Pomposo', quando:'orgulhoso, se achando', cor:'#e9c46a', modo:'anel',
+  132|     acc:['coroa','gravata','monoculo'], corpo:'translateY(-12px) rotate(7deg) scale(1.06)',
+  133|     olhoE:{ d:'M150 204 h22 v8 a11 6 0 0 1 -22 0 z', cheio:true }, olhoD:{ d:'M228 204 h22 v8 a11 6 0 0 1 -22 0 z', cheio:true },
+  134|     sob:'M146 192 L174 192 M226 186 L254 180', boca:'M178 252 Q 206 258, 230 240', extra:'' },
+  135|   pensando:  { nome:'🤓 Pensador', quando:'calculando, pesquisando', cor:'#3ef0ff', modo:'lento',
+  136|     acc:['lampada','oculos'], corpo:'rotate(-3deg)',
+  137|     olhoE:{ d:'M156 186 h16 v18 h-16 z', cheio:true }, olhoD:{ d:'M236 186 h16 v18 h-16 z', cheio:true },
+  138|     sob:'', boca:'M180 252 q 10 -6 20 0 t 20 0', extra:'' },
+  139|   triste:    { nome:'🌧️ Tristinho', quando:'mês no vermelho, decepcionado', cor:'#6fa8ff', modo:'chuva',
+  140|     acc:['nuvem','lagrima'], corpo:'translateY(18px) scale(.95, .88)',
+  141|     olhoE:{ d:'M151 198 h20 v18 h-20 z', cheio:true }, olhoD:{ d:'M229 198 h20 v18 h-20 z', cheio:true },
+  142|     sob:'M146 184 L172 176 M228 176 L254 184', boca:'M178 260 Q 200 244, 222 260', extra:'' },
+  143|   tentado:   { nome:'😈 Capetinha', quando:'tentado, zoeira', cor:'#b06bff', modo:'calmo',
+  144|     acc:['chifres','rabo'], corpo:'rotate(-6deg)',
+  145|     olhoE:{ d:'M150 202 h22 v12 h-22 z', cheio:true }, olhoD:{ d:'M228 190 h22 v26 h-22 z', cheio:true },
+  146|     sob:'M226 176 L254 166', boca:'M170 252 Q 200 262, 230 240', extra:'' },
+  147|   perturbado:{ nome:'👿 Capeta bravo', quando:'perturbado, irritado', cor:'#ff3b5c', modo:'agitado',
+  148|     acc:['chifres','rabo'], corpo:'scale(1.05)', treme:true,
+  149|     olhoE:{ d:'M148 192 L174 202 V216 H148 Z', cheio:true }, olhoD:{ d:'M252 192 L226 202 V216 H252 Z', cheio:true },
+  150|     sob:'', boca:'M176 258 Q 200 240, 224 258', extra:'' },
+  151|   alerta:    { nome:'🚨 Sirene', quando:'alerta sério', cor:'#ff8a3d', modo:'agitado',
+  152|     acc:['sirene'], corpo:'scale(1.04)',
+  153|     olhoE:{ d:'M149 202 a12 12 0 1 0 24 0 a12 12 0 1 0 -24 0', cheio:false }, olhoD:{ d:'M227 202 a12 12 0 1 0 24 0 a12 12 0 1 0 -24 0', cheio:false },
+  154|     sob:'', boca:'M192 252 a8 8 0 1 0 16 0 a8 8 0 1 0 -16 0', extra:'' },
+  155|   professor: { nome:'👨‍🏫 Professor', quando:'dica, ideia, insight', cor:'#7cc4ff', modo:'lento', grupo:'carteira',
+  156|     acc:['capelo','lousa','oculos'], corpo:'rotate(-4deg)',
+  157|     olhoE:{ d:'M152 190 h18 v20 h-18 z', cheio:true }, olhoD:{ d:'M232 190 h18 v20 h-18 z', cheio:true },
+  158|     sob:'M226 170 L254 164', boca:'M180 248 Q 202 258, 224 244', extra:'' },
+  159|   parceiro:  { nome:'🤗 Parceiro', quando:'mês apertado, precisa de apoio', cor:'#ffa883', modo:'abraco', grupo:'carteira',
+  160|     acc:['cachecol','coracao','bochechas'], corpo:'translateY(4px) scale(1.02)',
+  161|     olhoE:{ d:'M148 206 Q 161 196, 174 206', cheio:false }, olhoD:{ d:'M226 206 Q 239 196, 252 206', cheio:false },
+  162|     sob:'M148 186 L172 180 M228 180 L252 186', boca:'M182 244 Q 200 256, 218 244', extra:'' },
+  163|   bronca:    { nome:'🟨 Bronca', quando:'passou do limite', cor:'#ffb020', modo:'calmo', grupo:'carteira',
+  164|     acc:['cartao'], corpo:'rotate(3deg) scale(1.03)',
+  165|     olhoE:{ d:'M150 194 h22 v22 h-22 z', cheio:true }, olhoD:{ d:'M228 194 h22 v22 h-22 z', cheio:true },
+  166|     sob:'M146 176 L172 186 M254 176 L228 186', boca:'M180 254 h40', extra:'' },
+  167|   lembrete:  { nome:'⏰ Lembrete', quando:'conta perto de vencer', cor:'#4ee6a6', modo:'calmo', grupo:'carteira',
+  168|     acc:['despertador'], corpo:'translateY(-4px)',
+  169|     olhoE:{ d:'M152 202 a 9 9 0 1 0 18 0 a 9 9 0 1 0 -18 0', cheio:true }, olhoD:{ d:'M230 202 a 9 9 0 1 0 18 0 a 9 9 0 1 0 -18 0', cheio:true },
+  170|     sob:'M146 182 Q 161 172, 176 182 M224 182 Q 239 172, 254 182', boca:'M186 248 Q 200 258, 214 248', extra:'' },
+  171|   chocado:   { nome:'😶 Sem reação', quando:'chocado, sem palavras', cor:'#b77dff', modo:'parado', grupo:'reacoes',
+  172|     acc:[], corpo:'scale(.97)',
+  173|     olhoE:{ d:'M155 200 a 7 7 0 1 0 14 0 a 7 7 0 1 0 -14 0', cheio:true }, olhoD:{ d:'M231 200 a 7 7 0 1 0 14 0 a 7 7 0 1 0 -14 0', cheio:true },
+  174|     sob:'', boca:'', extra:'' },
+  175|   economista:{ nome:'📈 Economista', quando:'controlando melhor as finanças', cor:'#4ade80', modo:'anel', grupo:'reacoes',
+  176|     acc:['cofrinho','bochechas'], corpo:'translateY(-6px) rotate(-3deg)',
+  177|     olhoE:{ d:'M150 192 h22 v24 h-22 z', cheio:true }, olhoD:{ d:'M228 192 h22 v24 h-22 z', cheio:true },
+  178|     sob:'M146 178 Q 161 172, 176 178 M224 178 Q 239 172, 254 178', boca:'M174 242 Q 200 266, 226 242', extra:'' },
+  179|   rico:      { nome:'🤑 Rico', quando:'salário caiu', cor:'#ffe27a', modo:'dinheiro', grupo:'reacoes',
+  180|     acc:['terno','oculosEscuros'], corpo:'translateY(-10px) rotate(4deg) scale(1.04)',
+  181|     olhoE:{ d:'M152 196 h18 v16 h-18 z', cheio:true }, olhoD:{ d:'M230 196 h18 v16 h-18 z', cheio:true },
+  182|     sob:'', boca:'M166 240 Q 200 274, 236 236 Z', extra:'' },
+  183|   decepcionado:{ nome:'😮‍💨 Decepcionado', quando:'estourou o limite do mês', cor:'#a5b4d0', modo:'lento', grupo:'reacoes',
+  184|     acc:['suor'], corpo:'translateY(8px) rotate(-4deg)', anim:'nega',
+  185|     olhoE:{ d:'M150 204 h22 v9 h-22 z', cheio:true }, olhoD:{ d:'M228 204 h22 v9 h-22 z', cheio:true },
+  186|     sob:'M148 192 L 174 196 M226 196 L 252 192', boca:'M182 254 Q 200 249, 220 257', extra:'' },
+  187|   nojinho:   { nome:'🤢 Nojinho', quando:'não curtiu sua atitude', cor:'#c3d44a', modo:'lento', grupo:'reacoes',
+  188|     acc:['fedor','lingua'], corpo:'rotate(-8deg) translateX(-6px)',
+  189|     olhoE:{ d:'M148 196 L 172 204 L 148 212', cheio:false }, olhoD:{ d:'M230 196 h18 v16 h-18 z', cheio:true },
+  190|     sob:'M226 182 L 252 188', boca:'M176 250 q 8 -6 16 0 t 16 0 t 16 0', extra:'' },
+  191|   medo:      { nome:'😱 Medo', quando:'gastando mais do que devia', cor:'#c7d2fe', modo:'medo', grupo:'reacoes',
+  192|     acc:['suor','pupilas'], corpo:'scale(.9) translateY(6px)', treme:true, bocaTreme:true,
+  193|     olhoE:{ d:'M147 202 a 14 14 0 1 0 28 0 a 14 14 0 1 0 -28 0', cheio:false }, olhoD:{ d:'M225 202 a 14 14 0 1 0 28 0 a 14 14 0 1 0 -28 0', cheio:false },
+  194|     sob:'M146 178 L 172 172 M228 172 L 254 178', boca:'M174 256 l 9 -7 l 9 7 l 9 -7 l 9 7 l 9 -7 l 9 7', extra:'' },
+  195|   desconfiado:{ nome:'🤨 Desconfiado', quando:'finge que economiza', cor:'#f472b6', modo:'lento', grupo:'reacoes',
+  196|     acc:['lupa'], corpo:'rotate(6deg) translateX(6px)', anim:'trocaOlho',
+  197|     olhoE:{ d:'M150 204 h22 v6 h-22 z', cheio:true }, olhoD:{ d:'M240 194 h14 v18 h-14 z', cheio:true },
+  198|     sob:'M146 194 L 174 198 M228 176 L 256 168', boca:'M180 252 h26 q 8 0 12 -6', extra:'' },
+  199|   amigao:    { nome:'🤝 Amigão', quando:'toque pra chegar na meta', cor:'#2dd4bf', modo:'calmo', grupo:'reacoes',
+  200|     acc:['alvo','bilhete'], corpo:'rotate(-4deg) translateY(-4px)',
+  201|     olhoE:{ d:'M148 206 Q 161 192, 174 206', cheio:false }, olhoD:{ d:'M228 190 h22 v24 h-22 z', cheio:true },
+  202|     sob:'M224 176 Q 239 168, 254 176', boca:'M172 242 Q 202 266, 230 238', extra:'' },
+  203|   humorista: { nome:'🎤 Humorista', quando:'hora da piada', cor:'#ff9f1c', modo:'festa', grupo:'estilos',
+  204|     acc:['microfone','nariz'], corpo:'rotate(-5deg)', anim:'ri',
+  205|     olhoE:{ d:'M148 196 L 172 204 L 148 212', cheio:false }, olhoD:{ d:'M252 196 L 228 204 L 252 212', cheio:false },
+  206|     sob:'', boca:'M168 240 Q 200 280, 232 240 Z', extra:'HA!' },
+  207|   gerente:   { nome:'💼 Gerente', quando:'jeito formal, explica a fundo', cor:'#cbd5e1', modo:'anel', grupo:'estilos',
+  208|     acc:['terno','maleta','meialua'], corpo:'scale(1.02)',
+  209|     olhoE:{ d:'M152 190 h18 v16 h-18 z', cheio:true }, olhoD:{ d:'M230 190 h18 v16 h-18 z', cheio:true },
+  210|     sob:'M146 178 h28 M226 178 h28', boca:'M182 250 Q 200 254, 218 250', extra:'' },
+  211|   investidor:{ nome:'💡 Investidor', quando:'sugestão leve, sem pressão', cor:'#60a5fa', modo:'calmo', grupo:'estilos',
+  212|     acc:['bone','seta'], corpo:'rotate(-6deg) translateY(-4px)',
+  213|     olhoE:{ d:'M156 196 h18 v18 h-18 z', cheio:true }, olhoD:{ d:'M234 196 h18 v18 h-18 z', cheio:true },
+  214|     sob:'M152 182 Q 165 176, 178 182 M230 180 L 256 174', boca:'M176 246 Q 204 260, 228 242', extra:'' },
+  215|   preocupado:{ nome:'😟 Preocupado', quando:'conta chegando no limite', cor:'#fdba74', modo:'calmo', grupo:'reacoes',
+  216|     acc:['medidor','suor'], corpo:'translateY(4px) rotate(3deg)',
+  217|     olhoE:{ d:'M151 196 h20 v20 h-20 z', cheio:true }, olhoD:{ d:'M229 196 h20 v20 h-20 z', cheio:true },
+  218|     sob:'M146 184 L 172 176 M228 176 L 254 184', boca:'M180 254 q 7 -6 14 0 t 14 0 t 14 0', extra:'' },
+  219|   vidente:   { nome:'🔮 Vidente', quando:'previsão do mês', cor:'#e879f9', modo:'anel', grupo:'gemini',
+  220|     acc:['turbante','bola'], corpo:'translateY(-8px)',
+  221|     olhoE:{ d:'M148 202 Q 161 212, 174 202', cheio:false }, olhoD:{ d:'M226 202 Q 239 212, 252 202', cheio:false },
+  222|     sob:'M146 186 Q 161 180, 176 186 M224 186 Q 239 180, 254 186', boca:'M192 250 a 8 6 0 1 0 16 0 a 8 6 0 1 0 -16 0', extra:'' },
+  223|   zen:       { nome:'🧘 Zen', quando:'orçamentos todos abaixo da metade', cor:'#c4b5fd', modo:'lento', grupo:'gemini',
+  224|     acc:['lotus'], corpo:'scale(1)', anim:'levita',
+  225|     olhoE:{ d:'M148 204 Q 161 212, 174 204', cheio:false }, olhoD:{ d:'M226 204 Q 239 212, 252 204', cheio:false },
+  226|     sob:'', boca:'M186 246 Q 200 254, 214 246', extra:'' },
+  227|   detetive:  { nome:'🕵️ Detetive', quando:'"onde mais gastei?"', cor:'#d6a46b', modo:'lento', grupo:'gemini',
+  228|     acc:['chapeuDetetive','lupa'], corpo:'rotate(-3deg)', anim:'varre',
+  229|     olhoE:{ d:'M150 202 h22 v8 h-22 z', cheio:true }, olhoD:{ d:'M230 194 h18 v18 h-18 z', cheio:true },
+  230|     sob:'M146 192 L 174 196 M226 182 L 254 176', boca:'M182 252 h24 q 8 0 12 -4', extra:'' },
+  231|   sobrevivente:{ nome:'🧟 Sobrevivente', quando:'fim de mês zerado (só no Ácido)', cor:'#9fb08f', modo:'lento', grupo:'gemini',
+  232|     acc:['curto','olheiras'], corpo:'translateY(10px)', anim:'cambaleia',
+  233|     olhoE:{ d:'M148 204 a 13 13 0 1 0 26 0 a 13 13 0 1 0 -26 0', cheio:false }, olhoD:{ d:'M234 204 a 5 5 0 1 0 10 0 a 5 5 0 1 0 -10 0', cheio:true },
+  234|     sob:'', boca:'M178 256 L 196 250 L 210 258 L 224 250', extra:'' },
+  235|   desnorteado:{ gira:true, nome:'😵‍💫 Desnorteado', quando:'sumiu um tempão e voltou com a bomba', cor:'#67e8f9', modo:'bagunca', grupo:'reacoes',
+  236|     acc:['tontura','suor'], corpo:'translateY(4px)', anim:'cambaleia',
+  237|     olhoE:{ d:'M161 202 a 3 3 0 0 1 6 0 a 6 6 0 0 1 -12 0 a 9 9 0 0 1 18 0 a 12 12 0 0 1 -24 0', cheio:false }, olhoD:{ d:'M239 202 a 3 3 0 0 1 6 0 a 6 6 0 0 1 -12 0 a 9 9 0 0 1 18 0 a 12 12 0 0 1 -24 0', cheio:false },
+  238|     sob:'M146 182 Q 160 172, 174 178 M226 176 Q 240 172, 254 184', boca:'M180 256 q 8 -10 16 0 t 16 0 t 16 -4', extra:'?!' },
+  239|   recalculando:{ nome:'🧭 Recalculando', quando:'alerta vermelho: refazer a rota', cor:'#ff4d5e', modo:'anel', grupo:'reacoes',
+  240|     acc:['gps'], corpo:'scale(1.03)',
+  241|     olhoE:{ d:'M150 196 h22 v18 h-22 z', cheio:true }, olhoD:{ d:'M228 196 h22 v18 h-22 z', cheio:true },
+  242|     sob:'M146 182 L 174 186 M254 182 L 226 186', boca:'M178 250 h44', extra:'' },
+  243|   sonolento: { nome:'😴 Sonolento', quando:'tédio, nada acontecendo', cor:'#818cf8', modo:'dormindo', grupo:'perfil',
+  244|     acc:['touca','zzz'], corpo:'rotate(-12deg) translateY(12px)', anim:'respira',
+  245|     olhoE:{ d:'M148 206 Q 160 213, 172 206', cheio:false }, olhoD:{ d:'M228 206 Q 240 213, 252 206', cheio:false },
+  246|     sob:'', boca:'M194 252 a 6 5 0 1 0 12 0 a 6 5 0 1 0 -12 0', extra:'' },
+  247|   envergonhado:{ nome:'😳 Envergonhado', quando:'vergonha, foi zoado', cor:'#fda4af', modo:'abraco', grupo:'perfil',
+  248|     acc:['corado','suor'], corpo:'scale(.9) rotate(8deg) translateX(10px)', anim:'encolhe',
+  249|     olhoE:{ d:'M164 210 h14 v12 h-14 z', cheio:true }, olhoD:{ d:'M238 210 h14 v12 h-14 z', cheio:true },
+  250|     sob:'M150 190 L 174 186 M228 186 L 252 190', boca:'M188 256 q 6 -5 12 0 t 12 0', extra:'' },
+  251|   contador:  { nome:'🧮 Contador', quando:'fechamento do mês, relatório', cor:'#86efac', modo:'anel', grupo:'jf2',
+  252|     acc:['calculadora','viseira'], corpo:'rotate(-3deg)',
+  253|     olhoE:{ d:'M150 200 h20 v14 h-20 z', cheio:true }, olhoD:{ d:'M226 200 h20 v14 h-20 z', cheio:true },
+  254|     sob:'M148 186 h24 M226 186 h24', boca:'M184 252 h32', extra:'' },
+  255|   banqueiro: { nome:'🏦 Banqueiro', quando:'cartão novo cadastrado', cor:'#e5c07b', modo:'anel', grupo:'jf2',
+  256|     acc:['cartola','cartoes','bigode','monoculo'], corpo:'translateY(-6px) rotate(3deg)',
+  257|     olhoE:{ d:'M150 198 h20 v14 h-20 z', cheio:true }, olhoD:{ d:'M230 198 h20 v14 h-20 z', cheio:true },
+  258|     sob:'M146 184 L 172 180 M226 180 L 254 184', boca:'', extra:'' },
+  259|   ferias:    { nome:'🏖️ Férias', quando:'modo férias ligado', cor:'#38bdf8', modo:'lento', grupo:'jf2',
+  260|     acc:['chapeuPraia','oculosEscuros','praia'], corpo:'translateY(-4px)', anim:'balanca',
+  261|     olhoE:{ d:'M152 196 h18 v16 h-18 z', cheio:true }, olhoD:{ d:'M230 196 h18 v16 h-18 z', cheio:true },
+  262|     sob:'', boca:'M170 240 Q 200 268, 230 240', extra:'' },
+  263|   // 17/11 (JF: "conseguiu fazer o avatar do C.A.O.S. como guia turístico?"): 5 formas novas, cada uma pra uma coisa
+  264|   // que entrou nesta semana e usava avatar emprestado (45 → 50, regra do 0 ou 5)
+  265|   guia:      { nome:'🧭 Guia Turístico', quando:'tutorial do app', cor:'#34d399', modo:'calmo', grupo:'jf3',
+  266|     acc:['chapeuGuia','bandeira','bochechas'], corpo:'translateY(-4px) rotate(-2deg)', anim:'balanca',
+  267|     olhoE:{ d:'M148 206 Q 161 194, 174 206', cheio:false }, olhoD:{ d:'M226 206 Q 239 194, 252 206', cheio:false },
+  268|     sob:'', boca:'M174 240 Q 200 264, 226 240', extra:'' },
+  269|   curioso:   { nome:'🤔 Curioso', quando:'pergunta de amigo depois do gasto', cor:'#fbbf24', modo:'lento', grupo:'jf3',
+  270|     acc:['interrogacao'], corpo:'rotate(4deg)',
+  271|     olhoE:{ d:'M151 204 a10 10 0 1 0 20 0 a10 10 0 1 0 -20 0', cheio:true }, olhoD:{ d:'M227 200 a13 13 0 1 0 26 0 a13 13 0 1 0 -26 0', cheio:true },
+  272|     sob:'M226 174 Q 240 164, 256 170', boca:'M192 250 a8 8 0 1 0 16 0 a8 8 0 1 0 -16 0', extra:'' },
+  273|   distraido: { nome:'🦋 Distraído', quando:'tangente de TDAH: lembrou de outra coisa', cor:'#c084fc', modo:'bagunca', grupo:'jf3',
+  274|     acc:['borboleta'], corpo:'rotate(-5deg) translateX(-4px)',
+  275|     olhoE:{ d:'M160 188 h14 v14 h-14 z', cheio:true }, olhoD:{ d:'M240 186 h14 v14 h-14 z', cheio:true },
+  276|     sob:'', boca:'M180 250 q 10 -6 20 0 t 20 0', extra:'' },
+  277|   formiga:   { nome:'🐜 Formiguinha', quando:'gastinhos que somam muito', cor:'#fb923c', modo:'lento', grupo:'jf3',
+  278|     acc:['formigas','lupa'], corpo:'translateY(4px)',
+  279|     olhoE:{ d:'M150 202 h22 v10 h-22 z', cheio:true }, olhoD:{ d:'M228 202 h22 v10 h-22 z', cheio:true },
+  280|     sob:'M148 188 L 174 194 M226 194 L 252 188', boca:'M184 252 h32', extra:'' },
+  281|   pesquisador:{ nome:'🔭 Pesquisador', quando:'pesquisa de preço e planos', cor:'#22d3ee', modo:'anel', grupo:'jf3',
+  282|     acc:['binoculo','prancheta'], corpo:'rotate(-3deg)',
+  283|     olhoE:{ d:'M152 194 h18 v20 h-18 z', cheio:true }, olhoD:{ d:'M230 194 h18 v20 h-18 z', cheio:true },
+  284|     sob:'M150 180 L 172 184', boca:'M180 248 Q 202 258, 224 244', extra:'' },
+  285|   simulador: { nome:'🛒 Simulador', quando:'"vale comprar agora ou esperar?"', cor:'#facc15', modo:'lento', grupo:'jf2',
+  286|     acc:['balanca','calculadora','calendario'], corpo:'rotate(-2deg)',
+  287|     olhoE:{ d:'M156 190 h16 v18 h-16 z', cheio:true }, olhoD:{ d:'M236 190 h16 v18 h-16 z', cheio:true },
+  288|     sob:'M150 178 Q 163 172, 176 178 M226 174 L 252 168', boca:'M182 250 q 9 -6 18 0 t 18 0', extra:'' },
+  289|   auditor:   { nome:'✂️ Auditor', quando:'assinaturas comendo o orçamento', cor:'#fb7185', modo:'lento', grupo:'gemini2',
+  290|     acc:['tesoura','carimbo','meialua'], corpo:'rotate(-3deg)',
+  291|     olhoE:{ d:'M150 200 h22 v8 h-22 z', cheio:true }, olhoD:{ d:'M228 200 h22 v8 h-22 z', cheio:true },
+  292|     sob:'M146 186 L 174 190 M226 184 L 254 178', boca:'M184 254 h30', extra:'' },
+  293|   cobrador:  { nome:'🧾 Cobrador', quando:'conta rachada, falta receber', cor:'#a3e635', modo:'calmo', grupo:'gemini2',
+  294|     acc:['prancheta','boneCobrador','caneta'], corpo:'rotate(3deg)',
+  295|     olhoE:{ d:'M150 194 h22 v20 h-22 z', cheio:true }, olhoD:{ d:'M228 194 h22 v20 h-22 z', cheio:true },
+  296|     sob:'M146 182 h26 M226 178 L 254 172', boca:'M178 248 Q 204 258, 226 242', extra:'' },
+  297|   calmo:     { nome:'😌 Calmo', quando:'tudo tranquilo, mês bom', cor:'#7dd3fc', modo:'lento', grupo:'humor',
+  298|     acc:['bochechas'], corpo:'rotate(-3deg)',
+  299|     olhoE:{ d:'M151 196 h20 v20 h-20 z', cheio:true }, olhoD:{ d:'M229 196 h20 v20 h-20 z', cheio:true },
+  300|     sob:'M148 182 Q 161 178, 174 182 M226 182 Q 239 178, 252 182', boca:'M180 246 Q 200 258, 220 246', extra:'' },
+  301|   surpreso:  { nome:'😲 Surpreso', quando:'você evoluiu, seguiu as dicas', cor:'#f0abfc', modo:'festa', grupo:'reacoes',
+  302|     acc:['espanto'], corpo:'translateY(-4px)', anim:'pulo',
+  303|     olhoE:{ d:'M148 202 a 13 13 0 1 0 26 0 a 13 13 0 1 0 -26 0', cheio:true }, olhoD:{ d:'M226 202 a 13 13 0 1 0 26 0 a 13 13 0 1 0 -26 0', cheio:true },
+  304|     sob:'M144 176 Q 161 164, 178 174 M222 174 Q 239 164, 256 176', boca:'M188 252 a 12 14 0 1 0 24 0 a 12 14 0 1 0 -24 0 Z', extra:'!!' },
+  305|   confiante: { nome:'😎 Confiante', quando:'mês bem melhor que o passado', cor:'#2ee6a8', modo:'anel', grupo:'reacoes',
+  306|     acc:['evolucao','brilhoOlho'], corpo:'translateY(-8px) rotate(4deg) scale(1.03)',
+  307|     olhoE:{ d:'M150 200 h22 v14 h-22 z', cheio:true }, olhoD:{ d:'M228 196 h22 v18 h-22 z', cheio:true },
+  308|     sob:'M146 186 L 174 188 M226 178 Q 240 170, 254 176', boca:'M174 244 Q 204 262, 230 238', extra:'' },
+  309|   vermelho:  { nome:'🟥 Cartão vermelho', quando:'2 cartões ou mais perto do limite', cor:'#ff2d4b', modo:'agitado', grupo:'reacoes',
+  310|     acc:['cartaoVermelho','fumaca','apitoVermelho'], corpo:'rotate(-3deg) scale(1.05)', treme:true, anim:'apitando',
+  311|     olhoE:{ d:'M148 190 L 176 202 V 216 H 148 Z', cheio:true }, olhoD:{ d:'M252 190 L 224 202 V 216 H 252 Z', cheio:true },
+  312|     sob:'M144 178 L 178 192 M256 178 L 222 192', boca:'M172 262 Q 200 238, 228 262', extra:'' },
+  313|   treinador: { nome:'🏋️ Treinador', quando:'ofensiva: dias seguidos anotando', cor:'#f97316', modo:'agitado', grupo:'gemini2',
+  314|     acc:['chama','faixa','apito'], corpo:'translateY(-6px) rotate(-4deg)', anim:'ri',
+  315|     olhoE:{ d:'M150 190 h22 v20 h-22 z', cheio:true }, olhoD:{ d:'M228 190 h22 v20 h-22 z', cheio:true },
+  316|     sob:'', boca:'M176 250 Q 190 256, 204 250', extra:'' },
+  317|   // 15/11 (JF): o C.A.O.S. Gamer, pra moedas de jogo e gastos com jogos. Fone com microfone e controle na mão.
+  318|   gamer:     { nome:'🎮 Gamer', quando:'moedas de jogo e gastos com jogos', cor:'#a78bfa', modo:'calmo', grupo:'estilos',
+  319|     acc:['fone','controle'], corpo:'rotate(-3deg)', anim:'balanca',
+  320|     olhoE:{ d:'M150 200 h22 v14 h-22 z', cheio:true }, olhoD:{ d:'M228 200 h22 v14 h-22 z', cheio:true },
+  321|     sob:'M148 188 L 174 184 M226 184 L 252 188', boca:'M174 242 Q 202 262, 228 242', extra:'' },
+  322|   vovo:      { nome:'👴 Vovô', quando:'inflação, comparar com o ano passado', cor:'#f5d0a9', modo:'lento', grupo:'gemini2',
+  323|     acc:['bengala','sobrancelhoes','bigodao','oculos'], corpo:'translateY(8px) rotate(-3deg)', anim:'balanca',
+  324|     olhoE:{ d:'M150 204 Q 161 196, 172 204', cheio:false }, olhoD:{ d:'M230 204 Q 241 196, 252 204', cheio:false },
+  325|     sob:'', boca:'', extra:'' },
+  326| });
+  327| 
+  328| const ANIM_CORPO = ['nega', 'ri', 'levita', 'cambaleia', 'varre', 'respira', 'balanca', 'encolhe', 'trocaOlho', 'apitando', 'pulo'];
+  329| const ANIM_ACC = Object.freeze({
+  330|   cofrinho:'balanca', cartao:'vaivem', cartaoVermelho:'vaivem', meialua:'sobe', oculos:'sobe', oculosEscuros:'sobe', bengala:'bate',
+  331|   maleta:'balanca', lingua:'lingua', prancheta:'balanca', apito:'balanca', seta:'sobe', lousa:'pulsa', lotus:'pulsa', carimbo:'bate',
+  332|   alvo:'pulsa', calendario:'balanca', cartola:'sobe', chapeuPraia:'balanca', touca:'balanca', corado:'pulsa', sobrancelhoes:'sobe',
+  333|   bigodao:'bigode', bigode:'bigode', chapeu:'balanca', coroa:'balanca', gravata:'balanca', terno:'sobe', tesoura:'balanca',
+  334|   boneCobrador:'sobe', faixa:'sobe', viseira:'sobe', chapeuDetetive:'balanca', turbante:'sobe', nariz:'pulsa', microfone:'balanca',
+  335|   chapeuGuia:'balanca', bandeira:'balanca', interrogacao:'pulsa', borboleta:'vaivem', formigas:'vaivem', binoculo:'sobe', // 17/11
+  336|   medidor:'balanca', evolucao:'sobe', capelo:'balanca', bochechas:'pulsa', monoculo:'balanca', fone:'sobe', controle:'balanca', bilhete:'balanca', olheiras:'pulsa',
+  337| });
+  338| 
+  339| const SVG = `<g class="av-particulas"></g>
+  340| <g class="av-flutua"><g class="av-forma">
+  341| <g class="acc" data-acc="asas">
+  342| <path class="av-asaE asa neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round"
+  343| d="M104 196 C 72 160, 34 168, 40 198 C 44 222, 72 232, 104 226 C 86 218, 74 210, 104 210 Z"/>
+  344| <path class="av-asaD asa neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round"
+  345| d="M296 196 C 328 160, 366 168, 360 198 C 356 222, 328 232, 296 226 C 314 218, 326 210, 296 210 Z"/>
+  346| </g>
+  347| <g class="acc" data-acc="aureola"><ellipse class="av-aureola neon" cx="200" cy="108" rx="48" ry="10" fill="none" stroke-width="5"/></g>
+  348| <g class="acc" data-acc="chifres">
+  349| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M132 140 L122 96 L158 134 Z"/>
+  350| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M242 134 L262 104 L276 112 L268 140 Z"/>
+  351| <circle class="av-faisca neon" cx="279" cy="100" r="4" stroke-width="2" fill="none"/>
+  352| </g>
+  353| <g class="acc" data-acc="rabo">
+  354| <path class="neon" fill="none" stroke-width="5" stroke-linecap="round" d="M262 282 C 300 320, 250 345, 292 362"/>
+  355| <path class="neon" fill="#0f1320" stroke-width="3" stroke-linejoin="round" d="M284 352 L306 366 L282 374 Z"/>
+  356| </g>
+  357| <g class="acc" data-acc="coroa">
+  358| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" transform="rotate(-9 200 120)"
+  359| d="M162 140 L166 100 L184 120 L200 92 L216 120 L234 100 L238 140 Z"/>
+  360| <circle class="neon" cx="200" cy="124" r="4" fill="none" stroke-width="2" transform="rotate(-9 200 120)"/>
+  361| </g>
+  362| <g class="acc" data-acc="gravata">
+  363| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M200 298 L174 284 L174 312 Z M200 298 L226 284 L226 312 Z"/>
+  364| <circle class="neon" cx="200" cy="298" r="5" fill="#0f1320" stroke-width="3"/>
+  365| </g>
+  366| <g class="acc" data-acc="chapeu">
+  367| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" transform="rotate(12 200 120)" d="M176 140 L200 78 L224 140 Z"/>
+  368| <path class="neon" fill="none" stroke-width="3" transform="rotate(12 200 120)" d="M186 116 L214 116 M193 98 L207 98"/>
+  369| <circle class="neon" cx="213" cy="76" r="7" fill="none" stroke-width="3"/>
+  370| </g>
+  371| <g class="acc" data-acc="lampada">
+  372| <path class="neon" fill="none" stroke-width="4" stroke-linecap="round" d="M200 136 L200 116"/>
+  373| <circle class="av-lampada-luz neon" cx="200" cy="100" r="13" fill="none" stroke-width="4"/>
+  374| <path class="neon" fill="none" stroke-width="3" d="M194 113 h12"/>
+  375| </g>
+  376| <g class="acc" data-acc="nuvem">
+  377| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round"
+  378| d="M150 96 C 136 96, 132 76, 148 72 C 150 56, 174 52, 182 66 C 192 50, 222 54, 222 74 C 240 72, 248 96, 230 96 Z"/>
+  379| <path class="gota neon" stroke-width="3" stroke-linecap="round" d="M166 104 v8"/>
+  380| <path class="gota neon" stroke-width="3" stroke-linecap="round" d="M190 104 v8" style="animation-delay:.35s"/>
+  381| <path class="gota neon" stroke-width="3" stroke-linecap="round" d="M214 104 v8" style="animation-delay:.7s"/>
+  382| </g>
+  383| <g class="acc" data-acc="sirene">
+  384| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M178 136 Q 178 104, 200 104 Q 222 104, 222 136 Z"/>
+  385| <g class="av-raios"><path class="neon" fill="none" stroke-width="4" stroke-linecap="round" d="M160 104 l-14 -8 M240 104 l14 -8 M200 92 v-14"/></g>
+  386| </g>
+  387| <g class="acc" data-acc="lousa">
+  388| <rect class="neon" x="312" y="146" width="62" height="50" rx="6" fill="#0f1320" stroke-width="4"/>
+  389| <path class="neon" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M320 186 L334 174 L346 180 L364 158 M356 158 h8 v8"/>
+  390| <path class="neon" fill="none" stroke-width="3" stroke-linecap="round" d="M292 248 L320 200"/>
+  391| </g>
+  392| <g class="acc" data-acc="coracao"><path class="av-coracao neon" stroke-width="3" d="M318 150 C 292 132, 300 108, 318 120 C 336 108, 344 132, 318 150 Z"/></g>
+  393| <g class="acc" data-acc="cartao">
+  394| <rect x="308" y="140" width="42" height="58" rx="6" fill="#ffd400" stroke="#ffd400" stroke-width="3" filter="url(#av-brilho)" transform="rotate(14 329 169)"/>
+  395| <path class="neon" fill="none" stroke-width="5" stroke-linecap="round" d="M292 236 Q 312 220, 318 196"/>
+  396| </g>
+  397| <g class="acc" data-acc="despertador">
+  398| <g class="av-despertador">
+  399| <circle class="neon" cx="200" cy="100" r="20" fill="#0f1320" stroke-width="4"/>
+  400| <path class="neon" fill="none" stroke-width="4" stroke-linecap="round" d="M176 88 a 12 12 0 0 1 14 -14 M224 88 a 12 12 0 0 0 -14 -14"/>
+  401| <path class="neon" fill="none" stroke-width="3" stroke-linecap="round" d="M200 100 v-11 M200 100 h8 M186 118 l-6 9 M214 118 l6 9"/>
+  402| </g>
+  403| </g>
+  404| <g class="acc" data-acc="cofrinho">
+  405| <circle class="av-moeda neon" cx="338" cy="214" r="8" fill="#0f1320" stroke-width="3"/>
+  406| <ellipse class="neon" cx="340" cy="262" rx="30" ry="21" fill="#0f1320" stroke-width="4"/>
+  407| <path class="neon" fill="#0f1320" stroke-width="3" stroke-linejoin="round" d="M326 246 l4 -12 l10 9"/>
+  408| <rect class="neon" x="368" y="255" width="9" height="13" rx="3" fill="#0f1320" stroke-width="3"/>
+  409| <path class="neon" fill="none" stroke-width="3" stroke-linecap="round" d="M330 242 h16 M326 280 v8 M352 280 v8"/>
+  410| <circle cx="356" cy="256" r="2.5" fill="var(--cor)"/>
+  411| </g>
+  412| <g class="acc" data-acc="fedor">
+  413| <path class="fedor neon" fill="none" stroke-width="3" stroke-linecap="round" d="M118 150 q 7 -8 0 -16 t 0 -16"/>
+  414| <path class="fedor neon" fill="none" stroke-width="3" stroke-linecap="round" d="M96 166 q 7 -8 0 -16 t 0 -16" style="animation-delay:.5s"/>
+  415| <path class="fedor neon" fill="none" stroke-width="3" stroke-linecap="round" d="M140 134 q 7 -8 0 -16 t 0 -16" style="animation-delay:1s"/>
+  416| </g>
+  417| <g class="acc" data-acc="alvo">
+  418| <circle class="neon" cx="344" cy="166" r="26" fill="#0f1320" stroke-width="4"/>
+  419| <circle class="neon" cx="344" cy="166" r="15" fill="none" stroke-width="3"/>
+  420| <circle cx="344" cy="166" r="5" fill="var(--cor)"/>
+  421| <path class="av-flecha neon" fill="none" stroke-width="4" stroke-linecap="round" d="M300 214 L 340 170 M300 214 l -4 -12 M300 214 l 12 -2"/>
+  422| </g>
+  423| <g class="acc" data-acc="bilhete">
+  424| <path class="neon" fill="#0f1320" stroke-width="3" stroke-linejoin="round" transform="rotate(-8 74 232)" d="M44 200 h58 v52 l -12 12 h -46 z M102 252 h -12 v 12"/>
+  425| <text x="73" y="222" text-anchor="middle" font-size="11" font-weight="900" fill="var(--cor)" transform="rotate(-8 74 232)">DICA</text>
+  426| <text x="73" y="242" text-anchor="middle" font-size="13" font-weight="900" fill="var(--cor)" transform="rotate(-8 74 232)">+R$210</text>
+  427| <path class="neon" fill="none" stroke-width="2" stroke-linecap="round" transform="rotate(-8 74 232)" d="M54 252 h30"/>
+  428| </g>
+  429| <g class="acc" data-acc="microfone"><g class="av-microfone">
+  430| <path class="neon" fill="none" stroke-width="7" stroke-linecap="round" d="M80 228 L 100 266"/>
+  431| <circle class="neon" cx="72" cy="212" r="16" fill="#0f1320" stroke-width="4"/>
+  432| <path class="neon" fill="none" stroke-width="2" d="M60 206 h24 M58 214 h28 M62 222 h20"/>
+  433| </g></g>
+  434| <g class="acc" data-acc="fone">
+  435| <path class="neon" fill="none" stroke-width="7" stroke-linecap="round" d="M94 196 Q 94 92, 200 92 Q 306 92, 306 196"/>
+  436| <rect class="neon" x="78" y="172" width="26" height="50" rx="10" fill="#0f1320" stroke-width="4"/>
+  437| <rect class="neon" x="296" y="172" width="26" height="50" rx="10" fill="#0f1320" stroke-width="4"/>
+  438| <path class="neon" fill="none" stroke-width="4" stroke-linecap="round" d="M90 222 Q 88 288, 132 302"/>
+  439| <circle class="neon" cx="138" cy="303" r="7" fill="var(--cor)" stroke-width="2"/>
+  440| </g>
+  441| <g class="acc" data-acc="controle"><g class="av-controle">
+  442| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M312 246 Q 314 232, 330 232 h28 Q 374 232, 376 246 l 6 22 Q 384 282, 372 282 Q 364 282, 358 272 h-28 Q 324 282, 316 282 Q 304 282, 306 268 Z"/>
+  443| <path class="neon" fill="none" stroke-width="3" stroke-linecap="round" d="M328 248 v12 M322 254 h12"/>
+  444| <circle cx="360" cy="250" r="3.5" fill="var(--cor)"/><circle cx="368" cy="258" r="3.5" fill="var(--cor)"/>
+  445| </g></g>
+  446| <g class="acc" data-acc="maleta">
+  447| <path class="neon" fill="none" stroke-width="4" stroke-linejoin="round" d="M330 238 v-10 h24 v10"/>
+  448| <rect class="neon" x="314" y="238" width="56" height="40" rx="7" fill="#0f1320" stroke-width="4"/>
+  449| <path class="neon" fill="none" stroke-width="3" d="M314 254 h56 M338 250 h8 v8 h-8 z"/>
+  450| </g>
+  451| <g class="acc" data-acc="seta">
+  452| <path class="av-seta neon" fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" d="M304 262 L 326 230 L 342 242 L 370 196 M356 194 h16 v16"/>
+  453| </g>
+  454| <g class="acc" data-acc="medidor">
+  455| <path class="neon" fill="#0f1320" stroke-width="4" d="M302 200 A 40 40 0 0 1 382 200 Z"/>
+  456| <path fill="none" stroke="#ff3b5c" stroke-width="6" stroke-linecap="round" filter="url(#av-brilho)" d="M370 174 A 40 40 0 0 1 378 192"/>
+  457| <path class="av-ponteiro neon" fill="none" stroke-width="4" stroke-linecap="round" d="M342 198 L 372 180"/>
+  458| <text x="342" y="222" text-anchor="middle" font-size="14" font-weight="800" fill="var(--cor)">94%</text>
+  459| </g>
+  460| <g class="acc" data-acc="calculadora">
+  461| <g class="av-fitaSobe"><rect class="neon" x="56" y="150" width="24" height="64" rx="3" fill="#0f1320" stroke-width="3"/>
+  462| <path class="av-fita neon" fill="none" stroke-width="2" stroke-dasharray="10 6" d="M62 160 h12 M62 172 h12 M62 184 h12 M62 196 h12 M62 208 h12"/></g>
+  463| <rect class="neon" x="48" y="212" width="40" height="56" rx="7" fill="#0f1320" stroke-width="4"/>
+  464| <rect class="neon" x="55" y="219" width="26" height="11" rx="2" fill="none" stroke-width="2"/>
+  465| <rect class="tecla" x="54" y="236" width="8" height="6" rx="1.5" fill="var(--cor)" style="animation-delay:0.00s"/><rect class="tecla" x="64" y="236" width="8" height="6" rx="1.5" fill="var(--cor)" style="animation-delay:0.37s"/><rect class="tecla" x="74" y="236" width="8" height="6" rx="1.5" fill="var(--cor)" style="animation-delay:0.74s"/><rect class="tecla" x="54" y="246" width="8" height="6" rx="1.5" fill="var(--cor)" style="animation-delay:1.11s"/><rect class="tecla" x="64" y="246" width="8" height="6" rx="1.5" fill="var(--cor)" style="animation-delay:1.48s"/><rect class="tecla" x="74" y="246" width="8" height="6" rx="1.5" fill="var(--cor)" style="animation-delay:1.85s"/><rect class="tecla" x="54" y="256" width="8" height="6" rx="1.5" fill="var(--cor)" style="animation-delay:0.32s"/><rect class="tecla" x="64" y="256" width="8" height="6" rx="1.5" fill="var(--cor)" style="animation-delay:0.69s"/><rect class="tecla" x="74" y="256" width="8" height="6" rx="1.5" fill="var(--cor)" style="animation-delay:1.06s"/>
+  466| </g>
+  467| <g class="acc" data-acc="cartoes"><g class="av-leque">
+  468| <rect class="neon" x="314" y="200" width="54" height="34" rx="6" fill="#0f1320" stroke-width="3" transform="rotate(-24 330 240)"/>
+  469| <rect class="neon" x="314" y="200" width="54" height="34" rx="6" fill="#0f1320" stroke-width="3" transform="rotate(-8 330 240)"/>
+  470| <rect class="neon" x="314" y="200" width="54" height="34" rx="6" fill="#0f1320" stroke-width="3" transform="rotate(8 330 240)"/>
+  471| <rect class="neon" x="314" y="200" width="54" height="34" rx="6" fill="#0f1320" stroke-width="3" transform="rotate(24 330 240)"/>
+  472| <path class="neon" fill="none" stroke-width="3" transform="rotate(24 330 240)" d="M314 210 h54 M322 224 h12"/>
+  473| </g></g>
+  474| <g class="acc" data-acc="praia">
+  475| <g class="av-sol"><circle class="neon" cx="70" cy="96" r="16" fill="#0f1320" stroke-width="4"/>
+  476| <path class="neon" fill="none" stroke-width="3" stroke-linecap="round" d="M70 68 v-8 M70 124 v8 M42 96 h-8 M98 96 h8 M50 76 l-6 -6 M90 116 l6 6 M50 116 l-6 6 M90 76 l6 -6"/></g>
+  477| <circle class="neon" cx="340" cy="262" r="24" fill="#0f1320" stroke-width="4"/>
+  478| <path class="neon" fill="none" stroke-width="3" stroke-linecap="round" d="M322 250 q 18 -8 36 0 M348 244 L 366 202 h 10"/>
+  479| <circle cx="332" cy="252" r="3" fill="var(--cor)"/>
+  480| </g>
+  481| <g class="acc" data-acc="tesoura"><g class="av-tesoura">
+  482| <path class="neon" fill="none" stroke-width="5" stroke-linecap="round" d="M322 232 L 372 194 M322 198 L 372 236"/>
+  483| <circle class="neon" cx="314" cy="240" r="9" fill="#0f1320" stroke-width="4"/>
+  484| <circle class="neon" cx="314" cy="190" r="9" fill="#0f1320" stroke-width="4"/>
+  485| </g></g>
+  486| <g class="acc" data-acc="carimbo">
+  487| <circle class="neon" cx="74" cy="196" r="10" fill="#0f1320" stroke-width="4"/>
+  488| <rect class="neon" x="68" y="206" width="12" height="22" fill="#0f1320" stroke-width="3"/>
+  489| <rect x="52" y="228" width="44" height="14" rx="3" fill="#ff3b5c" stroke="#ff3b5c" filter="url(#av-brilho)"/>
+  490| <text x="74" y="270" text-anchor="middle" font-size="13" font-weight="900" fill="#ff3b5c" transform="rotate(-10 74 266)">CORTA</text>
+  491| </g>
+  492| <g class="acc" data-acc="prancheta">
+  493| <rect class="neon" x="46" y="168" width="58" height="80" rx="7" fill="#0f1320" stroke-width="4"/>
+  494| <rect class="neon" x="62" y="162" width="26" height="12" rx="3" fill="#0f1320" stroke-width="3"/>
+  495| <path class="neon" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M56 194 l 6 6 l 10 -12 M78 196 h18 M56 218 l 6 6 l 10 -12 M78 220 h18 M78 238 h18"/>
+  496| </g>
+  497| <g class="acc" data-acc="chama"><g class="av-chama">
+  498| <path fill="#ff8a3d" stroke="#ffb020" stroke-width="3" stroke-linejoin="round" filter="url(#av-brilho)" d="M76 160 C 52 134, 74 112, 74 88 C 96 104, 110 124, 102 160 Z"/>
+  499| <text x="89" y="152" text-anchor="middle" font-size="24" font-weight="900" fill="#0f1320">5</text>
+  500| </g></g>
+  501| <g class="acc" data-acc="bengala">
+  502| <path class="neon" fill="none" stroke-width="7" stroke-linecap="round" d="M74 304 V 214 Q 74 190, 96 190 Q 114 190, 114 206"/>
+  503| </g>
+  504| <g class="acc" data-acc="calendario">
+  505| <rect class="neon" x="312" y="196" width="58" height="56" rx="8" fill="#0f1320" stroke-width="4"/>
+  506| <path class="neon" fill="none" stroke-width="4" d="M312 212 h58 M326 190 v12 M356 190 v12"/>
+  507| <text x="341" y="236" text-anchor="middle" font-size="17" font-weight="900" fill="var(--cor)">27/11</text>
+  508| <text x="341" y="248" text-anchor="middle" font-size="8" font-weight="800" fill="var(--cor)">BLACK FRIDAY</text>
+  509| </g>
+  510| <g class="acc" data-acc="cartaoVermelho">
+  511| <rect x="306" y="136" width="44" height="62" rx="6" fill="#ff2d4b" stroke="#ff2d4b" stroke-width="3" filter="url(#av-brilho)" transform="rotate(12 328 167)"/>
+  512| <path class="neon" fill="none" stroke-width="5" stroke-linecap="round" d="M292 236 Q 312 220, 316 194"/>
+  513| </g>
+  514| <g class="acc" data-acc="evolucao">
+  515| <rect class="neon" x="306" y="200" width="66" height="62" rx="8" fill="#0f1320" stroke-width="3"/>
+  516| <rect x="318" y="232" width="14" height="22" rx="2" fill="var(--cor)" opacity=".45"/>
+  517| <rect class="cresce" x="344" y="212" width="14" height="42" rx="2" fill="var(--cor)"/>
+  518| <text x="339" y="225" text-anchor="middle" font-size="11" font-weight="900" fill="var(--cor)">↑</text>
+  519| </g>
+  520| <g class="acc" data-acc="fumaca">
+  521| <path class="fumo neon" fill="none" stroke-width="4" stroke-linecap="round" d="M118 150 q -8 -7 0 -14 q 8 -7 0 -14" style="animation-delay:0s"/>
+  522| <path class="fumo neon" fill="none" stroke-width="4" stroke-linecap="round" d="M282 150 q 8 -7 0 -14 q -8 -7 0 -14" style="animation-delay:0.3s"/>
+  523| <path class="fumo neon" fill="none" stroke-width="4" stroke-linecap="round" d="M104 180 q -8 -7 0 -14 q 8 -7 0 -14" style="animation-delay:0.6s"/>
+  524| <path class="fumo neon" fill="none" stroke-width="4" stroke-linecap="round" d="M296 180 q 8 -7 0 -14 q -8 -7 0 -14" style="animation-delay:0.9s"/>
+  525| <path class="fumo neon" fill="none" stroke-width="4" stroke-linecap="round" d="M150 128 q -8 -7 0 -14 q 8 -7 0 -14" style="animation-delay:0.45s"/>
+  526| <path class="fumo neon" fill="none" stroke-width="4" stroke-linecap="round" d="M250 128 q 8 -7 0 -14 q -8 -7 0 -14" style="animation-delay:0.75s"/>
+  527| <path class="fumo neon" fill="none" stroke-width="4" stroke-linecap="round" d="M200 120 q 8 -7 0 -14 q -8 -7 0 -14" style="animation-delay:1.05s"/>
+  528| </g>
+  529| <rect class="neon" x="100" y="135" width="200" height="150" rx="34" fill="#0f1320" stroke-width="5"/>
+  530| <rect x="114" y="149" width="172" height="122" rx="24" fill="none" stroke="#ffffff" stroke-opacity=".06" stroke-width="2"/>
+  531| <g class="acc" data-acc="capelo">
+  532| <g transform="rotate(-6 200 120)">
+  533| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M172 126 v14 q28 12 56 0 v-14"/>
+  534| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M146 120 L200 98 L254 120 L200 142 Z"/>
+  535| <path class="neon" fill="none" stroke-width="3" stroke-linecap="round" d="M200 120 L246 124 L248 150"/>
+  536| <rect class="neon" x="243" y="150" width="10" height="12" rx="2" fill="none" stroke-width="3"/>
+  537| </g>
+  538| </g>
+  539| <g class="acc" data-acc="cachecol">
+  540| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M112 274 Q 200 300, 288 274 L 290 290 Q 200 318, 110 290 Z"/>
+  541| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M244 294 L 252 336 L 270 332 L 262 290"/>
+  542| <path class="neon" fill="none" stroke-width="2" d="M150 286 v10 M180 292 v10 M210 294 v10 M240 290 v10"/>
+  543| </g>
+  544| <g class="acc" data-acc="terno">
+  545| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M128 282 L 112 344 H 288 L 272 282 Z"/>
+  546| <path class="neon" fill="none" stroke-width="3" stroke-linejoin="round" d="M162 284 L 200 330 L 238 284"/>
+  547| <path class="neon" fill="#0f1320" stroke-width="3" stroke-linejoin="round" d="M200 290 l -8 9 l 8 30 l 8 -30 z"/>
+  548| <circle class="neon" cx="200" cy="338" r="2.5" fill="var(--cor)" stroke-width="1"/>
+  549| </g>
+  550| <g class="acc" data-acc="suor"><path class="av-suor" fill="#9fd8ff" stroke="#9fd8ff" stroke-width="2" filter="url(#av-brilho)" d="M276 158 q -9 13 0 18 q 9 -5 0 -18"/></g>
+  551| <g class="acc" data-acc="pupilas"><g class="av-pupilas">
+  552| <circle cx="161" cy="202" r="3.5" fill="var(--cor)"/><circle cx="239" cy="202" r="3.5" fill="var(--cor)"/>
+  553| </g></g>
+  554| <g class="acc" data-acc="lingua"><path fill="#ff8fb3" stroke="#ff8fb3" stroke-width="2" d="M208 250 q 2 18 14 12 q 5 -6 -2 -14 z"/></g>
+  555| <g class="acc" data-acc="bone">
+  556| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M140 142 Q 142 102, 200 102 Q 258 102, 260 142 Z"/>
+  557| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M142 138 L 100 128 Q 94 140, 104 146 L 142 146 Z"/>
+  558| <circle class="neon" cx="200" cy="104" r="4" fill="var(--cor)" stroke-width="1"/>
+  559| </g>
+  560| <g class="acc" data-acc="meialua">
+  561| <path class="neon" fill="none" stroke-width="3" stroke-linejoin="round" d="M142 208 h38 v4 q 0 14 -19 14 q -19 0 -19 -14 z M220 208 h38 v4 q 0 14 -19 14 q -19 0 -19 -14 z M180 210 h40"/>
+  562| </g>
+  563| <g class="acc" data-acc="turbante">
+  564| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M136 142 Q 128 96, 200 90 Q 272 96, 264 142 Z"/>
+  565| <path class="neon" fill="none" stroke-width="3" d="M144 126 Q 200 102, 256 126 M150 110 Q 200 134, 250 110"/>
+  566| <circle class="neon" cx="200" cy="114" r="7" fill="var(--cor)" stroke-width="2"/>
+  567| <path class="neon" fill="none" stroke-width="3" stroke-linecap="round" d="M200 107 Q 208 84, 222 80"/>
+  568| </g>
+  569| <g class="acc" data-acc="bola">
+  570| <circle class="av-bola neon" cx="200" cy="320" r="26" fill="color-mix(in srgb, var(--cor) 18%, #0f1320)" stroke-width="4"/>
+  571| <path class="neon" fill="none" stroke-width="3" stroke-linecap="round" d="M188 318 q 12 -12 24 0 M194 326 q 6 6 12 0"/>
+  572| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M178 342 h44 l -6 12 h -32 z"/>
+  573| </g>
+  574| <g class="acc" data-acc="lotus">
+  575| <path class="neon" fill="#0f1320" stroke-width="3" stroke-linejoin="round" d="M200 140 Q 168 130, 162 102 Q 190 106, 200 140 Z M200 140 Q 232 130, 238 102 Q 210 106, 200 140 Z"/>
+  576| <path class="neon" fill="#0f1320" stroke-width="3" stroke-linejoin="round" d="M200 140 Q 186 112, 200 86 Q 214 112, 200 140 Z"/>
+  577| <path class="neon" fill="none" stroke-width="3" stroke-linecap="round" d="M166 140 Q 200 150, 234 140"/>
+  578| </g>
+  579| <g class="acc" data-acc="chapeuDetetive">
+  580| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M150 140 Q 152 98, 200 102 Q 248 98, 250 140 Z"/>
+  581| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M120 142 Q 200 126, 280 142 Q 200 154, 120 142 Z"/>
+  582| <path class="neon" fill="none" stroke-width="3" d="M152 130 Q 200 120, 248 130"/>
+  583| </g>
+  584| <g class="acc" data-acc="curto">
+  585| <path class="neon" fill="none" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" d="M232 136 L 240 116 L 230 108 L 242 94"/>
+  586| <path class="av-curto" fill="none" stroke="#ffe27a" stroke-width="3" stroke-linecap="round" filter="url(#av-brilho)" d="M246 90 l 10 -6 M244 98 l 12 2 M238 88 l 2 -10"/>
+  587| <g transform="rotate(32 286 156)">
+  588| <rect x="266" y="150" width="40" height="13" rx="6" fill="#f2c9a0" stroke="#f2c9a0"/>
+  589| <rect x="280" y="150" width="12" height="13" fill="#e3b48a"/>
+  590| </g>
+  591| </g>
+  592| <g class="acc" data-acc="olheiras">
+  593| <path fill="none" stroke="#a855f7" stroke-width="4" stroke-linecap="round" filter="url(#av-brilho)" d="M146 224 Q 161 232, 176 224 M224 224 Q 239 232, 254 224"/>
+  594| </g>
+  595| <g class="acc" data-acc="tontura">
+  596| <path class="tont neon" fill="var(--cor)" stroke-width="1" d="M0 -8 L2.4 -2.4 L8 -2.4 L3.4 1.2 L5 7.4 L0 3.6 L-5 7.4 L-3.4 1.2 L-8 -2.4 L-2.4 -2.4 Z"/>
+  597| <path class="tont neon" fill="var(--cor)" stroke-width="1" d="M0 -8 L2.4 -2.4 L8 -2.4 L3.4 1.2 L5 7.4 L0 3.6 L-5 7.4 L-3.4 1.2 L-8 -2.4 L-2.4 -2.4 Z"/>
+  598| <path class="tont neon" fill="var(--cor)" stroke-width="1" d="M0 -8 L2.4 -2.4 L8 -2.4 L3.4 1.2 L5 7.4 L0 3.6 L-5 7.4 L-3.4 1.2 L-8 -2.4 L-2.4 -2.4 Z"/>
+  599| </g>
+  600| <g class="acc" data-acc="gps">
+  601| <g class="av-pino">
+  602| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M200 64 c -14 0 -22 10 -22 22 c 0 16 22 38 22 38 s 22 -22 22 -38 c 0 -12 -8 -22 -22 -22 z"/>
+  603| <circle class="neon" cx="200" cy="86" r="7" fill="var(--cor)" stroke-width="2"/>
+  604| </g>
+  605| <path class="av-rota neon" fill="none" stroke-width="4" stroke-linecap="round" stroke-dasharray="10 10" d="M56 360 C 110 320, 160 380, 214 346 S 312 318, 344 344"/>
+  606| <path class="neon" fill="#0f1320" stroke-width="3" stroke-linejoin="round" d="M344 344 V 312 L 368 320 L 344 328"/>
+  607| </g>
+  608| <g class="acc" data-acc="touca">
+  609| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M142 144 Q 160 98, 214 96 Q 262 98, 300 150 Q 270 128, 246 128 Q 210 126, 176 146 Z"/>
+  610| <path class="neon" fill="none" stroke-width="5" stroke-linecap="round" d="M140 146 Q 200 128, 262 140"/>
+  611| <circle class="neon" cx="302" cy="156" r="9" fill="#0f1320" stroke-width="3"/>
+  612| </g>
+  613| <g class="acc" data-acc="cartola">
+  614| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M164 136 V 76 H 236 V 136 Z"/>
+  615| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M138 140 Q 200 128, 262 140 Q 200 150, 138 140 Z"/>
+  616| <path class="neon" fill="none" stroke-width="4" d="M164 122 H 236"/>
+  617| </g>
+  618| <g class="acc" data-acc="chapeuGuia">
+  619| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M98 146 Q 200 120, 302 146 Q 200 164, 98 146 Z"/>
+  620| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M150 140 Q 150 96, 200 92 Q 250 96, 250 140 Z"/>
+  621| <path fill="none" stroke="var(--cor)" stroke-width="7" filter="url(#av-brilho)" d="M152 128 Q 200 118, 248 128"/>
+  622| </g>
+  623| <g class="acc" data-acc="bandeira"><g class="av-bandeira">
+  624| <path class="neon" fill="none" stroke-width="5" stroke-linecap="round" d="M80 336 L 80 120"/>
+  625| <path class="neon" fill="color-mix(in srgb, var(--cor) 35%, transparent)" stroke-width="4" stroke-linejoin="round" d="M80 122 L 146 138 L 80 158 Z"/>
+  626| <circle class="neon" cx="80" cy="116" r="5" fill="var(--cor)" stroke-width="2"/>
+  627| </g></g>
+  628| <g class="acc" data-acc="interrogacao"><text class="av-interrogacao" x="296" y="128" text-anchor="middle" font-size="76" font-weight="900" fill="var(--cor)" filter="url(#av-brilho)">?</text></g>
+  629| <g class="acc" data-acc="borboleta"><g class="av-borboleta">
+  630| <path class="neon" fill="color-mix(in srgb, var(--cor) 30%, transparent)" stroke-width="3" d="M306 108 q -30 -34 -38 -4 q 6 22 38 4 z"/>
+  631| <path class="neon" fill="color-mix(in srgb, var(--cor) 30%, transparent)" stroke-width="3" d="M306 108 q 30 -34 38 -4 q -6 22 -38 4 z"/>
+  632| <path class="neon" fill="none" stroke-width="4" stroke-linecap="round" d="M306 92 v 30 M306 92 l -6 -10 M306 92 l 6 -10"/>
+  633| <path fill="none" stroke="var(--cor)" stroke-opacity=".5" stroke-width="2" stroke-dasharray="4 6" d="M296 132 C 280 160, 300 170, 276 186"/>
+  634| </g></g>
+  635| <g class="acc" data-acc="formigas"><g class="av-formigas">
+  636| <g transform="translate(96 340)"><circle cx="0" cy="0" r="6" fill="var(--cor)"/><circle cx="12" cy="0" r="5" fill="var(--cor)"/><circle cx="22" cy="-2" r="4" fill="var(--cor)"/>
+  637| <circle class="neon" cx="12" cy="-16" r="8" fill="#0f1320" stroke-width="2"/><text x="12" y="-12" text-anchor="middle" font-size="10" font-weight="900" fill="var(--cor)">$</text></g>
+  638| <g transform="translate(150 350)"><circle cx="0" cy="0" r="6" fill="var(--cor)"/><circle cx="12" cy="0" r="5" fill="var(--cor)"/><circle cx="22" cy="-2" r="4" fill="var(--cor)"/>
+  639| <circle class="neon" cx="12" cy="-16" r="8" fill="#0f1320" stroke-width="2"/><text x="12" y="-12" text-anchor="middle" font-size="10" font-weight="900" fill="var(--cor)">$</text></g>
+  640| <g transform="translate(204 342)"><circle cx="0" cy="0" r="6" fill="var(--cor)"/><circle cx="12" cy="0" r="5" fill="var(--cor)"/><circle cx="22" cy="-2" r="4" fill="var(--cor)"/>
+  641| <circle class="neon" cx="12" cy="-16" r="8" fill="#0f1320" stroke-width="2"/><text x="12" y="-12" text-anchor="middle" font-size="10" font-weight="900" fill="var(--cor)">$</text></g>
+  642| </g></g>
+  643| <g class="acc" data-acc="binoculo"><g class="av-binoculo">
+  644| <circle class="neon" cx="290" cy="196" r="18" fill="color-mix(in srgb, var(--cor) 14%, #0f1320)" stroke-width="5"/>
+  645| <circle class="neon" cx="334" cy="196" r="18" fill="color-mix(in srgb, var(--cor) 14%, #0f1320)" stroke-width="5"/>
+  646| <path class="neon" fill="none" stroke-width="6" stroke-linecap="round" d="M306 192 h 12"/>
+  647| <path fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="3" stroke-linecap="round" d="M282 188 q 4 -6 10 -6 M326 188 q 4 -6 10 -6"/>
+  648| </g></g>
+  649| <g class="acc" data-acc="chapeuPraia">
+  650| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M90 146 Q 200 116, 310 146 Q 200 160, 90 146 Z"/>
+  651| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M156 138 Q 160 100, 200 100 Q 240 100, 244 138 Z"/>
+  652| <path fill="none" stroke="#ff8fb3" stroke-width="5" filter="url(#av-brilho)" d="M158 130 Q 200 122, 242 130"/>
+  653| </g>
+  654| <g class="acc" data-acc="boneCobrador">
+  655| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M146 142 Q 148 106, 200 104 Q 252 106, 254 142 Z"/>
+  656| <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M140 140 Q 200 154, 260 140 L 268 150 Q 200 168, 132 150 Z"/>
+  657| <circle class="neon" cx="200" cy="124" r="7" fill="var(--cor)" stroke-width="2"/>
+  658| </g>
+  659| <g class="acc" data-acc="caneta"><g class="av-caneta">
+  660| <path class="neon" fill="none" stroke-width="7" stroke-linecap="round" d="M266 118 L 304 86"/>
+  661| <path fill="#fff" d="M262 122 l -6 6 l 9 -2 z"/>
+  662| </g></g>
+  663| <g class="acc" data-acc="faixa">
+  664| <path fill="#ff4d5e" stroke="#ff4d5e" stroke-width="2" filter="url(#av-brilho)" d="M104 164 Q 200 146, 296 164 L 296 178 Q 200 160, 104 178 Z"/>
+  665| <path fill="#ff4d5e" stroke="#ff4d5e" stroke-width="2" d="M294 166 l 22 -6 l -4 10 l 8 6 l -24 2 z"/>
+  666| </g>
+  667| <g class="acc" data-acc="sobrancelhoes">
+  668| <path fill="#f8fafc" stroke="#f8fafc" stroke-width="2" stroke-linejoin="round" d="M138 176 Q 160 160, 182 172 Q 160 170, 140 184 Z M262 176 Q 240 160, 218 172 Q 240 170, 260 184 Z"/>
+  669| </g>
+  670| <g class="acc" data-acc="balanca">
+  671| <path class="neon" fill="none" stroke-width="4" stroke-linecap="round" d="M200 136 V 76"/>
+  672| <path class="neon" fill="#0f1320" stroke-width="3" d="M188 136 h24"/>
+  673| <path class="av-trave neon" fill="none" stroke-width="4" stroke-linecap="round" d="M146 78 H 254"/>
+  674| <g class="av-pratoE"><path class="neon" fill="none" stroke-width="2" d="M0 0 l -12 26 M0 0 l 12 26"/>
+  675| <path class="neon" fill="#0f1320" stroke-width="3" d="M-18 26 h36 q -2 12 -18 12 q -16 0 -18 -12 z"/>
+  676| <text x="0" y="20" text-anchor="middle" font-size="9" font-weight="900" fill="var(--cor)">AGORA</text></g>
+  677| <g class="av-pratoD"><path class="neon" fill="none" stroke-width="2" d="M0 0 l -12 26 M0 0 l 12 26"/>
+  678| <path class="neon" fill="#0f1320" stroke-width="3" d="M-18 26 h36 q -2 12 -18 12 q -16 0 -18 -12 z"/>
+  679| <text x="0" y="20" text-anchor="middle" font-size="9" font-weight="900" fill="var(--cor)">ESPERAR</text></g>
+  680| <g class="av-moedasBal"></g>
+  681| <circle class="neon" cx="200" cy="76" r="5" fill="var(--cor)" stroke-width="1"/>
+  682| </g>
+  683| <g class="acc" data-acc="oculos">
+  684| <circle class="neon" cx="161" cy="198" r="21" fill="none" stroke-width="3"/>
+  685| <circle class="neon" cx="241" cy="198" r="21" fill="none" stroke-width="3"/>
+  686| <path class="neon" fill="none" stroke-width="3" d="M182 196 Q 201 188, 220 196"/>
+  687| </g>
+  688| <g class="acc" data-acc="monoculo">
+  689| <circle class="neon" cx="239" cy="206" r="21" fill="none" stroke-width="3"/>
+  690| <path class="neon" fill="none" stroke-width="2" d="M258 216 Q 272 248, 262 282"/>
+  691| </g>
+  692| <g class="acc" data-acc="bochechas">
+  693| <ellipse cx="144" cy="236" rx="12" ry="6" fill="#ff8fb3" opacity=".55"/>
+  694| <ellipse cx="256" cy="236" rx="12" ry="6" fill="#ff8fb3" opacity=".55"/>
+  695| </g>
+  696| <g class="acc" data-acc="lagrima"><path class="av-lagrima neon" fill="none" stroke-width="3" d="M156 222 q -6 10 0 13 q 6 -3 0 -13"/></g>
+  697| <g class="av-rosto">
+  698| <g class="av-olhar"><g class="av-olhos">
+  699| <path class="av-olhoE neon" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  700| <path class="av-olhoD neon" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  701| </g></g>
+  702| <path class="av-sobrancelhas neon" fill="none" stroke-width="4" stroke-linecap="round"/>
+  703| <path class="av-boca neon" fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  704| <text class="av-extra" x="200" y="128" text-anchor="middle" font-size="34" font-weight="800" fill="var(--cor)" filter="url(#av-brilho)"></text>
+  705| </g>
+  706| <g class="acc" data-acc="oculosEscuros">
+  707| <rect class="neon" x="140" y="186" width="44" height="30" rx="9" fill="#05070c" stroke-width="3"/>
+  708| <rect class="neon" x="216" y="186" width="44" height="30" rx="9" fill="#05070c" stroke-width="3"/>
+  709| <path class="neon" fill="none" stroke-width="3" d="M184 196 Q 200 190, 216 196 M140 194 L 118 186 M260 194 L 282 186"/>
+  710| <path fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="3" stroke-linecap="round" d="M150 194 l 8 -4 M226 194 l 8 -4"/>
+  711| </g>
+  712| <g class="acc" data-acc="lupa"><g class="av-lupa">
+  713| <circle class="neon" cx="241" cy="202" r="24" fill="color-mix(in srgb, var(--cor) 12%, transparent)" stroke-width="5"/>
+  714| <path class="neon" fill="none" stroke-width="7" stroke-linecap="round" d="M258 220 L 284 250"/>
+  715| <path fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="3" stroke-linecap="round" d="M228 192 q 6 -8 14 -8"/>
+  716| </g></g>
+  717| <g class="acc" data-acc="nariz"><circle class="av-nariz" cx="200" cy="226" r="10" fill="#ff3b5c" stroke="#ff3b5c" filter="url(#av-brilho)"/></g>
+  718| <g class="acc" data-acc="zzz">
+  719| <text class="z neon" x="262" y="130" font-size="18" font-weight="800" fill="var(--cor)" stroke-width="0">z</text>
+  720| <text class="z neon" x="276" y="110" font-size="24" font-weight="800" fill="var(--cor)" stroke-width="0" style="animation-delay:.7s">Z</text>
+  721| <text class="z neon" x="294" y="86" font-size="30" font-weight="800" fill="var(--cor)" stroke-width="0" style="animation-delay:1.4s">Z</text>
+  722| </g>
+  723| <g class="acc" data-acc="corado">
+  724| <ellipse cx="146" cy="234" rx="20" ry="11" fill="#ff4d7d" opacity=".55" filter="url(#av-brilho)"/>
+  725| <ellipse cx="254" cy="234" rx="20" ry="11" fill="#ff4d7d" opacity=".55" filter="url(#av-brilho)"/>
+  726| <path fill="none" stroke="#ff4d7d" stroke-width="2.5" stroke-linecap="round" d="M136 238 l6 -8 M146 238 l6 -8 M156 238 l6 -8 M244 238 l6 -8 M254 238 l6 -8 M264 238 l6 -8"/>
+  727| </g>
+  728| <g class="acc" data-acc="viseira">
+  729| <path fill="color-mix(in srgb, #4ade80 30%, transparent)" stroke="#4ade80" stroke-width="3" filter="url(#av-brilho)" d="M122 162 Q 200 126, 278 162 L 266 176 Q 200 148, 134 176 Z"/>
+  730| <path fill="none" stroke="#facc15" stroke-width="6" stroke-linecap="round" filter="url(#av-brilho)" d="M282 150 L 306 116"/>
+  731| <path fill="#ffd7a0" stroke="#ffd7a0" stroke-width="2" d="M282 150 l -2 9 l 7 -5 z"/>
+  732| </g>
+  733| <g class="acc" data-acc="bigode">
+  734| <path class="av-bigodeVivo neon" fill="var(--cor)" stroke-width="2" stroke-linejoin="round" d="M200 236 Q 186 226, 172 234 Q 162 240, 156 232 Q 160 248, 178 244 Q 192 242, 200 238 Q 208 242, 222 244 Q 240 248, 244 232 Q 238 240, 228 234 Q 214 226, 200 236 Z"/>
+  735| </g>
+  736| <g class="acc" data-acc="apito">
+  737| <rect class="neon" x="206" y="242" width="30" height="16" rx="7" fill="#0f1320" stroke-width="3"/>
+  738| <circle class="neon" cx="230" cy="250" r="4" fill="none" stroke-width="2"/>
+  739| <path class="neon" fill="none" stroke-width="2" d="M236 252 Q 262 268, 256 290"/>
+  740| </g>
+  741| <g class="acc" data-acc="bigodao">
+  742| <path fill="#f8fafc" stroke="#f8fafc" stroke-width="2" stroke-linejoin="round" filter="url(#av-brilho)" d="M200 234 Q 180 220, 160 232 Q 146 242, 140 232 Q 142 258, 168 256 Q 188 254, 200 246 Q 212 254, 232 256 Q 258 258, 260 232 Q 254 242, 240 232 Q 220 220, 200 234 Z"/>
+  743| </g>
+  744| <g class="acc" data-acc="brilhoOlho"><path class="brilhinho" fill="#fff" d="M250 186 l 2 5 l 5 2 l -5 2 l -2 5 l -2 -5 l -5 -2 l 5 -2 z"/></g>
+  745| <g class="acc" data-acc="apitoVermelho"><g class="av-apitoVai">
+  746| <rect class="neon" x="204" y="240" width="32" height="18" rx="8" fill="#0f1320" stroke-width="3"/>
+  747| <circle class="neon" cx="229" cy="249" r="4.5" fill="none" stroke-width="2"/>
+  748| <path class="neon" fill="none" stroke-width="3" stroke-linecap="round" d="M242 240 l 12 -8 M244 249 h 14 M242 258 l 12 8"/>
+  749| <text x="282" y="262" text-anchor="middle" font-size="15" font-weight="900" fill="#fff" transform="rotate(-10 282 262)">PRIII!</text>
+  750| </g></g>
+  751| <g class="acc" data-acc="espanto">
+  752| <path class="espanto neon" fill="none" stroke-width="4" stroke-linecap="round" d="M120 128 l -14 -12 M280 128 l 14 -12 M200 110 v -18 M150 112 l -6 -16 M250 112 l 6 -16 M98 170 h -16 M302 170 h 16"/>
+  753| <path fill="#fff" d="M196 228 a 3 3 0 1 0 0.1 0 Z"/>
+  754| <circle class="brilhinho" cx="168" cy="196" r="3" fill="#fff"/><circle class="brilhinho" cx="246" cy="196" r="3" fill="#fff" style="animation-delay:.4s"/>
+  755| </g>
+  756| </g></g>`;
+  757| 
+  758| const NS = 'http://www.w3.org/2000/svg';
+  759| const CONFETE = ['#ffd24a', '#ff5fa2', '#3ef0ff', '#7dff8a', '#b06bff'];
+  760| const VEL = { calmo: 1, lento: 0.35, agitado: 2.6, festa: 1.8, anel: 0.6, chuva: 1, abraco: 0.25, bagunca: 3, dormindo: 0.08, parado: 0, dinheiro: 1, medo: 1.2 };
+  761| const vivos = new Set();
+  762| let laco = null;
+  763| let parar = () => false; // "menos movimento" (o app informa)
+  764| 
+  765| /** O app diz como saber se a pessoa quer menos movimento. */
+  766| export function configurarAvatar({ menosMovimento } = {}) {
+  767|   if (typeof menosMovimento === 'function') parar = menosMovimento;
+  768| }
+  769| 
+  770| function garantirFiltro() {
+  771|   if (document.getElementById('av-brilho')) return;
+  772|   const s = document.createElementNS(NS, 'svg');
+  773|   s.setAttribute('width', '0'); s.setAttribute('height', '0'); s.setAttribute('aria-hidden', 'true');
+  774|   s.style.position = 'absolute';
+  775|   s.innerHTML = '<defs><filter id="av-brilho" filterUnits="userSpaceOnUse" x="-60" y="-60" width="520" height="520"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
+  776|   document.body.appendChild(s);
+  777| }
+  778| 
+  779| /**
+  780|  * Cria um avatar dentro de `el`. Devolve { mostrar(nome), falando(sim), forma, destruir() }.
+  781|  * tamanho: 'grande' (abertura), 'medio' (painel) ou 'pequeno' (Início, conversa): o pequeno usa menos pedacinhos
+  782|  * e um brilho só no conjunto, que pesa menos no celular.
+  783|  */
+  784| export function criarAvatar(el, { tamanho = 'pequeno', forma = 'calmo' } = {}) {
+  785|   garantirFiltro();
+  786|   el.classList.add('avatar', `avatar-${tamanho}`);
+  787|   el.setAttribute('aria-hidden', 'true');
+  788|   el.innerHTML = `<svg viewBox="20 40 360 340" focusable="false">${SVG}</svg>`;
+  789|   const q = nome => el.querySelector(`.av-${nome}`);
+  790|   const corpo = q('forma');
+  791|   // acessórios que se mexem sozinhos ganham um embrulho com a animação
+  792|   el.querySelectorAll('.acc').forEach((g, i) => {
+  793|     const tipo = ANIM_ACC[g.dataset.acc];
+  794|     if (!tipo) return;
+  795|     const w = document.createElementNS(NS, 'g');
+  796|     w.setAttribute('class', `mexe mexe-${tipo}`);
+  797|     w.style.animationDelay = `${(i * 0.29) % 1.3}s`;
+  798|     while (g.firstChild) w.appendChild(g.firstChild);
+  799|     g.appendChild(w);
+  800|   });
+  801|   const qtd = tamanho === 'pequeno' ? 9 : 15;
+  802|   const pedacos = Array.from({ length: qtd }, (_, i) => {
+  803|     const r = document.createElementNS(NS, 'rect');
+  804|     const t = 5 + (i % 3) * 3;
+  805|     r.setAttribute('width', t); r.setAttribute('height', t); r.setAttribute('rx', 1.5);
+  806|     r.setAttribute('fill', 'none'); r.setAttribute('stroke-width', tamanho === 'pequeno' ? 3 : 2);
+  807|     r.style.opacity = 0.35 + (i % 4) * 0.15;
+  808|     q('particulas').appendChild(r);
+  809|     return { el: r, t, ang: i * (Math.PI * 2 / qtd), raio: 140 + (i % 5) * 12, vel: 0.003 + (i % 4) * 0.0015, giro: i * 37, x: 60 + (i * 53) % 280, y: (i * 41) % 400 };
+  810|   });
+  811|   const moedas = [];
+  812|   const a = { el, atual: null, pedacos, moedas, proximaMoeda: 0, piscaEm: 0, olhaEm: 0, lado: 1 };
+  813| 
+  814|   function desenharRosto(f) {
+  815|     for (const lado of ['olhoE', 'olhoD']) {
+  816|       q(lado).setAttribute('d', f[lado].d);
+  817|       q(lado).style.fill = f[lado].cheio ? f.cor : 'none';
+  818|       q(lado).classList.toggle('gira', !!f.gira && !parar());
+  819|     }
+  820|     q('sobrancelhas').setAttribute('d', f.sob || 'M0 0');
+  821|     q('sobrancelhas').style.display = f.sob ? '' : 'none';
+  822|     q('boca').setAttribute('d', f.boca || 'M0 0');
+  823|     q('boca').style.display = f.boca ? '' : 'none';
+  824|     q('boca').style.fill = f.boca.endsWith('Z') ? '#0f1320' : 'none';
+  825|     q('boca').classList.toggle('oscila', !parar() && !f.bocaTreme);
+  826|     q('boca').classList.toggle('tremula', !parar() && !!f.bocaTreme);
+  827|     q('extra').textContent = f.extra;
+  828|   }
+  829| 
+  830|   a.mostrar = (nome, { imediato = false } = {}) => {
+  831|     const f = FORMAS[nome] || FORMAS.calmo;
+  832|     if (a.atual === nome) return;
+  833|     a.atual = FORMAS[nome] ? nome : 'calmo';
+  834|     el.style.setProperty('--cor', f.cor);
+  835|     el.dataset.forma = a.atual;
+  836|     el.querySelectorAll('.acc').forEach(g => g.classList.toggle('on', f.acc.includes(g.dataset.acc)));
+  837|     corpo.style.transform = f.corpo;
+  838|     corpo.classList.toggle('treme', !!f.treme);
+  839|     for (const x of ANIM_CORPO) corpo.classList.toggle(x, f.anim === x);
+  840|     if (imediato || parar()) desenharRosto(f);
+  841|     else { q('rosto').classList.add('troca'); setTimeout(() => { desenharRosto(f); q('rosto').classList.remove('troca'); }, 150); }
+  842|   };
+  843|   a.falando = sim => { for (const b of [q('boca'), q('bigodeVivo')]) b?.classList.toggle('falando', !!sim && !parar()); };
+  844|   // 2.1.7 (JF, 17/11: "seria muito legal se a boca dele mexesse quando a voz estivesse ligada"): com a voz natural, a
+  845|   // boca abre na medida do volume da fala (0 a 1); null volta ao normal. "Menos movimento" deixa a boca parada.
+  846|   a.nivel = x => {
+  847|     const b = q('boca');
+  848|     if (!b) return;
+  849|     if (x == null || parar()) { b.style.scale = ''; b.classList.remove('voz'); return; }
+  850|     b.classList.remove('falando');
+  851|     b.classList.add('voz'); // tira a "respiração" da boca enquanto a voz natural fala
+  852|     b.style.transformBox = 'fill-box';
+  853|     b.style.transformOrigin = 'center';
+  854|     b.style.scale = `${(1 + x * 0.15).toFixed(3)} ${(0.5 + x * 1.1).toFixed(3)}`;
+  855|   };
+  856|   a.destruir = () => { vivos.delete(a); el.innerHTML = ''; };
+  857|   a.mostrar(forma, { imediato: true });
+  858|   vivos.add(a);
+  859|   if (!laco) laco = requestAnimationFrame(quadro);
+  860|   return a;
+  861| }
+  862| 
+  863| // ---------- Um laço só pra todos os avatares na tela ----------
+  864| function quadro(agora) {
+  865|   laco = requestAnimationFrame(quadro);
+  866|   if (document.hidden) return;
+  867|   const quieto = parar();
+  868|   for (const a of vivos) {
+  869|     if (!a.el.isConnected) { vivos.delete(a); continue; }
+  870|     if (a.el.offsetParent === null && getComputedStyle(a.el).position !== 'fixed') continue; // não aparece: não gasta
+  871|     const f = FORMAS[a.atual] || FORMAS.calmo, modo = f.modo;
+  872|     a.el.classList.toggle('parado', quieto);
+  873|     const v = VEL[modo] ?? 1;
+  874|     const tremor = modo === 'agitado' ? 7 : modo === 'medo' ? 4 : 0;
+  875|     a.pedacos.forEach((p, i) => {
+  876|       const cor = modo === 'festa' ? CONFETE[i % CONFETE.length] : modo === 'dinheiro' ? '#4ade80' : f.cor;
+  877|       if (p.cor !== cor) { p.cor = cor; p.el.style.stroke = cor; }
+  878|       const nota = modo === 'dinheiro';
+  879|       if (p.nota !== nota) { p.nota = nota; p.el.setAttribute('width', nota ? 16 : p.t); p.el.setAttribute('height', nota ? 9 : p.t); }
+  880|       if (quieto && p.feito) return;
+  881|       p.feito = true;
+  882|       p.ang += p.vel * v; p.giro += v * 1.5;
+  883|       let x, y;
+  884|       if (modo === 'chuva' || modo === 'dinheiro') {
+  885|         p.y += 0.6 + (i % 3) * 0.3; if (p.y > 400) p.y = 20;
+  886|         x = p.x; y = p.y;
+  887|       } else {
+  888|         const raio = modo === 'medo' ? 112 + (i % 3) * 5 : modo === 'festa' ? 150 : modo === 'anel' ? 165 : modo === 'abraco' ? 118 + (i % 3) * 6 : p.raio;
+  889|         const ang = modo === 'anel' ? (i * Math.PI * 2 / a.pedacos.length) + agora / 4000 : p.ang;
+  890|         x = 200 + Math.cos(ang) * raio + (Math.random() - 0.5) * tremor;
+  891|         y = 212 + Math.sin(ang) * raio * (modo === 'anel' ? 0.35 : 0.8) + (Math.random() - 0.5) * tremor;
+  892|         p.x = x; p.y = y;
+  893|       }
+  894|       if (modo === 'bagunca') {
+  895|         if (Math.random() < 0.03) { p.bx = 40 + Math.random() * 320; p.by = 40 + Math.random() * 330; }
+  896|         if (p.bx !== undefined) { x = p.bx + (Math.random() - 0.5) * 3; y = p.by + (Math.random() - 0.5) * 3; }
+  897|       }
+  898|       p.el.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${modo === 'anel' ? 45 : Math.round(p.giro)})`);
+  899|     });
+  900|     if (quieto) continue;
+  901|     const q = n => a.el.querySelector(`.av-${n}`);
+  902|     // piscar e olhar em volta (com a sobrancelha acompanhando)
+  903|     if (agora > a.piscaEm) {
+  904|       a.piscaEm = agora + 2500 + Math.random() * 2500;
+  905|       if (!/Q/.test(f.olhoE.d) && !f.gira) { q('olhos').classList.add('pisca'); setTimeout(() => q('olhos')?.classList.remove('pisca'), 130); }
+  906|     }
+  907|     if (agora > a.olhaEm) {
+  908|       a.olhaEm = agora + 1400 + Math.random() * 2200;
+  909|       if (!f.gira) {
+  910|         const centro = Math.random() < 0.35;
+  911|         q('olhar').style.transform = centro ? '' : `translate(${Math.round((Math.random() - 0.5) * 10)}px,${Math.round((Math.random() - 0.5) * 5)}px)`;
+  912|         a.lado = -a.lado;
+  913|         q('sobrancelhas').style.transform = centro ? '' : `rotate(${a.lado * 5}deg) translateY(${Math.random() < 0.5 ? -2 : 0}px)`;
+  914|       }
+  915|     }
+  916|     if (a.atual === 'desnorteado') {
+  917|       const t = agora / 600;
+  918|       a.el.querySelectorAll('.tont').forEach((e, i) => {
+  919|         const ang = t + i * 2.09;
+  920|         e.setAttribute('transform', `translate(${200 + Math.cos(ang) * 62} ${112 + Math.sin(ang) * 14}) scale(${0.8 + (Math.sin(ang) + 1) * 0.25})`);
+  921|       });
+  922|     }
+  923|     if (a.atual === 'simulador') balanca(a, agora, q);
+  924|     const faisca = q('faisca');
+  925|     if (faisca) faisca.style.opacity = Math.random() < (modo === 'agitado' ? 0.5 : 0.15) ? 1 : 0.2;
+  926|   }
+  927|   if (!vivos.size) { cancelAnimationFrame(laco); laco = null; }
+  928| }
+  929| 
+  930| // balança do Simulador: a trave sobe e desce e a moeda cai no prato mais baixo
+  931| function balanca(a, agora, q) {
+  932|   const ang = Math.sin(agora / 900) * 0.16;
+  933|   const dx = 54 * Math.cos(ang), dy = 54 * Math.sin(ang);
+  934|   q('trave').setAttribute('transform', `rotate(${(ang * 180 / Math.PI).toFixed(2)} 200 78)`);
+  935|   const pE = { x: 200 - dx, y: 78 - dy }, pD = { x: 200 + dx, y: 78 + dy };
+  936|   q('pratoE').setAttribute('transform', `translate(${pE.x} ${pE.y})`);
+  937|   q('pratoD').setAttribute('transform', `translate(${pD.x} ${pD.y})`);
+  938|   if (agora > a.proximaMoeda) {
+  939|     a.proximaMoeda = agora + 700 + Math.random() * 500;
+  940|     const c = document.createElementNS(NS, 'circle');
+  941|     c.setAttribute('r', '5.5'); c.setAttribute('fill', '#ffd400'); c.setAttribute('stroke', '#b8860b'); c.setAttribute('stroke-width', '1');
+  942|     q('moedasBal').appendChild(c);
+  943|     a.moedas.push({ el: c, lado: pD.y > pE.y ? 'D' : 'E', dxo: (Math.random() - 0.5) * 16, y: 20, vy: 0, parada: 0 });
+  944|   }
+  945|   for (let k = a.moedas.length - 1; k >= 0; k--) {
+  946|     const m = a.moedas[k], prato = m.lado === 'D' ? pD : pE, fundo = prato.y + 30;
+  947|     if (!m.parada) { m.vy += 0.35; m.y += m.vy; if (m.y >= fundo) { m.y = fundo; m.vy *= -0.35; if (Math.abs(m.vy) < 0.6) m.parada = agora; } }
+  948|     else m.y = fundo;
+  949|     m.el.setAttribute('cx', prato.x + m.dxo); m.el.setAttribute('cy', m.y);
+  950|     if (m.parada && agora - m.parada > 1200) { m.el.remove(); a.moedas.splice(k, 1); }
+  951|     else if (m.parada) m.el.setAttribute('opacity', String(1 - (agora - m.parada) / 1200));
+  952|   }
+  953| }
+  954| 

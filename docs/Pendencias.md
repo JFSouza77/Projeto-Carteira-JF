@@ -4,6 +4,16 @@ Um lugar só pra ver o que está aberto (sugestão do Code do Perfil, 12/11/2026
 Os detalhes continuam em `Pedidos_do_JF.md`, `Rascunhos_da_Semana.md` e `Ideias.md`; aqui fica só o resumo.
 Atualizada pelo Wally a cada rodada.
 
+## Aberto em 17/11 (madrugada)
+
+- **Voz natural ainda robótica no iPhone:** o JF manda o print do "Testar a voz" (Ajustes → C.A.O.S.). A 2.1.8.1 já
+  destrava o áudio em todo toque (suspeita forte). Se continuar, o print diz se é chave, região, teto ou som travado.
+- **Revisões:** blocos pro Gemini em `docs/revisoes/para_gemini_2026-11-17/` (o JF manda os 10 arquivos separados) e
+  roteiro pro GPT em `correio/para_o_gpt/2026-11-17_roteiro_debug.md` (iPhone 11, 13 e 15, claro e escuro).
+- **Code:** aplicar o núcleo 1.6.0 + 1.7.0 + 1.8.0 no Perfil (JFSouza77/Projeto_Perfil_JF#219); recado do dia em
+  `correio/para_o_code/2026-11-17_resumo_do_dia.md`.
+- Ideia pra depois: "guardar a cada compra" segue a data do gasto ao editar (hoje a transferência guarda a data original).
+
 ## Recado do Code: Novidades e revisão (16/11)
 
 - Feito: itens das 3 Novidades mais novas reescritos explicando onde fica e como usa; teste que reprova item curto e título

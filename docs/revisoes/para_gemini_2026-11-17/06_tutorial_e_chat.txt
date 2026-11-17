@@ -1,0 +1,795 @@
+BLOCO: Tutorial guiado e tela do Chat
+App C.A.O.S. Finanças 2.1.8.1 Alfa · C.A.O.S. 2.4.3 · núcleo 1.8.0 · 17/11/2026
+
+
+===== ARQUIVO: js/tour_passos.js =====
+
+    1| // Tutorial guiado (JF, 17/11): "imagine que fosse um jogo: a tela escurece, acende só o que você precisa ver naquele
+    2| // momento, e o C.A.O.S. vira guia turístico, mostrando parte por parte". Pensado pra quem é muito novo ou mais velho.
+    3| // 17/11 (JF): em todos os passos o C.A.O.S. aparece como Guia Turístico (chapéu de explorador e bandeirinha).
+    4| // Arquivo só de dados e funções puras (o teste confere); quem desenha é o js/telas/tour.js.
+    5| // Regra do JF: quantidades terminam em 0 ou 5 (10 passos no completo, 5 no básico, 5 temas).
+    6| 
+    7| export const PASSOS_TOUR = Object.freeze({
+    8|   inicio_caos: { tela: 'inicio', alvo: '#caos', forma: 'guia', titulo: 'Eu sou o C.A.O.S.',
+    9|     texto: 'Muito prazer! Aqui no Início eu comento seus gastos, aviso quando alguma coisa aperta e comemoro quando o mês vai bem. Tocou em mim, a gente conversa.' },
+   10|   inicio_resumo: { tela: 'inicio', alvo: '#resumo-gasto', forma: 'guia', titulo: 'Seu mês num olhar',
+   11|     texto: 'Aqui aparece quanto você já gastou no mês e, quando der, quanto ainda dá pra gastar até o salário. Os números mudam sozinhos a cada anotação.' },
+   12|   barra: { tela: 'inicio', alvo: '.tabbar', forma: 'guia', titulo: 'A barra de baixo',
+   13|     texto: 'Daqui você vai pra qualquer lugar do app: Início, Contas, Lançar, Mês e Chat. É só tocar no nome.' },
+   14|   lancar_botao: { tela: 'inicio', alvo: '.tabbar [data-tab="lancar"]', forma: 'guia', titulo: 'O botão mais importante',
+   15|     texto: 'Gastou ou recebeu dinheiro? Toque neste botão do meio pra anotar. Leva só uns segundos.' },
+   16|   lancar_form: { tela: 'lancar', alvo: '#entry-form', forma: 'guia', titulo: 'Anotar é assim',
+   17|     texto: 'Escolha se é gasto ou entrada, digite o valor, diga o que foi e como pagou. Pronto! Também dá pra mandar a foto do comprovante que eu leio.',
+   18|     // quem acabou de chegar ainda não tem conta: o Lançar mostra antes o "cadastre uma conta"
+   19|     alvoAlt: '#lancar-trava',
+   20|     textoAlt: 'Antes do primeiro gasto, eu peço a conta do seu banco: só o nome e o saldo, nada de senha. Depois aparece aqui o espaço pra anotar o valor, o que foi e como pagou.' },
+   21|   contas: { tela: 'contas', alvo: '#add-conta-card', forma: 'guia', titulo: 'Seus bancos e cartões',
+   22|     texto: 'Em Contas você cadastra seus bancos e cartões, só com o saldo e o limite. Nada de senha nem número de cartão: o app nunca mexe no seu banco.' },
+   23|   mes: { tela: 'mes', alvo: '#comp-card', forma: 'guia', titulo: 'As contas do mês',
+   24|     texto: 'Em Mês ficam as contas fixas (aluguel, luz, internet), os planos e as metas. Eu te lembro antes de vencer.' },
+   25|   chat: { tela: 'conversa', alvo: '#chat-form', forma: 'guia', titulo: 'Fale comigo',
+   26|     texto: 'Aqui você escreve do jeito que fala com um amigo: "gastei 30 no mercado", "quanto gastei este mês?", "dá pra ir ao cinema?". Eu entendo e respondo.' },
+   27|   ajuda: { tela: 'inicio', alvo: '#me-ajuda', forma: 'guia', titulo: 'Travou? Me chama',
+   28|     texto: 'Este botão de ajuda fica sempre por perto. Tocou nele, aparecem atalhos e o passo a passo de cada coisa. Dá até pra arrastar ele pro lado.' },
+   29|   ajustes: { tela: 'inicio', alvo: '#abrir-ajustes', forma: 'guia', titulo: 'Do seu jeito',
+   30|     texto: 'Em Ajustes você escolhe meu humor, liga minha voz, aumenta a letra e cria sua conta pra usar em vários aparelhos. Este tutorial também mora lá.' },
+   31| });
+   32| 
+   33| export const ROTEIROS = Object.freeze({
+   34|   completo: ['inicio_caos', 'inicio_resumo', 'barra', 'lancar_botao', 'lancar_form', 'contas', 'mes', 'chat', 'ajuda', 'ajustes'],
+   35|   basico: ['inicio_caos', 'lancar_botao', 'lancar_form', 'chat', 'ajuda'],
+   36| });
+   37| 
+   38| // "Quero saber uma coisa só" (JF): a pessoa escolhe o assunto e vê só aquele pedaço
+   39| export const TEMAS_TOUR = Object.freeze([
+   40|   { id: 'anotar', t: 'Como anoto um gasto', passos: ['lancar_botao', 'lancar_form'] },
+   41|   { id: 'conversar', t: 'Como converso com o C.A.O.S.', passos: ['inicio_caos', 'chat'] },
+   42|   { id: 'bancos', t: 'Como cadastro meu banco', passos: ['contas'] },
+   43|   { id: 'mes', t: 'Onde vejo como anda o mês', passos: ['inicio_resumo', 'mes'] },
+   44|   { id: 'jeito', t: 'Como deixo o app do meu jeito', passos: ['ajustes', 'ajuda'] },
+   45| ]);
+   46| 
+   47| /** Lista de passos de um roteiro ou tema, já com o número ("Passo 2 de 5"). */
+   48| export function montarRoteiro(qual) {
+   49|   const ids = ROTEIROS[qual] || TEMAS_TOUR.find(t => t.id === qual)?.passos || [];
+   50|   return ids.filter(id => PASSOS_TOUR[id]).map((id, i, todos) => ({ id, ...PASSOS_TOUR[id], n: i + 1, de: todos.length }));
+   51| }
+   52| 
+
+===== ARQUIVO: js/telas/tour.js =====
+
+    1| // Tutorial guiado, estilo jogo (JF, 17/11): "a tela escurece, acende só o que você precisa ver, e o C.A.O.S. vira
+    2| // guia turístico". Primeiro uma tela de boas-vindas ("Você é novo por aqui?") com 4 caminhos: tudo, só o básico, uma
+    3| // coisa só, ou pular. Depois, passo a passo: escurece tudo, acende o pedaço da vez com um anel piscando e o C.A.O.S.
+    4| // explica num balão grande, com Voltar, Próximo e Sair. Pensado pra quem é muito novo ou mais velho: letra grande,
+    5| // botões grandes, sem pressa (nada anda sozinho). "Menos movimento" tira as animações.
+    6| // Camada de UI: não grava dado nenhum da pessoa, só o "já viu o tutorial" nos ajustes.
+    7| 
+    8| import { $, esc, state } from '../estado.js';
+    9| import * as db from '../db.js';
+   10| import { criarAvatar } from '../avatar.js';
+   11| import { MENOS_MOVIMENTO } from '../app.js';
+   12| import { TEMAS_TOUR, montarRoteiro } from '../tour_passos.js';
+   13| 
+   14| let atual = null; // { passos, i, fim }
+   15| let avatarTour = null;
+   16| let avatarBoas = null;
+   17| 
+   18| const espera = ms => new Promise(r => setTimeout(r, ms));
+   19| 
+   20| async function marcarVisto() {
+   21|   state.settings.tourVisto = true;
+   22|   await db.setMeta('settings', state.settings).catch(() => {});
+   23| }
+   24| 
+   25| // ---------- Boas-vindas ----------
+   26| 
+   27| /**
+   28|  * Tela "Você é novo por aqui?". `depois` roda quando a pessoa termina ou pula (no 1º acesso, a conversa de
+   29|  * apresentação do C.A.O.S. começa depois do tutorial).
+   30|  */
+   31| export async function abrirBoasVindas({ depois = null, primeiraVez = false, desistirSe = null } = {}) {
+   32|   // espera a abertura (o C.A.O.S. com o slogan) sair da tela
+   33|   // (sem limite: na 1ª vez com o servidor, a abertura espera a pessoa escolher entrar, criar ou continuar sem conta)
+   34|   while (document.getElementById('abertura')) await espera(300);
+   35|   // quem entrou na conta num celular novo traz o perfil da nuvem: não é novo por aqui (17/11, revisão da madrugada)
+   36|   if (desistirSe?.()) return;
+   37|   fecharBoasVindas();
+   38|   const el = document.createElement('div');
+   39|   el.className = 'tour-boas';
+   40|   el.id = 'tour-boas';
+   41|   el.setAttribute('role', 'dialog');
+   42|   el.setAttribute('aria-modal', 'true');
+   43|   el.setAttribute('aria-labelledby', 'tour-boas-tit');
+   44|   el.innerHTML = `
+   45|     <div class="tour-boas-caixa">
+   46|       <span class="tour-boas-avatar" id="tour-boas-avatar" aria-hidden="true"></span>
+   47|       <h2 id="tour-boas-tit">${primeiraVez ? 'Olá! Você é novo por aqui?' : 'Quer que eu te mostre o app?'}</h2>
+   48|       <p>Eu sou o C.A.O.S., seu parceiro pras finanças. Posso te mostrar o app parte por parte, com calma. Como você prefere?</p>
+   49|       <div class="tour-boas-opcoes" id="tour-opcoes">
+   50|         <button type="button" class="primary" data-tour="completo">🧭 Me mostra tudo <small>10 passos, uns 2 minutos</small></button>
+   51|         <button type="button" class="ghost" data-tour="basico">⚡ Só o básico <small>5 passos rapidinhos</small></button>
+   52|         <button type="button" class="ghost" data-tour="temas">❓ Quero saber uma coisa só</button>
+   53|         <button type="button" class="link-btn" data-tour="pular">Pular, já sei mexer</button>
+   54|       </div>
+   55|       <div class="tour-boas-opcoes" id="tour-temas" hidden>
+   56|         ${TEMAS_TOUR.map(t => `<button type="button" class="ghost" data-tour="${esc(t.id)}">${esc(t.t)}</button>`).join('')}
+   57|         <button type="button" class="link-btn" data-tour="voltar">‹ Voltar</button>
+   58|       </div>
+   59|     </div>`;
+   60|   document.body.appendChild(el);
+   61|   try { avatarBoas = criarAvatar($('#tour-boas-avatar'), { tamanho: 'grande', forma: 'guia' }); } catch { avatarBoas = null; }
+   62|   el.querySelector('[data-tour]')?.focus();
+   63|   el.addEventListener('click', async e => {
+   64|     const b = e.target.closest('[data-tour]');
+   65|     if (!b) return;
+   66|     const q = b.dataset.tour;
+   67|     if (q === 'temas' || q === 'voltar') {
+   68|       $('#tour-opcoes').hidden = q === 'temas';
+   69|       $('#tour-temas').hidden = q !== 'temas';
+   70|       el.querySelector(`#${q === 'temas' ? 'tour-temas' : 'tour-opcoes'} [data-tour]`)?.focus();
+   71|       avatarBoas?.mostrar(q === 'temas' ? 'curioso' : 'guia');
+   72|       return;
+   73|     }
+   74|     fecharBoasVindas();
+   75|     await marcarVisto();
+   76|     if (q === 'pular') { depois?.(); return; }
+   77|     comecarTour(q, { depois });
+   78|   });
+   79| }
+   80| 
+   81| function fecharBoasVindas() {
+   82|   avatarBoas?.destruir?.();
+   83|   avatarBoas = null;
+   84|   document.getElementById('tour-boas')?.remove();
+   85| }
+   86| 
+   87| // ---------- O passeio ----------
+   88| 
+   89| export function comecarTour(qual, { depois = null } = {}) {
+   90|   const passos = montarRoteiro(qual);
+   91|   if (!passos.length) return depois?.();
+   92|   fecharTour();
+   93|   const el = document.createElement('div');
+   94|   el.className = 'tour';
+   95|   el.id = 'tour';
+   96|   el.innerHTML = `
+   97|     <div class="tour-luz" id="tour-luz" aria-hidden="true"></div>
+   98|     <div class="tour-cartao" id="tour-cartao" role="dialog" aria-modal="true" aria-labelledby="tour-tit" aria-describedby="tour-txt">
+   99|       <div class="tour-topo"><span class="tour-avatar" id="tour-avatar" aria-hidden="true"></span>
+  100|         <div><p class="tour-passo" id="tour-passo"></p><h2 id="tour-tit"></h2></div></div>
+  101|       <p class="tour-txt" id="tour-txt" aria-live="polite"></p>
+  102|       <div class="tour-pontos" id="tour-pontos" aria-hidden="true"></div>
+  103|       <div class="tour-botoes">
+  104|         <button type="button" class="ghost" id="tour-voltar">‹ Voltar</button>
+  105|         <button type="button" class="primary" id="tour-proximo">Próximo ›</button>
+  106|       </div>
+  107|       <button type="button" class="link-btn tour-sair" id="tour-sair">Sair do tutorial</button>
+  108|     </div>`;
+  109|   document.body.appendChild(el);
+  110|   document.body.classList.add('em-tour');
+  111|   try { avatarTour = criarAvatar($('#tour-avatar'), { tamanho: 'pequeno', forma: passos[0].forma }); } catch { avatarTour = null; }
+  112|   atual = { passos, i: 0, depois };
+  113|   $('#tour-proximo').addEventListener('click', () => irPasso(atual.i + 1, 1));
+  114|   $('#tour-voltar').addEventListener('click', () => irPasso(atual.i - 1, -1));
+  115|   $('#tour-sair').addEventListener('click', () => terminar(false));
+  116|   // tocar no pedaço aceso também avança (como no tutorial de jogo)
+  117|   $('#tour-luz').addEventListener('click', () => irPasso(atual.i + 1, 1));
+  118|   addEventListener('keydown', teclas);
+  119|   addEventListener('resize', posicionar);
+  120|   addEventListener('scroll', posicionar, true);
+  121|   irPasso(0);
+  122| }
+  123| 
+  124| function teclas(e) {
+  125|   if (!atual) return;
+  126|   if (e.key === 'Escape') terminar(false);
+  127|   else if (e.key === 'ArrowRight') irPasso(atual.i + 1, 1);
+  128|   else if (e.key === 'ArrowLeft') irPasso(atual.i - 1, -1);
+  129| }
+  130| 
+  131| async function irPasso(i, dir = 1) {
+  132|   if (!atual) return;
+  133|   if (i >= atual.passos.length) return terminar(true);
+  134|   if (i < 0) return;
+  135|   atual.i = i;
+  136|   const p = atual.passos[i];
+  137|   const cartao = $('#tour-cartao');
+  138|   cartao.classList.add('trocando');
+  139|   if (location.hash.slice(1) !== p.tela) location.hash = p.tela;
+  140|   await espera(MENOS_MOVIMENTO.matches ? 120 : 380);
+  141|   if (!atual) return;
+  142|   const visivel = sel => { const x = sel && document.querySelector(sel); return x && x.getClientRects().length ? x : null; };
+  143|   const alvoAlt = !visivel(p.alvo) && visivel(p.alvoAlt);
+  144|   const alvo = visivel(p.alvo) || alvoAlt;
+  145|   // pedaço que não existe ou está escondido (ex.: tela grande sem a barra de baixo): pula sem travar
+  146|   if (!alvo || !alvo.getClientRects().length) {
+  147|     return dir < 0 && i > 0 ? irPasso(i - 1, -1) : irPasso(i + 1, 1);
+  148|   }
+  149|   if (alvo.tagName === 'DETAILS') alvo.open = false; // fechado fica menor e cabe na tela
+  150|   alvo.scrollIntoView({ block: 'center', behavior: MENOS_MOVIMENTO.matches ? 'auto' : 'smooth' });
+  151|   await espera(MENOS_MOVIMENTO.matches ? 60 : 320);
+  152|   if (!atual) return;
+  153|   atual.alvo = alvo;
+  154|   $('#tour-passo').textContent = `Passo ${p.n} de ${p.de}`;
+  155|   $('#tour-tit').textContent = p.titulo;
+  156|   $('#tour-txt').textContent = alvoAlt && p.textoAlt ? p.textoAlt : p.texto;
+  157|   $('#tour-pontos').innerHTML = atual.passos.map((_, k) => `<i class="${k === i ? 'atual' : k < i ? 'feito' : ''}"></i>`).join('');
+  158|   $('#tour-voltar').hidden = i === 0;
+  159|   $('#tour-proximo').textContent = i === atual.passos.length - 1 ? 'Terminar ✓' : 'Próximo ›';
+  160|   avatarTour?.mostrar(p.forma);
+  161|   posicionar();
+  162|   cartao.classList.remove('trocando');
+  163|   $('#tour-proximo').focus({ preventScroll: true });
+  164| }
+  165| 
+  166| // acende o pedaço da vez e põe o balão do lado que tiver espaço (em cima ou embaixo)
+  167| function posicionar() {
+  168|   if (!atual?.alvo) return;
+  169|   const r = atual.alvo.getBoundingClientRect();
+  170|   const folga = 8;
+  171|   const luz = $('#tour-luz');
+  172|   const alto = Math.min(r.height + folga * 2, innerHeight * 0.6);
+  173|   Object.assign(luz.style, {
+  174|     left: `${Math.max(4, r.left - folga)}px`, top: `${Math.max(4, r.top - folga)}px`,
+  175|     width: `${Math.min(innerWidth - 8, r.width + folga * 2)}px`, height: `${alto}px`,
+  176|   });
+  177|   const cartao = $('#tour-cartao');
+  178|   const meio = r.top + Math.min(r.height, alto) / 2;
+  179|   cartao.classList.toggle('em-cima', meio > innerHeight * 0.5);
+  180| }
+  181| 
+  182| async function terminar(completo) {
+  183|   const depois = atual?.depois;
+  184|   fecharTour();
+  185|   if (location.hash.slice(1) !== 'inicio' && !depois) location.hash = 'inicio';
+  186|   if (completo && !depois) {
+  187|     const { toast } = await import('../app.js');
+  188|     toast('Pronto! Quando quiser rever, o tutorial fica em Ajustes e no botão de ajuda.');
+  189|   }
+  190|   depois?.();
+  191| }
+  192| 
+  193| export function fecharTour() {
+  194|   removeEventListener('keydown', teclas);
+  195|   removeEventListener('resize', posicionar);
+  196|   removeEventListener('scroll', posicionar, true);
+  197|   avatarTour?.destruir?.();
+  198|   avatarTour = null;
+  199|   atual = null;
+  200|   document.getElementById('tour')?.remove();
+  201|   document.body.classList.remove('em-tour');
+  202| }
+  203| 
+  204| export const tourAberto = () => !!atual;
+  205| 
+
+===== ARQUIVO: js/telas/chat.js =====
+
+    1| // Tela do Chat (16/11, corte do app.js): mensagens, pergunta pro C.A.O.S. e pra IA online, fila do "amanhã eu trago",
+    2| // confirmar o que ele propôs, foto e print no chat. Mudou só de arquivo, o jeito de funcionar é o mesmo.
+    3| // Quem grava continua sendo a UI (via db.js), depois do Confirmar da pessoa.
+    4| 
+    5| import { $, catById, dados, esc, renderizar, state } from '../estado.js';
+    6| import { FORMAS, formaPara, rostoDaForma } from '../avatar.js';
+    7| import { IDENTIDADE, SUGESTOES, conversar, curiosidadeDoGasto, humorParaIA, emocaoDoMomento, rostoAvulso } from '../caos/index.js';
+    8| import { accountLabel, createTransferencia, depoisDoSaldo, marcarRecebido, editarConta, editarLancamento, formatBRL, sugerirCategoria, toISODate } from '../engine.js';
+    9| import * as conta from '../conta.js';
+   10| import { lerPagamento, seguirPagamento } from '../caos/conversa.js';
+   11| import * as db from '../db.js';
+   12| import { falar, falaTerminou } from '../voz.js';
+   13| import { fraseDoPrint, resumoDoPrint } from '../caos/ofertas.js';
+   14| import * as ia from '../ia.js';
+   15| import * as imagens from '../imagens.js';
+   16| import { MENOS_MOVIMENTO, avatarFala, formaDaMsg, guardarMemoria, ic, narrate, onboardingResposta, pintarRosto, renderPerfil, setRosto } from '../app.js';
+   17| import { registrarEntrada, registrarGasto } from './lancar.js';
+   18| import { guardarEmMeta, iniciarMeta, metaResposta, renderMes, salvarMetas } from './mes.js';
+   19| import { renderContas } from './contas.js';
+   20| 
+   21| // A IA online não recebe o nome da pessoa (privacidade): ela escreve {nome} e o app troca aqui, no aparelho (JF, 16/11)
+   22| export function trocarNome(texto, nome) {
+   23|   const t = String(texto ?? '');
+   24|   if (!t.includes('{nome}')) return t;
+   25|   if (nome) return t.replaceAll('{nome}', nome);
+   26|   return t.replace(/,\s*\{nome\}/g, '').replace(/\{nome\}\s*,\s*/g, '').replace(/\{nome\}/g, '').replace(/\s{2,}/g, ' ').trim();
+   27| }
+   28| 
+   29| export function addMsg(msg) {
+   30|   if (msg.texto) msg.texto = trocarNome(msg.texto, state.perfil?.apelido);
+   31|   if (msg.de === 'caos' && !msg.rosto) {
+   32|     msg.rosto = msg.temp
+   33|       ? rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory })
+   34|       : emocaoDoMomento(state.caosMemory, state.settings.mood).rosto
+   35|         || rostoAvulso(undefined, { mood: state.settings.mood, memory: state.caosMemory });
+   36|   }
+   37|   state.chat.push(msg);
+   38|   if (state.chat.length > 60) state.chat.splice(0, state.chat.length - 60);
+   39|   db.setMeta('chat', state.chat.filter(m => !m.temp).map(({ url, ...m }) => m)).catch(() => {});
+   40|   renderChat();
+   41| }
+   42| 
+   43| export function renderChat() {
+   44|   const log = $('#chat-log');
+   45|   if (!state.chat.length) {
+   46|     log.innerHTML = `<li class="msg caos-msg"><span class="who">C.A.O.S.</span>Oi! Sou o C.A.O.S. ${esc(IDENTIDADE.slogan)} Me pergunta dos seus gastos, manda "gastei 30 no mercado" ou a foto de um comprovante.</li>`;
+   47|   } else {
+   48|     log.innerHTML = state.chat.map((m, i) => {
+   49|       if (m.de === 'eu') {
+   50|         return `<li class="msg eu">${m.url ? `<img src="${esc(m.url)}" alt="Foto enviada">` : ''}${esc(m.texto || '')}</li>`;
+   51|       }
+   52|       const acao = m.acao && !m.acaoFeita
+   53|         ? `<div class="acao"><button class="sim" data-acao="${i}" data-ok="1">${ic('i-ok')} Confirmar</button><button class="nao" data-acao="${i}" data-ok="0">Cancelar</button></div>`
+   54|         : '';
+   55|       const f = formaDaMsg(m), fcor = FORMAS[f]?.cor || 'var(--caos)';
+   56|       if (m.digitando) return `<li class="msg caos-msg pensando digitando" style="--msg-cor:${fcor}" aria-label="C.A.O.S. está digitando"><span class="who" aria-hidden="true"><span class="caos-face mini" data-msg="${i}"></span></span><span class="pontos" aria-hidden="true"><i></i><i></i><i></i></span> digitando</li>`;
+   57|       return `<li class="msg caos-msg ${m.temp ? 'pensando' : ''}" style="--msg-cor:${fcor}"><span class="who" aria-label="C.A.O.S.${m.ia ? ' com IA' : ''}"><span class="caos-face mini" data-msg="${i}" aria-hidden="true"></span>${m.ia ? '<span class="tag-ia">IA</span>' : ''}</span>${textoDaMsg(m.texto)}${acao}</li>`;
+   58|     }).join('');
+   59|     // rostinho no balão (JF, 13/11 à noite: "emoji quebra a lógica; os rostinhos é que dão a característica dele").
+   60|     // Combina com o avatar: o rosto da própria fala, se já bate com a forma; senão, o rostinho da forma. Mesma cor.
+   61|     for (const el of log.querySelectorAll('[data-msg]')) {
+   62|       const i = Number(el.dataset.msg), m = state.chat[i];
+   63|       if (!m) continue;
+   64|       const f = formaDaMsg(m);
+   65|       const r = rostoDaForma(f, m.rosto, i); // 2.1.3.2: o mesmo rostinho do avatar
+   66|       setRosto(el, r);
+   67|       if (FORMAS[f]) el.style.setProperty('--emo-cor', FORMAS[f].cor);
+   68|     }
+   69|   }
+   70|   const ult = [...state.chat].reverse().find(m => m.de === 'caos');
+   71|   const sug = ult?.sugestoes?.length ? ult.sugestoes : SUGESTOES.slice(0, 6);
+   72|   // atalhos pras outras abas (ideia do AI Studio, 13/11): só levam até lá, nunca fazem nada sozinhos
+   73|   const ATALHOS = [['#lancar', 'i-lancar', 'Lançar'], ['#contas', 'i-contas', 'Contas'], ['#mes', 'i-mes', 'Mês']];
+   74|   $('#chat-suggestions').innerHTML = sug.map(s => `<button type="button" class="chip" data-sug="${esc(s)}">${esc(s)}</button>`).join('')
+   75|     + (state.onboarding || state.metaFlow ? [] : ATALHOS).map(([h, i, t]) => `<button type="button" class="chip atalho" data-ir="${h}" aria-label="Ir para ${t}">${ic(i)} ${t}</button>`).join('');
+   76|   if (!$('#tela-conversa').hidden) window.scrollTo(0, document.body.scrollHeight);
+   77| }
+   78| 
+   79| export const IA_POR_DIA = 20;
+   80| 
+   81| export const iaRecentes = new Map();
+   82| 
+   83| export async function usoDaIAHoje() {
+   84|   const u = await db.getMeta('iaUso', null).catch(() => null);
+   85|   return u && u.dia === toISODate() ? u : { dia: toISODate(), n: 0 };
+   86| }
+   87| 
+   88| // 2.1.3.1 (GPT, 16/11): conta o uso do mês (aparelho × IA online × memória) pra ver onde vai o crédito
+   89| async function anotarUso(tipo) {
+   90|   try {
+   91|     const mes = toISODate().slice(0, 7);
+   92|     const uso = ia.contarUsoIA(await db.getMeta('iaMes', null), mes, tipo);
+   93|     await db.setMeta('iaMes', uso);
+   94|     const el = $('#ai-uso');
+   95|     if (el) el.textContent = ia.descreverUsoIA(uso, mes); // Ajustes já mostra o número novo, sem reabrir o app
+   96|   } catch { /* contador é só informação: se falhar, a conversa segue */ }
+   97| }
+   98| 
+   99| export async function enviarPergunta(texto, { doPrint = false } = {}) {
+  100|   const t = String(texto || '').trim();
+  101|   if (!t) return;
+  102|   if (state.onboarding) return onboardingResposta(t);
+  103|   if (state.metaFlow) return metaResposta(t);
+  104|   if (!doPrint) addMsg({ de: 'eu', texto: t });
+  105|   const { fala, memoria } = conversar(t, dados(), { mood: state.settings.mood, memory: state.caosMemory, now: Date.now(), perfil: state.perfil });
+  106|   guardarMemoria(memoria);
+  107|   pintarRosto(fala.rosto, fala.intent);
+  108| 
+  109|   // Travas de crédito no aparelho (15/11, JF: "IA de bolso, sem abusar"): a mesma pergunta na última meia hora usa a
+  110|   // resposta guardada; e cada aparelho manda no máximo IA_POR_DIA perguntas por dia pra IA (o servidor tem os dele).
+  111|   // revisão do Gemini (16/11): a chave do cache e a fila usam o texto que vai pra IA (com o assunto junto) e o humor
+  112|   const textoIA = fala.perguntaIA || t;
+  113|   const humorIA = humorParaIA(state.settings.mood, state.perfil);
+  114|   const chaveIA = `${humorIA}|${textoIA.toLowerCase().replace(/\s+/g, ' ').trim()}`;
+  115|   const repetida = iaRecentes.get(chaveIA);
+  116|   if (!fala.entendeu && repetida && Date.now() - repetida.em < 30 * 60_000) {
+  117|     addMsg({ de: 'caos', texto: repetida.texto, ia: true, sugestoes: SUGESTOES.slice(0, 5), rosto: fala.rosto });
+  118|     await anotarUso('memoria');
+  119|     return;
+  120|   }
+  121|   const usoIA = await usoDaIAHoje();
+  122|   // o criador não tem limite no aparelho (JF, 16/11: "quem tá pagando sou eu"); o servidor também libera pelo selo da conta
+  123|   const iaCansada = !fala.entendeu && state.settings.aiOn && state.settings.aiUrl && usoIA.n >= IA_POR_DIA && !state.perfil?.seloCriador;
+  124|   if (iaCansada) {
+  125|     fala.texto = `Por hoje a minha IA online já respondeu ${IA_POR_DIA} perguntas: sou uma IA de bolso e economizo pra não pesar no bolso de ninguém. Amanhã eu volto com tudo! Enquanto isso, pergunta dos seus gastos que eu respondo aqui mesmo.`;
+  126|   } else if (!fala.entendeu && state.settings.aiOn && state.settings.aiUrl) {
+  127|     const pensando = rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory });
+  128|     pintarRosto(pensando);
+  129|     addMsg({ de: 'caos', texto: 'Deixa eu pensar com a IA…', temp: true, rosto: pensando });
+  130|     try {
+  131|       const resposta = await ia.perguntar(state.settings.aiUrl, { pergunta: textoIA, humor: humorIA, dados: dados(), modo: fala.modoIA, semBusca: fala.intent === 'papo_pessoal', emocao: fala.emocao });
+  132|       await db.setMeta('iaUso', { dia: toISODate(), n: usoIA.n + 1 });
+  133|       await anotarUso(ia.motivoDaIA(fala));
+  134|       iaRecentes.set(chaveIA, { texto: resposta, em: Date.now() });
+  135|       state.chat = state.chat.filter(m => !m.temp);
+  136|       addMsg({ de: 'caos', texto: resposta, ia: true, sugestoes: SUGESTOES.slice(0, 5), rosto: fala.rosto });
+  137|       pintarRosto(fala.rosto);
+  138|       if (state.settings.voice) falar(trocarNome(resposta, state.perfil?.apelido).replace(/\*\*/g, ''));
+  139|       return;
+  140|     } catch (e) {
+  141|       state.chat = state.chat.filter(m => !m.temp);
+  142|       const guardou = fala.palpite ? false : await guardarPergunta(textoIA);
+  143|       addMsg({ de: 'caos', texto: `${fala.texto}${guardou ? ' A IA online não respondeu agora, mas guardei sua pergunta e trago a resposta depois.' : ` (A IA online não respondeu: ${e.message})`}`, sugestoes: fala.sugestoes, rosto: fala.rosto });
+  144|       pintarRosto(fala.rosto);
+  145|       return;
+  146|     }
+  147|   }
+  148|   if (!iaCansada && !fala.entendeu && !fala.palpite && await guardarPergunta(textoIA)) {
+  149|     // Fila geral (1.6.0): o que ele não sabe vai pro servidor quando der; a resposta volta na conversa.
+  150|     fala.texto = 'Ainda não sei responder isso, mas guardei sua pergunta. Quando eu tiver conexão com o servidor do C.A.O.S. Finanças, eu trago a resposta aqui.';
+  151|   }
+  152|   if (fala.entendeu) await anotarUso('local');
+  153|   await respiro(fala.texto);
+  154|   addMsg({ de: 'caos', texto: fala.texto, sugestoes: fala.sugestoes, acao: fala.acao, rosto: fala.rosto, assunto: fala.intent });
+  155|   pintarRosto(fala.rosto, fala.intent);
+  156|   avatarFala(Math.min(2600, 400 + fala.texto.length * 22));
+  157|   if (state.settings.voice) falar(fala.texto, fala.emocao);
+  158|   // 2º balão (JF, 16/11): "digitando…" de novo e o "ah, e…" logo depois, como amigo no WhatsApp
+  159|   if (fala.posTexto) {
+  160|     // 2.1.5 (JF): respiro de verdade. Com voz, espera a 1ª fala acabar; sem voz, dá tempo de ler o 1º balão
+  161|     if (state.settings.voice) await falaTerminou();
+  162|     else await new Promise(r => setTimeout(r, MENOS_MOVIMENTO.matches ? 300 : Math.min(2500, 700 + fala.texto.length * 12)));
+  163|     await respiro(fala.posTexto);
+  164|     addMsg({ de: 'caos', texto: fala.posTexto, rosto: fala.rosto, assunto: fala.posAssunto || fala.intent });
+  165|     pintarRosto(fala.rosto, fala.posAssunto || fala.intent); // 2.1.3.2: o "digitando…" deixava o topo preso no pensador
+  166|     avatarFala(Math.min(2000, 400 + fala.posTexto.length * 22));
+  167|     if (state.settings.voice) falar(fala.posTexto, fala.emocao, { emenda: true });
+  168|   }
+  169|   if (fala.filaIA) await perguntaPraDepois(fala.filaIA);
+  170|   if (fala.fluxoMeta) iniciarMeta(fala.fluxoMeta.nome, { jaFalou: true });
+  171|   if (fala.modoFoto) state.modoFoto = { tipo: fala.modoFoto, duvida: t, ate: Date.now() + 10 * 60_000 };
+  172| }
+  173| 
+  174| // Respiro antes da resposta (pedido do JF, 06/11): instantâneo demais "dá medo e quebra a imersão".
+  175| // 0,6 a 1,8 s conforme o tamanho da resposta; com "menos movimento", espera curta e sem animação. Não trava nada.
+  176| export const tempoDePensar = (texto, menosMovimento = false) =>
+  177|   menosMovimento ? 300 : Math.round(Math.min(1800, Math.max(600, 450 + String(texto || '').length * 9)));
+  178| 
+  179| export async function respiro(texto) {
+  180|   const id = `d${Date.now()}${Math.random()}`;
+  181|   const pensando = rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory });
+  182|   pintarRosto(pensando);
+  183|   addMsg({ de: 'caos', texto: 'digitando…', temp: id, digitando: true, rosto: pensando });
+  184|   const espera = tempoDePensar(texto, MENOS_MOVIMENTO.matches);
+  185|   avatarFala(espera);
+  186|   await new Promise(r => setTimeout(r, espera));
+  187|   state.chat = state.chat.filter(m => m.temp !== id);
+  188| }
+  189| 
+  190| export async function perguntaPraDepois(item) {
+  191|   const pronto = state.settings.aiOn && state.settings.aiUrl && navigator.onLine;
+  192|   if (pronto) {
+  193|     const pensando = rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory });
+  194|     addMsg({ de: 'caos', texto: 'Vou buscar a comparação com a IA…', temp: true, rosto: pensando });
+  195|     try {
+  196|       const texto = await ia.perguntarBancos(state.settings.aiUrl, { bancos: item.bancos, cdi: state.mercado?.cdi?.valor });
+  197|       state.chat = state.chat.filter(m => !m.temp);
+  198|       addMsg({ de: 'caos', ia: true, texto });
+  199|       return;
+  200|     } catch {
+  201|       state.chat = state.chat.filter(m => !m.temp);
+  202|     }
+  203|   }
+  204|   const fila = (await db.getMeta('fila', [])).filter(x => x.tipo !== item.tipo);
+  205|   fila.push({ ...item, id: crypto.randomUUID?.() || String(Date.now()), criadoEm: Date.now() });
+  206|   await db.setMeta('fila', fila);
+  207|   addMsg({ de: 'caos', texto: 'Hoje eu não consigo trazer a comparação certinha, mas guardei sua pergunta. Assim que eu tiver conexão com o servidor do C.A.O.S. Finanças, eu trago a resposta aqui. 😉' });
+  208| }
+  209| 
+  210| export async function guardarPergunta(pergunta) {
+  211|   try {
+  212|     const fila = await db.getMeta('fila', []);
+  213|     const p = String(pergunta).trim().slice(0, 300);
+  214|     if (!p || fila.some(x => x.tipo === 'pergunta' && x.pergunta.toLowerCase() === p.toLowerCase())) return true;
+  215|     const perguntas = fila.filter(x => x.tipo === 'pergunta');
+  216|     if (perguntas.length >= 10) return false;
+  217|     fila.push({ tipo: 'pergunta', pergunta: p, id: crypto.randomUUID?.() || String(Date.now()), criadoEm: Date.now() });
+  218|     await db.setMeta('fila', fila);
+  219|     return true;
+  220|   } catch {
+  221|     return false;
+  222|   }
+  223| }
+  224| 
+  225| export async function processarFila() {
+  226|   if (!(state.settings.aiOn && state.settings.aiUrl && navigator.onLine)) return;
+  227|   const fila = await db.getMeta('fila', []);
+  228|   if (!fila.length) return;
+  229|   const resta = [];
+  230|   for (const item of fila) {
+  231|     try {
+  232|       if (item.tipo === 'pergunta') {
+  233|         const texto = await ia.perguntar(state.settings.aiUrl, { pergunta: item.pergunta, humor: humorParaIA(state.settings.mood, state.perfil), dados: dados() });
+  234|         const nome = state.perfil?.apelido;
+  235|         addMsg({ de: 'caos', ia: true, texto: `Ei${nome ? `, ${nome}` : ''}, sabe aquela sua pergunta? "${item.pergunta}" Agora eu consigo responder: ${texto}` });
+  236|         $('#caos-line').textContent = 'Lembra daquela pergunta? Agora eu sei responder. Toca aqui pra ver.';
+  237|         continue;
+  238|       }
+  239|       if (item.tipo === 'explicar') {
+  240|         const img = await imagens.pegar(item.imagemId);
+  241|         if (!img) continue; // a foto foi apagada: tira da fila
+  242|         const texto = await ia.explicarImagem(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob), duvida: item.duvida, humor: humorParaIA(state.settings.mood, state.perfil) });
+  243|         const nome = state.perfil?.apelido;
+  244|         addMsg({ de: 'caos', ia: true, texto: `Ei${nome ? `, ${nome}` : ''}, sabe aquele print do banco que você me mandou? Agora eu consigo explicar: ${texto}` });
+  245|         $('#caos-line').textContent = 'Expliquei aquele print do banco. Toca aqui pra ver.';
+  246|         continue;
+  247|       }
+  248|       if (item.tipo !== 'bancos') continue;
+  249|       const texto = await ia.perguntarBancos(state.settings.aiUrl, { bancos: item.bancos, cdi: state.mercado?.cdi?.valor });
+  250|       addMsg({ de: 'caos', ia: true, texto: `Lembra que você perguntou qual banco rende mais? Trouxe: ${texto}` });
+  251|       $('#caos-line').textContent = 'Trouxe a resposta que eu fiquei devendo. Toca aqui pra ver.';
+  252|     } catch {
+  253|       resta.push(item);
+  254|     }
+  255|   }
+  256|   await db.setMeta('fila', resta);
+  257| }
+  258| 
+  259| export async function confirmarAcao(i, ok) {
+  260|   const m = state.chat[i];
+  261|   if (!m?.acao || m.acaoFeita) return;
+  262|   m.acaoFeita = true;
+  263|   if (!ok) {
+  264|     addMsg({ de: 'caos', texto: 'Cancelado. Nada foi anotado.' });
+  265|     return;
+  266|   }
+  267|   try {
+  268|     const a = m.acao;
+  269|     // sem conta cadastrada, gasto e entrada esperam (Anne, 15/11): primeiro a conta
+  270|     if (['registrar_gasto', 'registrar_entrada', 'registrar_varios'].includes(a.tipo) && !state.accounts.some(x => x.tipo !== 'cartao')) {
+  271|       m.acaoFeita = false;
+  272|       addMsg({ de: 'caos', texto: 'Antes de anotar, cadastra uma conta (o banco e o saldo, nada de senha). Toca em Contas aqui embaixo, ou no passo 2 do "Comece por aqui", que eu te levo.' });
+  273|       return;
+  274|     }
+  275|     if (a.tipo === 'criar_meta') {
+  276|       await salvarMetas([...state.metas, a.meta]);
+  277|       addMsg({ de: 'caos', texto: `Meta ${a.meta.nome} salva! Ela fica na aba 📅 Mês. Quando guardar dinheiro, me fala "guardei 50 na meta ${a.meta.nome}" que eu somo.` });
+  278|       return;
+  279|     }
+  280|     if (a.tipo === 'meta_guardar') {
+  281|       await guardarEmMeta(a.metaId, a.valorCents);
+  282|       return;
+  283|     }
+  284|     if (a.tipo === 'mudar_apelido') {
+  285|       state.perfil = { ...(state.perfil || {}), apelido: a.apelido, nome: state.perfil?.nome || a.apelido };
+  286|       await db.setMeta('perfil', state.perfil);
+  287|       renderPerfil();
+  288|       addMsg({ de: 'caos', texto: `Fechado! A partir de agora te chamo de ${a.apelido}.` });
+  289|       return;
+  290|     }
+  291|     if (a.tipo === 'definir_piso') {
+  292|       const conta = state.accounts.find(x => x.id === a.accountId);
+  293|       if (!conta) { addMsg({ de: 'caos', texto: 'Não achei mais essa conta.' }); return; }
+  294|       const novo = editarConta(conta, { pisoCents: a.pisoCents }, { accounts: state.accounts });
+  295|       await db.put(db.STORES.accounts, novo);
+  296|       state.accounts = state.accounts.map(x => (x.id === novo.id ? novo : x));
+  297|       renderContas(); renderizar();
+  298|       addMsg({ de: 'caos', texto: `Piso de ${accountLabel(novo)} salvo: ${formatBRL(a.pisoCents)}. Quando o saldo chegar perto, eu aviso.` });
+  299|       return;
+  300|     }
+  301|     if (a.tipo === 'editar_data') {
+  302|       // "esse gasto foi na quarta" (14/11): o C.A.O.S. propõe, a pessoa confirma, o app grava
+  303|       const x = state.expenses.find(e => e.id === a.expenseId);
+  304|       if (!x) { addMsg({ de: 'caos', texto: 'Não achei mais esse gasto. Ele foi apagado?' }); return; }
+  305|       const novo = editarLancamento(x, { amountCents: x.amountCents, note: x.note, date: a.date, categoryId: x.categoryId }, { kind: 'gasto', categories: state.categories });
+  306|       await db.put(db.STORES.expenses, novo);
+  307|       state.expenses = state.expenses.map(e => (e.id === x.id ? novo : e));
+  308|       renderizar();
+  309|       addMsg({ de: 'caos', texto: `Pronto: agora está no dia ${Number(a.date.slice(8, 10))}/${Number(a.date.slice(5, 7))}.` });
+  310|       return;
+  311|     }
+  312|     if (a.tipo === 'editar_valor') {
+  313|       // "errei, foi 45, não 50" (revisão do Gemini, 16/11): o C.A.O.S. propõe, a pessoa confirma, o app grava
+  314|       const x = state.expenses.find(e => e.id === a.expenseId);
+  315|       if (!x) { addMsg({ de: 'caos', texto: 'Não achei mais esse gasto. Ele foi apagado?' }); return; }
+  316|       const novo = editarLancamento(x, { amountCents: a.amountCents, note: x.note, date: x.date, categoryId: x.categoryId }, { kind: 'gasto', categories: state.categories });
+  317|       await db.put(db.STORES.expenses, novo);
+  318|       state.expenses = state.expenses.map(e => (e.id === x.id ? novo : e));
+  319|       renderizar();
+  320|       addMsg({ de: 'caos', texto: `Pronto: agora está ${formatBRL(a.amountCents)}.` });
+  321|       return;
+  322|     }
+  323|     if (a.tipo === 'fatura_paga') {
+  324|       // "já paguei a fatura do C6" (16/11): mesma baixa do botão em Contas
+  325|       const cartao = state.accounts.find(x => x.id === a.cartaoId);
+  326|       if (!cartao) { addMsg({ de: 'caos', texto: 'Não achei mais esse cartão.' }); return; }
+  327|       const novo = { ...cartao, faturaPagaAte: a.ate };
+  328|       await db.put(db.STORES.accounts, novo);
+  329|       state.accounts = state.accounts.map(x => (x.id === novo.id ? novo : x));
+  330|       renderizar();
+  331|       addMsg({ de: 'caos', texto: `Fatura do ${accountLabel(novo)} paga. Limite de volta!` });
+  332|       return;
+  333|     }
+  334|     if (a.tipo === 'racha_recebido') {
+  335|       // "o João me pagou" (16/11): dá baixa na parte dele da rachadinha
+  336|       const x = state.expenses.find(e => e.id === a.expenseId);
+  337|       if (!x) { addMsg({ de: 'caos', texto: 'Não achei mais essa conta dividida.' }); return; }
+  338|       const novo = marcarRecebido(x, a.pessoaId);
+  339|       await db.put(db.STORES.expenses, novo);
+  340|       state.expenses = state.expenses.map(e => (e.id === x.id ? novo : e));
+  341|       renderizar();
+  342|       addMsg({ de: 'caos', texto: `Anotado: ${a.nome} te pagou ${formatBRL(a.valorCents)}.` });
+  343|       return;
+  344|     }
+  345|     if (a.tipo === 'transferir') {
+  346|       // "transferi 200 do Inter pro C6" (revisão do Gemini, 16/11): mesma gravação da tela de Contas
+  347|       const t = createTransferencia({ deId: a.deId, paraId: a.paraId, amountCents: a.amountCents, date: a.date }, { accounts: state.accounts });
+  348|       state.transferencias = [...state.transferencias, t];
+  349|       await db.setMeta('transferencias', state.transferencias);
+  350|       renderizar();
+  351|       addMsg({ de: 'caos', texto: `Transferência anotada: ${formatBRL(a.amountCents)}. Os saldos das duas contas já mudaram.` });
+  352|       return;
+  353|     }
+  354|     if (a.tipo === 'registrar_varios') {
+  355|       let eventos = [];
+  356|       // revisão do Gemini (16/11): junta os eventos de todos (antes só o último contava e um estouro do 1º sumia)
+  357|       for (const x of a.itens) eventos.push(...(await registrarGasto({ ...x, imageId: a.imageId })));
+  358|       const total = a.itens.reduce((t, x) => t + x.amountCents, 0);
+  359|       const fala = narrate(eventos, { ignoreCooldown: true });
+  360|       addMsg({ de: 'caos', texto: `Anotei os ${a.itens.length} pagamentos (${formatBRL(total)}).${fala ? ` ${fala.texto}` : ''}`, rosto: fala?.rosto });
+  361|       return;
+  362|     }
+  363|     const events = a.tipo === 'registrar_entrada'
+  364|       ? await registrarEntrada({ amountCents: a.amountCents, sourceId: a.sourceId, note: a.note, date: a.date, accountId: a.accountId || null, prevista: !!a.prevista })
+  365|       : await registrarGasto({ amountCents: a.amountCents, categoryId: a.categoryId, note: a.note, date: a.date, imageId: a.imageId, compromissoId: a.compromissoId, accountId: a.accountId,
+  366|           forma: a.forma || null, parcelas: a.parcelas || 1, limiteModo: a.limiteModo || 'total' });
+  367|     if (a.compromissoId) renderMes();
+  368|     const fala = narrate(events, { ignoreCooldown: true });
+  369|     addMsg({ de: 'caos', texto: fala ? fala.texto : 'Anotado!', rosto: fala?.rosto });
+  370|     // JF, 14/11: lançamento com data de antes do saldo informado já está dentro dele; o C.A.O.S. explica
+  371|     const conta = a.accountId && state.accounts.find(x => x.id === a.accountId && x.tipo !== 'cartao');
+  372|     if (conta && a.date && !depoisDoSaldo({ date: a.date, createdAt: Date.now() }, conta)) {
+  373|       addMsg({ de: 'caos', texto: `Só lembrando: como isso foi dia ${Number(a.date.slice(8, 10))}/${Number(a.date.slice(5, 7))}, antes do saldo de ${accountLabel(conta)} que você informou, o valor já está dentro dele. Anotei pra conta do mês, mas o saldo do banco não mudou.` });
+  374|     }
+  375|     if (state.settings.voice && fala) falar(fala.texto, fala.emocao);
+  376|     // 2.1.4 (JF, 16/11): pergunta curiosa de amigo depois do gasto ("valeu a pena?"), às vezes e nunca junto de alerta
+  377|     if (a.tipo === 'registrar_gasto' && !fala?.alerta) {
+  378|       const c = curiosidadeDoGasto({ categoryId: a.categoryId, amountCents: a.amountCents, compromissoId: a.compromissoId || null },
+  379|         { memory: state.caosMemory, now: Date.now() });
+  380|       if (c.fala) {
+  381|         guardarMemoria(c.memoria);
+  382|         if (state.settings.voice) await falaTerminou(); // a pergunta espera o "Anotado" acabar de ser falado
+  383|         await respiro(c.fala.texto);
+  384|         addMsg({ de: 'caos', texto: c.fala.texto, sugestoes: c.fala.sugestoes, assunto: 'curiosidade' });
+  385|         pintarRosto(null, 'curiosidade');
+  386|         if (state.settings.voice) falar(c.fala.texto);
+  387|       }
+  388|     }
+  389|   } catch (e) {
+  390|     m.acaoFeita = false;
+  391|     addMsg({ de: 'caos', texto: `Não consegui anotar: ${e.message}` });
+  392|   }
+  393| }
+  394| 
+  395| export async function explicarPrint(img, duvida) {
+  396|   const pronto = state.settings.aiOn && state.settings.aiUrl && navigator.onLine;
+  397|   if (pronto) {
+  398|     await respiro('Deixa eu olhar com calma o que o banco quis dizer.');
+  399|     addMsg({ de: 'caos', texto: 'Olhando o print com a IA…', temp: true, rosto: rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory }) });
+  400|     try {
+  401|       const texto = await ia.explicarImagem(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob), duvida, humor: humorParaIA(state.settings.mood, state.perfil) });
+  402|       state.chat = state.chat.filter(m => !m.temp);
+  403|       addMsg({ de: 'caos', ia: true, texto });
+  404|       if (state.settings.voice) falar(trocarNome(texto, state.perfil?.apelido).replace(/\*\*/g, ''));
+  405|       return;
+  406|     } catch {
+  407|       state.chat = state.chat.filter(m => !m.temp);
+  408|     }
+  409|   }
+  410|   const fila = await db.getMeta('fila', []);
+  411|   fila.push({ tipo: 'explicar', imagemId: img.id, duvida: String(duvida || '').slice(0, 300), id: crypto.randomUUID?.() || String(Date.now()), criadoEm: Date.now() });
+  412|   await db.setMeta('fila', fila);
+  413|   addMsg({ de: 'caos', texto: 'Agora eu não consigo falar com o servidor do C.A.O.S. Finanças, mas guardei o print aqui no aparelho. Assim que tiver conexão, eu explico e te aviso.' });
+  414| }
+  415| 
+  416| // Negrito simples (14/11: a IA às vezes manda **R$ 238,58** e os asteriscos apareciam). Escapa antes, então é seguro.
+  417| export const textoDaMsg = t => esc(t || '').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*\*/g, '');
+  418| 
+  419| // Teclado do iPhone (14/11, JF: "as barras descem junto com a tela"): quando o teclado fecha, o iPhone às vezes deixa
+  420| // as barras de baixo no meio da tela. O app percebe o teclado, esconde a barra de abas enquanto ele está aberto e,
+  421| // quando fecha, dá um "empurrãozinho" na rolagem pra ele recalcular o lugar das barras.
+  422| export function ligarTeclado() {
+  423|   const vv = window.visualViewport;
+  424|   if (!vv) return;
+  425|   let aberto = false;
+  426|   const conferir = () => {
+  427|     const agora = innerHeight - vv.height > 140;
+  428|     if (agora === aberto) return;
+  429|     aberto = agora;
+  430|     document.body.classList.toggle('teclado', aberto);
+  431|     if (!aberto) requestAnimationFrame(() => { window.scrollTo(window.scrollX, window.scrollY + 1); window.scrollTo(window.scrollX, window.scrollY - 1); });
+  432|   };
+  433|   vv.addEventListener('resize', conferir);
+  434|   document.addEventListener('focusout', () => setTimeout(() => {
+  435|     conferir();
+  436|     if (!document.activeElement?.matches?.('input, textarea, select')) window.scrollTo(window.scrollX, window.scrollY);
+  437|   }, 60));
+  438| }
+  439| 
+  440| export function tirarAnexo() {
+  441|   state.fotoPendente = null;
+  442|   $('#chat-anexo').hidden = true;
+  443|   const img = $('#chat-anexo-img');
+  444|   if (img.src) { URL.revokeObjectURL(img.src); img.removeAttribute('src'); }
+  445|   $('#chat-input').placeholder = 'Pergunte ao C.A.O.S.…';
+  446| }
+  447| 
+  448| export async function fotoNoChat(arquivo, legenda = '') {
+  449|   try {
+  450|     const img = await imagens.guardar(arquivo, 'chat');
+  451|     addMsg({ de: 'eu', texto: legenda, url: URL.createObjectURL(img.blob), imagemId: img.id });
+  452|     // a legenda também diz o que fazer (14/11): "explica esse print", "qual oferta é melhor?"
+  453|     const pedeExplicar = /\b(explica|explique|o que (e|é|significa)|nao entendi|não entendi|que cobranca|que cobrança)\b/i.test(legenda);
+  454|     const pedeOferta = /\b(oferta|ofertas|compar|qual (e |é )?(melhor|mais barat)|vale a pena)\b/i.test(legenda);
+  455|     const explicar = pedeExplicar ? { duvida: legenda } : state.modoFoto?.tipo === 'explicar' && state.modoFoto.ate > Date.now() ? state.modoFoto : null;
+  456|     // print de oferta (13/11): quando o C.A.O.S. pediu o print ou tem uma comparação aberta
+  457|     const ofertas = pedeOferta || (state.modoFoto?.tipo === 'ofertas' && state.modoFoto.ate > Date.now()) || state.caosMemory?.aguardando?.tipo === 'ofertas';
+  458|     state.modoFoto = null;
+  459|     if (explicar) return explicarPrint(img, explicar.duvida);
+  460|     if (ofertas) return lerPrintDeOferta(img);
+  461|     if (!(state.settings.aiOn && state.settings.aiUrl)) {
+  462|       addMsg({ de: 'caos', texto: 'Guardei a foto. Pra eu ler o valor sozinho, ative a IA online em Ajustes. Ou me diz: "gastei 30 no mercado".' });
+  463|       return;
+  464|     }
+  465|     addMsg({ de: 'caos', texto: 'Lendo a foto com a IA…', temp: true });
+  466|     const r = await ia.lerImagem(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob), categorias: state.categories, legenda });
+  467|     state.chat = state.chat.filter(m => !m.temp);
+  468|     const cat = catById(r.categoria) || catById('outros');
+  469|     // vários pagamentos no mesmo print (14/11, JF: "leu os 5 e só lançou 1"): um Confirmar lança todos
+  470|     const itens = Array.isArray(r.itens) ? r.itens.filter(x => x.valor_centavos > 0) : [];
+  471|     if (itens.length > 1) {
+  472|       const hoje = toISODate();
+  473|       const lista = itens.map(x => {
+  474|         const c = catById(x.categoria) || catById(sugerirCategoria(x.estabelecimento, state.expenses)?.categoryId) || catById('outros');
+  475|         return { amountCents: x.valor_centavos, categoryId: c.id, date: /^\d{4}-\d{2}-\d{2}$/.test(x.data || '') ? x.data : hoje, note: (x.estabelecimento || '').slice(0, 120) };
+  476|       });
+  477|       const total = lista.reduce((t, x) => t + x.amountCents, 0);
+  478|       const linhas = lista.map((x, i) => `${i + 1}. ${x.note || 'Sem nome'}: ${formatBRL(x.amountCents)} em ${catById(x.categoryId).name} (${x.date.slice(8)}/${x.date.slice(5, 7)})`).join('\n');
+  479|       addMsg({
+  480|         de: 'caos', ia: true,
+  481|         texto: `Achei ${lista.length} pagamentos, total ${formatBRL(total)}:\n${linhas}\nAnoto todos?${r.confianca === 'baixa' ? ' Li com pouca certeza, confere os valores.' : ''} Se algum sair errado, dá pra corrigir no lápis depois.`,
+  482|         acao: { tipo: 'registrar_varios', itens: lista, imageId: img.id },
+  483|       });
+  484|       return;
+  485|     }
+  486|     if (r.valor_centavos > 0) {
+  487|       const leitura = `${r.resumo || 'Li o comprovante.'} ${formatBRL(r.valor_centavos)} em ${cat.name}${r.estabelecimento ? ` (${r.estabelecimento})` : ''}.${r.confianca === 'baixa' ? ' Li com pouca certeza, confere o valor.' : ''}`;
+  488|       const base = { tipo: 'registrar_gasto', amountCents: r.valor_centavos, categoryId: cat.id, date: /^\d{4}-\d{2}-\d{2}$/.test(r.data || '') ? r.data : toISODate(), note: (r.estabelecimento || '').slice(0, 120), imageId: img.id };
+  489|       // revisão do Gemini (16/11): com conta cadastrada, a foto também pergunta "pagou como?" e de qual conta (a legenda
+  490|       // já pode dizer: "pix do inter"), senão o gasto entrava sem conta e não mexia no saldo nem na fatura
+  491|       const acao = { ...base, ...lerPagamento(legenda || '', state.accounts) };
+  492|       const segue = state.accounts.length ? seguirPagamento(acao, dados()) : { acao: base };
+  493|       if (segue.aguardar) {
+  494|         guardarMemoria({ ...state.caosMemory, aguardando: { ...segue.aguardar, em: Date.now() } });
+  495|         addMsg({ de: 'caos', ia: true, texto: `${leitura} ${segue.fato}`, sugestoes: segue.sugestoes });
+  496|       } else {
+  497|         addMsg({ de: 'caos', ia: true, texto: `${leitura} Anoto?`, acao: segue.acao });
+  498|       }
+  499|     } else {
+  500|       addMsg({ de: 'caos', ia: true, texto: r.resumo || 'Não achei um valor nessa imagem.' });
+  501|     }
+  502|   } catch (e) {
+  503|     state.chat = state.chat.filter(m => !m.temp);
+  504|     addMsg({ de: 'caos', texto: e.message || 'Não consegui ler a foto.' });
+  505|   }
+  506| }
+  507| 
+  508| export async function lerPrintDeOferta(img) {
+  509|   if (!(state.settings.aiOn && state.settings.aiUrl)) {
+  510|     addMsg({ de: 'caos', texto: 'Pra eu ler o print sozinho, preciso da IA online (Ajustes → IA online). Enquanto isso, me escreve: "geladeira 3500 no mercado livre e 3400 na amazon".' });
+  511|     return;
+  512|   }
+  513|   addMsg({ de: 'caos', texto: 'Lendo a oferta do print…', temp: true, rosto: rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory }) });
+  514|   try {
+  515|     const lido = await ia.lerOfertas(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob) });
+  516|     state.chat = state.chat.filter(m => !m.temp);
+  517|     const frase = fraseDoPrint(lido);
+  518|     if (!frase) return addMsg({ de: 'caos', ia: true, texto: 'Não achei preço de loja nesse print. Manda um print que mostre o preço e o nome da loja, ou me escreve os valores.' });
+  519|     addMsg({ de: 'caos', ia: true, texto: resumoDoPrint(lido) });
+  520|     await enviarPergunta(frase, { doPrint: true });
+  521|   } catch (e) {
+  522|     state.chat = state.chat.filter(m => !m.temp);
+  523|     addMsg({ de: 'caos', texto: e.message || 'Não consegui ler o print.' });
+  524|   }
+  525| }
+  526| 

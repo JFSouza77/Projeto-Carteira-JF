@@ -1,0 +1,486 @@
+BLOCO: Voz: app (voz natural + voz do celular + boca) e servidor (Azure)
+App C.A.O.S. Finanças 2.1.8.1 Alfa · C.A.O.S. 2.4.3 · núcleo 1.8.0 · 17/11/2026
+
+
+===== ARQUIVO: js/voz.js =====
+
+    1| // Voz do C.A.O.S. (speechSynthesis), portada do Perfil JF: escolhe a melhor voz pt-BR do aparelho,
+    2| // de preferência masculina, e limpa o texto pra voz não tropeçar (emoji, "R$", siglas).
+    3| 
+    4| // Vozes masculinas conhecidas (iPhone: Felipe, Eddy, Reed, Rocko; Windows: Daniel, Antonio…)
+    5| const MASC = /felipe|ant[oô]nio|daniel|ricardo|jorge|cristiano|donato|humberto|j[uú]lio|val[eé]rio|luciano|rodrigo|f[aá]bio|eddy|\breed\b|rocko|grandpa|masculin|\bmale\b/i;
+    6| // Vozes femininas conhecidas: perdem pontos na escolha automática
+    7| const FEM = /luciana|joana|catarina|francisca|thalita|maria|vit[oó]ria|let[ií]cia|raquel|\bflo\b|grandma|sandy|shelley|google portugu|female|feminin/i;
+    8| 
+    9| export const vozDisponivel = () => typeof window !== 'undefined' && 'speechSynthesis' in window;
+   10| 
+   11| function nota(v) {
+   12|   let s = 0;
+   13|   if (/^pt[-_]BR/i.test(v.lang)) s += 10;
+   14|   if (v.localService) s += 5;
+   15|   if (/natural|neural|premium|enhanced|aprimorad|google|online/i.test(v.name || '')) s += 4;
+   16|   if (MASC.test(v.name || '')) s += 6;
+   17|   else if (FEM.test(v.name || '')) s -= 8;
+   18|   return s;
+   19| }
+   20| 
+   21| function melhorVoz() {
+   22|   try {
+   23|     return speechSynthesis.getVoices().filter(v => /^pt/i.test(v.lang)).sort((a, b) => nota(b) - nota(a))[0] || null;
+   24|   } catch {
+   25|     return null;
+   26|   }
+   27| }
+   28| 
+   29| // Tom e velocidade por emoção (o Perfil faz igual com o humor da matriz)
+   30| const JEITO = {
+   31|   alegria: [1.08, 1.1], radiante: [1.1, 1.12], orgulho: [1.02, 1.05], preocupacao: [0.95, 0.97],
+   32|   protetor: [0.96, 0.97], tenso: [1.04, 0.95], irritacao: [1.05, 0.9], tedio: [0.88, 0.85],
+   33|   curiosidade: [1.02, 1.08], carinho: [0.95, 1.02], calmo: [1, 1],
+   34|   // emoções novas do núcleo (13/11, achado do Gemini): assustado fala um pouco mais rápido e agudo; enjoado e sem graça, mais baixo
+   35|   medo: [1.06, 1.08], nojo: [0.92, 0.9], vergonha: [0.94, 0.96],
+   36| };
+   37| 
+   38| export function textoParaVoz(t) {
+   39|   return String(t || '')
+   40|     .replace(/[\p{Extended_Pictographic}️‍]/gu, '')
+   41|     // 2.1.3.1 (GPT, 16/11): o negrito (**) e o {nome} que sobrar não podem ser lidos em voz alta
+   42|     .replace(/\*\*/g, '').replace(/\{nome\},?\s*/g, '')
+   43|     .replace(/C\.A\.O\.S\./g, 'Caos')
+   44|     .replace(/R\$\s?(\d[\d.]*)(?:,(\d{2}))?/g, (m, r, c) => `${r.replace(/\./g, '')} reais${c && c !== '00' ? ` e ${Number(c)} centavos` : ''}`)
+   45|     .replace(/(\d+)%/g, '$1 por cento')
+   46|     .replace(/\s*(?:\.{2,}|…)\s*/g, ', ')
+   47|     .replace(/\s+/g, ' ')
+   48|     .trim();
+   49| }
+   50| 
+   51| // Velocidade escolhida em Ajustes → Acessibilidade (multiplica o jeito de cada emoção)
+   52| let VELOCIDADE = 1;
+   53| export function setVelocidade(v) {
+   54|   const n = Number(v);
+   55|   VELOCIDADE = Number.isFinite(n) ? Math.min(1.6, Math.max(0.6, n)) : 1;
+   56| }
+   57| 
+   58| // 2.1.5 (JF, 16/11: "ele não espera acabar a primeira fala antes de falar a segunda; tem que dar esse respiro"):
+   59| // falar() devolve uma promessa que termina quando a fala acaba (ou num tempo máximo, se o aparelho não avisar).
+   60| // O 2º balão espera ela. Com { emenda: true }, a fala entra na fila em vez de cortar a anterior.
+   61| //
+   62| // 2.1.7 (JF, 17/11: "vamos ligar a voz dele na Azure igual fiz no Perfil" + "seria muito legal se a boca dele
+   63| // mexesse quando a voz estivesse ligada"): primeiro tenta a voz natural do servidor (Microsoft Azure, igual ao Perfil);
+   64| // se o servidor não tiver voz, se não tiver internet, se demorar mais de 4 s ou falhar, fala com a voz do aparelho,
+   65| // sem a pessoa perceber. E avisa quem estiver ouvindo (o avatar): começou, o volume de cada instante (pra boca abrir
+   66| // na medida da fala) e acabou. Vai pro servidor só o texto da fala (o mesmo que aparece no balão).
+   67| let falaAtual = Promise.resolve();
+   68| export const falaTerminou = () => falaAtual;
+   69| 
+   70| let servidorDaVoz = () => null; // o app diz qual é o servidor (com a IA online ligada)
+   71| export function definirServidorDaVoz(fn) { servidorDaVoz = typeof fn === 'function' ? fn : () => null; }
+   72| let ouvinte = {}; // { inicio(modo), nivel(0..1), palavra(), fim() }
+   73| export function definirOuvinteDaFala(o) { ouvinte = o || {}; }
+   74| const avisar = (nome, ...a) => { try { ouvinte[nome]?.(...a); } catch { /* o avatar nunca derruba a voz */ } };
+   75| 
+   76| // emoção da Carteira → emoção da voz do servidor (tabela do Code, 05_Voz.md: nunca raiva nem fúria, firme e não bravo)
+   77| export const EMOCAO_DA_VOZ = Object.freeze({
+   78|   alegria: 'orgulho', radiante: 'festa', orgulho: 'orgulho', preocupacao: 'preocupado', protetor: 'carinho', tenso: 'preocupado',
+   79|   irritacao: 'desafio', tedio: 'tedio', curiosidade: 'pensando', carinho: 'carinho', calmo: 'calmo', medo: 'medo', nojo: 'nojo',
+   80|   vergonha: 'vergonha',
+   81| });
+   82| 
+   83| // AbortSignal.timeout não existe em iPhone mais antigo (iOS 15): sem ele, a voz natural desistia na hora (17/11)
+   84| function tempoLimite(ms) {
+   85|   if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) return AbortSignal.timeout(ms);
+   86|   const c = new AbortController();
+   87|   setTimeout(() => c.abort(), ms);
+   88|   return c.signal;
+   89| }
+   90| 
+   91| let corte = 0; // cada calar() muda o número: fala de antes não toca mais
+   92| let fonte = null; // o áudio da nuvem tocando agora
+   93| 
+   94| // estado da voz do servidor: "ligada" vale 10 min; "não deu" é conferido de novo em 1 min (como no Perfil)
+   95| let nuvem = { base: null, ok: null, em: 0 };
+   96| async function nuvemLigada(base) {
+   97|   const agora = Date.now();
+   98|   if (nuvem.base === base && nuvem.ok !== null && agora - nuvem.em < (nuvem.ok ? 600_000 : 60_000)) return nuvem.ok;
+   99|   let ok = false;
+  100|   try {
+  101|     const r = await fetch(`${base}/voz/estado`, { signal: tempoLimite(4000) });
+  102|     ok = r.ok && !!(await r.json()).ligada;
+  103|   } catch { ok = false; }
+  104|   nuvem = { base, ok, em: agora };
+  105|   return ok;
+  106| }
+  107| 
+  108| // as falas se repetem muito: guarda as últimas 50 no aparelho (não pede de novo)
+  109| const guardadas = new Map();
+  110| let ultimaVoz = '';
+  111| async function pedirAudio(base, t, emocao, vel, tom, limite = 5000) {
+  112|   const chave = `${emocao}|${vel}|${tom}|${t}`;
+  113|   if (guardadas.has(chave)) return guardadas.get(chave).slice(0);
+  114|   const r = await fetch(`${base}/voz`, {
+  115|     method: 'POST', headers: { 'content-type': 'application/json' }, signal: tempoLimite(limite),
+  116|     body: JSON.stringify({ t, r: vel, p: tom, e: EMOCAO_DA_VOZ[emocao] || 'calmo' }),
+  117|   });
+  118|   if (!r.ok || !/audio/.test(r.headers.get('content-type') || '')) {
+  119|     const j = await r.json().catch(() => ({}));
+  120|     throw Object.assign(new Error(`voz ${r.status}`), { status: r.status, detalhe: j });
+  121|   }
+  122|   ultimaVoz = r.headers.get('x-voz') || '';
+  123|   const buf = await r.arrayBuffer();
+  124|   guardadas.set(chave, buf.slice(0));
+  125|   if (guardadas.size > 50) guardadas.delete(guardadas.keys().next().value);
+  126|   return buf;
+  127| }
+  128| 
+  129| let ctx = null;
+  130| function audioCtx() {
+  131|   if (ctx) return ctx;
+  132|   const C = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext);
+  133|   if (!C) return null;
+  134|   try { ctx = new C(); } catch { ctx = null; }
+  135|   return ctx;
+  136| }
+  137| /** iPhone: o som só sai depois de um toque. O app chama isto no primeiro toque na tela. */
+  138| // 2.1.7.3: o app chama em TODO toque (o iPhone pede o destrave quando o dedo sai da tela, e trava de novo quando o app
+  139| // vai pro fundo); com o som já rodando, não faz nada
+  140| export function destravarAudio() {
+  141|   const c = audioCtx();
+  142|   if (!c || c.state === 'running') return;
+  143|   try {
+  144|     c.resume();
+  145|     const b = c.createBuffer(1, 1, 22050);
+  146|     const s = c.createBufferSource();
+  147|     s.buffer = b; s.connect(c.destination); s.start(0);
+  148|   } catch { /* sem som destravado, a voz do aparelho segura */ }
+  149| }
+  150| 
+  151| // toca o MP3 e mede o volume enquanto toca (é isso que mexe a boca do avatar no ritmo da fala)
+  152| async function tocar(buf, minha) {
+  153|   const c = audioCtx();
+  154|   if (!c) throw new Error('sem áudio');
+  155|   // iPhone: depois de ir pro fundo, o áudio fica "interrupted" (não só "suspended"); tenta voltar antes de tocar
+  156|   if (c.state !== 'running') { await c.resume().catch(() => {}); if (c.state !== 'running') throw new Error('áudio travado'); }
+  157|   const dados = await c.decodeAudioData(buf);
+  158|   if (minha !== corte) return;
+  159|   const s = c.createBufferSource();
+  160|   s.buffer = dados;
+  161|   const an = c.createAnalyser();
+  162|   an.fftSize = 512;
+  163|   s.connect(an); an.connect(c.destination);
+  164|   fonte = s;
+  165|   const amostra = new Uint8Array(an.fftSize);
+  166|   let raf = 0;
+  167|   const medir = () => {
+  168|     an.getByteTimeDomainData(amostra);
+  169|     let soma = 0;
+  170|     for (const v of amostra) { const x = (v - 128) / 128; soma += x * x; }
+  171|     avisar('nivel', Math.min(1, Math.sqrt(soma / amostra.length) * 4));
+  172|     raf = requestAnimationFrame(medir);
+  173|   };
+  174|   await new Promise(fim => {
+  175|     s.onended = () => { cancelAnimationFrame(raf); if (fonte === s) fonte = null; fim(); };
+  176|     avisar('inicio', 'nuvem');
+  177|     s.start(0);
+  178|     raf = requestAnimationFrame(medir);
+  179|   });
+  180| }
+  181| 
+  182| function falarNoAparelho(t, emocao, minha) {
+  183|   if (!vozDisponivel() || minha !== corte) return Promise.resolve();
+  184|   return new Promise(fim => {
+  185|     try {
+  186|       const u = new SpeechSynthesisUtterance(t);
+  187|       u.lang = 'pt-BR';
+  188|       const v = melhorVoz();
+  189|       if (v) u.voice = v;
+  190|       const [vel, tom] = JEITO[emocao] || JEITO.calmo;
+  191|       // sem voz masculina no aparelho, ele fala um pouco mais grave (como no Perfil)
+  192|       u.pitch = Math.max(0.4, Math.min(2, (v && !MASC.test(v.name || '') ? 0.8 : 1) * tom));
+  193|       u.rate = Math.min(2, Math.max(0.5, vel * VELOCIDADE));
+  194|       const acabou = () => { clearTimeout(tempo); fim(); };
+  195|       const tempo = setTimeout(acabou, Math.min(30_000, 1500 + t.length * 90 / u.rate));
+  196|       u.onboundary = () => avisar('palavra'); // cada palavra: a boca dá uma abridinha
+  197|       u.onend = u.onerror = acabou;
+  198|       speechSynthesis.speak(u);
+  199|       // 17/11 (JF: "os avatares não estão mexendo a boca"): no app instalado no iPhone o aviso de "começou" (onstart)
+  200|       // nem sempre chega; a boca começa junto com o pedido de fala, sem depender dele
+  201|       avisar('inicio', 'aparelho');
+  202|     } catch { fim(); }
+  203|   });
+  204| }
+  205| 
+  206| async function falarAgora(t, emocao, minha) {
+  207|   const base = servidorDaVoz();
+  208|   const [vel, tom] = JEITO[emocao] || JEITO.calmo;
+  209|   try {
+  210|     if (base && (typeof navigator === 'undefined' || navigator.onLine !== false) && await nuvemLigada(base)) {
+  211|       try {
+  212|         const buf = await pedirAudio(base, t, emocao, Math.round(vel * VELOCIDADE * 20) / 20, Math.round(tom * 20) / 20);
+  213|         if (minha !== corte) return;
+  214|         await tocar(buf, minha);
+  215|         return;
+  216|       } catch { /* demorou, falhou ou o som está travado: a voz do aparelho fala */ }
+  217|     }
+  218|     if (minha === corte) await falarNoAparelho(t, emocao, minha);
+  219|   } finally {
+  220|     if (minha === corte) avisar('fim');
+  221|   }
+  222| }
+  223| 
+  224| export function falar(texto, emocao = 'calmo', { emenda = false } = {}) {
+  225|   const t = textoParaVoz(texto);
+  226|   if (!t || (!vozDisponivel() && !servidorDaVoz())) return Promise.resolve();
+  227|   if (!emenda) calar();
+  228|   const minha = corte;
+  229|   const antes = emenda ? falaAtual : Promise.resolve();
+  230|   falaAtual = antes.then(() => (minha === corte ? falarAgora(t, emocao, minha) : null)).catch(() => {});
+  231|   return falaAtual;
+  232| }
+  233| 
+  234| // "Testar a voz" (Ajustes, 17/11): fala uma frase pela voz natural e diz em português o que aconteceu
+  235| const NOME_VOZ = { mai: 'a voz MAI (a mais natural)', padrao: 'a voz grátis da Microsoft' };
+  236| export async function testarVoz() {
+  237|   destravarAudio();
+  238|   const base = servidorDaVoz();
+  239|   if (!base) return { ok: false, msg: 'A voz natural precisa da IA online ligada (aqui embaixo, em IA online e servidor).' };
+  240|   if (typeof navigator !== 'undefined' && navigator.onLine === false) return { ok: false, msg: 'Sem internet agora: ele fala com a voz do celular.' };
+  241|   nuvem = { base: null, ok: null, em: 0 }; // confere de novo, sem lembrar do resultado de antes
+  242|   let estado;
+  243|   try {
+  244|     const r = await fetch(`${base}/voz/estado`, { signal: tempoLimite(6000) });
+  245|     estado = await r.json();
+  246|     if (!r.ok) return { ok: false, msg: `O servidor respondeu ${r.status}: ${estado.erro || 'sem detalhe'}.` };
+  247|   } catch (e) { return { ok: false, msg: `Não consegui falar com o servidor (${e.name === 'AbortError' || e.name === 'TimeoutError' ? 'demorou demais' : e.message}).` }; }
+  248|   if (!estado.ligada) return { ok: false, msg: 'O servidor ainda não tem a voz: faltam as chaves da Azure (ou o deploy depois de colocar as chaves).' };
+  249|   try {
+  250|     calar();
+  251|     const buf = await pedirAudio(base, 'Oi! Essa é a minha voz natural. Gostou?', 'alegria', 1, 1, 15000);
+  252|     const quem = ultimaVoz.replace(/^(nova|guardada):?/, '') || '';
+  253|     await tocar(buf, corte);
+  254|     avisar('fim');
+  255|     return { ok: true, msg: `Funcionando: ${NOME_VOZ[quem] || 'voz natural'}${/guardada/.test(ultimaVoz) ? ' (fala guardada)' : ''}. Vozes no servidor: ${(estado.vozes || []).map(v => NOME_VOZ[v] || v).join(' e ')}.` };
+  256|   } catch (e) {
+  257|     avisar('fim');
+  258|     const d = e.detalhe || {};
+  259|     if (e.status === 502) return { ok: false, msg: `A Microsoft recusou (erro ${d.status || '?'}). ${d.status === 401 || d.status === 403 ? 'Chave ou região errada nos segredos.' : 'Confira as chaves e a região.'}` };
+  260|     if (e.status === 429) return { ok: false, msg: d.erro === 'teto' ? 'Chegou no teto de letras do mês: até virar o mês, ele fala com a voz do celular.' : 'Muitas falas seguidas: espera um pouquinho.' };
+  261|     if (e.status) return { ok: false, msg: `O servidor respondeu ${e.status}: ${d.erro || 'sem detalhe'}.` };
+  262|     if (/travado/.test(e.message)) return { ok: false, msg: 'O som do celular está travado: toque na tela e tente de novo (e confira se o iPhone não está no silencioso).' };
+  263|     return { ok: false, msg: `Não deu: ${e.name === 'AbortError' || e.name === 'TimeoutError' ? 'a voz demorou demais' : e.message}.` };
+  264|   }
+  265| }
+  266| 
+  267| export function calar() {
+  268|   corte++;
+  269|   try { if (vozDisponivel()) speechSynthesis.cancel(); } catch {}
+  270|   try { fonte?.stop(); } catch {}
+  271|   fonte = null;
+  272|   avisar('fim');
+  273| }
+  274| 
+  275| /** Ditado (falar com o C.A.O.S.): usa o reconhecimento de voz do navegador, quando existe. */
+  276| export function ditadoDisponivel() {
+  277|   return typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  278| }
+  279| 
+  280| // Bug do JF (13/11): o microfone "não fazia nada". No app instalado no iPhone o reconhecimento às vezes termina sem
+  281| // resultado e sem erro, e a promessa ficava parada pra sempre. Agora toda saída vira resposta: o texto, ou um erro com
+  282| // motivo claro (e o app oferece o plano B: o microfone do próprio teclado).
+  283| const MOTIVO = {
+  284|   'not-allowed': 'O microfone está bloqueado pra este app. Libera em Ajustes do celular → Safari (ou o navegador) → Microfone.',
+  285|   'service-not-allowed': 'O ditado está desligado no celular. No iPhone: Ajustes → Geral → Teclado → Ativar Ditado.',
+  286|   'audio-capture': 'Não achei microfone funcionando no aparelho.',
+  287|   'network': 'O ditado do navegador precisa de internet e ela falhou.',
+  288|   'no-speech': 'Não ouvi nada. Fala logo depois de tocar no microfone.',
+  289|   'aborted': 'Parei de ouvir.',
+  290| };
+  291| let atual = null;
+  292| 
+  293| /** Para de ouvir (segundo toque no microfone). */
+  294| export function pararDeOuvir() {
+  295|   try { atual?.stop(); } catch {}
+  296| }
+  297| 
+  298| export function ouvir({ limiteMs = 12000 } = {}) {
+  299|   return new Promise((resolve, reject) => {
+  300|     const R = window.SpeechRecognition || window.webkitSpeechRecognition;
+  301|     if (!R) return reject(new Error('Ditado não disponível neste navegador.'));
+  302|     let r, acabou = false, texto = '';
+  303|     const fim = (erro) => {
+  304|       if (acabou) return;
+  305|       acabou = true;
+  306|       clearTimeout(relogio);
+  307|       atual = null;
+  308|       if (texto) resolve(texto);
+  309|       else reject(Object.assign(new Error(erro || 'Não consegui ouvir.'), { semResultado: true }));
+  310|     };
+  311|     try {
+  312|       r = new R();
+  313|       r.lang = 'pt-BR';
+  314|       r.interimResults = false;
+  315|       r.maxAlternatives = 1;
+  316|       r.continuous = false;
+  317|       r.onresult = e => { texto = (e.results?.[0]?.[0]?.transcript || '').trim(); if (texto) fim(); };
+  318|       r.onerror = e => fim(MOTIVO[e.error] || `Não consegui ouvir (${e.error || 'erro desconhecido'}).`);
+  319|       r.onnomatch = () => fim('Não entendi o áudio. Tenta de novo, mais devagar.');
+  320|       r.onend = () => fim(texto ? null : 'O navegador parou de ouvir sem me passar o que você disse.');
+  321|       atual = r;
+  322|       r.start();
+  323|     } catch (e) {
+  324|       return fim(`Não consegui ligar o microfone (${e.message || e}).`);
+  325|     }
+  326|     const relogio = setTimeout(() => { try { r.stop(); } catch {} fim('Demorou demais e eu parei de ouvir.'); }, limiteMs);
+  327|   });
+  328| }
+  329| 
+
+===== ARQUIVO: servidor/voz.js =====
+
+    1| // Voz natural do C.A.O.S. (Microsoft Azure) na Carteira (JF, 17/11: "vamos ligar a voz dele na Azure igual fiz no
+    2| // Perfil com a ajuda do Code"). Copiado do Perfil (servidor/worker.js, 1.7.10.x, e docs/CAOS_Anatomia/05_Voz.md) sem
+    3| // mudar a lógica: duas vozes na ordem ("mai", mais natural e paga, opcional; "padrao", grátis), SSML com a emoção,
+    4| // cache das falas e teto de letras por mês. Diferença da Carteira: o cache e o teto ficam no CARTEIRA_KV (no Perfil
+    5| // é o storage do Durable Object), e o ritmo por endereço fica em memória.
+    6| // Segredos (só no Cloudflare, nunca no código): AZURE_SPEECH_KEY + AZURE_SPEECH_REGION (grátis) e, opcional,
+    7| // AZURE_MAI_KEY + AZURE_MAI_REGION. Variáveis: AZURE_VOZ, AZURE_MAI_VOZ, AZURE_ESTILOS, VOZ_TETO_MES.
+    8| 
+    9| // [volume, pausa do "…" em ms, estilo da Microsoft (só nas vozes com estilos), ajuste de velocidade em %]
+   10| // (tabela do Perfil, C.A.O.S. 4.1.4: dia a dia normal, sem "ator de novela")
+   11| export const VOZ_EMOCOES = {
+   12|   calmo: ['+0%', 380, 'neutral', 0],
+   13|   orgulho: ['+8%', 320, 'joyful', 0],
+   14|   raiva: ['+15%', 260, 'angry', 0],
+   15|   furia: ['+22%', 220, 'shouting', 0],
+   16|   deboche: ['+4%', 470, 'neutral', -3],
+   17|   tedio: ['-10%', 650, '', 0],
+   18|   carinho: ['-6%', 420, 'softvoice', 0],
+   19|   desafio: ['+10%', 300, 'determined', 0],
+   20|   pensando: ['-4%', 600, 'confused', 0],
+   21|   preocupado: ['+0%', 380, 'fearful', 0],
+   22|   festa: ['+15%', 260, 'excited', 0],
+   23|   surpresa: ['+12%', 300, 'surprised', 0],
+   24|   triste: ['-12%', 650, 'sad', 0],
+   25|   julgando: ['-3%', 520, '', 0],
+   26|   espiando: ['-18%', 500, 'whispering', 0],
+   27|   recompondo: ['-3%', 300, 'neutral', 8],
+   28|   medo: ['+5%', 280, 'fearful', 0],
+   29|   ansiedade: ['+5%', 260, 'fearful', 5],
+   30|   vergonha: ['-8%', 480, 'embarrassed', -5],
+   31|   nojo: ['+0%', 450, 'disgusted', 0],
+   32|   nostalgia: ['-6%', 560, 'neutral', -5],
+   33|   alivio: ['-3%', 340, 'neutral', 5],
+   34| };
+   35| // mudou a tabela ou o SSML? Suba, senão o cache devolve a voz antiga
+   36| export const VOZ_SSML_VERSAO = 1;
+   37| 
+   38| /** Texto já limpo (sem < > & ") → SSML, igual ao Perfil. */
+   39| export function vozSsml(nome, t, rateN, pitch, e, estilos) {
+   40|   const [vol, pausa, estilo, dRate] = VOZ_EMOCOES[e] || VOZ_EMOCOES.calmo;
+   41|   const rn = Math.round((Number(rateN) || 0) + (dRate || 0)), rate = (rn >= 0 ? '+' : '') + rn + '%';
+   42|   if (!/[.!?…]$/.test(t)) t += '.'; // sem ponto no fim, a voz às vezes "solta o ar"
+   43|   let corpo = t
+   44|     .replace(/^(ah+|hm+|hum+|u[eé]|ops|opa|uau|eita|nossa|vish|oxe|aff)([,!.]?)\s+(?!⏸)/i, (m, a, pt) => `${a}${pt || ','}<break time="220ms"/> `)
+   45|     .replace(/\s*⏸\s*/g, `<break time="${pausa}ms"/> `)
+   46|     .replace(/\p{L}*(\p{L})\1{2,}\p{L}*/gu, w => `<prosody rate="-15%" volume="+20%">${w.replace(/(\p{L})\1{2,}/gu, '$1').toLowerCase()}</prosody>`)
+   47|     .replace(/(^|[^\p{L}])(\p{Lu}{4,})(?![\p{L}])/gu, (m, a, w) => `${a}<prosody volume="+25%"${estilos ? '' : ' pitch="+8%"'}>${w.toLowerCase()}</prosody>`);
+   48|   corpo = `<prosody rate="${rate}"${estilos ? '' : ` pitch="${pitch}"`} volume="${vol}">${corpo}</prosody>`;
+   49|   if (estilos && estilo) corpo = `<mstts:express-as style="${estilo}">${corpo}</mstts:express-as>`;
+   50|   return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="pt-BR"><voice name="${nome}">${corpo}</voice></speak>`;
+   51| }
+   52| 
+   53| /** Vozes do servidor, na ordem de tentativa ("mai" primeiro, se tiver; a "padrao" é a reserva). */
+   54| export function vozesDoServidor(env) {
+   55|   const url = (reg, teste) => teste || `https://${String(reg).replace(/[^a-z0-9]/g, '')}.tts.speech.microsoft.com/cognitiveservices/v1`;
+   56|   const nome = (n, pad) => String(n || pad).replace(/[^A-Za-z0-9:.-]/g, '');
+   57|   const out = [];
+   58|   if (env.AZURE_MAI_KEY && env.AZURE_MAI_REGION)
+   59|     out.push({ id: 'mai', chave: env.AZURE_MAI_KEY, url: url(env.AZURE_MAI_REGION, env.AZURE_MAI_URL), nome: nome(env.AZURE_MAI_VOZ, 'pt-BR-Caio:MAI-Voice-2.1-Flash'), estilos: true });
+   60|   if (env.AZURE_SPEECH_KEY && env.AZURE_SPEECH_REGION)
+   61|     out.push({ id: 'padrao', chave: env.AZURE_SPEECH_KEY, url: url(env.AZURE_SPEECH_REGION, env.AZURE_URL), nome: nome(env.AZURE_VOZ, 'pt-BR-AntonioNeural'), estilos: !!env.AZURE_ESTILOS && env.AZURE_ESTILOS !== '0' });
+   62|   return out;
+   63| }
+   64| 
+   65| export function vozEstado(env) {
+   66|   const v = vozesDoServidor(env);
+   67|   return { ligada: v.length > 0, vozes: v.map(x => x.id) }; // só os nomes (mai, padrao), nunca as chaves
+   68| }
+   69| 
+   70| // em memória (uma pessoa por app): voz principal fora do ar e ritmo por endereço
+   71| const vozFora = {};
+   72| const ritmoVoz = new Map();
+   73| const json = (dados, status, h) => new Response(JSON.stringify(dados), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...h } });
+   74| 
+   75| /** POST /voz { t, r, p, e } → MP3 (ou JSON de erro; aí o app fala com a voz do aparelho). */
+   76| export async function vozFalar(req, env, h = {}) {
+   77|   const vozes = vozesDoServidor(env);
+   78|   if (!vozes.length) return json({ erro: 'Voz natural não configurada no servidor.' }, 503, h);
+   79|   let d;
+   80|   try {
+   81|     const bruto = await req.text();
+   82|     if (bruto.length > 4000) return json({ erro: 'grande' }, 413, h);
+   83|     d = JSON.parse(bruto);
+   84|   } catch {
+   85|     return json({ erro: 'json' }, 400, h);
+   86|   }
+   87|   const t = String(d?.t || '').replace(/[\u0000-\u001f<>&"]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 400);
+   88|   if (!t) return json({ erro: 'vazio' }, 400, h);
+   89|   const num = (v, a, b) => Math.max(a, Math.min(b, Number.isFinite(+v) ? +v : 1));
+   90|   const r = Math.round(num(d.r, 0.5, 2) * 20) / 20, p = Math.round(num(d.p, 0.5, 2) * 20) / 20;
+   91|   const e = Object.prototype.hasOwnProperty.call(VOZ_EMOCOES, d.e) ? d.e : '';
+   92|   const kv = env.CARTEIRA_KV;
+   93|   // x-voz exposto (17/11): o "Testar a voz" do app mostra qual voz respondeu
+   94|   const mp3 = (dados, origem) => new Response(dados, { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'public, max-age=604800', 'x-voz': origem, 'access-control-expose-headers': 'x-voz', ...h } });
+   95|   const chaveDe = async v => {
+   96|     const dig = await crypto.subtle.digest('SHA-256', new TextEncoder().encode([v.nome, r, p, t, e, v.estilos ? 1 : 0, VOZ_SSML_VERSAO].join('|')));
+   97|     return 'voz:' + [...new Uint8Array(dig)].map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 40);
+   98|   };
+   99|   const agora = Date.now();
+  100|   const pausa = Number(env.VOZ_PAUSA_MS) > 0 ? Number(env.VOZ_PAUSA_MS) : 600e3;
+  101|   const ativas = vozes.filter((v, i) => i === vozes.length - 1 || !(agora - (vozFora[v.id] || 0) < pausa));
+  102|   // a mesma fala, do mesmo jeito, volta do cache (as falas se repetem muito: não gasta o Azure de novo)
+  103|   if (kv) for (const v of ativas) {
+  104|     const g = await kv.get(await chaveDe(v), 'arrayBuffer');
+  105|     if (g) return mp3(g, 'guardada');
+  106|   }
+  107|   const ip = req.headers.get('cf-connecting-ip') || 'x';
+  108|   const rv = (ritmoVoz.get(ip) || []).filter(x => agora - x < 3600e3);
+  109|   if (rv.length >= 400) return json({ erro: 'calma' }, 429, h);
+  110|   rv.push(agora);
+  111|   ritmoVoz.set(ip, rv);
+  112|   // teto do mês em letras (padrão 100 mil: com os 400 mil do Perfil, cabe nas 500 mil grátis do Azure, se a conta for a mesma)
+  113|   const mes = new Date().toISOString().slice(0, 7);
+  114|   const teto = Number(env.VOZ_TETO_MES) > 0 ? Number(env.VOZ_TETO_MES) : 100000;
+  115|   const gasto = kv ? Number(await kv.get(`voz:mes:${mes}`)) || 0 : 0;
+  116|   if (gasto + t.length > teto) return json({ erro: 'teto' }, 429, h);
+  117|   const pct = (x, k) => (x >= 1 ? '+' : '') + Math.round((x - 1) * k) + '%';
+  118|   let ultimo = 0;
+  119|   for (const v of ativas) {
+  120|     let az = null;
+  121|     try {
+  122|       az = await fetch(v.url, {
+  123|         method: 'POST',
+  124|         headers: { 'Ocp-Apim-Subscription-Key': v.chave, 'Content-Type': 'application/ssml+xml', 'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3', 'User-Agent': 'carteira-jf' },
+  125|         body: vozSsml(v.nome, t, Math.round((r - 1) * 100), pct(p, 40), e, v.estilos),
+  126|       });
+  127|     } catch { az = null; }
+  128|     if (!az || !az.ok) {
+  129|       ultimo = az ? az.status : 0;
+  130|       vozFora[v.id] = agora;
+  131|       continue;
+  132|     }
+  133|     const dados = await az.arrayBuffer();
+  134|     if (kv) {
+  135|       await kv.put(`voz:mes:${mes}`, String(gasto + t.length), { expirationTtl: 40 * 86400 });
+  136|       if (dados.byteLength > 0 && dados.byteLength < 1900000) await kv.put(await chaveDe(v), dados, { expirationTtl: 30 * 86400 });
+  137|     }
+  138|     return mp3(dados, 'nova:' + v.id);
+  139|   }
+  140|   return json({ erro: 'azure', status: ultimo }, 502, h);
+  141| }
+  142| 
+  143| /** Só pros testes: limpa o que fica em memória. */
+  144| export function _zerarVoz() {
+  145|   for (const k of Object.keys(vozFora)) delete vozFora[k];
+  146|   ritmoVoz.clear();
+  147| }
+  148| 

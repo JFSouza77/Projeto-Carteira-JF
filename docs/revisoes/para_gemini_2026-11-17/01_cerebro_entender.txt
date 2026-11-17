@@ -1,0 +1,1067 @@
+BLOCO: Cérebro do C.A.O.S., parte 1: como ele ENTENDE a frase (entender, acharPesquisa, corretor, gírias)
+App C.A.O.S. Finanças 2.1.8.1 Alfa · C.A.O.S. 2.4.3 · núcleo 1.8.0 · 17/11/2026
+
+
+===== ARQUIVO: js/caos/conversa.js (linhas 1 a 1061) =====
+
+    1| // Conversa com o C.A.O.S. (offline, sem IA): entende a pergunta por palavras-chave e responde com os números
+    2| // do motor. Só leitura: quando a pessoa pede um registro ("gastei 30 no mercado"), ele devolve uma PROPOSTA
+    3| // ({ acao }) e quem grava é o app, depois do Confirmar (1ª lei).
+    4| 
+    5| import {
+    6|   formatBRL, parseAmount, periodRange, ofensiva, aReceber, comReforco, sumInRange, topCategories, summarizeMonth, forecastMonth,
+    7|   incomeIn, monthKey, shiftMonth, monthLabel, accountBalance, accountLabel, totalBalance, analyze, folgaDoPiso, dividirEntrePisos, resumoPisos, sugerirTransferencias,
+    8|   spentIn, toISODate, INCOME_SOURCES, idadeDe, faixaEtaria, situacaoCompromissos, analisarPlanejamento, cabeNoMes, sugerirCategoria, palavrasDe, faturaDoCartao, progressoMeta, resumoInvestimentos,
+    9|   formiguinhas, FORMIGA_LIMITE_CENTS,
+   10| } from '../engine.js';
+   11| import { IDENTIDADE, textoPodeNaoPode, textoVida, textoComoFunciona, textoPrivacidade } from './identidade.js';
+   12| import { acharTermo, ATUALIZADO_EM, GLOSSARIO } from './glossario.js';
+   13| import { acharMoedaJogo, lerPacote, DICA_SEGURANCA, MOEDAS_JOGOS } from './moedas_jogos.js';
+   14| import { lerPorcentagem, textoPorcentagem, lerOfertas, analisarOfertas, textoOfertas, lerOfertaUnica, textoOfertaUnica } from './ofertas.js';
+   15| 
+   16| const GLOSSARIO_POR_TERMO = new Map(GLOSSARIO.map(g => [g.termo, g]));
+   17| import { textoTendencia, quandoFoi, mercadoVelho } from '../mercado.js';
+   18| 
+   19| const norm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+   20|   .replace(/\bc\.\s?a\.\s?o\.\s?s\b\.?/g, 'caos') // "C.A.O.S." = "caos"
+   21|   .replace(/%/g, ' porcento ') // "1%" vira "1 porcento" (a calculadora de juros precisa)
+   22|   .replace(/[^\w\s,.$+*/×÷-]/g, ' ').replace(/\s+/g, ' ').trim(); // + * / × ÷ ficam: matemática básica (13/11)
+   23| 
+   24| // Palavras que levam a cada categoria (além do próprio nome dela)
+   25| const SINONIMOS = {
+   26|   mercado: ['mercado', 'supermercado', 'feira', 'acougue', 'padaria', 'hortifruti', 'atacadao', 'compras do mes', 'cerveja', 'refrigerante', 'bebida'],
+   27|   delivery: ['delivery', 'ifood', 'i food', 'rappi', 'pedido de comida', 'pedi comida', 'lanche em casa'],
+   28|   restaurante: ['restaurante', 'almoco', 'jantar', 'lanche', 'lanchonete', 'bar', 'cafe', 'pizzaria', 'hamburguer', 'sorvete', 'casquinha', 'acai', 'pastel', 'salgado', 'coxinha', 'mcdonalds', 'mcdonald s', 'mc donalds', 'burger king', 'subway', 'bobs'],
+   29|   transporte: ['transporte', 'uber', '99', 'onibus', 'metro', 'gasolina', 'combustivel', 'estacionamento', 'pedagio', 'taxi', 'carro', 'posto', 'etanol', 'alcool', 'diesel'],
+   30|   moradia: ['moradia', 'aluguel', 'condominio', 'iptu', 'casa'],
+   31|   contas: ['contas', 'conta de luz', 'luz', 'agua', 'internet', 'celular', 'telefone', 'gas', 'energia', 'boleto'],
+   32|   saude: ['saude', 'farmacia', 'remedio', 'medico', 'consulta', 'exame', 'dentista', 'plano de saude', 'academia'],
+   33|   lazer: ['lazer', 'cinema', 'show', 'festa', 'viagem', 'passeio'],
+   34|   // revisão do Gemini (16/11): jogo tinha ficado em Lazer depois que a categoria Jogos nasceu (2.2.8)
+   35|   jogos: ['jogos', 'jogo', 'game', 'games', 'steam', 'psn', 'xbox', 'nintendo', 'skin', 'passe de batalha', 'robux', 'vbucks'],
+   36|   // Streaming (06/11, pedido do JF): fica explícito, separado de Lazer e de Contas
+   37|   streaming: ['streaming', 'netflix', 'mercado play', 'disney', 'disney plus', 'hbo', 'hbo max', 'max', 'paramount',
+   38|     'paramount plus', 'prime video', 'amazon prime', 'globoplay', 'apple tv', 'crunchyroll', 'spotify', 'deezer',
+   39|     'youtube premium', 'star plus', 'telecine', 'assinatura de filme'],
+   40|   compras: ['compras', 'roupa', 'tenis', 'sapato', 'shopping', 'presente', 'eletronico', 'loja', 'shopee', 'amazon', 'mercado livre', 'shein', 'aliexpress'],
+   41|   // Educação (JF, 13/11): faculdade e bolsa de estudos
+   42|   educacao: ['educacao', 'faculdade', 'mensalidade', 'curso', 'escola', 'colegio', 'material escolar', 'livro', 'apostila', 'matricula', 'pos graduacao', 'pos', 'ingles', 'idiomas', 'cursinho', 'universidade', 'fies'],
+   43|   outros: ['outros', 'outro', 'diversos'],
+   44| };
+   45| 
+   46| const FONTES = {
+   47|   salario: ['salario', 'pagamento', 'holerite', 'vale'],
+   48|   freela: ['freela', 'freelance', 'bico', 'extra', 'servico', 'trampo'],
+   49|   rendimento: ['rendimento', 'rendimentos', 'juros', 'dividendo', 'dividendos', 'investimento', 'cdb', 'poupanca', 'tesouro'],
+   50|   presente: ['presente', 'pix', 'me deu', 'ganhei', 'mesada'],
+   51|   outros: ['outros', 'outro'],
+   52| };
+   53| 
+   54| function acharCategoria(t, categorias) {
+   55|   let melhor = null;
+   56|   const temJogos = categorias.some(c => c.id === 'jogos'); // sem a categoria Jogos, jogo continua em Lazer
+   57|   for (const c of categorias) {
+   58|     const chaves = [norm(c.name), ...(SINONIMOS[c.id] || []), ...(c.id === 'lazer' && !temJogos ? SINONIMOS.jogos : [])];
+   59|     for (const k of chaves) {
+   60|       if (k && new RegExp(`(^|\\s)${k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\s|$)`).test(t)) {
+   61|         if (!melhor || k.length > melhor.k.length) melhor = { c, k };
+   62|       }
+   63|     }
+   64|   }
+   65|   return melhor ? melhor.c : null;
+   66| }
+   67| 
+   68| function acharFonte(t) {
+   69|   for (const [id, chaves] of Object.entries(FONTES)) if (chaves.some(k => t.includes(k))) return id;
+   70|   return null;
+   71| }
+   72| 
+   73| function acharPeriodo(t) {
+   74|   if (/\bhoje\b/.test(t)) return 'hoje';
+   75|   if (/\bontem\b/.test(t)) return 'ontem';
+   76|   if (/mes passado|ultimo mes|mes anterior/.test(t)) return 'mes_passado';
+   77|   if (/semana|7 dias|sete dias/.test(t)) return 'semana';
+   78|   if (/\bano\b/.test(t)) return 'ano';
+   79|   return 'mes';
+   80| }
+   81| 
+   82| // ---------- Professor de finanças: calculadoras (13/11) ----------
+   83| 
+   84| /** "juros compostos de 1000 a 1% por 12 meses" → { tipo, valor, taxa (fração ao mês), meses }. */
+   85| export function lerCalculoJuros(texto) {
+   86|   const t = String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+   87|   const PCT = '(?:%|porcento|por cento)';
+   88|   const temPct = new RegExp(`\\d\\s*${PCT}`).test(t);
+   89|   const tipo = /juros? compost/.test(t) ? 'compostos' : /juros? simples/.test(t) ? 'simples' : /(quanto (rende|renderia|vai render|fica)|se eu (guardar|investir|aplicar))/.test(t) && temPct ? 'compostos' : null;
+   90|   if (!tipo) return null;
+   91|   const taxa = t.match(new RegExp(`(\\d+(?:[.,]\\d+)?)\\s*${PCT}\\s*(ao|a|por)?\\s*(mes|ano|a\\.?m\\.?|a\\.?a\\.?)?`));
+   92|   const prazo = t.match(/(\d+)\s*(meses|mes|anos|ano)\b/);
+   93|   const semTaxa = t.replace(new RegExp(`(\\d+(?:[.,]\\d+)?)\\s*${PCT}`, 'g'), ' ').replace(/(\d+)\s*(meses|mes|anos|ano)\b/g, ' ');
+   94|   const valor = acharValor(semTaxa);
+   95|   if (!taxa || !prazo || !valor) return { tipo, faltando: true };
+   96|   let i = Number(taxa[1].replace(',', '.')) / 100;
+   97|   const anual = /ano|a\.?a/.test(taxa[3] || '');
+   98|   let meses = Number(prazo[1]) * (/ano/.test(prazo[2]) ? 12 : 1);
+   99|   // taxa ao ano: no composto vira a mensal equivalente; no simples, divide por 12
+  100|   const iSimples = anual ? i / 12 : i;
+  101|   const iComposto = anual ? Math.pow(1 + i, 1 / 12) - 1 : i;
+  102|   if (meses > 600 || i > 1) return { tipo, faltando: true };
+  103|   return { tipo, valor, taxa: tipo === 'simples' ? iSimples : iComposto, taxaSimples: iSimples, meses, taxaTexto: `${taxa[1]}% ${anual ? 'ao ano' : 'ao mês'}` };
+  104| }
+  105| 
+  106| /** Juros: valor final e quanto foi de juros (centavos). */
+  107| export function calcularJuros({ tipo, valor, taxa, meses }) {
+  108|   const final = tipo === 'simples' ? valor * (1 + taxa * meses) : valor * Math.pow(1 + taxa, meses);
+  109|   return { finalCents: Math.round(final), jurosCents: Math.round(final - valor) };
+  110| }
+  111| 
+  112| /** "parcelar 3000 em 10x de 330" ou "3000 a vista ou 10x de 330" → { vista, n, parcela }. */
+  113| export function lerParcelamento(t) {
+  114|   const n = t.match(/(\d{1,2})\s*x|em (\d{1,2}) (vezes|parcelas)/);
+  115|   const parcela = t.match(/(?:x|vezes|parcelas) de (?:r\$\s?)?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)/);
+  116|   const resto = t.replace(/(\d{1,2})\s*x(?: de (?:r\$\s?)?\d+(?:[.,]\d{1,2})?)?/g, ' ').replace(/em \d{1,2} (vezes|parcelas)(?: de (?:r\$\s?)?\d{1,3}(?:\.\d{3})*(?:[.,]\d{1,2})?)?/g, ' ');
+  117|   const vista = acharValor(resto);
+  118|   return { vista: vista || null, n: n ? Number(n[1] || n[2]) : null, parcela: parcela ? parseAmount(parcela[1]) : null };
+  119| }
+  120| 
+  121| /** Data de um lançamento atrasado: "ontem", "anteontem", "dia 10" (do mês atual, ou do anterior se ainda não chegou). */
+  122| export function dataDoTexto(t, today) {
+  123|   const menos = n => { const d = new Date(`${today}T12:00:00`); d.setDate(d.getDate() - n); return toISODate(d); };
+  124|   if (/\banteontem\b/.test(t)) return menos(2);
+  125|   if (/\bontem\b/.test(t)) return menos(1);
+  126|   // dia da semana (14/11): "foi na quarta" = a última quarta (hoje, se hoje for quarta)
+  127|   const sem = t.match(/\b(domingo|segunda|terca|quarta|quinta|sexta|sabado)(?:[- ]feira)?\b/);
+  128|   if (sem) {
+  129|     const alvo = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'].indexOf(sem[1]);
+  130|     const hoje = new Date(`${today}T12:00:00`).getDay();
+  131|     return menos((hoje - alvo + 7) % 7);
+  132|   }
+  133|   const m = t.match(/\bdia (\d{1,2})\b/);
+  134|   if (m) {
+  135|     const dia = Number(m[1]);
+  136|     const mes = Number(today.slice(8, 10)) >= dia ? today.slice(0, 7) : shiftMonth(today.slice(0, 7), -1);
+  137|     const ultimo = new Date(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0).getDate();
+  138|     // "dia 31" num mês de 30 dias: último dia do mês (achado do Gemini), em vez de cair calado em hoje
+  139|     if (dia >= 1 && dia <= 31) return `${mes}-${String(Math.min(dia, ultimo)).padStart(2, '0')}`;
+  140|   }
+  141|   return today;
+  142| }
+  143| 
+  144| function avisoDaData(data, today) {
+  145|   if (data === today) return null;
+  146|   return `Vou anotar com a data de ${Number(data.slice(8, 10))}/${Number(data.slice(5, 7))}.`;
+  147| }
+  148| 
+  149| // Hora não é dinheiro (JF, 14/11: "foi na quarta 09:15 da manhã" virava R$ 9,00)
+  150| const HORAS = /\b\d{1,2}[:h]\d{2}\b|\b\d{1,2}h\b|\bas \d{1,2}(?:h| horas?)?\b|\b\d{1,2} ?(?:h|horas?)?(?= (?:da manha|da tarde|da noite|da madrugada)\b)/g;
+  151| // Nome de banco com número não é valor (16/11: "já paguei a fatura do C6" virava gasto de R$ 6)
+  152| const BANCO_COM_NUMERO = /\b(c6( bank)?|99( ?pay| ?food)?|bs2|b3|n26)\b/g;
+  153| function acharValor(t) {
+  154|   t = String(t).replace(HORAS, ' ').replace(BANCO_COM_NUMERO, ' ');
+  155|   const m = t.match(/(?:r\$\s?)?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(reais|real|conto|pila|r\$)?/);
+  156|   return m ? parseAmount(m[1]) : null;
+  157| }
+  158| 
+  159| // ---------- Cérebro que interpreta (1.6.0) ----------
+  160| // Erro de digitação: palavra parecida com uma do vocabulário dele vira a palavra certa ("qunto gastie" → "quanto gastei").
+  161| const VOCAB = [
+  162|   'quanto', 'quando', 'gastei', 'gastou', 'gastos', 'gasto', 'gastar', 'paguei', 'despesa', 'despesas', 'mercado',
+  163|   'supermercado', 'delivery', 'restaurante', 'transporte', 'moradia', 'contas', 'saude', 'lazer', 'compras', 'outros',
+  164|   'saldo', 'orcamento', 'limite', 'entrada', 'entradas', 'salario', 'rendimento', 'rendimentos', 'recebi', 'planejado',
+  165|   'planejei', 'planejamento', 'programado', 'compromisso', 'compromissos', 'vencimento', 'previsao', 'alerta', 'alertas',
+  166|   'guardado', 'poupado', 'banco', 'bancos', 'semana', 'passado', 'anterior', 'comparar', 'media', 'maior', 'piada',
+  167|   'ajuda', 'obrigado', 'cotacao', 'dolar', 'bitcoin', 'investir', 'pagar', 'farmacia', 'gasolina', 'aluguel', 'internet',
+  168|   'padaria', 'cinema', 'presente', 'sobrou', 'situacao', 'resumo', 'categoria', 'gastando', 'ontem', 'hoje', 'mes',
+  169| ];
+  170| // Palavras comuns que NÃO são erro (não corrigir pra parecida: "conta" ≠ "contas", "comprar" ≠ "compras").
+  171| const CONHECIDAS = [
+  172|   'ofensiva', 'foguinho', 'seguidos', 'seguida', 'sequencia', 'receber', 'devem', 'deve', 'rachei', 'rachar', 'rachada', 'rachadinha', 'dividi', 'dividir',
+  173|   'conta', 'comprar', 'compra', 'comprei', 'gasta', 'gastas', 'pago', 'paga', 'pagou', 'mais', 'menos', 'tenho', 'temos',
+  174|   'posso', 'pode', 'mesmo', 'sobre', 'meus', 'minha', 'minhas', 'quero', 'queria', 'falar', 'fala', 'coisa', 'coisas',
+  175|   'tudo', 'isso', 'esse', 'essa', 'este', 'esta', 'para', 'pela', 'pelo', 'dele', 'dela', 'voce', 'ainda', 'ganhei',
+  176|   'total', 'cabe', 'qual', 'quais', 'onde', 'como', 'vale', 'valeu', 'carro', 'casa', 'loja', 'festa', 'dinheiro',
+  177|   'comida', 'conto', 'reais', 'real', 'preciso', 'sabe', 'saber', 'cartao', 'fatura', 'poupar', 'guardar', 'dica',
+  178|   'dicas', 'algo', 'alguma', 'algum', 'muito', 'pouco', 'agora', 'depois', 'antes', 'sempre', 'nunca', 'tambem',
+  179|   'obrigada', 'brigado', 'certo', 'errado', 'legal', 'bom', 'boa', 'noite', 'tarde', 'manha', 'cade', 'quem', 'porque',
+  180|   'pois', 'entao', 'assim', 'aqui', 'juros', 'renda', 'banca', 'passa', 'passei', 'gastamos', 'ganho', 'ganha', 'mesada',
+  181|   'lanche', 'pizza', 'mercados', 'plano', 'planos', 'planejar', 'pagamento', 'pagamentos', 'gastando', 'gostei',
+  182|   'sobra', 'sobrar', 'falta', 'faltam', 'planejo', 'anotar', 'lancar', 'quero', 'investido', 'investida', 'investidos',
+  183|   'investimento', 'investimentos', 'aplicado', 'aplicacao', 'aplicacoes', 'rendeu', 'renderam', 'semanas', 'meses', 'dias', 'ano', 'anos', 'contar', 'contei', 'conte',
+  184|   // revisão do Gemini (16/11, conferida): "gosto" virava "gasto", "gato" virava "gasto", "mesa" virava "mes",
+  185|   // "maio" virava "maior", "parar" virava "pagar", "home" virava "hoje"
+  186|   'cinemark', 'cinepolis', 'kinoplex', 'pipoca', 'ingresso', 'ingressos', 'shopping', 'shoppings', // 2.3.9: cinema não vira outra palavra
+  187|   'gosto', 'gosta', 'gostou', 'gato', 'gatos', 'gata', 'mesa', 'mesas', 'maio', 'marco', 'abril', 'junho', 'julho', 'agosto',
+  188|   'parar', 'parei', 'home', 'meta', 'metas', 'jogo', 'jogos', 'game', 'games', 'pasta', 'gesto', 'menos', 'massa',
+  189| ];
+  190| // palavras do glossário não são "corrigidas" (bug de 13/11: "pé de meia" virava "pé de média")
+  191| const VOCAB_SET = new Set([...VOCAB, ...CONHECIDAS, ...GLOSSARIO.flatMap(g => g.chaves.flatMap(k => k.split(' ')))]);
+  192| 
+  193| /** Distância de edição com troca de letras vizinhas contando 1 ("gastie" ~ "gastei"). */
+  194| function distancia(a, b, max) {
+  195|   if (Math.abs(a.length - b.length) > max) return max + 1;
+  196|   const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  197|   for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  198|   for (let i = 1; i <= a.length; i++) {
+  199|     for (let j = 1; j <= b.length; j++) {
+  200|       const c = a[i - 1] === b[j - 1] ? 0 : 1;
+  201|       d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c);
+  202|       if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+  203|     }
+  204|   }
+  205|   return d[a.length][b.length];
+  206| }
+  207| 
+  208| export function corrigirDigitacao(t, extras = []) {
+  209|   const vocab = [...VOCAB, ...extras];
+  210|   return String(t).split(' ').map(w => {
+  211|     if (w.length < 4 || VOCAB_SET.has(w) || extras.includes(w) || /\d/.test(w)) return w;
+  212|     const max = w.length >= 8 ? 2 : 1;
+  213|     let melhor = null;
+  214|     for (const v of vocab) {
+  215|       if (Math.abs(v.length - w.length) > max || v[0] !== w[0]) continue; // primeira letra quase nunca erra
+  216|       // 4 letras tem vizinho demais (mesa/mes, home/hoje): aí só vale a letra que faltou ("sado" → "saldo") (16/11)
+  217|       if (w.length === 4 && v.length <= w.length) continue;
+  218|       const dd = distancia(w, v, max);
+  219|       if (dd <= max && (!melhor || dd < melhor.d)) melhor = { v, d: dd };
+  220|     }
+  221|     return melhor ? melhor.v : w;
+  222|   }).join(' ');
+  223| }
+  224| 
+  225| // Continuação da conversa ("e no mês passado?", "e em delivery?") reaproveita a última pergunta.
+  226| const REUSAVEIS = new Set(['gasto_total', 'maior_gasto', 'entradas', 'media', 'orcamento', 'saldo', 'previsao', 'comparar']);
+  227| const mencionaPeriodo = t => /\b(hoje|ontem|semana|7 dias|sete dias|ano|mes passado|ultimo mes|mes anterior|este mes|esse mes|neste mes|nesse mes)\b/.test(t);
+  228| 
+  229| // Melhor palpite quando não dá pra ter certeza: a intenção com mais pistas na frase.
+  230| const PISTAS = {
+  231|   gasto_total: ['gast', 'despes', 'paguei', 'saiu'],
+  232|   saldo: ['saldo', 'banco', 'guard', 'poup', 'conta'],
+  233|   entradas: ['recebi', 'salario', 'entrada', 'renda', 'rendiment'],
+  234|   planos: ['plane', 'program', 'comprar'],
+  235|   pagar: ['pagar', 'venc', 'boleto', 'fatura'],
+  236|   orcamento: ['limite', 'orcament', 'sobr'],
+  237|   alertas: ['alerta', 'situac', 'resumo', 'problema'],
+  238|   maior_gasto: ['maior', 'mais'],
+  239|   previsao: ['previs', 'fim do mes', 'ritmo'],
+  240| };
+  241| 
+  242| function palpite(t) {
+  243|   let melhor = null;
+  244|   for (const [intent, pistas] of Object.entries(PISTAS)) {
+  245|     const n = pistas.filter(p => t.includes(p)).length;
+  246|     if (n && (!melhor || n > melhor.n)) melhor = { intent, n };
+  247|   }
+  248|   return melhor?.intent || null;
+  249| }
+  250| 
+  251| /**
+  252|  * Descobre a intenção. Função pura e testável.
+  253|  * `anterior` = a última pergunta entendida ({ intent, categoryId, periodo }), pra continuar a conversa.
+  254|  */
+  255| // Abreviações e gírias (06/11, pedido do JF): "vc", "cê", "tbm", "q", "pq", "hj", "qnto"… viram a palavra inteira.
+  256| const GIRIAS = {
+  257|   vc: 'voce', vcs: 'voces', ce: 'voce', oce: 'voce', tb: 'tambem', tbm: 'tambem', tmb: 'tambem', q: 'que', oq: 'o que',
+  258|   pq: 'por que', pk: 'por que', ta: 'esta', tao: 'estao', to: 'estou', td: 'tudo', tds: 'todos', mt: 'muito', mto: 'muito',
+  259|   mta: 'muita', blz: 'beleza', obg: 'obrigado', vlw: 'valeu', msm: 'mesmo', hj: 'hoje', qnt: 'quanto', qto: 'quanto',
+  260|   qnto: 'quanto', qnd: 'quando', qdo: 'quando', n: 'nao', naum: 'nao', nn: 'nao', eh: 'e', dps: 'depois', agr: 'agora',
+  261|   cmg: 'comigo', ctg: 'contigo', pfv: 'por favor', pf: 'por favor', sla: 'sei la', tlgd: 'ta ligado', mn: 'mano', vdd: 'verdade',
+  262|   grana: 'dinheiro', bufunfa: 'dinheiro', din: 'dinheiro', gastano: 'gastando', torrei: 'gastei', rango: 'comida',
+  263|   // atalhos de finanças do brasileiro (sugestão do Gemini, 06/11)
+  264|   // mais gírias (JF, 13/11 à noite)
+  265|   fds: 'fim de semana', tmj: 'tamo junto', pprt: 'papo reto', mlk: 'moleque', slk: 'sei la', vey: 'veio', kkk: 'haha', kkkk: 'haha', rs: 'haha', rsrs: 'haha',
+  266|   cc: 'cartao', vr: 'restaurante', va: 'mercado', xopi: 'shopee', chopi: 'shopee', xopee: 'shopee', mercadolivre: 'mercado livre', ml: 'mercado livre',
+  267| };
+  268| export function expandirGirias(t) {
+  269|   return String(t).split(' ').map(w => GIRIAS[w] ?? w).join(' ');
+  270| }
+  271| 
+  272| // ---------- Palavrão (JF, 13/11 à noite: "ele tem que entender o palavrão, até abreviado, tipo KRLH") ----------
+  273| // Ele ENTENDE, mas nunca responde com palavrão. Dois casos:
+  274| //  · xingar o C.A.O.S. ("vsf caos", "você é um lixo") → resposta de xingamento (calma, sem revidar);
+  275| //  · desabafo ("krlh, gastei 500 no mercado") → tira o palavrão e entende o pedido normal; se só sobrou o palavrão,
+  276| //    ele pergunta o que houve. Assim "que merda, quanto gastei?" deixa de virar xingamento.
+  277| const PALAVROES = {
+  278|   caralho: 'caralho', krlh: 'caralho', krl: 'caralho', crl: 'caralho', crlh: 'caralho', karalho: 'caralho', caraio: 'caralho', carai: 'caralho', caramba: 'caramba', krai: 'caralho',
+  279|   porra: 'porra', poha: 'porra', pora: 'porra', prr: 'porra', porr: 'porra', merda: 'merda', mrd: 'merda', bosta: 'bosta', cacete: 'cacete', kct: 'cacete',
+  280|   pqp: 'puta que pariu', putz: 'putz', puts: 'putz', droga: 'droga', inferno: 'inferno', desgraca: 'desgraca', dsgrc: 'desgraca', mds: 'meu deus', aff: 'aff', afe: 'aff',
+  281|   foda: 'foda', fodase: 'foda-se', fdse: 'foda-se', fudeu: 'fudeu', fodeu: 'fudeu', fudido: 'fudido', lascou: 'lascou', saco: 'saco',
+  282| };
+  283| // ofensa: palavra que já é xingamento de alguém
+  284| const OFENSAS = {
+  285|   vsf: 'vai se foder', vtnc: 'vai tomar no cu', tnc: 'tomar no cu', fdp: 'filho da puta', vsfd: 'vai se foder', pnc: 'pau no cu',
+  286|   burro: 'burro', idiota: 'idiota', inutil: 'inutil', lixo: 'lixo', otario: 'otario', otaria: 'otaria', babaca: 'babaca', imbecil: 'imbecil',
+  287|   trouxa: 'trouxa', arrombado: 'arrombado', bocó: 'boco', boco: 'boco', retardado: 'retardado', estupido: 'estupido', jumento: 'jumento', anta: 'anta',
+  288|   porcaria: 'porcaria', chato: 'chato', ridiculo: 'ridiculo', palhaco: 'palhaco', escroto: 'escroto', cuzao: 'cuzao',
+  289| };
+  290| // Apelido de amigo (JF, 14/11: "eu chamo meus melhores amigos de corno, de vagabundo… é meu jeito de tratar o caos"):
+  291| // não é xingamento. Ele entende como tratamento de brother e responde a pergunta que veio junto.
+  292| const APELIDOS = {
+  293|   corno: 'corno', cornao: 'corno', vagabundo: 'vagabundo', vagabunda: 'vagabunda', vagaba: 'vagabundo', safado: 'safado', safada: 'safada',
+  294|   malandro: 'malandro', maluco: 'maluco', doido: 'doido', doida: 'doida', mane: 'mane', pilantra: 'pilantra', folgado: 'folgado',
+  295|   cabecudo: 'cabecudo', sacana: 'sacana', bandido: 'bandido', vacilao: 'vacilao',
+  296| };
+  297| const FRASES_OFENSA = /(vai (se|te) (foder|fuder|ferrar|lascar)|vai tomar no cu|filho da puta|odeio (voce|vc|o caos)|cala (a )?boca|tomar no cu)/;
+  298| const PARA_ELE = /\b(voce|vc|tu|caos|seu|sua|te|contigo)\b/;
+  299| /** Lê palavrão e ofensa. Devolve { limpo, palavrao, ofensa }. Pura. */
+  300| export function lerPalavroes(t) {
+  301|   const palavras = t.replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
+  302|   const temOfensa = FRASES_OFENSA.test(t) || palavras.some(w => OFENSAS[w]);
+  303|   const temPalavrao = palavras.some(w => PALAVROES[w]) || /puta que pariu|que merda|que porra/.test(t);
+  304|   // palavrão dito PRA ele ("caos de merda", "você é uma bosta") também é ofensa
+  305|   const ofensa = temOfensa || (temPalavrao && PARA_ELE.test(t) && /\b(e|eh|de|seu|sua|uma?|esse|essa)\b/.test(t) && palavras.length <= 7);
+  306|   // revisão do Gemini (16/11): "gastei 80 igual um maluco", "tô doido pra juntar" não é chamar ele de maluco/doido
+  307|   const adjetivo = /\b(to|estou|ta|esta|fiquei|ficou|igual (a )?(um|uma)|que nem (um|uma)|feito (um|uma)|tipo (um|uma)|como (um|uma))\s+(maluco|doido|doida|folgado|safado|safada)\b/.test(t);
+  308|   const apelido = !adjetivo && palavras.some(w => APELIDOS[w]);
+  309|   const limpo = palavras.filter(w => !PALAVROES[w] && !OFENSAS[w] && !APELIDOS[w]).join(' ')
+  310|     .replace(new RegExp(FRASES_OFENSA.source, 'g'), ' ').replace(/\b(puta que pariu|que (merda|porra))\b/g, ' ').replace(/^(que|mano|meu|ai|nossa|ah|eita)( |$)/, '').replace(/\s+/g, ' ').trim();
+  311|   return { limpo, palavrao: temPalavrao || temOfensa, ofensa, apelido };
+  312| }
+  313| 
+  314| // Sobrou só "e aí", "fala", "oi"… depois de tirar o apelido? Então foi só um chamado de amigo.
+  315| const SO_CHAMADO = /^(e ai|eai|fala|oi|ola|opa|salve|bom dia|boa tarde|boa noite|ei|ow|o|caos|meu|mano|ai|hein|ne)?( (caos|meu|mano|ai|hein|ne|ze))*$/;
+  316| 
+  317| // Planos guiados (JF, 16/11): compra, viagem, pet, moradia, transporte e economizar. "Ele não te dá a resposta: te
+  318| // orienta a chegar nela." Antes da IA, um questionário rápido sem IA (5 perguntas, uma por vez, com Pular), pra uma
+  319| // pesquisa só, certeira, sem inventar número. O orçamento é sempre o último.
+  320| const PRIVACIDADE = 'Fica tranquilo: esta conversa fica só no seu celular. Pra IA vai só o necessário, sem seu nome, e o servidor do app não guarda sua pergunta. Quer apagar? A lixeira do Chat limpa a conversa e a minha memória dela. ';
+  321| export const PASSOS_PESQUISA = Object.freeze({
+  322|   viagem: [
+  323|     { id: 'origem', rotulo: 'Saindo de', q: 'De onde você sai? (a cidade)' },
+  324|     { id: 'quando', rotulo: 'Quando e quem', q: 'Quando quer ir, por quantos dias e quantas pessoas? Tipo "janeiro, 7 dias, 2 pessoas".' },
+  325|     { id: 'incluir', rotulo: 'Pesquisar', q: 'O que eu pesquiso: passagem, hotel ou os dois?', chips: ['Passagem', 'Hotel', 'Os dois'] },
+  326|     { id: 'regiao', rotulo: 'Região ou tipo de hotel', q: 'Tem região ou tipo de hospedagem preferido? Tipo "perto da praia", "no centro", "pousada simples".' },
+  327|     { id: 'orcamento', rotulo: 'Orçamento', q: 'E o orçamento total? Me fala tipo "até 5000". Se não tiver, diz "sem orçamento".', chips: ['Sem orçamento'] },
+  328|   ],
+  329|   produto: [
+  330|     { id: 'detalhe', rotulo: 'Detalhes', q: 'Me descreve melhor: modelo, tamanho ou o que precisa ter? Tipo "300 litros, frost free".' },
+  331|     { id: 'uso', rotulo: 'Pra quê', q: 'É pra quê? Tipo "casa com 4 pessoas", "trabalho", "presente".' },
+  332|     { id: 'marca', rotulo: 'Marca', q: 'Tem marca preferida, ou alguma que você não quer?', chips: ['Tanto faz'] },
+  333|     { id: 'quando', rotulo: 'Precisa pra', q: 'Precisa pra quando?', chips: ['Urgente', 'Este mês', 'Sem pressa'] },
+  334|     { id: 'orcamento', rotulo: 'Orçamento', q: 'E o orçamento? Me fala tipo "até 5000". Se não tiver, diz "sem orçamento".', chips: ['Sem orçamento'] },
+  335|   ],
+  336|   pet: [
+  337|     { id: 'animal', rotulo: 'Bicho e porte', q: 'Qual bicho e de que porte? Tipo "cachorro pequeno, pinscher" ou "gato".' },
+  338|     { id: 'origem', rotulo: 'Adotar ou comprar', q: 'Vai adotar ou comprar?', chips: ['Adotar', 'Comprar'] },
+  339|     { id: 'cuidados', rotulo: 'Entra na conta', q: 'O que entra na conta? Ração, banho e tosa, veterinário, vacinas, plano de saúde pet…', chips: ['Tudo', 'Só o básico'] },
+  340|     { id: 'cidade', rotulo: 'Cidade', q: 'Em que cidade você mora? O preço muda bastante de lugar pra lugar.' },
+  341|     { id: 'orcamento', rotulo: 'Dá pra separar por mês', q: 'Quanto dá pra separar por mês pro pet? Tipo "até 300". Se não souber, diz "sem orçamento".', chips: ['Sem orçamento'] },
+  342|   ],
+  343|   moradia: [
+  344|     { id: 'atual', rotulo: 'Paga hoje', q: `${PRIVACIDADE}Quanto você paga hoje de moradia (aluguel com condomínio, ou parcela)?` },
+  345|     { id: 'regiao', rotulo: 'Cidade e bairro', q: 'Em que cidade e bairro? Não precisa de endereço: só o bairro.' },
+  346|     { id: 'trabalho', rotulo: 'Ida pro trabalho', q: 'Fica longe do trabalho ou do estudo? Como você vai: a pé, ônibus, carro, moto?' },
+  347|     { id: 'objetivo', rotulo: 'Quer', q: 'O que você quer: ver se está caro, mudar pra algo mais barato, ou comprar?', chips: ['Ver se está caro', 'Mudar', 'Comprar'] },
+  348|     { id: 'orcamento', rotulo: 'Teto por mês', q: 'Quanto dá pra pagar por mês de moradia, no máximo? Tipo "até 1500".', chips: ['Sem orçamento'] },
+  349|   ],
+  350|   transporte: [
+  351|     { id: 'rotina', rotulo: 'Rotina', q: `${PRIVACIDADE}Como é seu dia a dia: de qual bairro sai, pra qual vai e quantas vezes? Só bairros, sem endereço.` },
+  352|     { id: 'veiculo', rotulo: 'Vai de', q: 'Vai de quê hoje?', chips: ['Carro', 'Moto', 'Ônibus', 'App'] },
+  353|     { id: 'gasto', rotulo: 'Gasta por mês', q: 'Quanto gasta por mês com isso, mais ou menos? (gasolina, passagem, estacionamento…)' },
+  354|     { id: 'opcoes', rotulo: 'Topa outras opções', q: 'Topa outras opções? Bicicleta, a pé, carona, ônibus, juntar as saídas…', chips: ['Topo', 'Prefiro não'] },
+  355|     { id: 'orcamento', rotulo: 'Quer gastar até', q: 'Quanto quer gastar por mês com transporte? Tipo "até 400".', chips: ['Sem orçamento'] },
+  356|   ],
+  357|   // 2.3.9 (JF, 16/11: "quero ir ao cinema esse mês… dá pra ir? compro pipoca?"): passeio e lazer
+  358|   lazer: [
+  359|     { id: 'regiao', rotulo: 'Cidade ou região', q: 'Em que cidade ou região? Tipo "Grande Vitória", "centro de BH".' },
+  360|     { id: 'quando', rotulo: 'Quando', q: 'Quando você quer ir?', chips: ['Este fim de semana', 'Este mês'] },
+  361|     { id: 'quem', rotulo: 'Quantas pessoas', q: 'Vai sozinho ou com mais gente?', chips: ['Só eu', '2 pessoas', 'Família'] },
+  362|     { id: 'extras', rotulo: 'Além do ingresso', q: 'Entra o quê além do ingresso? Pipoca, estacionamento, lanche, Uber…', chips: ['Pipoca', 'Estacionamento', 'Só o ingresso'] },
+  363|     { id: 'orcamento', rotulo: 'Quer gastar até', q: 'Quanto quer gastar no total? Tipo "até 100". Se não tiver, diz "sem orçamento".', chips: ['Sem orçamento'] },
+  364|   ],
+  365|   economizar: [
+  366|     { id: 'meta', rotulo: 'Quer economizar', q: 'Quanto quer economizar por mês? Tipo "300".' },
+  367|     { id: 'objetivo', rotulo: 'Pra quê', q: 'É pra algum objetivo? Reserva, viagem, sair de dívida…', chips: ['Reserva', 'Dívida', 'Um sonho'] },
+  368|     { id: 'fixos', rotulo: 'Contas que pesam', q: 'Quais contas fixas pesam mais? Tipo aluguel, internet, celular, streaming.' },
+  369|     { id: 'intocavel', rotulo: 'Não abre mão de', q: 'Tem algo que você não abre mão? Tipo academia ou um streaming.', chips: ['Nada'] },
+  370|     { id: 'prazo', rotulo: 'Prazo', q: 'Em quanto tempo quer ver o resultado?', chips: ['1 mês', '3 meses', '6 meses'] },
+  371|   ],
+  372| });
+  373| const NOME_DO_PLANO = { lazer: 'Plano de passeio', viagem: 'Pesquisa de viagem', produto: 'Pesquisa de compra', pet: 'Plano de pet', moradia: 'Plano de moradia', transporte: 'Plano de transporte', economizar: 'Plano pra economizar' };
+  374| 
+  375| const LAZER = /\b(restaurante|restaurantes|lanchonete|pizzaria|hamburgueria|cinema|cinemark|cinepolis|kinoplex|filme no cinema|ingresso|ingressos|show|teatro|parque de diversao|balada|barzinho|rodizio|passeio|role|festival|estadio|boliche|escape room)\b/;
+  376| // pergunta de preço de algo de fora ("quanto tá um ingresso no cinemark?"): não é "quanto gastei" (2.3.9, JF)
+  377| const PRECO_DE_FORA = /\b(quanto (ta|esta|custa|custam|sai|fica|anda|e|eh|ta custando|esta custando)|qual (o )?(preco|valor)|preco d[eoa]s?|valor d[eoa]s?|valores d[eoa]s?)\b/;
+  378| // pesquisa pedida com todas as letras: vai direto pra IA, sem questionário (JF: "sou seu criador, me respeita")
+  379| const PESQUISA_DIRETA = /\b(pesquisa|pesquisar|busca|buscar|procura|procurar|ve|ver|olha|olhar)( (pra|para) mim)?( (na|no) (internet|google|web))\b/;
+  380| // pergunta de recomendação ("qual o melhor shopping pra ver um filme?", "melhor ração pro meu cachorro",
+  381| // "qual o melhor custo-benefício?"): vai direto pra IA pesquisar (2.4.2, JF: "ele tem que entender muito melhor
+  382| // as perguntas"). Fica de fora o que é do próprio dinheiro (banco, cartão, investimento…), que tem resposta aqui.
+  383| const RECOMENDA = /\b((qual|quais) (e |eh |seria |sao )?(o |a |os |as )?melhor(es)?|(o|a) melhor (tipo de |marca de |lugar pra |opcao )?\w+ (pra|para)|melhor custo.?beneficio|custo.?beneficio|vale mais a pena|compensa mais|(me )?recomenda(r|ria)?|(me )?indica(r|ria)?|onde (e|eh|fica|sai|compro) mais barat[oa]|qual (e |eh )?(o |a )?mais barat[oa]|o que (e|eh) melhor)\b/;
+  384| const DO_PROPRIO_DINHEIRO = /\b(banco|bancos|conta|contas|cartao|cartoes|fatura|investimento|investimentos|investir|cdb|tesouro|rende|rendimento|poupanca|orcamento|categoria|gasto|gastos|gastei|meta|metas|saldo|salario|juros|cofrinho|caixinha|dica|app|aplicativo|economizar|economia|poupar)\b/;
+  385| const VIAGEM = /\b(viagem|viajar|passagem|passagens|voo|voos|hotel|hospedagem|pacote de viagem)\b/;
+  386| const PET = /\b(pet|pets|cachorro|cachorrinho|cao|gato|gatinho|gata|filhote|pinscher|pincher|calopsita|passaro|hamster|coelho|peixe|aquario|vira lata)\b/;
+  387| const MORADIA = /\b(aluguel|apartamento|ape|casa propria|me mudar|mudar de casa|mudar de apartamento|mudanca|morar sozinh[oa]|condominio|financiar (uma |a )?(casa|ape))\b/;
+  388| const TRANSPORTE = /\b(gasolina|combustivel|etanol|uber|99|onibus|transporte|carro|moto|bicicleta|bike|deslocamento)\b/;
+  389| const PEDE = /\b(quanto|custa|custaria|sai|sairia|fica|ficaria|pesquis|procur|planej|calcul|me ajuda|ajuda|me ajude|quero|pretendo|penso em|vale|compensa|caro|cara|economiz|gasto muito|gastando muito|gasto demais|reduzir|diminuir)/;
+  390| /** Planos guiados (16/11): o que a pessoa quer planejar ou pesquisar, e se já disse o orçamento. */
+  391| export function acharPesquisa(t, valor) {
+  392|   if (/\b(juntar|guardar|poupar|meta|gastei|paguei|comprei|recebi|robux|v ?bucks|diamantes|quanto gastei|quanto gasto com|gasto com|gastando com)\b/.test(t)) return null;
+  393|   let tipo = null;
+  394|   const precoDeFora = PRECO_DE_FORA.test(t) && /\b(um|uma|o|a|os|as|no|na|do|da)\b/.test(t);
+  395|   if (LAZER.test(t) && (PEDE.test(t) || precoDeFora || /\b(da pra (eu )?ir|posso ir|vale ir|recomenda|pesquis|valores?|precos?)\b/.test(t))) tipo = 'lazer';
+  396|   // recomendação: o assunto decide o plano; sem assunto conhecido, é compra
+  397|   const recomenda = RECOMENDA.test(t) && !DO_PROPRIO_DINHEIRO.test(t);
+  398|   if (!tipo && recomenda) tipo = LAZER.test(t) ? 'lazer' : PET.test(t) ? 'pet' : VIAGEM.test(t) ? 'viagem' : MORADIA.test(t) ? 'moradia' : TRANSPORTE.test(t) ? 'transporte' : 'produto';
+  399|   if (tipo) { /* já decidido acima */ }
+  400|   else if (/(onde (posso|da pra|consigo|eu posso) economizar|como (posso |eu )?economizar|me ajuda a economizar|cortar gastos|reduzir (meus )?gastos|gastar menos)/.test(t)) tipo = 'economizar';
+  401|   else if (PET.test(t) && PEDE.test(t) && !/\b(racao|petshop|pet shop)\b.*\b\d/.test(t)) tipo = 'pet';
+  402|   else if (MORADIA.test(t) && PEDE.test(t)) tipo = 'moradia';
+  403|   else if (TRANSPORTE.test(t) && /(economiz|gasto muito|gastando muito|gasto demais|caro|reduzir|diminuir|compensa|vale mais|ajuda)/.test(t)) tipo = 'transporte';
+  404|   else if (VIAGEM.test(t) && PEDE.test(t)) tipo = 'viagem';
+  405|   else if (/\b(pesquisa|pesquisar|procura|procurar|acha|achar|encontra|encontrar|compara|comparar)\b.*\b(preco|precos|onde|loja|lojas|melhor|barato|mais barato|um|uma|o|a)\b/.test(t)
+  406|     || /\b(onde (compro|comprar|acho)|melhor preco|mais barato|quero comprar (um|uma|o|a))\b/.test(t)
+  407|     || PESQUISA_DIRETA.test(t)) tipo = 'produto';
+  408|   if (!tipo) return null;
+  409|   // vai direto pra IA, sem questionário (2.3.9, JF): pesquisa pedida com todas as letras ("pesquisa na internet…"),
+  410|   // pergunta de preço curta ("quanto tá um ingresso no cinemark?") ou pedido já detalhado (o questionário só atrapalha)
+  411|   const palavras = t.split(/\s+/).filter(Boolean).length;
+  412|   // (pergunta de preço curta só pula no passeio: compra, pet e casa ainda ganham as perguntas, que poupam crédito)
+  413|   const direto = PESQUISA_DIRETA.test(t) || recomenda || (tipo === 'lazer' && precoDeFora && palavras <= 12) || palavras >= 18;
+  414|   const orc = t.match(/\b(orcamento|ate|teto|no maximo|maximo)\b[^0-9]{0,15}(\d[\d.,]*)/);
+  415|   const orcamento = orc ? Math.round(Number(orc[2].replace(/\./g, '').replace(',', '.')) * 100) : undefined;
+  416|   const item = t.replace(/\b(pra mim|para mim|na internet|no google|na web|quais sao|qual e|qual|quanto (ta|esta|anda)|os valores|o valor|valores|valor|ve|ver|olha|olhar|busca|buscar)\b/g, ' ').replace(/\b(me ajuda a|me ajude a|ajuda a|ajude a|me ajuda|me ajude|caos|por favor|pesquisa|pesquisar|procura|procurar|acha|achar|encontra|encontrar|compara|comparar|quanto|custa|custaria|sai|sairia|fica|ficaria|o preco de|preco de|preco|onde (compro|comprar|acho)|quero comprar|quero fazer|quero|pretendo|penso em|calcular|planejar|considerando|pra eu|para eu|eu)\b/g, ' ')
+  417|     .replace(/\b(orcamento|ate|teto|no maximo|maximo)\b[^0-9]{0,15}\d[\d.,]*( reais| mil)?/g, ' ').replace(/[?!.,;]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^((qual|o|a|os|as|da|do|de|pra|para|que|e)\s+)+/, '');
+  418|   // lazer: o que a pessoa já disse não vira pergunta de novo
+  419|   const respostas = tipo === 'lazer' ? respostasDoLazer(t) : {};
+  420|   const padrao = { lazer: 'esse passeio', viagem: 'essa viagem', produto: 'isso', pet: 'seu pet', moradia: 'sua moradia', transporte: 'seu transporte', economizar: 'onde economizar' }[tipo];
+  421|   return { tipo, viagem: tipo === 'viagem', item: (item || padrao).slice(0, 80), direto, respostas,
+  422|     orcamento: orcamento && orcamento > 0 ? orcamento : (valor && /\b(orcamento|ate)\b/.test(t) ? valor : undefined) };
+  423| }
+  424| 
+  425| // 2.3.9: tira do pedido de passeio o que já foi dito (região, quando, quem, extras)
+  426| function respostasDoLazer(t) {
+  427|   const r = {};
+  428|   const reg = t.match(/\b(grande vitoria|vitoria|vila velha|serra|cariacica|viana|guarapari|sao paulo|rio de janeiro|belo horizonte|bh|curitiba|salvador|recife|fortaleza|brasilia|porto alegre)\b/)
+  429|     || t.match(/\b(?:aqui (?:na|no|em)|perto (?:de|da|do)|em) ([a-z]+(?: [a-z]+)?)\b(?= |$)/);
+  430|   if (reg && !/\b(casa|mim|um|uma|o|a)$/.test(reg[1])) r.regiao = reg[1];
+  431|   const q = t.match(/\b(esse mes|este mes|essa semana|esta semana|esse fim de semana|este fim de semana|fim de semana|hoje|amanha|sabado|domingo|sexta)\b/);
+  432|   if (q) r.quando = q[1];
+  433|   const quem = t.match(/\b(sozinho|sozinha|so eu|eu e (?:minha|meu) [a-z]+|com (?:a |o )?(?:minha|meu) [a-z]+|com amigos|em familia|familia|\d+ pessoas)\b/);
+  434|   if (quem) r.quem = quem[1];
+  435|   const ex = ['pipoca', 'estacionamento', 'lanche', 'uber', 'combo', 'refrigerante'].filter(x => t.includes(x));
+  436|   if (ex.length) r.extras = ex.join(', ');
+  437|   return r;
+  438| }
+  439| 
+  440| export function entender(texto, { categories = [], anterior = null } = {}) {
+  441|   const base = corrigirDigitacao(expandirGirias(norm(texto)), categories.map(c => norm(c.name)));
+  442|   const pv = lerPalavroes(base);
+  443|   // Xingou E perguntou ("burro, quanto gastei?"): ele lê os dois. Responde a pergunta, com uma reação curta antes.
+  444|   // Só xingamento, sem pergunta de verdade: segue como xingamento (com a paciência escalando).
+  445|   if (pv.ofensa) {
+  446|     const r = pv.limpo && pv.limpo !== base && !SO_CHAMADO.test(pv.limpo) ? entender(pv.limpo, { categories, anterior }) : null;
+  447|     if (r && r.intent !== 'nao_entendi' && r.intent !== 'xingamento' && r.intent !== 'desabafo') return { ...r, palavrao: true, xingouJunto: true };
+  448|     return { t: base, intent: 'xingamento', palavrao: true, categoria: null, periodo: acharPeriodo(base) };
+  449|   }
+  450|   if (pv.apelido && !pv.palavrao) {
+  451|     if (!pv.limpo || pv.limpo === base || SO_CHAMADO.test(pv.limpo)) return { t: base, intent: 'apelido', categoria: null, periodo: 'mes' };
+  452|     const r = entender(pv.limpo, { categories, anterior });
+  453|     return { ...r, apelido: true };
+  454|   }
+  455|   if (pv.palavrao) {
+  456|     const r = entender(pv.limpo, { categories, anterior });
+  457|     if (!pv.limpo || (r.intent === 'nao_entendi' && !r.palpite)) return { ...r, t: base, intent: 'desabafo', palavrao: true };
+  458|     return { ...r, palavrao: true };
+  459|   }
+  460|   const r0 = entenderSimples(base, { categories, anterior });
+  461|   const t = r0.t;
+  462|   const curta = t.split(' ').length <= 6;
+  463|   const continua = anterior && REUSAVEIS.has(anterior.intent) && curta
+  464|     && (/^e\b/.test(t) || /^(e )?(no|na|em|do|da|com|de|nos|nas)\b/.test(t) || (r0.intent === 'nao_entendi' && (r0.categoria || mencionaPeriodo(t))));
+  465|   if (continua && (r0.intent === 'nao_entendi' || r0.intent === 'gasto_total' || r0.intent === anterior.intent || r0.intent === 'comparar')) {
+  466|     const categoria = r0.categoria || (mencionaPeriodo(t) ? categories.find(c => c.id === anterior.categoryId) || null : null);
+  467|     const periodo = mencionaPeriodo(t) ? r0.periodo : anterior.periodo || 'mes';
+  468|     const intent = r0.intent === 'comparar' && anterior.intent !== 'comparar' ? 'comparar' : anterior.intent;
+  469|     return { ...r0, intent, categoria, periodo, continuacao: true };
+  470|   }
+  471|   if (r0.intent === 'nao_entendi' && !r0.foraDoTema) {
+  472|     const p = palpite(t);
+  473|     if (p) return { ...r0, intent: p, palpite: true };
+  474|   }
+  475|   return r0;
+  476| }
+  477| 
+  478| // ---------- O que ele tem anotado do mercado (pesquisado em 13/11/2026) ----------
+  479| // JF (13/11): "ele pode informar os valores, mas deixa claro que é o que tem anotado até tal dia; não é verdade
+  480| // absoluta; vale conferir com o banco". Atualizar a data quando atualizar os números.
+  481| export const ANOTADO_EM = '13 de novembro de 2026';
+  482| export const AVISO_DATA = `Isso é o que eu tinha anotado até ${ANOTADO_EM}: não é verdade absoluta, valores mudam todo dia. Confere com o banco.`;
+  483| const SELIC_ANOTADA = 'Selic em 13,75% ao ano (Copom de 4/11). '; // só quando não tem o dado ao vivo do servidor
+  484| const RENDIMENTOS_ANOTADOS = 'Com condições (campanha, depósito mínimo ou assinatura), os cofrinhos do PicPay e do Mercado Pago chegam a uns 120% do CDI, e o Nubank a 120% pra alguns clientes. Sem condição, Nubank, Inter e C6 ficam perto de 100%.';
+  485| 
+  486| // ---------- Matemática básica (JF, 13/11 à noite) ----------
+  487| // "quanto é 7 x 8?", "15 vezes 23", "1200 dividido por 12", "350 + 80". Ele faz a conta e ensina um atalho.
+  488| const NUM_C = '(\\d+(?:[.,]\\d+)?)';
+  489| const OPS = { x: '*', vezes: '*', '*': '*', '×': '*', mais: '+', '+': '+', menos: '-', '-': '-', 'dividido por': '/', 'divido por': '/', '/': '/', '÷': '/' };
+  490| export function lerConta(t) {
+  491|   const m = t.match(new RegExp(`^(?:quanto (?:e|da|fica|vale)\\s+|calcula\\s+|faz (?:a conta|ai)\\s+)?${NUM_C}\\s*(x|vezes|\\*|×|mais|\\+|menos|-|dividido por|divido por|/|÷)\\s*${NUM_C}\\s*\\??$`));
+  492|   if (!m) return null;
+  493|   const n = v => Number(v.replace(',', '.'));
+  494|   const a = n(m[1]), b = n(m[3]), op = OPS[m[2]];
+  495|   if (!Number.isFinite(a) || !Number.isFinite(b) || !op) return null;
+  496|   if (op === '-' && !/^(quanto|calcula|faz)/.test(t)) return null; // "50-60 reais" sozinho não é conta
+  497|   return { a, b, op };
+  498| }
+  499| const fmtNum = v => Number(v.toFixed(2)).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+  500| export function textoConta({ a, b, op }) {
+  501|   const A = fmtNum(a), B = fmtNum(b);
+  502|   if (op === '/') {
+  503|     if (b === 0) return 'Dividir por zero não dá, nem pra mim. Nenhum número cabe zero vezes certinho.';
+  504|     const r = a / b;
+  505|     return `${A} ÷ ${B} = ${fmtNum(r)}. Pra conferir, faz o caminho de volta: ${fmtNum(r)} × ${B} = ${A}.`;
+  506|   }
+  507|   if (op === '*') {
+  508|     const r = a * b;
+  509|     const inteiros = Number.isInteger(a) && Number.isInteger(b);
+  510|     // atalho: quebra o número maior em dezenas + unidades (15 × 23 = 15 × 20 + 15 × 3)
+  511|     const [p, q] = b >= a ? [a, b] : [b, a];
+  512|     if (inteiros && q >= 11 && q % 10 !== 0) {
+  513|       const dez = q - (q % 10), uni = q % 10;
+  514|       return `${A} × ${B} = ${fmtNum(r)}. Atalho: ${fmtNum(p)} × ${fmtNum(dez)} = ${fmtNum(p * dez)} e ${fmtNum(p)} × ${uni} = ${fmtNum(p * uni)}; somando, ${fmtNum(r)}.`;
+  515|     }
+  516|     if (inteiros && a <= 10 && b <= 10) return `${A} × ${B} = ${fmtNum(r)}. É somar o ${A} ${B} vezes (ou o ${B}, ${A} vezes).`;
+  517|     return `${A} × ${B} = ${fmtNum(r)}.`;
+  518|   }
+  519|   if (op === '+') {
+  520|     const r = a + b;
+  521|     const redondo = Math.ceil(b / 10) * 10;
+  522|     return Number.isInteger(b) && b % 10 !== 0 && b > 10
+  523|       ? `${A} + ${B} = ${fmtNum(r)}. Atalho: soma ${fmtNum(redondo)} (dá ${fmtNum(a + redondo)}) e tira ${fmtNum(redondo - b)}.`
+  524|       : `${A} + ${B} = ${fmtNum(r)}.`;
+  525|   }
+  526|   const r = a - b;
+  527|   return `${A} − ${B} = ${fmtNum(r)}.${r < 0 ? ' Deu negativo: o segundo número é maior que o primeiro.' : ` Pra conferir: ${fmtNum(r)} + ${B} = ${A}.`}`;
+  528| }
+  529| 
+  530| // "800 robux" é quantidade de moeda de jogo, não valor em reais (JF, 15/11)
+  531| const MOEDA_QTD = /\b\d+(?:\.\d{3})*\s*(?:robux|v ?-?bucks|vp|rp|diamantes?|minecoins?|gemas?|uc|cp|cristais|primogemas?|jades?(?: estelares?)?|fragmentos?(?: oniricos?)?|fc points|cod points)\b/g;
+  532| const FORA_DO_PAPEL = /\b(quem (venceu|ganhou|foi campeao|e o artilheiro)|campeonato|brasileirao|libertadores|placar|resultado do jogo|escalacao|artilheiro|horoscopo|meu signo|signo de|receita de|como (fazer|faco|preparo) (um |uma )?(bolo|torta|pao|lasanha|pudim)|letra da musica|previsao do tempo|vai chover|capital d[aeo]s? |quantos anos tem|quem descobriu|quem inventou)\b/;
+  533| const FORA_DO_TEMA = /\b(series?|filmes?|novelas?|livros?|jogos? de|games?|animes?|desenhos?|temporadas?|episodios?|ator|atriz|atores|cantor|cantora|bandas?|albuns?|album|time de|campeonato|copa do mundo|marvel|dc comics|estreias?|estreou|bilheteria|personagens?|elenco|trailer|diretor|roteiro|oscar|hbo|disney|pixar)\b/;
+  534| const PAPO_PESSOAL = /\b(como (voce )?(se sente|esta se sentindo|ta se sentindo|se sentiu|tem se sentido)|voce se sente|o que (voce )?(acha|achou|tem achado|pensa|pensou) (da|do|de|sobre) (sua|seu|voce|mim|ser|ter)|o que (voce )?(tem achado|acha) da (sua )?evolucao|voce (gosta|curte|prefere|sonha|tem medo|tem saudade|fica feliz|fica triste|se diverte)|(seu|sua) (filme|musica|serie|comida|cor|time|jogo|livro|desenho) (favorit|preferid)|qual (e )?(o |a )?(seu|sua) (filme|musica|serie|comida|cor|time|jogo|livro|desenho)|se voce fosse|voce (ja )?(sonhou|imaginou))/;
+  535| 
+  536| function entenderSimples(t, { categories = [], anterior = null } = {}) {
+  537|   // "dia 10" é data, não valor (P9, "esqueci de lançar": "gastei 50 no mercado dia 10")
+  538|   const r = { t, categoria: acharCategoria(t, categories), periodo: acharPeriodo(t), valor: acharValor(t.replace(/\bdia \d{1,2}\b/g, ' ').replace(MOEDA_QTD, ' ')), fonte: acharFonte(t) };
+  539|   const pergunta = /\b(quanto|qual|quais|onde|como|tive|teve|tenho|vai|posso|consigo|algum|alguma)\b|\?/.test(t);
+  540| 
+  541|   if (!t) return { ...r, intent: 'nao_entendi' };
+  542|   // Papo pessoal com ele (JF, 15/11: "como vc se sente tendo acesso à internet?" virava gasto em Contas, por causa da
+  543|   // palavra "internet"): pergunta sobre o que ele sente, acha ou gosta vai pra IA online quando está ligada; sem ela,
+  544|   // ele responde como está. Não pega pergunta de dinheiro ("o que você acha de eu comprar 300?").
+  545|   // Aperto sem palavrão (revisão do Gemini, 16/11): "tô liso", "acabou meu dinheiro", "esse mês tá osso". Antes ia pra
+  546|   // IA (gastava crédito); agora ele acolhe aqui, com os números do mês e um caminho.
+  547|   if (!r.valor && /\b(to|estou|tô|fiquei|ando|tamo|estamos) (liso|lisa|duro|dura|quebrado|quebrada|zerado|zerada|sem (grana|dinheiro|um real|nada))\b|\bacabou (o |meu |todo o |todo meu )?dinheiro\b|\b(mes|semana) (ta|esta|tá) (osso|dificil|apertado|puxado|complicado|foda)\b|\b(fatura|conta) (ta|esta|tá) (me )?dando medo\b|\bnao (sei|to sabendo) (mais )?(como|o que) (pagar|fazer com (as|minhas) contas)\b/.test(t)) return { ...r, categoria: null, intent: 'aperto' };
+  548|   if (PAPO_PESSOAL.test(t) && !r.valor && !/\b(gast|saldo|fatura|orcamento|dinheiro|comprar|compra|paguei|pagar|investir|economizar|guardar)/.test(t)) return { ...r, categoria: null, intent: 'papo_pessoal' };
+  549|   // Moedas de jogo (JF, 15/11): Robux, V-Bucks, Diamantes, VP… é dinheiro de verdade, então é com ele.
+  550|   // Registro ("comprei 800 robux por 40") continua sendo registro.
+  551|   const jogo = acharMoedaJogo(t);
+  552|   if (jogo && !/\b(gastei|comprei|paguei)\b/.test(t)
+  553|     && /\b(moeda|moedas|quanto|quantos|preco|precos|vale|valendo|valor|cotacao|converter|convert|em reais|reais|real|comprar|compro|recarga|recarregar|gift|card|cartao|onde|qual|quais|como|pacote|barato|caro|compensa|pena)\b|\?/.test(t)) {
+  554|     const precoDeHoje = /\b(quanto|quantos|preco|precos|vale|valendo|valor|cotacao|converter|convert|em reais|barato|caro|compensa)\b/.test(t);
+  555|     return { ...r, categoria: null, intent: 'moeda_jogo', jogo, pacote: lerPacote(t), precoDeHoje };
+  556|   }
+  557|   // Continuação do assunto do jogo (JF, 16/11: "quanto tá valendo 100 robux?" e depois "mas quanto tá valendo em relação
+  558|   // ao real? qual a cotação" virava Ibovespa por causa de "cotação"). Sem outra moeda ou índice na frase, segue no jogo.
+  559|   const jogoAntes = !jogo && anterior?.intent === 'moeda_jogo' && anterior.jogo ? MOEDAS_JOGOS.find(j => j.jogo === anterior.jogo) : null;
+  560|   if (jogoAntes && !/\b(dolar|dolares|usd|euros?|libras?|bitcoin|btc|bolsa|ibovespa|ibov|b3|acoes|selic|cdi|ipca|inflacao)\b/.test(t)
+  561|     && /\b(cotacao|valendo|vale|valor|preco|precos|quanto|real|reais|converter|convert|cambio)\b/.test(t)) {
+  562|     return { ...r, categoria: null, intent: 'moeda_jogo', jogo: jogoAntes, pacote: lerPacote(t), precoDeHoje: true, seguimento: true };
+  563|   }
+  564|   // Fora do papel (JF, 15/11: "quem venceu o Brasileirão de 19xx? aí foge muito; a IA gastaria crédito à toa"):
+  565|   // esporte, horóscopo, receita de comida, letra de música, clima… sem dinheiro no meio, ele responde aqui mesmo,
+  566|   // sem chamar a IA, e sugere o Google.
+  567|   if (FORA_DO_PAPEL.test(t) && !/\b(gast|paguei|comprei|preco|precos|custa|custou|custo|orcamento|salario|dinheiro|reais|valor|ingresso|aposta|bilheteria|caro|barato|quanto (custa|sai|paga|ganha|ganhou))/.test(t)) return { ...r, categoria: null, intent: 'fora_do_papel' };
+  568|   // Fora do tema (JF, 15/11: "VisionQuest teve o mesmo orçamento da série Lanterns?!" virava "você não definiu
+  569|   // orçamentos"): fala de filme, série, jogo, time, artista… sem falar do próprio dinheiro vai pra IA online
+  570|   // (sem ela, "ainda não sei responder"). Registro com valor ("gastei 40 no cinema") continua sendo registro.
+  571|   if (FORA_DO_TEMA.test(t) && !r.valor && !/\b(eu|meu|minha|meus|minhas|gastei|paguei|comprei|assinei|assinatura|gasto|gastos|cartao|fatura)\b/.test(t)) return { ...r, categoria: null, intent: 'nao_entendi', foraDoTema: true };
+  572|   // Matemática básica (JF, 13/11 à noite: "ele ensina matemática básica pra gente"): "quanto é 15 x 23?"
+  573|   const conta = lerConta(t);
+  574|   if (conta) return { ...r, intent: 'conta', conta };
+  575|   // Ofertas e porcentagem (JF, 13/11): "3500 no mercado livre, 3400 na amazon e 2100 na shopee", "15% de 3500",
+  576|   // "3500 com 10% de desconto", "de 3500 por 2800". Antes do registro: preço em loja não é gasto.
+  577|   if (!/\b(gastei|paguei|comprei|torrei|recebi|ganhei)\b/.test(t)) {
+  578|     const ofertas = lerOfertas(t);
+  579|     if (ofertas) return { ...r, intent: 'comparar_ofertas', ofertas: ofertas.ofertas, produto: ofertas.produto };
+  580|     // "vou mandar o print da oferta", "compara esse print": a próxima foto é pra ler ofertas
+  581|     if (/(print|foto|imagem|tela)[a-z ]{0,20}(oferta|preco|produto|loja|anuncio)|(oferta|preco|anuncio)[a-z ]{0,15}(print|foto)|compar[a-z]* (esse|esses|o|os) (print|prints|foto|fotos)|^(mandar|vou mandar|mando) (o |um )?print$/.test(t)) return { ...r, intent: 'ofertas_print' };
+  582|     const unica = lerOfertaUnica(t);
+  583|     if (unica) return { ...r, intent: 'oferta_unica', ofertas: unica.ofertas, produto: unica.produto };
+  584|     const pct = lerPorcentagem(t);
+  585|     if (pct) return { ...r, intent: 'porcentagem', pct };
+  586|   }
+  587|   // Corrigir o VALOR do último gasto (revisão do Gemini, 16/11): "errei, foi 45, não 50" virava um gasto novo de R$ 45
+  588|   if (r.valor && !pergunta && (/^(errei|ops|opa|na verdade|corrigindo|corrige|digitei errado|anotei errado)\b/.test(t)
+  589|     || /\b(foi|era|foram|eram) (r\$ ?)?\d+([.,]\d{1,2})?( reais)?,? (e )?(nao|n) (r\$ ?)?\d/.test(t)
+  590|     || /\b(muda|mude|troca|corrige|arruma) (o |esse |este |aquele )?(ultimo |ultima )?(gasto|lancamento|valor)\b.*\b(pra|para) (r\$ ?)?\d/.test(t))) {
+  591|     return { ...r, intent: 'corrigir_valor' };
+  592|   }
+  593|   // Dar baixa pela conversa (revisão do Gemini, 16/11; o JF pediu pra fazer já): fatura paga e amigo que pagou a parte
+  594|   if (/\bfatura\b/.test(t) && /\b(paguei|quitei|ja paguei|ja pago|ja foi paga|esta paga|ta paga)\b/.test(t) && !pergunta) {
+  595|     return { ...r, valor: null, categoria: null, intent: 'fatura_paga' };
+  596|   }
+  597|   if (/\b(me pagou|me pagaram|pagou a parte|pagou o que devia|devolveu|devolveram|acertou comigo|acertaram comigo|me mandou o pix|me fez o pix|me passou o pix|me pagou o pix|pagou)\b/.test(t)
+  598|     && !/\b(eu|paguei|gastei|comprei)\b/.test(t) && !pergunta) {
+  599|     return { ...r, categoria: null, intent: 'racha_pago' };
+  600|   }
+  601|   // Transferência pela conversa (revisão do Gemini, 16/11): "transferi 200 do Inter pro C6" vira proposta (com Confirmar)
+  602|   if (r.valor && /\b(transferi|transfiro|mandei|passei|movi|joguei|botei)\b/.test(t) && /\b(do|da|de)\b.+\b(pro|pra|para|pro meu|pra minha)\b/.test(t)) {
+  603|     return { ...r, categoria: null, intent: 'registrar_transferencia' };
+  604|   }
+  605|   // Corrigir a data do último gasto (JF, 14/11: "esse gasto foi na quarta-feira 09:15 da manhã")
+  606|   if (/\b(esse|este|essa|esta|aquele|aquela|o ultimo|a ultima|ultimo|ultima)\s+(gasto|lancamento|pagamento|valor|compra)\b/.test(t)
+  607|     && /\b(foi|era|e|aconteceu|pago|paguei|caiu)\b/.test(t)
+  608|     && /\b(ontem|anteontem|hoje|dia \d{1,2}|domingo|segunda|terca|quarta|quinta|sexta|sabado)\b/.test(t) && !pergunta) {
+  609|     return { ...r, valor: null, intent: 'corrigir_data' };
+  610|   }
+  611|   // Piso de segurança e salário (JF, 14/11): "meu piso no Banestes é 2000", "quanto posso gastar no C6?",
+  612|   // "me ajuda a dividir meu salário entre os bancos", "tive aumento?", "recebi mais ou menos que mês passado?"
+  613|   // a receber (15/11): "quanto vou receber?", "o que tenho pra receber?"
+  614|   if (!r.valor && /\b(quanto|o que|quando) (eu )?(ainda )?vou receber\b|\bentradas? previstas?\b/.test(t)) return { ...r, intent: 'previstas' };
+  615|   // média de segurança e transferências (JF, 14/11): "como tá minha média de segurança?", "qual banco tem folga?"
+  616|   if (/\b(media de seguranca|seguranca (geral|dos bancos|media|como um todo)|piso (geral|total|medio)|pisos no geral|vou estourar (o |meu )?piso|quando (o piso )?estoura)\b/.test(t)) return { ...r, intent: 'media_seguranca' };
+  617|   if (/\b(qual|que) (banco|conta) (tem|ta com|esta com) (folga|sobra|mais dinheiro)\b|\b(de onde|qual banco) (eu )?(tiro|transfiro|passo)\b|\b(sugere|sugira|sugestao de) (uma )?transferencia\b|\btransferir pra (cobrir|completar)\b/.test(t)) return { ...r, intent: 'sugerir_transferencia' };
+  618|   if (/\b(piso|pisos|minimo de seguranca|valor de seguranca)\b/.test(t)) return { ...r, intent: r.valor && !pergunta ? 'definir_piso' : 'pisos' };
+  619|   if (/\b(dividir|distribuir|repartir|partilhar|parcionar|particionar|separar|organizar)\b/.test(t) && /\b(banco|bancos|contas)\b/.test(t)) return { ...r, intent: 'dividir_entre_bancos' };
+  620|   if (/quanto (eu )?(ainda )?(posso|da pra|consigo|devo) (gastar|usar|tirar)( ainda)? (no|na|do|da|pelo|pela)\b/.test(t)) return { ...r, intent: 'folga_conta' };
+  621|   if (/\b(aumento|aumentou|reajuste|diminuiu|reducao|reduziu|caiu meu salario)\b/.test(t) && /\b(salario|recebi|ganho|ganhei|tive|meu)\b/.test(t) && !r.valor) return { ...r, intent: 'entradas_comparar' };
+  622|   if (/\b(mais ou menos|menos ou mais|comparad[oa]|do que o mes passado|que o mes passado|que mes passado)\b/.test(t) && /\b(recebi|salario|entrou|entrada|entradas|ganhei)\b/.test(t)) return { ...r, intent: 'entradas_comparar' };
+  623|   // Registro ("gastei 30 no mercado", "paguei 120 de luz", "recebi 1500 de salario")
+  624|   if (r.valor && !/\bquanto\b/.test(t)) {
+  625|     // sem verbo, mas dizendo como pagou (JF, 14/11: "7 reais no débito do Inter", "5,50 numa casquinha pelo débito")
+  626|     if (!pergunta && /\b(pix|debito|credito|cartao|dinheiro)\b/.test(t) && !/\b(recebi|ganhei|entrou|caiu)\b/.test(t)) return { ...r, intent: 'registrar_gasto' };
+  627|     // (o "quanto vou receber?" é pergunta, sem valor: fica mais abaixo)
+  628|     // "vou receber 500 dia 20" (JF, 15/11): entrada prevista, ainda não entrou
+  629|     if (/\b(vou receber|vou ganhar|vai cair|vai entrar|tenho (a|pra|para) receber|vao me pagar|vai me pagar|vou ser pago)\b/.test(t)) return { ...r, intent: 'registrar_entrada', prevista: true };
+  630|     if (/\b(recebi|recebo|ganhei|ganho|entrou|caiu|recebemos|me pagaram)\b/.test(t)) return { ...r, intent: 'registrar_entrada' };
+  631|     if (/\b(gastei|paguei|comprei|torrei|saiu|pedi|abasteci|gasto de|gastamos|passei|deixei|foram|foi)\b/.test(t)) return { ...r, intent: 'registrar_gasto' };
+  632|     // Anotação curta, sem verbo, do jeito de quem anota num papel: "uber 30", "50 no posto" (achado do Gemini, 06/11)
+  633|     const curtinha = t.split(' ').length <= 5 && !pergunta && !/\b(meta|guardei|juntei|poupei|investi)\b/.test(t);
+  634|     if (curtinha && (r.categoria || descricaoDe(t) || /^[a-z]+ \d/.test(t) || /^\d+([.,]\d+)? [a-z]/.test(t))) return { ...r, intent: 'registrar_gasto' };
+  635|   }
+  636|   // "Esqueci de lançar" (P9, vistoria do JF): um sustinho de brincadeira e as perguntas pra anotar
+  637|   const ESQUECI = /\b(esqueci|esqueceu|esquecemos) de (lancar|anotar|colocar|registrar|botar|por)\b|\b(nao|n) (lancei|anotei|registrei)\b/;
+  638|   if (ESQUECI.test(t)) {
+  639|     // aproveita o que a frase já trouxe (achado do GPT, 12/11): "esqueci de lançar 50 no mercado dia 10" já vira proposta
+  640|     const resto = t.replace(/^.*?(esqueci|esqueceu|esquecemos|nao lancei|n lancei|nao anotei|nao registrei)( de (lancar|anotar|colocar|registrar|botar|por))?( um| uma| o| a)?( gasto| compra| coisa| conta)?\s*/, '').trim();
+  641|     const comoGasto = `gastei ${resto}`.trim();
+  642|     if (r.valor) return { ...r, t: comoGasto, intent: 'registrar_gasto' };
+  643|     if (r.categoria || descricaoDe(comoGasto)) return { ...r, t: comoGasto, intent: 'gasto_sem_valor' };
+  644|     return { ...r, intent: 'esqueci_de_lancar' };
+  645|   }
+  646|   // Gasto sem valor (12/11, vistoria do JF): "gastei não sei quanto de internet" → ele pergunta quanto foi
+  647|   const tSemNaoSei = t.replace(/\bnao sei (quanto|o valor|direito)\b/g, '');
+  648|   if (!r.valor && /\b(gastei|paguei|comprei|torrei|pedi|abasteci|gastamos)\b/.test(t) && !/\b(quanto|qual|quais|onde|como|quando)\b|\?/.test(tSemNaoSei)) {
+  649|     return { ...r, intent: 'gasto_sem_valor' };
+  650|   }
+  651|   // "Me explica melhor" (12/11): explicar de novo a última resposta, em passos
+  652|   if (/^(me )?(expli(ca|que)|explicar)( isso| ai| aí)?( melhor| de novo| direito| devagar| com calma)?\??$|^(nao|n) entendi( nada| isso| direito)?\??$|^como assim\??$|(pode|poderia|consegue) (me )?explicar( melhor| de novo)?|explica(r)? melhor|o que (voce|vc) quis dizer/.test(t)) {
+  653|     return { ...r, intent: 'explicar_melhor' };
+  654|   }
+  655|   // Metas (1.8.0): montar junto, ver o progresso e guardar dinheiro nelas
+  656|   if (r.valor && /\b(guardei|juntei|separei|coloquei|poupei|depositei)\b/.test(t) && /\b(meta|pr[oa]|para o|para a|no|na)\b/.test(t)) return { ...r, intent: 'meta_guardar' };
+  657|   if (/((criar|montar|nova|fazer|comecar) (uma )?meta|quero (guardar|juntar|economizar|poupar)( dinheiro)? (pra|para)|juntar dinheiro (pra|para)|me ajuda a (guardar|juntar)|quero (ter|fazer) uma reserva)/.test(t)) return { ...r, intent: 'meta_nova', metaNome: nomeDaMeta(t) };
+  658|   if (/(minhas metas|minha meta|\bmetas?\b.*(como|quanto|esta|estao|vai)|(como|quanto).*\bmetas?\b|quanto falta (pra|para) (a )?meta)/.test(t)) return { ...r, intent: 'metas' };
+  659|   // Compromissos, planos e "cabe no mês?" (1.3.0)
+  660|   if (/(qual (e )?(o )?meu nome|como (e|eh) meu nome|voce sabe (o )?meu nome|lembra (de )?mim|quem sou eu)/.test(t)) return { ...r, intent: 'meu_nome' };
+  661|   const apelido = t.match(/(?:me chama|pode me chamar|me chame) de ([a-z0-9 ]{2,30})$/);
+  662|   if (apelido) return { ...r, intent: 'mudar_apelido', apelido: apelido[1].trim() };
+  663|   // "quanto sobra do orçamento de mercado?" é orçamento, não "cabe no mês" (achado do Gemini, 06/11)
+  664|   if (/(orcamento|limite)/.test(t) && /(sobra|resta|falta|quanto (ainda )?posso)/.test(t) && !/cabe no/.test(t)) return { ...r, intent: 'orcamento' };
+  665|   // Pesquisa de compra e viagem (JF, 16/11): "quanto custaria uma viagem pros EUA?", "me ajuda a achar uma geladeira".
+  666|   // Ele pede o orçamento e a IA online pesquisa 2 a 4 sites; ele orienta, não entrega a resposta pronta.
+  667|   const pesquisa = acharPesquisa(t, r.valor);
+  668|   if (pesquisa) return { ...r, categoria: null, intent: 'pesquisa_compra', ...pesquisa };
+  669|   if (/(cabe no (mes|meu bolso|orcamento|bolso)|da pra comprar|posso comprar|consigo comprar|tenho dinheiro pra|vai sobrar|quanto (vai )?sobra)/.test(t)) return { ...r, intent: 'cabe' };
+  670|   // "Explica o print do banco" (06/11): a pessoa manda o print e ele explica pelo servidor
+  671|   if (/(explica|explicar|nao entendi|o que (significa|quer dizer)|me ajuda a entender).*(print|tela|banco|fatura|extrato|app do banco|imagem|foto)|(print|tela) do banco/.test(t)) return { ...r, intent: 'explicar_print' };
+  672|   // Cartão de crédito (06/11): "como está meu cartão?", "quanto vem na fatura?", "quanto tenho de limite?"
+  673|   // "o que é limite do cartão?" é pergunta de glossário, não do seu cartão (revisão de 13/11 à noite)
+  674|   const perguntaDeSignificado = /^(o que (e|sao|significa|quer dizer)|me explica|explica|me ensina)\b/.test(t) && acharTermo(t);
+  675|   if (!perguntaDeSignificado && /(cartao|fatura|limite (do|no) cartao)/.test(t) && !/\b(como|onde|quero|preciso|queria)\b.*\b(cadastr|adicion|registr|coloc|ponho|crio|criar)/.test(t)) return { ...r, intent: 'cartao' };
+  676|   if (/((o que|quanto) (eu )?(ainda )?tenho (pra|para|de) pagar|falta pagar|contas? (do|deste|desse) mes|vencimento|quando vence|o que vence|tenho conta|compromissos?|minhas contas fixas|assinaturas)/.test(t)) return { ...r, intent: 'pagar' };
+  677|   const querFazer = /\b(quero|preciso|queria|gostaria de) (anotar|lancar|registrar|adicionar|cadastrar|colocar|planejar|fazer|ligar|instalar|mandar)\b/.test(t);
+  678|   if (!/^como\b/.test(t) && !querFazer && /(o que (eu )?planejei|meus planos|planejamento|planos? (do|deste|desse|pro|para o) mes|o que (eu )?vou comprar|planejad|programad|o que (mais )?(eu )?tenho (pra|para) (esse|este|o) mes|o que mais (eu )?(tenho|vou))/.test(t)) return { ...r, intent: 'planos' };
+  679|   // Ofensiva (07/11): "quantos dias seguidos?", "minha ofensiva", "meu foguinho"
+  680|   if (/(ofensiva|foguinho|dias seguidos|dias em sequencia|sequencia de dias|streak)/.test(t) && !r.valor) return { ...r, intent: 'ofensiva' };
+  681|   // efeito formiguinha (JF, 16/11): "quais meus gastinhos?", "gastos pequenos", "efeito formiga"
+  682|   if (/(formiguinha|efeito formiga|gastinhos?\b|gastos? (pequenos?|miudos?|de formiga)|pequenos gastos)/.test(t) && !r.valor) return { ...r, intent: 'formiguinha' };
+  683|   // Rachadinha (07/11): "quem me deve?", "quanto tenho a receber?", "quanto me devem?"
+  684|   if (/(quem (me|ta me|esta me) dev|quanto (me )?devem|me deve[mn]?\b|(tenho|falta|faltam) (a|pra|para) receber|a receber\b|rachadinha|conta rachada|quem (nao )?(me )?pagou)/.test(t) && !r.valor) return { ...r, intent: 'a_receber' };
+  685|   if (/(quanto (eu )?(tenho )?investido|meus investimentos|minha carteira de investimento|quanto (meus investimentos|meu investimento) (rende|rendeu|renderam)|como (estao|esta) (meus|o meu|os meus) investimentos?)/.test(t)) return { ...r, intent: 'meus_investimentos' };
+  686|   // Saldo (06/11): "quanto eu tenho guardado no total?", "quanto tem nas contas?", "quanto poupei?"
+  687|   if (!/(pra|para) (pagar|gastar)/.test(t) && /(\bsaldo\b|quanto (eu )?(tenho|tem|ainda tenho|sobrou)\b(?! (pra|para|de) )|tenho guardado|guardad[oa]s?\b|poupad[oa]s?\b|quanto (eu )?(guardei|poupei|juntei)|dinheiro (no|na|nos|nas) (banco|conta)|tenho no banco|nas contas|no total)/.test(t)
+  688|     && !/(gast|entrada|recebi|rendimento|planej)/.test(t)) return { ...r, intent: 'saldo' };
+  689|   // Mercado (1.3.0): moedas, bolsa, juros e "vale investir?"
+  690|   // Professor de finanças (13/11): calculadoras e glossário offline (70 termos), antes de "entradas" (que pega "juros")
+  691|   const calc = lerCalculoJuros(t);
+  692|   // "o que é juros compostos?" é pergunta de glossário; conta só com números ou pedido de cálculo
+  693|   if (calc && (!calc.faltando || /(calcul|faz a conta|faca a conta|simul|quanto (rende|renderia|fica|vira))/.test(t))) return { ...r, intent: 'calc_juros', calc };
+  694|   if (/(vale a pena parcelar|parcelar ou (pagar )?(a vista)|a vista ou parcelad|compensa parcelar|devo parcelar|melhor parcelar)/.test(t)) return { ...r, intent: 'vale_parcelar', parc: lerParcelamento(t) };
+  695|   // Limite garantido (JF, 13/11 à noite): "quais bancos aumentam o limite se eu investir?"
+  696|   // revisão do Gemini (16/11): os parênteses faltavam (a trava do "o que é" só valia pra metade) e "guardo + limite + como"
+  697|   // pegava qualquer pergunta de guardar dinheiro
+  698|   if (!/^(o que (e|sao|significa)|me explica|explica)\b/.test(t) && (/(limite garantido|cdb (mais )?limite|limite (com|por) (garantia|investimento)|cdb cartao)/.test(t)
+  699|     || (/limite/.test(t) && /(invest|aplica|cdb|cofrinho|caixinha)/.test(t) && /(aumenta|aumentar|ganh|liber|vira|transforma)/.test(t)))) {
+  700|     return { ...r, intent: 'limite_investido' };
+  701|   }
+  702|   const termo = acharTermo(t);
+  703|   const contexto = t.match(/\b(meu|minha) (pai|mae|chefe|amigo|amiga|irmao|irma|avo|tio|tia|namorad[oa]|esposa|marido|professor[a]?|colega)\b.*\b(falou|disse|comentou|mencionou|falaram)\b/);
+  704|   if (termo && (contexto || /(o que (e|sao|significa|quer dizer)|\bque (e|sao)\b|me explica|explica|me ensina|como funciona|ouvi falar|vi falar|nunca entendi|nao entendo|nao sei o que)/.test(t))) {
+  705|     return { ...r, intent: 'glossario', termo, quem: contexto ? contexto[2] : null };
+  706|   }
+  707|   const ativo = /\b(dolar|dolares|usd)\b/.test(t) ? 'USD' : /\beuros?\b/.test(t) ? 'EUR' : /\blibras?\b/.test(t) ? 'GBP'
+  708|     : /\b(bitcoin|btc)\b/.test(t) ? 'BTC' : /peso argentino/.test(t) ? 'ARS' : /\b(bolsa|ibovespa|ibov|b3|acoes)\b/.test(t) ? 'IBOV'
+  709|     : /\bselic\b/.test(t) ? 'SELIC' : /\bcdi\b/.test(t) ? 'CDI' : /\b(ipca|inflacao)\b/.test(t) ? 'IPCA' : null;
+  710|   if (/((qual|quais|que) (banco|conta|desses|dessas)[a-z ]*(rende|rendimento))|rende mais|melhor rendimento|rendimento (do|da|dos|das|de|nos|nas) (banco|bancos|conta|contas|meu|minha|nubank|picpay|inter|mercado pago|c6|itau|bradesco|caixa|santander|pagbank)|onde (eu )?(deixo|guardo|coloco) (o |meu )?dinheiro|comparar (os )?bancos/.test(t)) return { ...r, intent: 'bancos' };
+  711|   if (/(vale (a pena )?investir|devo investir|investir em|boa hora (pra|para) (comprar|investir)|compensa (comprar|investir)|tende a (subir|cair|crescer))/.test(t)) return { ...r, intent: 'investir', ativo };
+  712|   if (ativo || /(mercado financeiro|como (esta|ta) o mercado|cotacao|cotacoes|cambio|moedas)/.test(t)) return { ...r, intent: 'mercado', ativo };
+  713|   // Quem ele é (identidade): vem antes de tudo que não é registro
+  714|   if (/(o que (significa|quer dizer)|significado|sigla).*(caos|seu nome|nome)|caos significa|o que e caos|o que e o caos/.test(t)) return { ...r, intent: 'significado' };
+  715|   if (/(o que (voce )?(acha|pensa|me diz|fala) (do|de|sobre o|sobre) (jf|joao|joao fernando|tgp|seu criador|criador|seu pai)|voce gosta (do|de) (jf|seu criador)|como e o jf|fala (do|sobre o) jf|(fala|falar|falando) (mal|bem) (do|de|sobre o) (jf|seu criador|criador)|o que voce tem a dizer sobre (o jf|seu criador))/.test(t)) return { ...r, intent: 'sobre_jf' };
+  716|   // Brincadeira com o criador: "quanto ele te deve de salário?" (06/11)
+  717|   if (/((quanto|qual).*(te deve|seu salario|teu salario|voce ganha|ce ganha)|(ele|jf|criador).*(paga|deve|pagar).*(salario|voce)|seu salario|voce recebe salario)/.test(t) && !r.valor) return { ...r, intent: 'salario_caos' };
+  718|   // Memória da conversa: "e agora?", "já sabe responder essa?" voltam na última pergunta que ficou sem resposta
+  719|   if (/^(e agora|e ai|e entao|ja (sabe|consegue|saber|sabes) (responder|me responder)|ja sabe|conseguiu (responder)?|lembra (da|daquela) (minha )?pergunta)\b/.test(t)) return { ...r, intent: 'retomar' };
+  720|   if (/(quem (te |o )?(criou|fez|programou|inventou|desenvolveu|construiu)|seu criador|seu pai|seu dono|quem e (o )?jf|quem manda em voce)/.test(t)) return { ...r, intent: 'criador' };
+  721|   // a vida dele (núcleo único, 12/11): quando nasceu, aniversário, a história toda
+  722|   if (/(quando (voce |vc )?nasceu|seu aniversario|aniversario (seu|do caos)|quantos anos (voce |vc )?tem|sua historia|sua vida|conta (a )?sua historia)/.test(t)) return { ...r, intent: 'vida' };
+  723|   if (/(de onde (voce )?(veio|vem|surgiu|saiu)|sua origem|onde (voce )?nasceu|projeto perfil|veio do perfil)/.test(t)) return { ...r, intent: 'origem' };
+  724|   if (/(como voce funciona|como (e|funciona) (o )?seu cerebro|seu cerebro|sistema nervoso|sua espinha|seus bracos|voce pensa|voce sente|como voce e feito|do que voce e feito)/.test(t)) return { ...r, intent: 'como_funciona' };
+  725|   if (/(o que voce (nao )?pode|o que voce nao faz|seus limites|voce (pode|consegue) (mexer|apagar|alterar|gastar|acessar|ver)|acessa (meu|o) banco|ve minha conta|minhas regras|suas regras|suas leis)/.test(t)) return { ...r, intent: 'limites' };
+  726|   if (/(quem e voce|quem (e|eh) tu|quem es tu|o que (e|eh) voce|se apresent|apresente.se|qual (e )?(o )?seu nome|como (voce )?se chama|voce e (uma )?(ia|inteligencia|robo|humano|gente|pessoa)|^caos\??$)/.test(t)) return { ...r, intent: 'identidade' };
+  727|   // 2.4.3 (JF, 17/11): frase de pensador ou investidor, ditado popular e curiosidade de dinheiro, sem gastar IA
+  728|   if (/(frase (do dia|de motivacao|motivacional|inspiradora|de (um |algum )?(pensador|filosofo|investidor|milionario|bilionario|famoso))|outra frase|me (motiva|inspira|anima)|motivacao|pensamento do dia|citacao)/.test(t) && !r.valor) return { ...r, intent: 'motivacao' };
+  729|   if (/(ditado|proverbio|outro ditado)/.test(t) && !r.valor) return { ...r, intent: 'ditado' };
+  730|   if (/(curiosidade|me conta (algo|alguma coisa|uma coisa) (legal|interessante|curiosa)|fato curioso|me ensina (algo|alguma coisa)|coisa interessante sobre (dinheiro|financas))/.test(t) && !/(gast|paguei|anot)/.test(t) && !r.valor) return { ...r, intent: 'curiosidade_fin' };
+  731|   if (/(piada|me faz rir|algo engracado|anedota|charada|me alegra)/.test(t)) return { ...r, intent: 'piada' };
+  732|   // Ensinar a usar o app ("como faço pra lançar um gasto?")
+  733|   const verboComo = /\b(como|onde)\b.*\b(faco|faz|fazer|coloco|colocar|cadastro|cadastrar|adiciono|adicionar|lanco|lancar|registro|registrar|anoto|anotar|crio|criar|mudo|mudar|troco|trocar|ativo|ativar|ligo|ligar|uso|usar|mando|mandar|envio|enviar|instalo|instalar|exporto|exportar|importo|importar|defino|definir|ponho|por|vejo|ver|apago|apagar|configuro|configurar|divido|dividir|racho|rachar)\b/;
+  734|   if (/(economiz|poupar|guardar dinheiro|gastar menos)/.test(t)) return { ...r, intent: 'dica' };
+  735|   if (verboComo.test(t) || querFazer || /(me ensina|tutorial|passo a passo|como usa(r)? o app|como funciona o app|como planejo)/.test(t)) {
+  736|     const TEMAS = [
+  737|       ['racha', /(divid|rach|amigos? (vao|vai) (me )?pagar|me pagar de volta)/],
+  738|       ['ofensiva', /(ofensiva|foguinho|dias seguidos|nao gastei nada)/],
+  739|       ['entrada', /(entrada|salario|rendimento|receita|recebi|ganho)/],
+  740|       ['orcamento', /(orcamento|limite|meta de gasto)/],
+  741|       ['cartao', /(cartao|fatura|credito)/],
+  742|       ['mes', /(planej|compromisso|conta fixa|assinatura|\bmes\b)/],
+  743|       ['conta', /(\bcontas?\b|banco|saldo|nubank|itau|bradesco|caixa|inter)/],
+  744|       ['foto', /(foto|comprovante|imagem|nota fiscal|recibo|print)/],
+  745|       ['lembrete', /(lembrete|notifica|avis(o|ar) diario|alarme)/],
+  746|       ['instalar', /(instal|tela inicial|celular|iphone|android)/],
+  747|       ['backup', /(backup|exportar|importar|copia|trocar de celular)/],
+  748|       ['ia', /(ia online|inteligencia|servidor|ler foto)/],
+  749|       ['humor', /(humor|voz|falar|acido|suave)/],
+  750|       ['apagar', /(apag|excluir|deletar|remover)/],
+  751|       ['gasto', /(gasto|despesa|compra|lancamento)/],
+  752|     ];
+  753|     const tema = (TEMAS.find(([, rx]) => rx.test(t)) || ['geral'])[0];
+  754|     return { ...r, intent: 'tutorial', tema };
+  755|   }
+  756|   if (/\b(ajuda|comandos|o que voce (faz|sabe)|pra que (voce )?serve|para que (voce )?serve|sua funcao|como voce (me )?ajuda|o que posso perguntar)\b/.test(t)) return { ...r, intent: 'ajuda' };
+  757|   if (/\b(obrigad|valeu|vlw|brigad|agradeco)/.test(t)) return { ...r, intent: 'agradecimento' };
+  758|   if (/\b(burro|idiota|inutil|lixo|chato|odeio voce|porcaria)\b/.test(t)) return { ...r, intent: 'xingamento' };
+  759|   if (/\b(te amo|voce e (o )?(muito )?(melhor|demais|incrivel|genial|otimo|legal|top|brabo|foda)|gosto de voce|lindo|parabens caos)\b/.test(t)) return { ...r, intent: 'elogio' };
+  760|   if (/(como voce (esta|ta)|tudo bem com voce|como (vai|ta) voce|seu humor|voce esta bem|^(e ai|eai|oi|ola|opa)?[ ,!]*(tudo|td) (bem|bom|certo|joia|tranquilo)\??$|^beleza\??$)/.test(t)) return { ...r, intent: 'como_esta' };
+  761|   if (/(meus dados|minha privacidade|privacidade|quem ve (meus|os meus)|e seguro|meus dados (estao|ficam)|pra onde vao)/.test(t)) return { ...r, intent: 'privacidade' };
+  762|   if (/\b(alerta|alertas|problema|como estou|como to|como esta (minha|a) (situacao|carteira)|situacao|resumo|radar)\b/.test(t)) return { ...r, intent: 'alertas' };
+  763|   if (/(rendimento|recebi|entrada|entradas|salario|ganhei|renda|entrou|receita|dividendo|juros)/.test(t)) return { ...r, intent: 'entradas' };
+  764|   if (/\b(saldo|quanto tenho|dinheiro na conta|na conta|nas contas|tenho no banco)\b/.test(t)) return { ...r, intent: 'saldo' };
+  765|   if (/(maior gasto|mais gastei|gastei mais|com o que (mais )?gast|onde (mais )?gast|categoria que mais|top|ranking|principal gasto)/.test(t)) return { ...r, intent: 'maior_gasto' };
+  766|   if (/(previsao|vai dar|fim do mes|ritmo|vou conseguir|chegar ao fim|projecao|aguenta|(vai|vou) fechar|fechar o mes|como (o mes|vou) (fechar|terminar))/.test(t)) return { ...r, intent: 'previsao' };
+  767|   if (/(compar|mes passado.*(gast|mais|menos)|melhor que|pior que|em relacao)/.test(t) && !/quanto gastei/.test(t)) return { ...r, intent: 'comparar' };
+  768|   if (/(orcamento|limite|quanto (ainda )?posso|quanto falta|quanto sobra|posso gastar|sobrou)/.test(t)) return { ...r, intent: 'orcamento' };
+  769|   if (/(media|por dia|diario|diaria)/.test(t)) return { ...r, intent: 'media' };
+  770|   if (/(dica|economiz|poupar|guardar dinheiro|como gastar menos|conselho|sugestao)/.test(t)) return { ...r, intent: 'dica' };
+  771|   if (/(gast|paguei|saiu|despesa|torrei)/.test(t) && pergunta) return { ...r, intent: 'gasto_total' };
+  772|   if (/^(o+i+e*|ola+|e a+i+|ea+i+|opa+|bom dia|boa tarde|boa noite|salve+|he+y+|alo+)\b/.test(t)) return { ...r, intent: 'saudacao' }; // "oii", "oie", "eaii" (teste do amigo do JF, 15/11)
+  773|   // 2.4.2 (JF: "qual melhor shopping pra curtir um cinema?" respondia "nenhum gasto em Compras"): nome de categoria
+  774|   // só vira "quanto gastei" em pergunta curta ("e no mercado?") ou que fala de gasto; o resto vai pra IA
+  775|   if (r.categoria && pergunta && (t.split(/\s+/).length <= 4 || /\b(quanto|total|soma|gastos?|gastei|foi)\b/.test(t))) return { ...r, intent: 'gasto_total' };
+  776|   return { ...r, intent: 'nao_entendi' };
+  777| }
+  778| 
+  779| /** "quero juntar dinheiro pra um show do Coldplay" → "Show do Coldplay" */
+  780| export function nomeDaMeta(t) {
+  781|   const m = String(t).match(/(?:pra|para)\s+(?:um|uma|o|a|os|as|meu|minha)?\s*([a-z0-9 ]{3,40})$/);
+  782|   if (!m) return null;
+  783|   const n = m[1].replace(/\s+(ate|em|no|na)\s.*$/, '').trim();
+  784|   return n ? n[0].toUpperCase() + n.slice(1) : null;
+  785| }
+  786| 
+  787| /** Resumo da meta que a pessoa montou (pra proposta e pra lista). */
+  788| export function textoMeta(p) {
+  789|   const prazo = p.ate ? ` até ${monthLabel(p.ate)}` : '';
+  790|   const porMes = p.porMesCents ? ` Guardando ${formatBRL(p.porMesCents)} por mês, você chega lá${prazo}.` : '';
+  791|   return `${p.nome}: ${formatBRL(p.guardadoCents)} de ${formatBRL(p.alvoCents)} (${p.pct}%), faltam ${formatBRL(p.faltaCents)}.${porMes}`;
+  792| }
+  793| 
+  794| const SUG_IDENTIDADE = ['O que você pode fazer?', 'Como funciona seu cérebro?', 'Conta uma piada', 'Quanto gastei este mês?'];
+  795| 
+  796| // Passo a passo de cada parte do app (o C.A.O.S. também instrui)
+  797| const TUTORIAL = {
+  798|   racha: 'Pra dividir uma conta: aba ➕ Lançar, digita o valor TOTAL que você pagou, escolhe a categoria e toca em "🍕 Dividir com amigos". Escreve o nome de quem vai te pagar (separado por vírgula). No orçamento entra só a sua parte, e o resto fica em "A receber" no Início. Quando o Pix cair, toca em "Recebi".',
+  799|   ofensiva: 'A ofensiva 🔥 conta os dias seguidos em que você anota no app. Lançou um gasto ou uma entrada no dia, conta. Não gastou nada? Toca em "Hoje não gastei nada" no Início, que também conta. Ficou um dia inteiro sem abrir, ela zera, mas o recorde fica guardado.',
+  800|   gasto: 'Pra anotar um gasto: aba ➕ Lançar, deixa em 💸 Gasto, digita o valor, escolhe a categoria e toca em Adicionar. Ou me fala aqui: "gastei 30 no mercado", que eu preparo e você confirma.',
+  801|   entrada: 'Pra anotar uma entrada: aba ➕ Lançar, toca em 💰 Entrada, digita o valor, escolhe de onde veio (salário, freela, rendimentos…) e toca em Adicionar. Ou me fala: "recebi 1500 de salário".',
+  802|   orcamento: 'Pra pôr orçamento: ⚙️ Ajustes (engrenagem no alto do Início) → Orçamentos, e coloca o limite do mês em cada categoria. Deixa vazio onde não quiser limite. Aí eu aviso em 80% e quando estourar.',
+  803|   conta: 'Pra adicionar uma conta: aba 🏦 Contas, escolhe o banco, coloca o saldo que aparece no app do banco e toca em Adicionar conta. Depois, ao lançar, escolhe a conta e eu acompanho o saldo. De vez em quando, toca em Atualizar saldo pra acertar com o banco.',
+  804|   mes: 'Pra planejar o mês: aba 📅 Mês. Em Compromissos você põe contas fixas, faturas, assinaturas e planos que se repetem (com o dia do vencimento). Em Planos do mês, o que quer comprar e quanto custa. Eu mostro a sobra prevista e respondo "cabe no mês?".',
+  805|   cartao: 'Pra registrar um cartão de crédito: aba 🏦 Contas → Adicionar cartão de crédito. Coloca o banco, o limite, o dia que a fatura fecha, o dia que vence e quanto já está usado. Depois, ao lançar um gasto, escolhe o cartão em "Conta" e eu acompanho a fatura e o limite.',
+  806|   foto: 'Pra mandar foto: em ➕ Lançar, toca em 📷 Foto do comprovante; ou aqui na conversa, no 📎. Com a IA online ligada (Ajustes), eu leio o valor sozinho e você só confirma.',
+  807|   lembrete: 'Pra ligar os lembretes: ⚙️ Ajustes → Lembretes, liga a chave e escolhe o horário. No iPhone só funciona com o app instalado na tela inicial e o servidor configurado.',
+  808|   instalar: 'Pra instalar: no Android, menu do Chrome → Instalar app. No iPhone, no Safari: Compartilhar → Adicionar à Tela de Início. No PC, o ícone de instalar na barra de endereço.',
+  809|   backup: 'Pra fazer backup: ⚙️ Ajustes → Backup → Exportar backup. Pra levar pra outro aparelho, abre o app lá e usa Importar backup com o arquivo. As fotos não entram no backup.',
+  810|   ia: 'A IA online é opcional: ⚙️ Ajustes → IA online, cola o endereço do servidor, liga e toca em Testar conexão. Ela lê foto de comprovante e responde o que eu não entendo sozinho.',
+  811|   humor: 'Pra mudar meu jeito: ⚙️ Ajustes → C.A.O.S. Humor Suave (gentil, o padrão), Normal ou Ácido (zoeira liberada). Ali também liga a minha voz.',
+  812|   apagar: 'Pra apagar um lançamento: na aba 🏠 Início, em Lançamentos do mês, toca no × do lado dele. Eu mesmo não apago nada: essa é uma das minhas leis.',
+  813|   geral: 'Na barra de baixo: ➕ Lançar (gastos e entradas), 📅 Mês (planejamento), 🏠 Início no meio (resumo e alertas), 💬 C.A.O.S. (eu!) e 🏦 Contas (bancos e saldos). Dá pra trocar de aba arrastando a tela pro lado. Os ⚙️ Ajustes (orçamentos, humor, lembretes, backup) ficam na engrenagem, no alto do Início. Pergunta "como lanço um gasto?" ou "como ponho orçamento?" que eu explico cada uma.',
+  814| };
+  815| 
+  816| const fmtPct = v => `${String(Math.round(v * 100) / 100).replace('.', ',')}%`;
+  817| const sinal = v => (v == null ? '' : `${v > 0 ? '+' : ''}${fmtPct(v)}`);
+  818| const fmtReal = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: v >= 1000 ? 0 : 2 });
+  819| 
+  820| /** Uma linha com o número, a variação e a tendência, mostrando a conta (base de cálculo). */
+  821| const NOME_ATIVO = { USD: 'dólar', EUR: 'euro', GBP: 'valor da libra', BTC: 'bitcoin', ARS: 'peso argentino', IBOV: 'Ibovespa', SELIC: 'valor da Selic', CDI: 'CDI', IPCA: 'IPCA' };
+  822| 
+  823| function textoAtivo(m, a) {
+  824|   if (a === 'SELIC') return m.selic ? `Selic: ${fmtPct(m.selic.valor)} ao ano${m.ipca12 ? `; com a inflação em 12 meses em ${fmtPct(m.ipca12.valor)}, o juro real fica perto de ${fmtPct(m.selic.valor - m.ipca12.valor)}` : ''}.` : '';
+  825|   if (a === 'CDI') return m.cdi ? `CDI: ${fmtPct(m.cdi.valor)} ao ano. É a referência da renda fixa (um CDB "100% do CDI" rende isso, antes do imposto).` : '';
+  826|   if (a === 'IPCA') return m.ipca12 ? `Inflação (IPCA) em 12 meses: ${fmtPct(m.ipca12.valor)}.` : '';
+  827|   const x = a === 'IBOV' ? m.ibov : m.moedas?.[a];
+  828|   if (!x) return '';
+  829|   const valor = a === 'IBOV' ? `${Math.round(x.atual).toLocaleString('pt-BR')} pontos` : fmtReal(x.atual);
+  830|   const media = x.media20 != null ? ` A média dos últimos ${Math.min(20, x.dias)} dias é ${a === 'IBOV' ? `${Math.round(x.media20).toLocaleString('pt-BR')} pontos` : fmtReal(x.media20)}, e ele está ${x.atual >= x.media20 ? 'acima' : 'abaixo'} dela: ${textoTendencia(x.tendencia)}.` : '';
+  831|   return `${x.nome || 'Ibovespa'}: ${valor}${x.varDia != null ? ` (${sinal(x.varDia)} no dia` : ''}${x.var5 != null ? `, ${sinal(x.var5)} em 5 dias)` : x.varDia != null ? ')' : ''}.${media}`;
+  832| }
+  833| 
+  834| function textoSobra(a) {
+  835|   // sem entrada nem orçamento não tem conta pra fazer (em JS, null >= 0 é true: antes virava "sobram R$ 0,00")
+  836|   if (a.sobraCents == null || !a.baseTipo) return semBase();
+  837|   const base = a.baseTipo === 'entradas' ? `das entradas (${formatBRL(a.baseCents)})` : `do orçamento (${formatBRL(a.baseCents)})`;
+  838|   const partes = `já saiu ${formatBRL(a.gastosCents)}, faltam ${formatBRL(a.compPendentesCents)} de compromissos e ${formatBRL(a.planosPendentesCents)} de planos`;
+  839|   if (a.sobraCents >= 0) return `Cabe no mês: ${partes}, e ainda sobram ${formatBRL(a.sobraCents)} ${base}.`;
+  840|   return `Não cabe tudo: ${partes}, e faltariam ${formatBRL(-a.sobraCents)} ${base}.${a.adiar.length ? ` Dá pra adiar ${a.adiar.map(p => `${p.nome} (${formatBRL(p.valorCents)})`).join(', ')}.` : ''}`;
+  841| }
+  842| 
+  843| // ---------- Como pagou (P8, vistoria do JF 12/11) ----------
+  844| // Ordem: pagou como? → cartão: crédito ou débito? → crédito: à vista ou parcelado (quantas vezes)? →
+  845| // parcelado: prende o limite todo ou só a parcela? → qual cartão / de qual banco. Pula o que a pessoa já disse.
+  846| 
+  847| const CONTA_DE = { credito: a => a.tipo === 'cartao', pix: a => a.tipo !== 'cartao', debito: a => a.tipo !== 'cartao' };
+  848| 
+  849| /** Tira da descrição as palavras do pagamento (pix, crédito, 3x, nome do banco). */
+  850| function limparPagamento(desc, accounts = []) {
+  851|   if (!desc) return desc;
+  852|   desc = desc.replace(HORAS, ' ').replace(/\b(da manha|da tarde|da noite|da madrugada)\b/g, ' ').replace(/\b(dia \d{1,2}|anteontem|ontem|hoje)\b/gi, ' ').replace(/\bdia\s*$/i, ' ').replace(/\s+/g, ' ').trim();
+  853|   if (!desc) return null;
+  854|   const bancos = new Set(accounts.flatMap(a => [a.bank, a.nickname]).filter(Boolean).map(norm));
+  855|   const LIGA = /^(no|na|de|do|da|em|a|com|pelo|pela|e)$/;
+  856|   const palavras = desc.split(/\s+/);
+  857|   // nome do banco com mais de uma palavra ("Banco Teste"): marca a sequência toda
+  858|   const doBanco = new Set();
+  859|   for (const b of bancos) {
+  860|     const bt = b.split(/\s+/);
+  861|     for (let i = 0; i + bt.length <= palavras.length; i++) {
+  862|       if (bt.every((x, k) => norm(palavras[i + k]) === x)) bt.forEach((_, k) => doBanco.add(i + k));
+  863|     }
+  864|   }
+  865|   const limpo = [];
+  866|   for (const [i, w] of palavras.entries()) {
+  867|     const n = norm(w);
+  868|     // número solto só sai se for parcela ("em 3 vezes"); "no 99", "padaria 2 irmãos" ficam (achado do Gemini, 12/11)
+  869|     const parcela = /^\d{1,2}$/.test(n) && /^(vezes|parcelas|x)$/.test(norm(palavras[i + 1] || ''));
+  870|     if (doBanco.has(i) || parcela || /^(pix|debito|credito|cartao|dinheiro|especie|\d{1,2}x|vezes|parcelas|parcelado|vista)$/.test(n) || bancos.has(n)) {
+  871|       while (limpo.length && LIGA.test(norm(limpo[limpo.length - 1]))) limpo.pop(); // "no" de "no pix"
+  872|       continue;
+  873|     }
+  874|     limpo.push(w);
+  875|   }
+  876|   while (limpo.length && LIGA.test(norm(limpo[0]))) limpo.shift();
+  877|   while (limpo.length && LIGA.test(norm(limpo[limpo.length - 1]))) limpo.pop();
+  878|   return limpo.join(' ').trim() || null;
+  879| }
+  880| 
+  881| /** Lê do texto o que a pessoa já contou do pagamento. */
+  882| export function lerPagamento(texto, accounts = []) {
+  883|   const t = norm(texto);
+  884|   const r = {};
+  885|   if (/\bpix\b/.test(t)) r.forma = 'pix';
+  886|   else if (/\bdebito\b/.test(t)) r.forma = 'debito';
+  887|   else if (/\bcredito\b/.test(t)) r.forma = 'credito';
+  888|   else if (/\b(dinheiro|especie|em maos|dinheiro vivo|nota)\b/.test(t)) r.forma = 'dinheiro';
+  889|   else if (/\bcartao\b/.test(t)) r.forma = 'cartao'; // falta saber: crédito ou débito
+  890|   const vezes = t.match(/\b(\d{1,2}) ?x\b|\bem (\d{1,2}) ?(vezes|parcelas)\b/);
+  891|   if (vezes) {
+  892|     const n = Number(vezes[1] || vezes[2]);
+  893|     if (n >= 1 && n <= 24) { r.parcelas = n; if (n > 1 && r.forma !== 'credito') r.forma = 'credito'; }
+  894|   } else if (/\b(a vista|avista|de uma vez|uma vez so)\b/.test(t)) r.parcelas = 1;
+  895|   if (/\b(limite todo|valor todo|no limite|prende tudo|tudo no limite|prende o limite)\b/.test(t)) r.limiteModo = 'total';
+  896|   else if (/\b(dividido|so a parcela|a parcela|parcela do mes|por mes)\b/.test(t)) r.limiteModo = 'parcela';
+  897|   const filtro = CONTA_DE[r.forma] || (() => true);
+  898|   const achou = accounts.filter(filtro).filter(a => {
+  899|     const nomes = [a.bank, a.nickname].filter(Boolean).map(norm);
+  900|     return nomes.some(n => n.length >= 2 && new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(t));
+  901|   });
+  902|   if (achou.length === 1) { r.accountId = achou[0].id; if (!r.forma && achou[0].tipo === 'cartao') r.forma = 'credito'; }
+  903|   return r;
+  904| }
+  905| 
+  906| /** A próxima pergunta sobre o pagamento, ou null quando já dá pra propor. */
+  907| export function proximaPerguntaPagamento(acao, accounts = []) {
+  908|   if (!accounts.length) return null; // sem conta cadastrada, não enche de pergunta
+  909|   if (!acao.forma) return { texto: 'Pagou como? Dinheiro, Pix, débito ou crédito?', sugestoes: ['Pix', 'Débito', 'Crédito', 'Dinheiro'] };
+  910|   if (acao.forma === 'cartao') return { texto: 'No cartão de crédito ou de débito?', sugestoes: ['Crédito', 'Débito'] };
+  911|   if (acao.forma === 'credito' && acao.parcelas == null) {
+  912|     return { texto: 'À vista ou parcelado? Se for parcelado, me fala em quantas vezes, tipo "4x".', sugestoes: ['À vista', '2x', '3x', '10x'] };
+  913|   }
+  914|   if (acao.forma === 'credito' && acao.parcelas > 1 && !acao.limiteModo) {
+  915|     const parcela = formatBRL(Math.floor(acao.amountCents / acao.parcelas));
+  916|     return { texto: `Esse parcelado prende o valor todo (${formatBRL(acao.amountCents)}) no seu limite, soltando ${parcela} por mês, ou só a parcela de ${parcela} ocupa o limite? Se não souber, fala "não sei".`,
+  917|       sugestoes: ['Prende o limite todo', 'Só a parcela', 'Não sei'] };
+  918|   }
+  919|   if (!acao.accountId && CONTA_DE[acao.forma]) {
+  920|     const cabem = accounts.filter(CONTA_DE[acao.forma]);
+  921|     if (cabem.length > 1) {
+  922|       return { texto: acao.forma === 'credito' ? 'Qual cartão?' : 'De qual banco saiu?', sugestoes: cabem.slice(0, 5).map(a => accountLabel(a)) };
+  923|     }
+  924|   }
+  925|   return null;
+  926| }
+  927| 
+  928| /** Completa a ação com o que dá pra deduzir (uma conta só, "não sei" = valor todo). */
+  929| function completarPagamento(acao, accounts = []) {
+  930|   const a = { ...acao };
+  931|   if (a.forma === 'credito' && a.parcelas > 1 && !a.limiteModo) return a;
+  932|   if (!a.accountId && CONTA_DE[a.forma]) {
+  933|     const cabem = accounts.filter(CONTA_DE[a.forma]);
+  934|     if (cabem.length === 1) a.accountId = cabem[0].id;
+  935|   }
+  936|   return a;
+  937| }
+  938| 
+  939| /** Proposta final (com o pagamento) ou a próxima pergunta, no formato de resposta do responder. */
+  940| export function seguirPagamento(acao, dados) {
+  941|   const accounts = dados.accounts || [];
+  942|   const a = completarPagamento(acao, accounts);
+  943|   const q = proximaPerguntaPagamento(a, accounts);
+  944|   if (q) return { fato: q.texto, cru: true, sugestoes: q.sugestoes, aguardar: { tipo: 'pagamento', acao: a } };
+  945|   const conta = accounts.find(c => c.id === a.accountId);
+  946|   const como = a.forma === 'credito' ? (a.parcelas > 1 ? `no crédito em ${a.parcelas}x de ${formatBRL(Math.floor(a.amountCents / a.parcelas))}` : 'no crédito à vista')
+  947|     : a.forma === 'debito' ? 'no débito' : a.forma === 'pix' ? 'no Pix' : a.forma === 'dinheiro' ? 'em dinheiro' : '';
+  948|   const final = { ...a, forma: a.forma === 'cartao' ? null : a.forma || null, parcelas: a.parcelas || 1, limiteModo: a.limiteModo || 'total' };
+  949|   const cat = (dados.categories || []).find(c => c.id === a.categoryId);
+  950|   return {
+  951|     fato: `Fechado: ${formatBRL(a.amountCents)} em ${cat?.name ?? 'Outros'}${como ? `, ${como}` : ''}${conta ? ` (${accountLabel(conta)})` : ''}. Confere e confirma aí embaixo.`,
+  952|     cru: true, acao: final, sugestoes: [],
+  953|   };
+  954| }
+  955| 
+  956| /** Resposta da pessoa a uma pergunta do pagamento. null = não era resposta (segue a conversa normal). */
+  957| export function continuarPagamento(acao, texto, dados) {
+  958|   const t = norm(texto);
+  959|   if (/^(cancela|cancelar|deixa|deixa pra la|esquece|nao quero)\b/.test(t)) return { fato: 'Tranquilo, não anotei nada.', cru: true, sugestoes: [] };
+  960|   if (String(texto).trim().split(/\s+/).length > 8) return null;
+  961|   const accounts = dados.accounts || [];
+  962|   const lido = lerPagamento(texto, accounts.filter(CONTA_DE[acao.forma === 'cartao' ? 'credito' : acao.forma] || (() => true)));
+  963|   const novo = { ...acao };
+  964|   if (lido.forma && (!acao.forma || acao.forma === 'cartao')) novo.forma = lido.forma === 'cartao' ? acao.forma || 'cartao' : lido.forma;
+  965|   if (lido.parcelas != null && novo.parcelas == null) novo.parcelas = lido.parcelas;
+  966|   if (lido.limiteModo && !novo.limiteModo) novo.limiteModo = lido.limiteModo;
+  967|   if (/\bnao sei\b/.test(t) && novo.parcelas > 1 && !novo.limiteModo) novo.limiteModo = 'total';
+  968|   if (lido.accountId && !novo.accountId) novo.accountId = lido.accountId;
+  969|   // resposta com o nome da conta como está na sugestão ("Nubank · Poupança")
+  970|   if (!novo.accountId) {
+  971|     const igual = accounts.find(a => norm(accountLabel(a)) === t);
+  972|     if (igual) { novo.accountId = igual.id; if (!novo.forma || novo.forma === 'cartao') novo.forma = igual.tipo === 'cartao' ? 'credito' : 'debito'; }
+  973|   }
+  974|   if (JSON.stringify(novo) === JSON.stringify(acao)) return null;
+  975|   return seguirPagamento(novo, dados);
+  976| }
+  977| 
+  978| /** "Me explica melhor": a última resposta de novo, em passos simples, com a conta aberta. */
+  979| export function explicarMelhor(anterior, dados, today = toISODate()) {
+  980|   const { expenses = [], incomes = [], categories = [] } = dados;
+  981|   const mes = monthKey(today);
+  982|   const intent = anterior?.intent;
+  983|   if (['planos', 'cabe', 'pagar', 'saldo_mes'].includes(intent)) {
+  984|     const a = analisarPlanejamento(dados, today);
+  985|     if (!a.baseTipo) return `${semBase()} Funciona assim: eu pego o que entra no mês, tiro o que já saiu, o que ainda falta pagar de contas fixas e os planos que você anotou. O que sobrar é o quanto você ainda pode gastar sem aperto.`;
+  986|     const base = a.baseTipo === 'entradas' ? `1) Entrou no mês: ${formatBRL(a.baseCents)}.` : `1) Seu orçamento do mês (você não anotou entradas, então uso os limites): ${formatBRL(a.baseCents)}.`;
+  987|     const resultado = a.sobraCents >= 0 ? `Sobram ${formatBRL(a.sobraCents)}: é o quanto você ainda pode gastar sem aperto.` : `Faltam ${formatBRL(-a.sobraCents)}: não cabe tudo, então algum plano precisa esperar.`;
+  988|     return `Vou por partes. ${base} 2) Já saiu: ${formatBRL(a.gastosCents)}. 3) Ainda falta pagar de contas fixas: ${formatBRL(a.compPendentesCents)}. 4) Planos que você anotou: ${formatBRL(a.planosPendentesCents)}. A conta é: ${formatBRL(a.baseCents)} − ${formatBRL(a.gastosCents)} − ${formatBRL(a.compPendentesCents)} − ${formatBRL(a.planosPendentesCents)}. ${resultado} Qual parte ficou confusa?`;
+  989|   }
+  990|   if (intent === 'previsao') {
+  991|     const f = forecastMonth(expenses, mes, today, dados.compromissos || []);
+  992|     const pend = f.pendentesCents ? ` Somei também ${formatBRL(f.pendentesCents)} de contas fixas e assinaturas que ainda não caíram (tipo a que cobra lá pelo dia 20).` : '';
+  993|     return `Vou por partes. Até hoje (dia ${f.day} de ${f.daysTotal}) você gastou ${formatBRL(f.spentCents)}. Tirando as contas fixas (${formatBRL(f.fixosCents)}), dá uma média de ${formatBRL(f.perDayCents)} por dia.${pend} Se continuar nesse ritmo até o dia ${f.daysTotal}, o mês fecha perto de ${formatBRL(f.projectedCents)}. É uma estimativa: se você gastar menos nos próximos dias, ela cai.`;
+  994|   }
+  995|   if (['gasto_total', 'gasto_categoria', 'maior_gasto', 'onde_gastei'].includes(intent)) {
+  996|     const s = summarizeMonth(expenses, categories, mes);
+  997|     const top = s.rows.filter(r => r.spentCents > 0).sort((a, b) => b.spentCents - a.spentCents).slice(0, 3);
+  998|     if (!top.length) return 'Ainda não tem gasto anotado neste mês, então não tem o que somar. Quando você lançar, eu mostro quanto foi em cada categoria.';
+  999|     return `Vou por partes. Eu somo tudo que você anotou no mês, separado por tipo de gasto (categoria). Os maiores: ${top.map(r => `${r.name} ${formatBRL(r.spentCents)}`).join(', ')}. Somando tudo dá ${formatBRL(s.totalCents)}. Quer ver uma categoria por dentro? Pergunta tipo "quanto gastei em ${top[0].name.toLowerCase()}?".`;
+ 1000|   }
+ 1001|   if (intent === 'glossario' && anterior.termo) {
+ 1002|     const g = GLOSSARIO_POR_TERMO.get(anterior.termo);
+ 1003|     if (g) return `Bora mais fundo em ${g.termo.toLowerCase()}. ${g.mais}`;
+ 1004|   }
+ 1005|   if (intent === 'cartao') {
+ 1006|     return 'Vou por partes. O cartão junta suas compras numa fatura. Ela "fecha" num dia do mês (o que você comprou até ali vai pra essa fatura) e "vence" alguns dias depois (é quando você paga). O limite é o máximo que o banco deixa você usar; o que você já usou e ainda não pagou fica preso nele. Por isso eu mostro quanto ainda está livre.';
+ 1007|   }
+ 1008|   if (!intent) return 'Explico, sim! Mas me diz o quê: me manda a pergunta de novo, ou o assunto (tipo "o cartão", "o cabe no mês", "a previsão"), que eu explico com calma, passo a passo.';
+ 1009|   return 'Explico, sim. Qual parte ficou confusa? Me manda a palavra ou o número que não fez sentido que eu explico só ele, com um exemplo.';
+ 1010| }
+ 1011| 
+ 1012| function semBase() {
+ 1013|   return 'Pra eu fazer essa conta, preciso saber quanto entra no seu mês. Quanto você recebe? Me fala tipo "recebi 2500 de salário" que eu anoto como entrada, e aí eu te digo quanto sobra de verdade.';
+ 1014| }
+ 1015| 
+ 1016| /** "gastei 30 no uber" → "uber"; "paguei 120 de luz" → "luz". */
+ 1017| /** Acha o banco citado na frase ("no C6", "do banestes", "mercado pago"), pelo nome ou apelido. */
+ 1018| function acharConta(t, contas) {
+ 1019|   let melhor = null;
+ 1020|   for (const a of contas) {
+ 1021|     const nomes = [a.bank, a.nickname, String(a.bank || '').split(/\s+/)[0]].filter(x => x && norm(x).length >= 2).map(norm);
+ 1022|     for (const n of nomes) if (new RegExp(`(^|\\s)${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\s|$)`).test(t) && (!melhor || n.length > melhor.n.length)) melhor = { a, n };
+ 1023|   }
+ 1024|   return melhor?.a || null;
+ 1025| }
+ 1026| 
+ 1027| const diaMes = iso => `${Number(iso.slice(8, 10))}/${Number(iso.slice(5, 7))}`;
+ 1028| 
+ 1029| /** Descrição da entrada ("recebi 200 de extra da gasolina" → "Extra da gasolina"); vazia se for só o nome da fonte. */
+ 1030| function notaDaEntrada(t, fonte, accounts = []) {
+ 1031|   const m = String(t).match(/\b(?:de|do|da|pelo|pela|pra|por)\s+([a-z0-9 ]{3,60})$/);
+ 1032|   let d = m ? m[1] : '';
+ 1033|   d = limparPagamento(d.replace(/\b(no|na)\s+[a-z0-9 ]+$/, ''), accounts) || '';
+ 1034|   d = d.replace(/\b(dia \d{1,2}|ontem|hoje|anteontem)\b/g, '').trim();
+ 1035|   if (!d || norm(fonte.name).includes(d) || /^(salario|pagamento|freela|extra)$/.test(d)) return '';
+ 1036|   return (d[0].toUpperCase() + d.slice(1)).slice(0, 60);
+ 1037| }
+ 1038| 
+ 1039| export function descricaoDe(t) {
+ 1040|   const m = String(t).match(/\b(?:no|na|nos|nas|em|de|do|da|com|pro|pra)\s+([a-z0-9 ]{2,40})$/);
+ 1041|   if (!m) return '';
+ 1042|   // número fica na descrição ("no 99", "padaria 2 irmãos"); palavra vazia sai (achado do Gemini, 12/11)
+ 1043|   return m[1].split(/\s+/).filter(w => /^\d{1,4}$/.test(w) || palavrasDe(w).length).slice(0, 3).join(' ');
+ 1044| }
+ 1045| 
+ 1046| /** Primeiro acesso: tira o nome de "meu nome é João", "sou a Ana", "João". */
+ 1047| export function extrairNome(texto) {
+ 1048|   let t = String(texto || '').trim().replace(/[.!?,;]+$/g, '');
+ 1049|   t = t.replace(/^(oi|ola|olá|e ai|eai|opa)[,!\s]+/i, '')
+ 1050|     .replace(/^(o\s+)?meu nome (é|e|eh)\s+/i, '').replace(/^(eu\s+)?(me chamo|sou o|sou a|sou)\s+/i, '')
+ 1051|     .replace(/^(pode me chamar de|me chama de)\s+/i, '');
+ 1052|   const nome = t.split(/\s+/).slice(0, 3).join(' ').replace(/[^\p{L}\p{N} '-]/gu, '').trim();
+ 1053|   return nome ? nome.split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' ').slice(0, 30) : '';
+ 1054| }
+ 1055| 
+ 1056| const pct = (a, b) => (b > 0 ? Math.round((a / b) * 100) : 0);
+ 1057| 
+ 1058| /**
+ 1059|  * Monta o FATO da resposta (com os números) para a intenção. Só leitura dos dados.
+ 1060|  * @returns {{ gatilho?: string, fato?: string, sugestoes?: string[], acao?: object, eventos?: string[] }}
+ 1061|  */

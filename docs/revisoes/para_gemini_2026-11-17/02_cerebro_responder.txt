@@ -1,0 +1,731 @@
+BLOCO: Cérebro do C.A.O.S., parte 2: como ele RESPONDE (responder, planos, pesquisa, pagamentos)
+App C.A.O.S. Finanças 2.1.8.1 Alfa · C.A.O.S. 2.4.3 · núcleo 1.8.0 · 17/11/2026
+
+
+===== ARQUIVO: js/caos/conversa.js (linhas 1062 a 1786) =====
+
+ 1062| export function responder(intencao, dados, { today = toISODate(), emocao = 'calmo', perfil = null, now = Date.now() } = {}) {
+ 1063|   const { expenses = [], incomes = [], categories = [], accounts = [], compromissos = [], planos = [] } = dados;
+ 1064|   const range = periodRange(intencao.periodo, today);
+ 1065|   const mes = monthKey(today);
+ 1066| 
+ 1067|   switch (intencao.intent) {
+ 1068|     case 'registrar_gasto': {
+ 1069|       // descrição: o que vem depois de "no/na/de/em/com" ("gastei 30 no uber" → "Uber")
+ 1070|       // descrição sem o jeito de pagar ("no pix no mercado" → "mercado")
+ 1071|       // corta o jeito de pagar antes de achar a descrição ("5,50 numa casquinha no mcdonalds pelo débito do inter")
+ 1072|       const semPag = intencao.t.split(/\s+(?:(?:no|na|pelo|pela|via|com|em|de|do|da)\s+)?(?:pix|debito|credito|cartao|dinheiro)\b/)[0];
+ 1073|       // moeda de jogo ("comprei 800 robux por 40"): a descrição é a moeda e a categoria é Lazer (15/11)
+ 1074|       const jogoReg = acharMoedaJogo(intencao.t);
+ 1075|       const desc = limparPagamento(descricaoDe(semPag) || descricaoDe(intencao.t), dados.accounts) || (jogoReg ? jogoReg.moeda.split(' (')[0] : '');
+ 1076|       // categoria: pela palavra (sinônimos) ou pelo que ele aprendeu com o histórico da pessoa
+ 1077|       const aprendida = !intencao.categoria && jogoReg && !/\b(mercado|restaurante|uber)\b/.test(intencao.t) ? { categoryId: 'jogos' }
+ 1078|         : !intencao.categoria && desc ? sugerirCategoria(desc, expenses) : null;
+ 1079|       const cat = intencao.categoria || (aprendida && categories.find(c => c.id === aprendida.categoryId))
+ 1080|         || categories.find(c => c.id === 'outros') || categories[0];
+ 1081|       // nem categoria nem descrição ("7 reais no débito do Inter"): pergunta em quê, sem inventar "Outros"
+ 1082|       if (!intencao.categoria && !aprendida && !desc) {
+ 1083|         const extra = intencao.t.slice(semPag.length).trim();
+ 1084|         return { fato: `Anotando ${formatBRL(intencao.valor)}. Foi em quê? Tipo "mercado", "uber" ou "farmácia".`, cru: true,
+ 1085|           sugestoes: ['Mercado', 'Restaurante', 'Transporte', 'Deixa pra depois'], aguardar: { tipo: 'desc_gasto', valor: intencao.valor, extra } };
+ 1086|       }
+ 1087|       const recorrente = /\b(internet|luz|energia|agua|aluguel|condominio|netflix|spotify|streaming|academia|plano|celular|telefone|assinatura|mensalidade|escola|faculdade|seguro|gas)\b/.test(intencao.t)
+ 1088|         || ['contas', 'moradia', 'streaming'].includes(cat?.id);
+ 1089|       return {
+ 1090|         gatilho: 'proposta_registro',
+ 1091|         dica: [avisoDaData(dataDoTexto(intencao.t, today), today), recorrente ? 'Isso parece conta de todo mês. Se for, cadastra em 📅 Mês → Contas fixas que eu passo a lembrar do vencimento e já entra no planejamento.' : null,
+ 1092|           // 15/11 (JF, que compra Robux): gasto com jogo ganha a dica de gift card × crédito
+ 1093|           cat?.id === 'jogos' && !lerPagamento(intencao.t, dados.accounts).forma ? 'Dica de gamer: gift card ajuda a gastar só o que você separou pro jogo; no crédito é mais prático pra compra que se repete (passe, assinatura), mas aí vale ficar de olho na fatura.' : null].filter(Boolean).join(' ') || null,
+ 1094|         vars: { valor: formatBRL(intencao.valor), categoria: cat?.name ?? 'Outros' },
+ 1095|         acao: { tipo: 'registrar_gasto', amountCents: intencao.valor, categoryId: cat?.id ?? 'outros', date: dataDoTexto(intencao.t, today),
+ 1096|           note: desc ? desc[0].toUpperCase() + desc.slice(1) : '', ...lerPagamento(intencao.t, dados.accounts) },
+ 1097|         aprendeu: !!aprendida,
+ 1098|         pagamento: true,
+ 1099|       };
+ 1100|     }
+ 1101|     case 'pagamento_resposta':
+ 1102|       return intencao.resposta;
+ 1103|     case 'corrigir_valor': {
+ 1104|       const ult = [...expenses].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+ 1105|       if (!ult) return { fato: 'Não achei gasto pra corrigir. Me fala de novo o valor e onde foi, que eu anoto.', cru: true, sugestoes: [] };
+ 1106|       const nome = ult.note || categories.find(c => c.id === ult.categoryId)?.name || 'gasto';
+ 1107|       if (ult.amountCents === intencao.valor) return { fato: `O gasto "${nome}" já está com ${formatBRL(ult.amountCents)}.`, cru: true, sugestoes: [] };
+ 1108|       return { fato: `Mudar o valor de "${nome}" de ${formatBRL(ult.amountCents)} pra ${formatBRL(intencao.valor)}?`, cru: true, sugestoes: [],
+ 1109|         acao: { tipo: 'editar_valor', expenseId: ult.id, amountCents: intencao.valor } };
+ 1110|     }
+ 1111|     case 'registrar_transferencia': {
+ 1112|       const contas = (dados.accounts || []).filter(a => a.tipo !== 'cartao');
+ 1113|       const [, deTxt = '', paraTxt = ''] = intencao.t.match(/\b(?:do|da|de)\b(.+?)\b(?:pro|pra|para)\b(.+)$/) || [];
+ 1114|       const de = acharConta(` ${deTxt} `, contas), para = acharConta(` ${paraTxt} `, contas);
+ 1115|       if (!de || !para || de.id === para.id) {
+ 1116|         return { fato: `Não achei as duas contas nessa frase. Fala tipo "transferi 200 do Inter pro Nubank", com os nomes como estão em Contas.${contas.length < 2 ? ' Pra transferir, você precisa de 2 contas cadastradas.' : ''}`, cru: true, sugestoes: [] };
+ 1117|       }
+ 1118|       return { fato: `Anotar a transferência de ${formatBRL(intencao.valor)} de ${accountLabel(de)} pra ${accountLabel(para)}? Não é gasto nem entrada: o dinheiro só muda de lugar.`, cru: true, sugestoes: [],
+ 1119|         acao: { tipo: 'transferir', deId: de.id, paraId: para.id, amountCents: intencao.valor, date: dataDoTexto(intencao.t, today) } };
+ 1120|     }
+ 1121|     case 'corrigir_data': {
+ 1122|       // o último gasto anotado (da categoria, se a frase disser: "esse valor em saúde")
+ 1123|       const lista = [...expenses].filter(e => !intencao.categoria || e.categoryId === intencao.categoria.id)
+ 1124|         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+ 1125|       const ult = lista[0];
+ 1126|       if (!ult) return { fato: 'Não achei esse gasto aqui. Me fala de novo o valor e onde foi, que eu anoto com a data certa.', cru: true, sugestoes: [] };
+ 1127|       const nova = dataDoTexto(intencao.t, today);
+ 1128|       const dm = iso => `${Number(iso.slice(8, 10))}/${Number(iso.slice(5, 7))}`;
+ 1129|       const nome = ult.note || categories.find(c => c.id === ult.categoryId)?.name || 'gasto';
+ 1130|       if (nova === ult.date) return { fato: `O gasto "${nome}" (${formatBRL(ult.amountCents)}) já está no dia ${dm(nova)}.`, cru: true, sugestoes: [] };
+ 1131|       return { fato: `Mudar a data de "${nome}" (${formatBRL(ult.amountCents)}) de ${dm(ult.date)} pra ${dm(nova)}?`, cru: true, sugestoes: [],
+ 1132|         acao: { tipo: 'editar_data', expenseId: ult.id, date: nova } };
+ 1133|     }
+ 1134|     case 'glossario': {
+ 1135|       const g = intencao.termo;
+ 1136|       const idade = idadeDe(perfil?.aniversario, today);
+ 1137|       const crianca = idade != null && faixaEtaria(idade) === 'crianca';
+ 1138|       const abre = intencao.quem ? `Ah, ${intencao.quem === 'mae' ? 'sua mãe' : `seu ${intencao.quem.replace('mae', 'mãe')}`} falou de ${g.termo.toLowerCase()}? Explico. ` : '';
+ 1139|       const gov = g.governo ? ` Isso depende de regra do governo, que muda: o que eu sei é de ${ATUALIZADO_EM}. Confere no canal oficial.` : '';
+ 1140|       const def = (crianca ? g.crianca : g.adulto).replace(/^É /, 'é ');
+ 1141|       return { fato: `${abre}${g.termo}: ${def}${gov} Quer que eu explique melhor? É só pedir.`, cru: true, sugestoes: ['Me explica melhor', 'O que é juros compostos?', 'Vale a pena parcelar?'] };
+ 1142|     }
+ 1143|     case 'calc_juros': {
+ 1144|       const c = intencao.calc;
+ 1145|       if (c.faltando) {
+ 1146|         return { fato: `Faço a conta de juros ${c.tipo}! Me manda o valor, a taxa e o tempo, tipo "juros ${c.tipo} de 1000 a 1% ao mês por 12 meses".`, cru: true, sugestoes: [] };
+ 1147|       }
+ 1148|       const r = calcularJuros(c);
+ 1149|       const tempo = c.meses % 12 === 0 && c.meses >= 12 ? `${c.meses / 12} ${c.meses === 12 ? 'ano' : 'anos'}` : `${c.meses} ${c.meses === 1 ? 'mês' : 'meses'}`;
+ 1150|       const comparar = c.tipo === 'compostos' ? ` Com juros simples daria ${formatBRL(calcularJuros({ ...c, tipo: 'simples', taxa: c.taxaSimples }).finalCents)}: a diferença é o juro sobre juro.` : '';
+ 1151|       return { fato: `Com juros ${c.tipo}, ${formatBRL(c.valor)} a ${c.taxaTexto} por ${tempo} vira ${formatBRL(r.finalCents)} (${formatBRL(r.jurosCents)} de juros).${comparar} Se for dívida, a mesma conta joga contra você. É só uma conta: rendimento real depende de imposto e taxa.`, cru: true, sugestoes: ['O que é juros compostos?', 'Vale a pena parcelar?'] };
+ 1152|     }
+ 1153|     case 'ofertas_print':
+ 1154|       return { fato: 'Manda o print da oferta pelo 📎 (pode ser um de cada loja) que eu leio preço, parcelas e frete e comparo pra você. A imagem só vai pro servidor do C.A.O.S. Finanças pra essa leitura.',
+ 1155|         modoFoto: 'ofertas', cru: true, sugestoes: [] };
+ 1156|     case 'oferta_unica':
+ 1157|       return { fato: textoOfertaUnica(intencao.ofertas[0], intencao.produto), cru: true, sugestoes: ['Mandar print', 'Deixa pra depois'], modoFoto: 'ofertas',
+ 1158|         aguardar: { tipo: 'ofertas', ofertas: intencao.ofertas, produto: intencao.produto } };
+ 1159|     case 'porcentagem':
+ 1160|       return { fato: textoPorcentagem(intencao.pct), cru: true, sugestoes: [] };
+ 1161|     case 'comparar_ofertas': {
+ 1162|       const a = analisarOfertas(intencao.ofertas);
+ 1163|       return { fato: textoOfertas(a, intencao.produto), cru: true, decisao: 'compra', sugestoes: ['Mandar print', 'Deixa pra depois'], modoFoto: 'ofertas',
+ 1164|         aguardar: { tipo: 'ofertas', ofertas: intencao.ofertas, produto: intencao.produto } };
+ 1165|     }
+ 1166|     case 'vale_parcelar': {
+ 1167|       const p = intencao.parc || {};
+ 1168|       if (p.n && p.parcela) {
+ 1169|         const total = p.n * p.parcela;
+ 1170|         const vista = p.vista && p.vista !== total ? p.vista : null;
+ 1171|         if (vista) {
+ 1172|           const dif = total - vista;
+ 1173|           return { fato: dif > 0
+ 1174|             ? `Parcelado dá ${p.n}x de ${formatBRL(p.parcela)} = ${formatBRL(total)}. À vista é ${formatBRL(vista)}. Parcelando você paga ${formatBRL(dif)} a mais: isso é juro, mesmo que digam "sem juros". Se dá pra pagar à vista sem apertar o mês, à vista ganha.`
+ 1175|             : `Parcelado dá ${formatBRL(total)} e à vista ${formatBRL(vista)}: o parcelado não sai mais caro. Aí vale parcelar se as ${p.n} parcelas de ${formatBRL(p.parcela)} cabem no mês junto com as que você já tem.`, cru: true, decisao: 'compra' };
+ 1176|         }
+ 1177|         return { fato: `${p.n}x de ${formatBRL(p.parcela)} dá ${formatBRL(total)} no total. Pergunta o preço à vista: se for menor, a diferença é o juro escondido. E confere se a parcela cabe no mês com as outras que você já tem.`, cru: true, decisao: 'compra' };
+ 1178|       }
+ 1179|       return { fato: 'Depende: o parcelado sai mais caro que o à vista? (aí tem juro). A parcela cabe no mês? E vale pelo que dura? Coxinha em 3x, não; notebook em 10x sem juros, pode ser. Me manda os números, tipo "3000 à vista ou 10x de 330".', cru: true, decisao: 'compra', sugestoes: [] };
+ 1180|     }
+ 1181|     case 'esqueci_de_lancar':
+ 1182|       return {
+ 1183|         fato: 'Esqueceu?! Quase caí da cadeira aqui. Brincadeira: acontece com todo mundo, e eu não conto pra ninguém. Me fala três coisas: quanto foi, em quê e quando. Tipo "50 no mercado ontem" ou "120 de luz dia 10".',
+ 1184|         cru: true,
+ 1185|         aguardar: { tipo: 'esqueci' },
+ 1186|         sugestoes: ['Deixa pra depois'],
+ 1187|       };
+ 1188|     case 'fatura_paga': {
+ 1189|       const cartoes = (dados.accounts || []).filter(a => a.tipo === 'cartao');
+ 1190|       const cartao = acharConta(intencao.t, cartoes) || (cartoes.length === 1 ? cartoes[0] : null);
+ 1191|       if (!cartao) return { fato: cartoes.length ? `De qual cartão? ${cartoes.map(c => accountLabel(c)).join(', ')}.` : 'Você ainda não tem cartão cadastrado aqui. Dá pra cadastrar em Contas.', cru: true, sugestoes: cartoes.slice(0, 4).map(c => `Paguei a fatura do ${c.bank}`) };
+ 1192|       const f = faturaDoCartao(comReforco(cartao, dados.accounts, expenses, dados.incomes || [], dados.transferencias || []), expenses, today);
+ 1193|       if (!f.fechadaCents) return { fato: `A fatura do ${accountLabel(cartao)} ainda não fechou: tem ${formatBRL(f.abertaCents)} na aberta. Quando fechar, aí você me fala que pagou.`, cru: true, sugestoes: [] };
+ 1194|       return { fato: `Marcar a fatura de ${formatBRL(f.fechadaCents)} do ${accountLabel(cartao)} como paga? O limite volta pra você.`, cru: true, sugestoes: [],
+ 1195|         acao: { tipo: 'fatura_paga', cartaoId: cartao.id, ate: f.ultimoFechamento, valorCents: f.fechadaCents } };
+ 1196|     }
+ 1197|     case 'racha_pago': {
+ 1198|       const lista = aReceber(expenses).itens;
+ 1199|       if (!lista.length) return { fato: 'Não tem ninguém te devendo aqui no app. Quando dividir uma conta, eu anoto quem falta pagar.', cru: true, sugestoes: [] };
+ 1200|       const achou = lista.filter(p => norm(p.nome).split(/\s+/).some(n => n.length >= 2 && new RegExp(`(^|\\s)${n}(\\s|$)`).test(intencao.t)));
+ 1201|       if (!achou.length) return { fato: `Quem foi? Tá me devendo: ${[...new Set(lista.map(p => p.nome))].slice(0, 6).join(', ')}.`, cru: true, sugestoes: [...new Set(lista.map(p => `${p.nome} me pagou`))].slice(0, 4) };
+ 1202|       // mais de uma conta da mesma pessoa: a do valor dito, ou a mais antiga
+ 1203|       const p = (intencao.valor && achou.find(x => x.valorCents === intencao.valor)) || achou.sort((a, b) => a.date.localeCompare(b.date))[0];
+ 1204|       return { fato: `Marcar que ${p.nome} te pagou ${formatBRL(p.valorCents)}${p.note ? ` (${p.note})` : ''}?`, cru: true, sugestoes: [],
+ 1205|         acao: { tipo: 'racha_recebido', expenseId: p.expenseId, pessoaId: p.pessoaId, nome: p.nome, valorCents: p.valorCents } };
+ 1206|     }
+ 1207|     case 'gasto_sem_valor': {
+ 1208|       // "paguei o aluguel": se é uma conta fixa cadastrada e ainda não paga este mês, propõe lançar ela (16/11)
+ 1209|       const fixa = situacaoCompromissos(dados.compromissos || [], expenses, today)
+ 1210|         .find(c => c.noMes && c.status !== 'pago' && norm(c.nome).length >= 3 && intencao.t.includes(norm(c.nome)));
+ 1211|       if (fixa && /\b(paguei|quitei|pago|ja paguei)\b/.test(intencao.t)) {
+ 1212|         const comp = (dados.compromissos || []).find(c => c.id === fixa.id) || fixa;
+ 1213|         return { fato: `Lançar ${fixa.nome} como pago: ${formatBRL(fixa.faltaCents)}? Se o valor foi outro, me fala tipo "paguei ${norm(fixa.nome)} 1350".`, cru: true, sugestoes: [],
+ 1214|           acao: { tipo: 'registrar_gasto', amountCents: fixa.faltaCents, categoryId: comp.categoryId || 'contas', note: fixa.nome, date: today, accountId: comp.accountId || null, compromissoId: fixa.id } };
+ 1215|       }
+ 1216|       const desc = descricaoDe(intencao.t);
+ 1217|       const doQue = desc ? ` de ${desc}` : intencao.categoria ? ` em ${intencao.categoria.name}` : '';
+ 1218|       return {
+ 1219|         fato: `Bora anotar! Quanto foi o gasto${doQue}? Me manda só o valor, tipo 79,90. Se não lembrar, dá uma olhada no app do banco ou na fatura e me fala depois.`,
+ 1220|         aguardar: { tipo: 'valor_gasto', t: intencao.t, categoria: intencao.categoria || null },
+ 1221|         cru: true,
+ 1222|         sugestoes: [],
+ 1223|       };
+ 1224|     }
+ 1225|     case 'explicar_melhor':
+ 1226|       return { fato: explicarMelhor(dados.anterior, dados, today) };
+ 1227|     case 'registrar_entrada': {
+ 1228|       const fonte = INCOME_SOURCES.find(s => s.id === (intencao.fonte || 'outros'));
+ 1229|       // prevista: "dia 20" é o próximo dia 20 (este mês se ainda não passou, senão o que vem)
+ 1230|       let data = dataDoTexto(intencao.t, today);
+ 1231|       if (intencao.prevista) {
+ 1232|         const m = intencao.t.match(/\bdia (\d{1,2})\b/);
+ 1233|         const d = m ? Number(m[1]) : null;
+ 1234|         const [ay, am, ad] = today.split('-').map(Number);
+ 1235|         // revisão do Gemini (16/11): "dia 16" no dia 16 é hoje (não o mês que vem); "dia 31" num mês curto vira o
+ 1236|         // último dia; "na sexta" é a PRÓXIMA sexta (o dataDoTexto olha pra trás, que é o certo pra gasto)
+ 1237|         const sem = intencao.t.match(/\b(domingo|segunda|terca|quarta|quinta|sexta|sabado)(?:[- ]feira)?\b/);
+ 1238|         if (d) {
+ 1239|           const mesAlvo = d >= ad ? am - 1 : am; // índice do mês (0 a 11), pode passar de 11: o Date ajusta o ano
+ 1240|           const ultimo = new Date(ay, mesAlvo + 1, 0).getDate();
+ 1241|           data = toISODate(new Date(ay, mesAlvo, Math.min(d, ultimo)));
+ 1242|         } else if (sem) {
+ 1243|           const alvo = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'].indexOf(sem[1]);
+ 1244|           const hojeSem = new Date(ay, am - 1, ad).getDay();
+ 1245|           data = toISODate(new Date(ay, am - 1, ad + ((alvo - hojeSem + 7) % 7)));
+ 1246|         } else data = data < today ? today : data;
+ 1247|       }
+ 1248|       return {
+ 1249|         gatilho: 'proposta_registro',
+ 1250|         vars: { valor: formatBRL(intencao.valor), categoria: intencao.prevista ? `entrada prevista pra ${data.slice(8, 10)}/${data.slice(5, 7)} (${fonte.name})` : `entrada (${fonte.name})` },
+ 1251|         // "recebi 1500 de salário no nubank": a entrada cai na conta (achado do Gemini); cartão nunca recebe entrada
+ 1252|         acao: { tipo: 'registrar_entrada', amountCents: intencao.valor, sourceId: fonte.id, date: data, note: notaDaEntrada(intencao.t, fonte, dados.accounts), ...(intencao.prevista ? { prevista: true } : {}),
+ 1253|           accountId: lerPagamento(intencao.t, (dados.accounts || []).filter(a => a.tipo !== 'cartao')).accountId || null },
+ 1254|       };
+ 1255|     }
+ 1256|     case 'gasto_total': {
+ 1257|       const filtro = intencao.categoria ? e => e.categoryId === intencao.categoria.id : () => true;
+ 1258|       const { totalCents, count } = sumInRange(expenses, range, filtro);
+ 1259|       const onde = intencao.categoria ? ` em ${intencao.categoria.name}` : '';
+ 1260|       if (!count) return { fato: `Nenhum gasto${onde} ${range.label}.`, sugestoes: ['Gastei 25 no mercado', 'Algum alerta?'] };
+ 1261|       let extra = '';
+ 1262|       // "quanto gastei de Uber?" (revisão do Gemini, 16/11): se a palavra bate com a descrição, mostra só ela também
+ 1263|       const termo = (intencao.t.match(/\b(?:de|com|no|na|em)\s+([a-z0-9]{3,})(?:\s|$)/) || [])[1];
+ 1264|       if (termo && !['este', 'esse', 'mes', 'semana', 'hoje', 'ontem', 'gasto', 'gastos', 'total'].includes(termo)) {
+ 1265|         const doTermo = expenses.filter(e => e.date >= range.from && e.date <= range.to && norm(e.note || '').split(/\s+/).includes(termo));
+ 1266|         const sub = doTermo.reduce((s, e) => s + e.amountCents, 0);
+ 1267|         if (doTermo.length && sub !== totalCents) extra = ` Só de ${termo}: ${formatBRL(sub)}, em ${doTermo.length} ${doTermo.length === 1 ? 'lançamento' : 'lançamentos'}.`;
+ 1268|       }
+ 1269|       if (intencao.categoria && intencao.periodo === 'mes' && intencao.categoria.budgetCents) {
+ 1270|         extra += ` São ${pct(totalCents, intencao.categoria.budgetCents)}% do orçamento de ${formatBRL(intencao.categoria.budgetCents)}.`;
+ 1271|       }
+ 1272|       return {
+ 1273|         fato: `Você gastou ${formatBRL(totalCents)}${onde} ${range.label}, em ${count} ${count === 1 ? 'lançamento' : 'lançamentos'}.${extra}`,
+ 1274|         sugestoes: ['Onde mais gastei?', 'Comparado ao mês passado?', 'Vai dar até o fim do mês?'],
+ 1275|       };
+ 1276|     }
+ 1277|     case 'maior_gasto': {
+ 1278|       const top = topCategories(expenses, categories, range);
+ 1279|       if (!top.length) return { fato: `Nada gasto ${range.label} ainda.` };
+ 1280|       const total = top.reduce((s, c) => s + c.totalCents, 0);
+ 1281|       const lista = top.slice(0, 3).map(c => `${c.emoji} ${c.name} ${formatBRL(c.totalCents)} (${pct(c.totalCents, total)}%)`).join(', ');
+ 1282|       const maior = expenses.filter(e => e.date >= range.from && e.date <= range.to)
+ 1283|         .reduce((m, e) => (!m || e.amountCents > m.amountCents ? e : m), null);
+ 1284|       const cat = maior && categories.find(c => c.id === maior.categoryId);
+ 1285|       const item = maior ? ` O maior lançamento foi ${formatBRL(maior.amountCents)}${maior.note ? ` (${maior.note})` : ''} em ${cat?.name ?? 'Outros'}.` : '';
+ 1286|       return { fato: `Onde mais saiu dinheiro ${range.label}: ${lista}.${item}`, sugestoes: ['Me dá uma dica', 'Quanto ainda posso gastar?'] };
+ 1287|     }
+ 1288|     case 'entradas': {
+ 1289|       // "rendimentos" no sentido geral = qualquer entrada; só filtra investimento quando a pergunta é específica
+ 1290|       const especifica = intencao.fonte === 'salario' || intencao.fonte === 'freela'
+ 1291|         || (intencao.fonte === 'rendimento' && /invest|juros|dividend|cdb|poupanca|tesouro/.test(intencao.t));
+ 1292|       const filtro = especifica ? i => i.sourceId === intencao.fonte : () => true;
+ 1293|       const { totalCents, count } = sumInRange(incomes, range, filtro);
+ 1294|       if (!count) {
+ 1295|         return {
+ 1296|           fato: `Não tem nenhuma entrada anotada ${range.label}. Se recebeu algo, me fala tipo "recebi 1500 de salário".`,
+ 1297|           sugestoes: ['Recebi 1500 de salário', 'Qual meu saldo?'],
+ 1298|         };
+ 1299|       }
+ 1300|       const porFonte = INCOME_SOURCES.map(s => ({ s, v: sumInRange(incomes, range, i => i.sourceId === s.id && filtro(i)).totalCents }))
+ 1301|         .filter(x => x.v > 0).map(x => `${x.s.emoji} ${x.s.name} ${formatBRL(x.v)}`).join(', ');
+ 1302|       const gastos = sumInRange(expenses, range).totalCents;
+ 1303|       const saldo = totalCents - gastos;
+ 1304|       // o que entrou além do salário, com a descrição (JF, 14/11: "o extra da gasolina")
+ 1305|       const extras = incomes.filter(i => i.date >= range.from && i.date <= range.to && i.sourceId !== 'salario' && filtro(i)).slice(0, 4)
+ 1306|         .map(i => `${i.note || INCOME_SOURCES.find(s => s.id === i.sourceId)?.name} ${formatBRL(i.amountCents)} (${diaMes(i.date)})`);
+ 1307|       return {
+ 1308|         fato: `Entrou ${formatBRL(totalCents)} ${range.label} (${porFonte}).${extras.length && intencao.fonte !== 'salario' ? ` ${especifica ? 'Foi' : 'Além do salário'}: ${extras.join(', ')}.` : ''}${especifica ? '' : ` Saiu ${formatBRL(gastos)}, então o saldo do período está ${saldo >= 0 ? 'positivo em' : 'negativo em'} ${formatBRL(Math.abs(saldo))}.`}`,
+ 1309|         sugestoes: ['Onde mais gastei?', 'Qual meu saldo?'],
+ 1310|       };
+ 1311|     }
+ 1312|     case 'entradas_comparar': {
+ 1313|       const este = monthKey(today), antes = shiftMonth(este, -1);
+ 1314|       const doMes = (m, f = () => true) => incomes.filter(i => i.month === m && f(i)).reduce((t, i) => t + i.amountCents, 0);
+ 1315|       const salA = doMes(este, i => i.sourceId === 'salario'), salB = doMes(antes, i => i.sourceId === 'salario');
+ 1316|       const totA = doMes(este), totB = doMes(antes);
+ 1317|       if (!totA && !totB) return { fato: 'Ainda não tem entrada anotada neste mês nem no passado. Me fala tipo "recebi 3000 de salário dia 5 no Banestes".', cru: true, sugestoes: ['Recebi 3000 de salário'] };
+ 1318|       const comp = (a, b, nome) => !b ? `${nome} deste mês: ${formatBRL(a)} (mês passado não tem anotado)` : a === b ? `${nome}: ${formatBRL(a)}, igual ao mês passado` : `${nome}: ${formatBRL(a)}, ${a > b ? 'mais' : 'menos'} ${formatBRL(Math.abs(a - b))} que o mês passado (${formatBRL(b)})`;
+ 1319|       const extras = incomes.filter(i => i.month === este && i.sourceId !== 'salario').map(i => `${i.note || INCOME_SOURCES.find(s => s.id === i.sourceId)?.name} ${formatBRL(i.amountCents)} dia ${Number(i.date.slice(8))}`);
+ 1320|       const aumento = salA && salB && salA !== salB ? (salA > salB ? ' Pelo salário anotado, teve aumento.' : ' Pelo salário anotado, veio menor.') : '';
+ 1321|       return { fato: `${comp(salA, salB, 'Salário')}. ${comp(totA, totB, 'Tudo que entrou')}.${aumento}${extras.length ? ` Extras deste mês: ${extras.slice(0, 4).join(', ')}.` : ''}`, cru: true,
+ 1322|         sugestoes: ['Me ajuda a dividir o salário entre os bancos', 'Quanto gastei este mês?'] };
+ 1323|     }
+ 1324|     case 'definir_piso': {
+ 1325|       const contas = (dados.accounts || []).filter(a => a.tipo !== 'cartao');
+ 1326|       const conta = acharConta(intencao.t, contas) || (contas.length === 1 ? contas[0] : null);
+ 1327|       if (!conta) return { fato: `Piso de ${formatBRL(intencao.valor)} em qual banco? Me fala tipo "meu piso no Banestes é 2000".`, cru: true, sugestoes: contas.slice(0, 4).map(a => `Piso no ${a.bank} é ${(intencao.valor / 100).toFixed(0)}`) };
+ 1328|       return { fato: `Combinado: o piso de segurança de ${accountLabel(conta)} fica em ${formatBRL(intencao.valor)}. Eu aviso quando o saldo chegar perto. Confirma?`, cru: true, sugestoes: [],
+ 1329|         acao: { tipo: 'definir_piso', accountId: conta.id, pisoCents: intencao.valor } };
+ 1330|     }
+ 1331|     case 'media_seguranca':
+ 1332|     case 'sugerir_transferencia': {
+ 1333|       const rp = resumoPisos((accounts || []), expenses, incomes, dados.transferencias || [], today);
+ 1334|       if (!rp.comPiso.length) return { fato: 'Pra fazer a média de segurança, preciso dos pisos dos seus bancos principais. Me fala tipo "meu piso no Banestes é 2000".', cru: true, sugestoes: [] };
+ 1335|       const nomes = rp.comPiso.map(c => c.nome).join(' e ');
+ 1336|       const comFolga = rp.contas.filter(c => c.folgaCents > 0).sort((a, b) => b.folgaCents - a.folgaCents).map(c => `${c.nome} ${formatBRL(c.folgaCents)}${c.pisoCents ? '' : ' (sem piso)'}`);
+ 1337|       const abaixo = rp.contas.filter(c => c.pisoCents && c.folgaCents < 0).map(c => `${c.nome} está ${formatBRL(-c.folgaCents)} abaixo do piso`);
+ 1338|       let fato = intencao.intent === 'sugerir_transferencia' ? `${comFolga.length ? `Folga: ${comFolga.join(', ')}. ` : ''}${abaixo.length ? `${abaixo.join('; ')}. ` : ''}` : `Somando ${nomes}: ${formatBRL(rp.saldoTotalCents)} pra um piso total de ${formatBRL(rp.pisoTotalCents)}. `;
+ 1339|       if (intencao.intent !== 'sugerir_transferencia') {
+ 1340|         if (rp.status === 'estourado') fato += `Já passou do piso em ${formatBRL(-rp.folgaTotalCents)}. `;
+ 1341|         else if (rp.diasAteEstourar != null) fato += `Folga de ${formatBRL(rp.folgaTotalCents)}: no ritmo de ${formatBRL(rp.gastoDiaCents)} por dia nesses bancos, ela acaba em ${rp.diasAteEstourar} ${rp.diasAteEstourar === 1 ? 'dia' : 'dias'}. `;
+ 1342|         else fato += `Folga de ${formatBRL(rp.folgaTotalCents)}, e ainda não tem gasto anotado nesses bancos este mês. `;
+ 1343|       }
+ 1344|       const t = sugerirTransferencias(rp.contas);
+ 1345|       if (t.passos.length) fato += `Sugestão: ${t.passos.map(p => `passar ${formatBRL(p.valorCents)} do ${p.de} pro ${p.para}`).join('; ')}.${t.aindaFaltaCents ? ` Mesmo assim faltam ${formatBRL(t.aindaFaltaCents)}.` : ''} Quem decide é você.`;
+ 1346|       else if (rp.contas.some(c => c.pisoCents && c.folgaCents < 0)) fato += 'Não tem outro banco com folga pra cobrir agora.';
+ 1347|       else fato += intencao.intent === 'sugerir_transferencia' ? 'Nenhum banco está abaixo do piso: não precisa transferir agora.' : 'Cada banco está acima do próprio piso.';
+ 1348|       return { fato: fato.trim(), cru: true, sugestoes: ['Quanto posso gastar no C6?', 'Me ajuda a dividir o salário entre os bancos'] };
+ 1349|     }
+ 1350|     case 'pisos':
+ 1351|     case 'folga_conta': {
+ 1352|       const contas = (dados.accounts || []).filter(a => a.tipo !== 'cartao');
+ 1353|       const achada = acharConta(intencao.t, contas);
+ 1354|       const lista = (achada ? [achada] : contas).map(a => ({ a, saldo: accountBalance(a, expenses, incomes, dados.transferencias || []) }));
+ 1355|       if (!contas.length) return { fato: 'Cadastra seus bancos em Contas primeiro. Depois me fala o piso de cada um, tipo "meu piso no Banestes é 2000".', cru: true, sugestoes: [] };
+ 1356|       const linhas = lista.map(({ a, saldo }) => {
+ 1357|         const p = folgaDoPiso(a, saldo);
+ 1358|         if (!p) return `${accountLabel(a)}: ${formatBRL(saldo)}, sem piso definido`;
+ 1359|         return p.abaixo ? `${accountLabel(a)}: ${formatBRL(saldo)}, ${formatBRL(-p.folgaCents)} abaixo do piso de ${formatBRL(p.pisoCents)}`
+ 1360|           : `${accountLabel(a)}: dá pra gastar até ${formatBRL(p.folgaCents)} sem passar do piso de ${formatBRL(p.pisoCents)}`;
+ 1361|       });
+ 1362|       const semPiso = lista.some(({ a }) => !(a.pisoCents > 0));
+ 1363|       return { fato: `${linhas.join('. ')}.${semPiso ? ' Pra definir um piso, me fala tipo "meu piso no Banestes é 2000".' : ''}`, cru: true,
+ 1364|         sugestoes: ['Me ajuda a dividir o salário entre os bancos'] };
+ 1365|     }
+ 1366|     case 'dividir_entre_bancos': {
+ 1367|       const contas = (dados.accounts || []).filter(a => a.tipo !== 'cartao' && !a.paraQuem);
+ 1368|       const ultimoSalario = [...incomes].filter(i => i.sourceId === 'salario').sort((a, b) => b.date.localeCompare(a.date))[0];
+ 1369|       const valor = intencao.valor || ultimoSalario?.amountCents || 0;
+ 1370|       if (!valor) return { fato: 'Quanto você quer dividir? Me fala tipo "dividir 3000 entre os bancos".', cru: true, sugestoes: [] };
+ 1371|       const lista = contas.map(a => ({ id: a.id, nome: accountLabel(a), pisoCents: a.pisoCents || 0, saldoCents: accountBalance(a, expenses, incomes, dados.transferencias || []) }));
+ 1372|       if (!lista.some(c => c.pisoCents > 0)) return { fato: `Pra dividir ${formatBRL(valor)} do jeito certo, preciso saber o piso de segurança de cada banco: o mínimo que você quer manter lá. Me fala tipo "meu piso no Banestes é 2000".`, cru: true, sugestoes: [] };
+ 1373|       const d = dividirEntrePisos(valor, lista);
+ 1374|       const passos = d.passos.map((p, i) => `${i + 1}) ${formatBRL(p.valorCents)} pro ${p.nome}${p.completo ? ' voltar ao piso' : ' (ainda não chega no piso)'}`);
+ 1375|       const base = intencao.valor ? '' : ` (seu último salário, de ${diaMes(ultimoSalario.date)})`;
+ 1376|       if (!passos.length) return { fato: `Todos os bancos estão acima do piso, então os ${formatBRL(valor)}${base} estão livres. Uma ideia: separar uma parte pra reserva antes de gastar. A decisão é sua.`, cru: true, sugestoes: [] };
+ 1377|       return { fato: `Com ${formatBRL(valor)}${base}: ${passos.join('; ')}.${d.livreCents ? ` Sobram ${formatBRL(d.livreCents)} livres: uma ideia é guardar uma parte antes de gastar.` : ' Não sobra nada livre depois de cobrir os pisos.'} É uma sugestão; quem decide é você.`, cru: true, sugestoes: [] };
+ 1378|     }
+ 1379|     case 'explicar_print':
+ 1380|       return { fato: 'Manda o print aqui pelo 📎 que eu te explico o que o banco quis dizer. A imagem só vai pro servidor do C.A.O.S. Finanças pra isso, e eu não repito números de conta nem de cartão.', modoFoto: 'explicar', sugestoes: [] };
+ 1381|     case 'meta_nova':
+ 1382|       return { gatilho: 'meta_pra_que', fluxoMeta: { nome: intencao.metaNome || null } };
+ 1383|     case 'metas': {
+ 1384|       const metas = (dados.metas || []).map(m => progressoMeta(m, today));
+ 1385|       if (!metas.length) return { fato: 'Você ainda não tem metas. Quer montar uma comigo? É só falar "quero juntar dinheiro pra…" ou tocar em Nova meta, na aba 📅 Mês.', sugestoes: ['Quero montar uma meta'] };
+ 1386|       return { fato: metas.map(m => (m.batida ? `${m.nome}: meta batida! 🎉` : textoMeta(m))).join(' '), sugestoes: ['Quero montar uma meta', 'Cabe no mês?'] };
+ 1387|     }
+ 1388|     case 'meta_guardar': {
+ 1389|       const metas = (dados.metas || []).filter(m => !m.conquistadaEm);
+ 1390|       if (!metas.length) return { fato: 'Você ainda não tem meta aberta pra guardar dinheiro. Quer montar uma? Fala "quero juntar dinheiro pra…".', sugestoes: ['Quero montar uma meta'] };
+ 1391|       const meta = metas.find(m => intencao.t.includes(norm(m.nome))) || (metas.length === 1 ? metas[0] : null);
+ 1392|       if (!meta) return { fato: `Em qual meta? Você tem: ${metas.map(m => m.nome).join(', ')}. Fala tipo "guardei 50 na meta ${metas[0].nome}".`, sugestoes: metas.map(m => `Guardei ${(intencao.valor / 100).toFixed(0)} na meta ${m.nome}`) };
+ 1393|       return { fato: `Quer que eu some ${formatBRL(intencao.valor)} na meta ${meta.nome}?`, acao: { tipo: 'meta_guardar', metaId: meta.id, valorCents: intencao.valor } };
+ 1394|     }
+ 1395|     case 'cartao': {
+ 1396|       const cartoes = accounts.filter(a => a.tipo === 'cartao');
+ 1397|       if (!cartoes.length) return { fato: 'Você ainda não cadastrou cartão de crédito. Na aba 🏦 Contas tem "Adicionar cartão de crédito": limite, dia que fecha e dia que vence. Aí eu acompanho a fatura com você.', sugestoes: ['Como registro meu cartão?'] };
+ 1398|       const partes = cartoes.map(c => {
+ 1399|         const f = faturaDoCartao(comReforco(c, accounts, expenses, incomes, dados.transferencias || []), expenses, today);
+ 1400|         const fech = f.diasParaFechar === 0 ? 'fecha hoje' : `fecha em ${f.diasParaFechar} ${f.diasParaFechar === 1 ? 'dia' : 'dias'}`;
+ 1401|         const venc = f.fechadaCents > 0 ? ` Fatura fechada de ${formatBRL(f.fechadaCents)} vence ${f.diasParaVencer === 0 ? 'hoje' : f.diasParaVencer === 1 ? 'amanhã' : `dia ${Number(f.vencimento.slice(8))}`}.` : '';
+ 1402|         return `${f.nome}: ${formatBRL(f.usadoCents)} de ${formatBRL(f.limiteCents)} do limite (${f.pct}%), sobram ${formatBRL(f.disponivelCents)}. A fatura aberta está em ${formatBRL(f.abertaCents)} e ${fech}.${venc}`;
+ 1403|       });
+ 1404|       return { fato: partes.join(' '), sugestoes: ['O que tenho pra pagar?', 'Cabe no mês?'] };
+ 1405|     }
+ 1406|     case 'saldo': {
+ 1407|       if (!accounts.length) {
+ 1408|         return { fato: 'Você ainda não cadastrou nenhuma conta. Vai na aba Contas, escolhe o banco e coloca o saldo atual.', sugestoes: ['Quanto gastei este mês?'] };
+ 1409|       }
+ 1410|       const t = intencao.t;
+ 1411|       const contas = accounts.filter(a => a.tipo !== 'cartao');
+ 1412|       const uma = contas.find(a => t.includes(norm(a.bank)) || (a.nickname && t.includes(norm(a.nickname))));
+ 1413|       if (uma) {
+ 1414|         return { fato: `${accountLabel(uma)}: saldo estimado de ${formatBRL(accountBalance(uma, expenses, incomes, dados.transferencias || []))}.`, sugestoes: ['Algum alerta?'] };
+ 1415|       }
+ 1416|       const lista = contas.map(a => `${accountLabel(a)} ${formatBRL(accountBalance(a, expenses, incomes, dados.transferencias || []))}`).join(', ');
+ 1417|       return {
+ 1418|         fato: `Saldo estimado total: ${formatBRL(totalBalance(accounts, expenses, incomes, dados.transferencias || []))} (${lista}). É o saldo que você informou mais o que foi lançado depois.`,
+ 1419|         sugestoes: ['Quanto gastei este mês?', 'Tive rendimentos?'],
+ 1420|       };
+ 1421|     }
+ 1422|     case 'orcamento': {
+ 1423|       const s = summarizeMonth(expenses, categories, mes);
+ 1424|       if (intencao.categoria) {
+ 1425|         const r = s.rows.find(x => x.id === intencao.categoria.id);
+ 1426|         if (!r.budgetCents) return { fato: `${r.name} não tem orçamento. Gasto do mês: ${formatBRL(r.spentCents)}. Dá pra definir em Ajustes.` };
+ 1427|         const resta = r.budgetCents - r.spentCents;
+ 1428|         return { fato: resta >= 0
+ 1429|           ? `${r.name}: ${formatBRL(r.spentCents)} de ${formatBRL(r.budgetCents)}. Ainda pode gastar ${formatBRL(resta)}.`
+ 1430|           : `${r.name} já passou ${formatBRL(-resta)} do orçamento de ${formatBRL(r.budgetCents)}.` };
+ 1431|       }
+ 1432|       if (!s.budgetTotalCents) return { fato: 'Você ainda não definiu orçamentos. Vai em Ajustes → Orçamentos e coloca um limite por categoria.' };
+ 1433|       const resta = s.budgetTotalCents - s.budgetedSpentCents;
+ 1434|       const dias = Number(today.slice(8, 10));
+ 1435|       const faltam = Math.max(1, new Date(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0).getDate() - dias + 1);
+ 1436|       return {
+ 1437|         fato: resta >= 0
+ 1438|           ? `Nas categorias com limite, ainda dá pra gastar ${formatBRL(resta)} este mês. Dá uns ${formatBRL(Math.floor(resta / faltam))} por dia até o fim do mês.`
+ 1439|           : `Os orçamentos já passaram ${formatBRL(-resta)} do total planejado (${formatBRL(s.budgetTotalCents)}).`,
+ 1440|         sugestoes: ['Onde mais gastei?', 'Me dá uma dica'],
+ 1441|       };
+ 1442|     }
+ 1443|     case 'previsao': {
+ 1444|       const f = forecastMonth(expenses, mes, today, compromissos);
+ 1445|       const s = summarizeMonth(expenses, categories, mes);
+ 1446|       const inc = incomeIn(incomes, mes);
+ 1447|       let fato = `No ritmo atual (${formatBRL(f.perDayCents)} por dia), o mês deve fechar em ${formatBRL(f.projectedCents)}.`;
+ 1448|       if (f.pendentesCents) fato += ` Já contei ${formatBRL(f.pendentesCents)} de contas fixas e assinaturas que ainda vão cair este mês.`;
+ 1449|       if (s.budgetTotalCents) {
+ 1450|         // compara só o que tem limite com o orçamento
+ 1451|         const projBud = Math.round((s.budgetedSpentCents / Math.max(1, f.day)) * f.daysTotal);
+ 1452|         fato += projBud > s.budgetTotalCents
+ 1453|           ? ` Nas categorias com limite, a previsão (${formatBRL(projBud)}) passa ${formatBRL(projBud - s.budgetTotalCents)} do orçamento.`
+ 1454|           : ` As categorias com limite devem fechar dentro do orçamento de ${formatBRL(s.budgetTotalCents)}.`;
+ 1455|       }
+ 1456|       if (inc) fato += f.projectedCents > inc ? ` E fica acima das entradas (${formatBRL(inc)}).` : ` E cabe nas entradas do mês (${formatBRL(inc)}).`;
+ 1457|       return { fato, sugestoes: ['Quanto ainda posso gastar?', 'Me dá uma dica'] };
+ 1458|     }
+ 1459|     case 'comparar': {
+ 1460|       const atual = spentIn(expenses, mes);
+ 1461|       const ant = spentIn(expenses, shiftMonth(mes, -1));
+ 1462|       const dia = Number(today.slice(8, 10));
+ 1463|       const antAteHoje = sumInRange(expenses, { from: `${shiftMonth(mes, -1)}-01`, to: `${shiftMonth(mes, -1)}-${String(dia).padStart(2, '0')}` }).totalCents;
+ 1464|       if (!ant) return { fato: `Não tem gasto anotado em ${monthLabel(shiftMonth(mes, -1))} pra comparar. Este mês: ${formatBRL(atual)}.` };
+ 1465|       const dif = atual - antAteHoje;
+ 1466|       return {
+ 1467|         fato: `Até o dia ${dia}, este mês saiu ${formatBRL(atual)}; no mesmo ponto do mês passado eram ${formatBRL(antAteHoje)} (${dif > 0 ? `${formatBRL(dif)} a mais` : dif < 0 ? `${formatBRL(-dif)} a menos` : 'igualzinho'}). O mês passado inteiro fechou em ${formatBRL(ant)}.`,
+ 1468|         sugestoes: ['Onde mais gastei?', 'Vai dar até o fim do mês?'],
+ 1469|       };
+ 1470|     }
+ 1471|     case 'media': {
+ 1472|       const f = forecastMonth(expenses, mes, today);
+ 1473|       return { fato: `Média deste mês: ${formatBRL(f.perDayCents)} por dia, em ${f.day} ${f.day === 1 ? 'dia' : 'dias'}.` };
+ 1474|     }
+ 1475|     case 'dica': {
+ 1476|       const top = topCategories(expenses, categories, periodRange('mes', today));
+ 1477|       const alertas = analyze(dados, today);
+ 1478|       if (alertas.some(a => a.type === 'delivery_repetido')) return { fato: 'Dica da semana: o delivery está pesando. Cozinhar duas vezes por semana já faz diferença no fim do mês.' };
+ 1479|       if (!top.length) return { fato: 'Primeira dica: anota tudo por uma semana, até o cafezinho. Depois eu te mostro onde dá pra cortar.' };
+ 1480|       // corte de 15% na maior categoria que dá pra segurar (delivery, lazer, compras…), não em moradia ou saúde
+ 1481|       const ESSENCIAIS = new Set(['moradia', 'saude', 'contas', 'mercado', 'transporte']);
+ 1482|       const c = top.find(x => !ESSENCIAIS.has(x.id)) || top[0];
+ 1483|       const corte = Math.round(c.totalCents * 0.15);
+ 1484|       const semOrc = categories.filter(x => !x.budgetCents).length;
+ 1485|       return {
+ 1486|         fato: `${c === top[0] ? 'Sua maior categoria no mês' : 'Onde dá pra segurar mais fácil'} é ${c.emoji} ${c.name} (${formatBRL(c.totalCents)}). Cortar 15% dela daria ${formatBRL(corte)} de folga.${semOrc ? ` E ${semOrc} categorias estão sem orçamento: definir um limite ajuda a segurar.` : ''}`,
+ 1487|       };
+ 1488|     }
+ 1489|     case 'alertas': {
+ 1490|       const a = analyze(dados, today);
+ 1491|       if (!a.length) return { fato: 'Nenhum alerta agora. Tudo dentro do esperado.', sugestoes: ['Quanto gastei este mês?', 'Vai dar até o fim do mês?'] };
+ 1492|       return { alertas: a, fato: `Tenho ${a.length} ${a.length === 1 ? 'alerta' : 'alertas'}. O principal:`, sugestoes: ['Onde mais gastei?', 'Me dá uma dica'] };
+ 1493|     }
+ 1494|     case 'meu_nome':
+ 1495|       return perfil?.apelido
+ 1496|         ? { fato: `Claro! Você é ${perfil.nome && perfil.nome !== perfil.apelido ? `${perfil.nome}, e eu te chamo de ${perfil.apelido}` : perfil.apelido}. Se quiser mudar, é só falar "me chama de…".` }
+ 1497|         : { fato: 'Ainda não sei seu nome. Me conta? Diz "me chama de" e o seu nome.' };
+ 1498|     case 'mudar_apelido': {
+ 1499|       const novo = intencao.apelido.split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
+ 1500|       return { gatilho: 'proposta_registro', vars: { valor: novo, categoria: 'seu novo nome' },
+ 1501|         fato: `Quer que eu passe a te chamar de ${novo}?`, acao: { tipo: 'mudar_apelido', apelido: novo } };
+ 1502|     }
+ 1503|     case 'pagar': {
+ 1504|       // fatura do cartão entra sozinha (achado do GPT, 12/11), menos se a pessoa já cadastrou essa fatura como
+ 1505|       // compromisso (aí não conta duas vezes). Fatura não vira proposta de gasto: as compras já foram lançadas;
+ 1506|       // pagar a fatura é marcar "Paguei a fatura" em Contas.
+ 1507|       const comFaturaCadastrada = new Set(compromissos.filter(c => c.tipo === 'fatura' && c.accountId).map(c => c.accountId));
+ 1508|       const faturas = accounts.filter(a => a.tipo === 'cartao' && !comFaturaCadastrada.has(a.id))
+ 1509|         .map(a => faturaDoCartao(comReforco(a, accounts, expenses, incomes, dados.transferencias || []), expenses, today))
+ 1510|         .filter(f => f.fechadaCents > 0);
+ 1511|       const dia = iso => `${Number(iso.slice(8))}/${Number(iso.slice(5, 7))}`;
+ 1512|       const txtFaturas = faturas.map(f => `fatura do ${f.nome} ${formatBRL(f.fechadaCents)} (${f.atrasada ? `venceu dia ${dia(f.vencimento)}` : `vence dia ${dia(f.vencimento)}`})`);
+ 1513|       const totalFaturas = faturas.reduce((t, f) => t + f.fechadaCents, 0);
+ 1514|       const dicaFatura = faturas.length ? ' Pagou a fatura? Marca em Contas, no cartão, em "Paguei a fatura".' : '';
+ 1515|       const sit = situacaoCompromissos(compromissos, expenses, today).filter(c => c.noMes);
+ 1516|       if (!compromissos.length && !faturas.length) return { fato: 'Você ainda não cadastrou compromissos. Na aba 📅 Mês dá pra pôr contas fixas, faturas, assinaturas e planos que se repetem, e eu lembro dos vencimentos.', sugestoes: ['O que planejei pro mês?'] };
+ 1517|       const abertos = sit.filter(c => c.status !== 'pago');
+ 1518|       if (!abertos.length && !faturas.length) return { fato: `Tudo pago este mês! ${sit.length} ${sit.length === 1 ? 'compromisso' : 'compromissos'} em dia.`, sugestoes: ['Cabe no mês?'] };
+ 1519|       const lista = [...abertos.map(c => `${c.nome} ${formatBRL(c.faltaCents)}${c.parcial ? ' que falta' : ''}${c.diaNoMes ? ` (${c.status === 'atrasado' ? `venceu dia ${c.diaNoMes}` : `dia ${c.diaNoMes}`})` : ''}`), ...txtFaturas].join('; ');
+ 1520|       const total = abertos.reduce((a, c) => a + c.faltaCents, 0) + totalFaturas;
+ 1521|       const prox = abertos.find(c => c.status === 'atrasado') || abertos[0];
+ 1522|       if (!prox) return { fato: `Falta pagar ${formatBRL(total)}: ${lista}.${dicaFatura}`, sugestoes: ['Cabe no mês?'] };
+ 1523|       return {
+ 1524|         fato: `Falta pagar ${formatBRL(total)} este mês: ${lista}. Já pagou ${prox.nome}? Se sim, confirma que eu lanço.${dicaFatura}`,
+ 1525|         acao: { tipo: 'registrar_gasto', amountCents: prox.faltaCents || prox.valorCents, categoryId: prox.categoryId, date: today, note: prox.nome, compromissoId: prox.id, accountId: prox.accountId },
+ 1526|         sugestoes: ['Cabe no mês?', 'O que planejei pro mês?'],
+ 1527|       };
+ 1528|     }
+ 1529|     case 'planos': {
+ 1530|       const a = analisarPlanejamento(dados, today);
+ 1531|       // 06/11: "o que mais eu tenho planejado?" mostra os planos E o que ainda falta pagar no mês
+ 1532|       const abertos = a.compromissos.filter(c => c.status !== 'pago');
+ 1533|       const contas = abertos.length ? ` Compromissos que faltam: ${abertos.map(c => `${c.nome} ${formatBRL(c.faltaCents)}${c.diaNoMes ? ` (dia ${c.diaNoMes})` : ''}`).join('; ')}.` : '';
+ 1534|       if (!a.planos.length && !abertos.length) return { fato: 'Nada planejado ainda pra este mês. Na aba 📅 Mês você lista o que quer comprar ou gastar, com valores, e eu calculo se cabe.', sugestoes: ['O que tenho pra pagar?'] };
+ 1535|       const lista = a.planos.map(p => `${p.feito ? '✔ ' : ''}${p.nome} ${formatBRL(p.valorCents)}`).join('; ');
+ 1536|       const planos = a.planos.length ? `Planos deste mês: ${lista}. Faltam ${formatBRL(a.planosPendentesCents)}.` : 'Nenhum plano de compra este mês.';
+ 1537|       return { fato: `${planos}${contas} ${textoSobra(a)}`, sugestoes: ['Cabe no mês?', 'O que tenho pra pagar?'] };
+ 1538|     }
+ 1539|     case 'cabe': {
+ 1540|       // "posso comprar 300 pelo C6?" (JF, 14/11): vê se o banco aguenta sem furar o piso, e sugere outro se não der
+ 1541|       const contasCabe = (accounts || []).filter(a => a.tipo !== 'cartao');
+ 1542|       const banco = intencao.valor && acharConta(intencao.t, contasCabe);
+ 1543|       if (banco) {
+ 1544|         const rp = resumoPisos(contasCabe, expenses, incomes, dados.transferencias || [], today);
+ 1545|         const c = rp.contas.find(x => x.id === banco.id);
+ 1546|         const depois = c.saldoCents - intencao.valor;
+ 1547|         const outro = rp.contas.filter(x => x.id !== banco.id && x.folgaCents >= intencao.valor).sort((a, b) => b.folgaCents - a.folgaCents)[0];
+ 1548|         let fato;
+ 1549|         if (depois < 0) fato = `No ${c.nome} não dá: tem ${formatBRL(c.saldoCents)} e a compra é ${formatBRL(intencao.valor)}.`;
+ 1550|         else if (c.pisoCents && depois < c.pisoCents) fato = `Dá, mas o ${c.nome} fica com ${formatBRL(depois)}, ${formatBRL(c.pisoCents - depois)} abaixo do piso de ${formatBRL(c.pisoCents)}.`;
+ 1551|         else fato = `Dá! O ${c.nome} fica com ${formatBRL(depois)}${c.pisoCents ? `, ainda ${formatBRL(depois - c.pisoCents)} acima do piso` : ''}.`;
+ 1552|         if ((depois < 0 || (c.pisoCents && depois < c.pisoCents)) && outro) fato += ` O ${outro.nome} tem folga de ${formatBRL(outro.folgaCents)}: dá pra comprar por ele ou passar o dinheiro de lá.`;
+ 1553|         return { fato: `${fato} A decisão é sua.`, cru: true, sugestoes: ['Como tá minha média de segurança?'] };
+ 1554|       }
+ 1555|       if (intencao.valor) {
+ 1556|         const c = cabeNoMes(dados, intencao.valor, today);
+ 1557|         if (c.cabe == null) return { fato: semBase() };
+ 1558|         return {
+ 1559|           fato: c.cabe
+ 1560|             ? `Cabe! Somando o que já saiu (${formatBRL(c.gastosCents)}), compromissos (${formatBRL(c.compPendentesCents)}) e planos (${formatBRL(c.planosPendentesCents)}), sobram ${formatBRL(c.sobraCents)}. Depois de ${formatBRL(intencao.valor)}, ficariam ${formatBRL(c.sobraDepois)}.`
+ 1561|             : `Apertado. Hoje a sobra prevista é ${formatBRL(c.sobraCents)}; com ${formatBRL(intencao.valor)} ficaria ${formatBRL(c.sobraDepois)}. ${c.adiar.length ? `Dá pra adiar ${c.adiar.map(p => p.nome).join(', ')}.` : 'Talvez esperar o próximo mês.'}`,
+ 1562|           sugestoes: ['O que tenho pra pagar?', 'O que planejei pro mês?'],
+ 1563|         };
+ 1564|       }
+ 1565|       const a = analisarPlanejamento(dados, today);
+ 1566|       if (a.sobraCents == null) return { fato: semBase() };
+ 1567|       return { fato: textoSobra(a), sugestoes: ['Posso comprar algo de 200?', 'O que tenho pra pagar?'] };
+ 1568|     }
+ 1569|     case 'bancos': {
+ 1570|       const bancos = [...new Set(accounts.map(a => a.bank).filter(b => b && !/carteira|outro/i.test(b)))];
+ 1571|       const saldo = accounts.length ? totalBalance(accounts, expenses, incomes, dados.transferencias || []) : 0;
+ 1572|       const cdi = dados.mercado?.cdi?.valor;
+ 1573|       let conta = '';
+ 1574|       if (cdi) {
+ 1575|         const mensal = Math.pow(1 + cdi / 100, 1 / 12) - 1;
+ 1576|         conta = ` Pra ter a base: o CDI está em ${fmtPct(cdi)} ao ano. Uma conta que paga 100% do CDI rende uns ${fmtPct(mensal * 100)} ao mês${saldo > 0 ? `: com os seus ${formatBRL(saldo)}, seriam cerca de ${formatBRL(Math.round(saldo * mensal))} por mês, antes do imposto` : ''}.`;
+ 1577|       }
+ 1578|       const quais = bancos.length > 1 ? `entre ${bancos.slice(0, -1).join(', ')} e ${bancos[bancos.length - 1]}` : bancos.length ? `do ${bancos[0]}` : 'entre os seus bancos';
+ 1579|       return {
+ 1580|         fato: `${cdi ? '' : SELIC_ANOTADA}${RENDIMENTOS_ANOTADOS} Pra comparar ${quais}, olha o "% do CDI" no app de cada um.${conta} ${AVISO_DATA}`,
+ 1581|         decisao: 'investimento', cru: true,
+ 1582|         filaIA: bancos.length ? { tipo: 'bancos', bancos, pergunta: intencao.t } : null,
+ 1583|         sugestoes: ['Qual a Selic?', 'Como está o mercado?'],
+ 1584|       };
+ 1585|     }
+ 1586|     case 'ofensiva': {
+ 1587|       const o = ofensiva({ expenses, incomes, diasSemGasto: perfil?.diasSemGasto || [] }, today);
+ 1588|       if (!o.dias) {
+ 1589|         return { fato: `Sua ofensiva está zerada${o.recorde ? ` (seu recorde é ${o.recorde} ${o.recorde === 1 ? 'dia' : 'dias'})` : ''}. Anota um gasto hoje, ou toca em "Hoje não gastei nada" no Início, e o foguinho 🔥 acende de novo.`, sugestoes: ['Quanto gastei hoje?', 'Quanto gastei este mês?'] };
+ 1590|       }
+ 1591|       const dia = n => `${n} ${n === 1 ? 'dia' : 'dias'}`;
+ 1592|       return {
+ 1593|         fato: `${o.dias === 1 ? '🔥 Ofensiva acesa: 1 dia anotando.' : `🔥 Ofensiva de ${o.dias} dias seguidos anotando.`}${o.hojeFeito ? ' Hoje já está garantido.' : ' Falta anotar hoje pra não perder!'} Seu recorde é ${dia(o.recorde)}.`,
+ 1594|         sugestoes: ['Quanto gastei este mês?', 'Quem me deve?'],
+ 1595|       };
+ 1596|     }
+ 1597|     case 'formiguinha': {
+ 1598|       // 16/11 (JF): os gastinhos de até R$ 30 do mês, somados, e onde mais aparecem
+ 1599|       const f = formiguinhas(expenses, mes);
+ 1600|       const lim = formatBRL(FORMIGA_LIMITE_CENTS);
+ 1601|       if (!f.count) return { fato: `Nenhum gastinho de até ${lim} este mês. Formiga nenhuma na sua carteira!`, sugestoes: ['Quanto gastei este mês?'] };
+ 1602|       const nomeCat = id => categories.find(c => c.id === id)?.name || id;
+ 1603|       const top = f.porCategoria.slice(0, 3).map(c => `${nomeCat(c.categoryId)} (${c.count}×, ${formatBRL(c.totalCents)})`).join(', ');
+ 1604|       const vezes = f.count === 1 ? '1 gastinho' : `${f.count} gastinhos`;
+ 1605|       return {
+ 1606|         fato: `Este mês foram ${vezes} de até ${lim}, somando ${formatBRL(f.totalCents)} (${f.pct}% de tudo que você gastou). Onde mais aparecem: ${top}.${f.count >= 10 ? ' Escolher um deles pra segurar na semana já faz diferença.' : ''}`,
+ 1607|         sugestoes: ['Onde mais gastei?', 'Quanto gastei este mês?'],
+ 1608|       };
+ 1609|     }
+ 1610|     case 'a_receber': {
+ 1611|       const r = aReceber(expenses);
+ 1612|       // também tem entrada prevista ("vou receber 500 dia 20", 15/11)? responde as duas coisas
+ 1613|       const prevTot = (dados.previstas || []).reduce((t, p) => t + p.amountCents, 0);
+ 1614|       if (!r.itens.length && prevTot) return responder({ ...intencao, intent: 'previstas' }, dados, { today, emocao, perfil, now });
+ 1615|       if (!r.itens.length) return { fato: 'Ninguém te deve nada agora. Quando rachar uma conta, marque "🍕 Dividir com amigos" na hora de lançar o gasto que eu guardo quem deve quanto.', sugestoes: ['Como divido uma conta?'] };
+ 1616|       const porPessoa = new Map();
+ 1617|       for (const x of r.itens) porPessoa.set(x.nome, (porPessoa.get(x.nome) || 0) + x.valorCents);
+ 1618|       const lista = [...porPessoa].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([n, v]) => `${n} (${formatBRL(v)})`).join(', ');
+ 1619|       return { fato: `Você tem ${formatBRL(r.totalCents)} a receber: ${lista}${porPessoa.size > 5 ? ' e mais gente' : ''}. Quando o Pix cair, toca em "Recebi" na lista "A receber", no Início.${prevTot ? ` Fora isso, tem ${formatBRL(prevTot)} de entrada prevista (pergunta "quanto vou receber?" que eu detalho).` : ''}`, sugestoes: ['Quanto gastei este mês?'] };
+ 1620|     }
+ 1621|     case 'meus_investimentos': {
+ 1622|       const lista = dados.investimentos || [];
+ 1623|       if (!lista.length) return { fato: 'Você ainda não cadastrou investimentos. Na aba 🏦 Contas, em "📈 Investimentos", você coloca o que tem (CDB, Tesouro, ações, poupança…), quanto aplicou e quanto está valendo. Aí eu acompanho com você.', sugestoes: ['Como está o mercado?'] };
+ 1624|       const r = resumoInvestimentos(lista);
+ 1625|       const sinal = r.ganhoCents >= 0 ? 'rendeu' : 'está abaixo em';
+ 1626|       const maior = r.porTipo[0];
+ 1627|       return {
+ 1628|         fato: `Você tem ${formatBRL(r.atualCents)} investidos em ${r.quantidade} ${r.quantidade === 1 ? 'aplicação' : 'aplicações'}. Aplicou ${formatBRL(r.aplicadoCents)} e ${sinal} ${formatBRL(Math.abs(r.ganhoCents))} (${r.rendimentoPct.toLocaleString('pt-BR')}%). A maior parte está em ${maior.nome} (${maior.pct}%). Lembrando: eu acompanho, mas não recomendo investimento.`,
+ 1629|         sugestoes: ['Como está o mercado?', 'Quanto tenho guardado no total?'],
+ 1630|       };
+ 1631|     }
+ 1632|     case 'mercado': case 'investir': {
+ 1633|       const m = dados.mercado;
+ 1634|       if (!m) {
+ 1635|         return { fato: 'Ainda não tenho dados do mercado. Eles chegam pelo servidor do C.A.O.S. Finanças, todo dia útil às 10h: configure o endereço em Ajustes → IA online. Depois que chegarem, eu guardo e respondo até sem internet.' };
+ 1636|       }
+ 1637|       const agora = new Date(now);
+ 1638|       const quando = quandoFoi(m.atualizadoEm, agora);
+ 1639|       const velho = mercadoVelho(m, agora) ? ' Esse dado já tem alguns dias, pode estar desatualizado.' : '';
+ 1640|       const linhaAtivo = a => textoAtivo(m, a);
+ 1641|       let fato;
+ 1642|       if (intencao.intent === 'investir') {
+ 1643|         const alvo = intencao.ativo || 'IBOV';
+ 1644|         fato = `${linhaAtivo(alvo) || 'Não tenho esse dado agora.'}${m.cdi ? ` Pra comparar: o CDI está em ${fmtPct(m.cdi.valor)} ao ano, que é quanto a renda fixa paga com pouco sobe e desce.` : ''} Se for investir, pensa no prazo e não coloca o dinheiro da reserva de emergência em algo que oscila.`;
+ 1645|       } else if (intencao.ativo) {
+ 1646|         fato = linhaAtivo(intencao.ativo);
+ 1647|         // JF, 16/11: "Como está o dólar?" respondia "Fiz as contas pra você: Esse dado não veio". Sem o dado, ele diz
+ 1648|         // a verdade e a pergunta vai pra IA online (que pode pesquisar), quando ela está ligada.
+ 1649|         if (!fato) {
+ 1650|           return { fato: `O ${NOME_ATIVO[intencao.ativo] || 'dado'} não veio na última atualização do mercado (${quando}). Com a IA online ligada, eu pesquiso o valor de hoje.`, cru: true, semDado: true, sugestoes: ['A bolsa tende a subir?', 'Qual a Selic?'] };
+ 1651|         }
+ 1652|       } else {
+ 1653|         fato = ['USD', 'EUR', 'IBOV', 'SELIC'].map(linhaAtivo).filter(Boolean).join(' ');
+ 1654|       }
+ 1655|       return { fato: `${fato} (Atualizado ${quando}.)${velho}`, aviso: true, sugestoes: ['Como está o dólar?', 'A bolsa tende a subir?', 'Qual a Selic?'] };
+ 1656|     }
+ 1657|     case 'previstas': {
+ 1658|       const prev = [...(dados.previstas || [])].sort((a, b) => a.date.localeCompare(b.date));
+ 1659|       if (!prev.length) return { fato: 'Não tem nada previsto pra receber. Quando souber de um dinheiro que vai cair, me fala tipo "vou receber 500 dia 20".', cru: true, sugestoes: [] };
+ 1660|       const tot = prev.reduce((t, p) => t + p.amountCents, 0);
+ 1661|       const lista = prev.slice(0, 5).map(p => `${formatBRL(p.amountCents)} dia ${p.date.slice(8, 10)}/${p.date.slice(5, 7)}${p.note ? ` (${p.note})` : ''}`).join('; ');
+ 1662|       return { fato: `Você tem ${formatBRL(tot)} pra receber: ${lista}. Quando cair, toca em "Recebi" na aba Entradas do Início.`, cru: true, sugestoes: ['Dá pra gastar quanto até o salário?'] };
+ 1663|     }
+ 1664|     case 'aperto': {
+ 1665|       // acolhe primeiro, número depois, e um caminho (jeito de ajudar do núcleo), sem sermão
+ 1666|       const mes = monthKey(today);
+ 1667|       const entrou = incomeIn(dados.incomes || [], mes);
+ 1668|       const saiu = summarizeMonth(dados.expenses || [], dados.categories || [], mes).totalCents;
+ 1669|       const conta = entrou || saiu
+ 1670|         ? ` Olhando o mês: entrou ${formatBRL(entrou)} e saiu ${formatBRL(saiu)}${entrou > saiu ? `, então ainda tem ${formatBRL(entrou - saiu)} pra respirar` : entrou < saiu ? `, ou seja, ${formatBRL(saiu - entrou)} a mais do que entrou` : ''}.`
+ 1671|         : '';
+ 1672|       return {
+ 1673|         fato: `Aperto acontece, e você não está sozinho nessa.${conta} Bora ver juntos onde dá pra segurar? Um passo de cada vez.`,
+ 1674|         cru: true, sugestoes: ['Onde posso economizar?', 'Onde mais gastei?', 'O que tenho pra pagar?'],
+ 1675|       };
+ 1676|     }
+ 1677|     case 'pesquisa_compra': {
+ 1678|       // JF, 16/11: "me ajuda a te ajudar". Antes de pesquisar, um questionário rápido, sem IA (não gasta crédito),
+ 1679|       // pra filtrar logo de cara e fazer UMA pesquisa certeira, sem inventar número nem procurar o que não serve.
+ 1680|       const { item } = intencao;
+ 1681|       const tipo = intencao.tipo || (intencao.viagem ? 'viagem' : 'produto');
+ 1682|       const passos = PASSOS_PESQUISA[tipo];
+ 1683|       let respostas = { ...(intencao.respostas || {}) };
+ 1684|       if (intencao.orcamento !== undefined && respostas.orcamento === undefined) respostas.orcamento = intencao.orcamento;
+ 1685|       let passo = intencao.passo || 0;
+ 1686|       while (passo < passos.length && respostas[passos[passo].id] !== undefined) passo++;
+ 1687|       // 2.3.9 (JF): pedido direto ou já detalhado vai pra IA na hora, com o texto inteiro e o que deu pra ler dele
+ 1688|       if (intencao.direto && !intencao.passo) {
+ 1689|         const lidas = passos.filter(p => respostas[p.id]).map(p => (p.id === 'orcamento' ? `${p.rotulo}: ${formatBRL(respostas.orcamento)}` : `${p.rotulo}: ${respostas[p.id]}`));
+ 1690|         const perguntaIA = `${NOME_DO_PLANO[tipo]}. Pedido da pessoa: "${intencao.t}".${lidas.length ? ` ${lidas.join('. ')}.` : ''}`
+ 1691|           + `${tipo === 'lazer' ? ' Diga se cabe no mês pelo resumo e se os extras (pipoca etc.) valem a pena.' : ''}`;
+ 1692|         const oQue = item.length > 40 ? { lazer: 'os preços desse passeio', viagem: 'essa viagem' }[tipo] || 'isso' : item;
+ 1693|         return { fato: `Bora! Vou pesquisar ${oQue} pra você${tipo === 'lazer' ? ' e ver se cabe no seu mês' : ''}.`, cru: true, perguntaIA: perguntaIA.slice(0, 600), modoIA: 'pesquisa',
+ 1694|           sugestoes: ['Dá pra gastar quanto até o salário?'] };
+ 1695|       }
+ 1696|       if (passo < passos.length) {
+ 1697|         const p = passos[passo];
+ 1698|         const abre = !intencao.passo
+ 1699|           ? `${tipo === 'viagem' || tipo === 'produto' ? `Bora pesquisar ${item}!` : tipo === 'lazer' ? `Bora planejar ${item}!` : 'Bora planejar isso junto!'} Me ajuda a te ajudar: umas perguntas rápidas antes, pra eu filtrar logo de cara e não sair inventando número nem procurando o que não te serve. `
+ 1700|           : '';
+ 1701|         return { fato: `${abre}${p.q}`, cru: true, sugestoes: [...(p.chips || []), 'Pular', 'Cancelar'], aguardar: { tipo: 'pesquisa', plano: tipo, item, passo, respostas } };
+ 1702|       }
+ 1703|       const temOrcamento = passos.some(p => p.id === 'orcamento');
+ 1704|       const linhas = passos.filter(p => respostas[p.id]).map(p => (p.id === 'orcamento' ? `${p.rotulo}: ${formatBRL(respostas.orcamento)}` : `${p.rotulo}: ${respostas[p.id]}`));
+ 1705|       if (temOrcamento && !respostas.orcamento) linhas.push('Orçamento: não informado');
+ 1706|       const perguntaIA = `${NOME_DO_PLANO[tipo]}: ${item}. ${linhas.join('. ')}.${tipo === 'lazer' ? ' Diga se cabe no mês pelo resumo e se os extras valem a pena.' : ''}`.slice(0, 520);
+ 1707|       // sem a IA online (ou sem internet), ele dá o caminho das pedras
+ 1708|       const CAMINHO = {
+ 1709|         viagem: 'Compare em 2 ou 3 lugares: o site das companhias (Azul, Gol, Latam) e um buscador (Google Voos, Decolar); pra hotel, Booking ou Airbnb filtrando a região. Confira se é ida e volta, bagagem, taxas, horário e escala. Numa viagem completa, some passagem, hospedagem, comida, transporte, seguro viagem e, se for pra fora, o câmbio.',
+ 1710|         produto: 'Compare em 2 ou 3 lojas (Mercado Livre, Amazon, Magalu) ou num comparador (Buscapé, Zoom). Confira frete, prazo, garantia, parcelamento e a reputação do vendedor.',
+ 1711|         pet: 'Some o fixo do mês (ração, areia ou tapete, antipulgas) e reserve pro que vem de vez em quando (vacinas, vermífugo, veterinário, banho e tosa). Uma reserva pra emergência do bicho evita susto. Adotar sai bem mais em conta que comprar.',
+ 1712|         moradia: 'Uma regra de bolso: moradia até uns 30% do que entra. Compare com anúncios do mesmo bairro e de bairros vizinhos (QuintoAndar, OLX, Zap) e some o custo de ir pro trabalho: às vezes um aluguel um pouco maior perto do serviço sai mais barato no fim do mês.',
+ 1713|         transporte: 'Anote quanto gasta por semana e veja se dá pra juntar saídas, rachar carona ou trocar alguns dias por ônibus, bicicleta ou a pé. No carro, calibrar o pneu e evitar arrancadas já economiza combustível. Compare o preço por km de cada jeito de ir.',
+ 1714|         lazer: 'Pra um passeio mais barato: dia de promoção (no cinema, geralmente no começo da semana), meia-entrada se tiver direito, pipoca e bebida de casa quando o lugar deixa, e estacionamento conta: às vezes um app de transporte sai igual. Veja o que sobra no mês antes de ir.',
+ 1715|         economizar: 'Comece pelo que mais pesa no mês e pelas assinaturas esquecidas. Corte primeiro o que você nem sente falta, e guarde a economia assim que o dinheiro entrar, antes de gastar.',
+ 1716|       }[tipo];
+ 1717|       return { fato: `Fechou, com isso eu filtro. ${CAMINHO}${respostas.orcamento ? ` Seu teto: ${formatBRL(respostas.orcamento)}.` : ''} Com a IA online ligada, eu faço a conta e pesquiso o que precisar pra você comparar.`, cru: true, perguntaIA, modoIA: 'pesquisa', sugestoes: ['Dá pra gastar quanto até o salário?'] };
+ 1718|     }
+ 1719|     case 'moeda_jogo': {
+ 1720|       const { jogo, pacote } = intencao;
+ 1721|       const partes = [`No ${jogo.jogo}, a moeda é ${jogo.moeda}. Dá pra comprar ${jogo.onde}.`];
+ 1722|       if (jogo.extra) partes.push(jogo.extra);
+ 1723|       if (pacote) {
+ 1724|         const por100 = Math.round((pacote.reaisCents / pacote.quantidade) * 100);
+ 1725|         partes.push(`Nesse pacote, sai ${formatBRL(por100)} a cada 100. Compare com os outros pacotes: o maior costuma sair mais barato por unidade, mas só vale se você ia usar tudo.`);
+ 1726|       } else if (intencao.precoDeHoje) {
+ 1727|         partes.push('O preço muda com promoção e com o dólar; sem internet eu não sei o valor de hoje. Com a IA online ligada, eu pesquiso.');
+ 1728|       }
+ 1729|       partes.push(DICA_SEGURANCA);
+ 1730|       return { fato: partes.join(' '), cru: true, sugestoes: ['Quanto gastei com jogos este mês?', 'Dá pra gastar quanto até o salário?'] };
+ 1731|     }
+ 1732|     case 'fora_do_papel': {
+ 1733|       const frases = [
+ 1734|         'Essa foge das minhas funções: eu sou uma IA de bolso, parceiro do seu dinheiro. Pra isso, o Google resolve rapidinho.',
+ 1735|         'Aí já é fora do meu campo. Eu cuido das suas finanças; essa pergunta o Google responde melhor que eu.',
+ 1736|         'Boa pergunta, mas não é comigo: sou especialista no seu bolso, não nisso. Dá uma busca no Google.',
+ 1737|         'Isso está além do que eu faço. Meu negócio é o seu dinheiro. Pra essa, vale perguntar no Google ou em outro site.',
+ 1738|         'Essa eu passo: sou um parceiro financeiro de bolso. Pergunta pro Google que ele sabe.',
+ 1739|       ];
+ 1740|       return { fato: frases[intencao.t.length % frases.length], cru: true, sugestoes: ['Quanto gastei este mês?', 'Dá pra gastar quanto até o salário?'] };
+ 1741|     }
+ 1742|     case 'como_esta':
+ 1743|     case 'papo_pessoal': // sem IA online, ele conta como está (com IA, o app manda a pergunta pra ela)
+ 1744|       return { gatilho: 'como_esta', vars: { emocao } };
+ 1745|     case 'retomar':
+ 1746|       return {};
+ 1747|     case 'salario_caos':
+ 1748|       return { gatilho: 'salario_caos', vars: {}, sugestoes: ['O que vc acha do JF?', 'Quanto gastei este mês?'] };
+ 1749|     case 'sobre_jf':
+ 1750|       return { gatilho: 'sobre_jf', vars: { criador: IDENTIDADE.criador }, sugestoes: SUG_IDENTIDADE };
+ 1751|     case 'vida':
+ 1752|       return { fato: textoVida(), sugestoes: SUG_IDENTIDADE };
+ 1753|     case 'motivacao':
+ 1754|       return { gatilho: 'motivacao', sugestoes: ['Outra frase', 'Me conta um ditado', 'Me conta uma curiosidade'] };
+ 1755|     case 'ditado':
+ 1756|       return { gatilho: 'ditado', sugestoes: ['Outro ditado', 'Me manda uma frase de motivação', 'Me conta uma curiosidade'] };
+ 1757|     case 'curiosidade_fin':
+ 1758|       return { gatilho: 'curiosidade_fin', sugestoes: ['Outra curiosidade', 'Me conta um ditado', 'Me manda uma frase de motivação'] };
+ 1759|     case 'significado': case 'criador': case 'origem': case 'identidade': case 'piada':
+ 1760|       return { gatilho: intencao.intent, vars: { sigla: IDENTIDADE.sigla, criador: IDENTIDADE.criador, origem: IDENTIDADE.origem, slogan: IDENTIDADE.slogan }, sugestoes: SUG_IDENTIDADE };
+ 1761|     case 'como_funciona':
+ 1762|       return { fato: textoComoFunciona(), sugestoes: ['Quais são suas leis?', 'O que você pode fazer?', 'E os meus dados?'] };
+ 1763|     case 'limites':
+ 1764|       return { fato: textoPodeNaoPode(), sugestoes: ['E os meus dados?', 'Como funciona seu cérebro?', 'Conta uma piada'] };
+ 1765|     case 'privacidade':
+ 1766|       return { fato: textoPrivacidade(), sugestoes: ['O que você pode fazer?', 'Como faço backup?'] };
+ 1767|     case 'tutorial':
+ 1768|       return { fato: TUTORIAL[intencao.tema] || TUTORIAL.geral, sugestoes: ['Como adiciono uma conta?', 'Como ponho orçamento?', 'Como mando foto?'] };
+ 1769|     case 'conta':
+ 1770|       return { fato: textoConta(intencao.conta), cru: true, sugestoes: ['Quanto é 15% de 200?', 'O que é regra de três?'] };
+ 1771|     case 'limite_investido':
+ 1772|       // pesquisado em 13/11/2026 (sites dos bancos e notícias); muda com o tempo, por isso a data e o "confira no app"
+ 1773|       return {
+ 1774|         fato: `Dá sim! Alguns bancos transformam dinheiro guardado em limite: C6 (Limite Garantido: R$ 1 aplicado vira R$ 1 de limite), Inter (CDB Mais Limite), Nubank (Caixinhas) e PicPay (Cofrinho do cartão). O dinheiro rende, mas fica preso como garantia. ${AVISO_DATA}`,
+ 1775|         cru: true, decisao: 'investimento', sugestoes: ['O que é limite garantido?', 'O que é CDB?'],
+ 1776|       };
+ 1777|     case 'ajuda':
+ 1778|       return {
+ 1779|         fato: 'Pode me perguntar dos seus gastos ("quanto gastei em delivery?"), do saldo, do orçamento ou de como o mês vai fechar. Também anoto: manda "gastei 30 no mercado" ou a foto do comprovante. Travou no app? Pergunta "como faço…".',
+ 1780|         sugestoes: SUG_IDENTIDADE,
+ 1781|       };
+ 1782|     default:
+ 1783|       return { gatilho: intencao.intent };
+ 1784|   }
+ 1785| }
+ 1786| 

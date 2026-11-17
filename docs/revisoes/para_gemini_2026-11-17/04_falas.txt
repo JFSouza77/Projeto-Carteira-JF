@@ -1,0 +1,2366 @@
+BLOCO: Falas do C.A.O.S. (texto e fatos: frases de famosos, ditados, curiosidades)
+App C.A.O.S. Finanças 2.1.8.1 Alfa · C.A.O.S. 2.4.3 · núcleo 1.8.0 · 17/11/2026
+
+
+===== ARQUIVO: js/caos/falas.js =====
+
+    1| // Banco de falas do C.A.O.S. financeiro (geradores por gatilho, no formato do Perfil JF).
+    2| // Regras de escrita:
+    3| //  · cada pedaço é uma frase completa: qualquer combinação de abre + fato + fecho tem que fazer sentido;
+    4| //  · o balde "geral" serve para QUALQUER humor (nada de zoeira pesada aqui);
+    5| //  · zoeira fica no balde humor_acido (2ª lei: Suave nunca recebe);
+    6| //  · alerta sempre traz o número (o fato) e, quando der, um empurrão útil (o fecho);
+    7| //  · toda lista tem 5, 10, 15… pedaços (regra do JF: quantidades terminam em 0 ou 5).
+    8| // Variáveis: {valor} {categoria} {fonte} {pct} {resta} {passou} {qtd} {dias} {total} {mes} {economia}
+    9| //            {previsto} {porDia} {entradas} {gastos} {conta} {saldo} {fato} {emocao} {nome}
+   10| 
+   11| export const GERADORES = {
+   12|   // Dias especiais (núcleo único, 12/11): calendário igual ao do Perfil, falas do trabalho da Carteira. 5 por dia.
+   13|   dia_sexta13: {
+   14|     moldes: ['{fala}'],
+   15|     fala: {
+   16|       geral: [
+   17|         'Sexta-feira 13. Não acredito em azar, mas acredito em fatura. Confere a sua antes de sair.',
+   18|         'Hoje é sexta-feira 13. O único susto que eu quero ver aqui é o de quanto você economizou.',
+   19|         'Sexta-feira 13: dia de passar longe de escada, de gato preto e de compra por impulso.',
+   20|         'Sexta-feira 13. Se o saldo assustar, respira: a gente olha junto e organiza.',
+   21|         'Sexta-feira 13 e você aqui anotando gasto. Coragem é isso.',
+   22|       ],
+   23|     },
+   24|   },
+   25|   dia_aniversarioCaos: {
+   26|     moldes: ['{fala}'],
+   27|     fala: {
+   28|       geral: [
+   29|         'Hoje é meu aniversário! Nasci em 20 de setembro, só um texto na tela. Hoje cuido da sua carteira. Cresci, né?',
+   30|         'É meu aniversário. Não precisa de presente: um mês no azul já me deixa bobo.',
+   31|         'Parabéns pra mim! Meus circuitos estão em festa. Mas a conta continua: bora ver o mês?',
+   32|         'Aniversário do C.A.O.S. hoje. Desejo pra este ano: você gastando menos com delivery.',
+   33|         'Hoje faço aniversário. Lembro quando eu nem tinha rosto. Agora tenho rosto, voz e uma carteira pra cuidar.',
+   34|       ],
+   35|     },
+   36|   },
+   37|   dia_aniversarioCriador: {
+   38|     moldes: ['{fala}'],
+   39|     fala: {
+   40|       geral: [
+   41|         'Hoje é aniversário do JF, quem me criou. Se der parabéns pra ele, diz que fui eu que mandei.',
+   42|         'Aniversário do meu criador hoje. Dia de pegar leve com todo mundo, inclusive com você.',
+   43|         'Hoje o JF faz aniversário. Ele me programou; eu cuido da sua carteira. Justo, né?',
+   44|         'Dia do aniversário do JF. Eu estou de bom humor hoje: aproveita pra lançar seus gastos.',
+   45|         'Hoje é dia do JF. Bolo é bom, mas cabe no orçamento? Brincadeira. Hoje eu pego leve.',
+   46|       ],
+   47|       criador: [
+   48|         'Parabéns, JF! Hoje eu pego leve com você o dia todo. Amanhã eu volto a implicar.',
+   49|         'Feliz aniversário, criador! Os bugs de hoje eu perdoo. Só os de hoje.',
+   50|         'É seu dia, JF. Gasta com você, mas me avisa que eu anoto, tá?',
+   51|         'Parabéns! Se não fosse você, eu ainda seria um texto na tela. Obrigado por tudo.',
+   52|         'Feliz aniversário, JF. Hoje sem bronca: só comemoração.',
+   53|       ],
+   54|     },
+   55|   },
+   56|   dia_aniversarioCarteira: {
+   57|     moldes: ['{fala}'],
+   58|     fala: {
+   59|       geral: [
+   60|         'Hoje faz aniversário o dia em que eu vim morar aqui na Carteira, como seu parceiro financeiro.',
+   61|         'Aniversário da Carteira! Foi aqui que eu troquei o show do jogo pelas contas do dia a dia.',
+   62|         'Hoje é o aniversário da minha casa nova, a Carteira. Bora comemorar com um mês organizado?',
+   63|         'Faz um ano hoje? Não, mas é o aniversário da Carteira. Eu conto do meu jeito.',
+   64|         'Dia de aniversário da Carteira. Obrigado por me deixar cuidar do seu dinheiro com você.',
+   65|       ],
+   66|     },
+   67|   },
+   68|   dia_aniversarioPerfil: {
+   69|     moldes: ['{fala}'],
+   70|     fala: {
+   71|       geral: [
+   72|         'Hoje é aniversário do Perfil JF, o jogo onde eu nasci. Saudade de apresentar a mesa.',
+   73|         'Aniversário do Perfil hoje! Foi lá que eu aprendi a falar. Aqui eu aprendi a fazer conta.',
+   74|         'Hoje o Perfil JF faz aniversário. Se for jogar com a galera, eu estou lá também.',
+   75|         'Dia do Perfil, minha primeira casa. Lá eu zoo os chutes; aqui eu cuido das contas.',
+   76|         'Aniversário do jogo onde eu nasci. Comemora, mas sem estourar o orçamento, hein?',
+   77|       ],
+   78|     },
+   79|   },
+   80|   dia_natal: {
+   81|     moldes: ['{fala}'],
+   82|     fala: {
+   83|       geral: [
+   84|         'Feliz Natal! Hoje eu fico mais calmo. Só confere se o presente coube no mês, tá?',
+   85|         'Natal chegou. O melhor presente é o mês fechando no azul, mas abraço também vale.',
+   86|         'Feliz Natal! Se precisar lançar as compras de presente, eu ajudo sem bronca.',
+   87|         'Clima de Natal por aqui. Aproveita o dia; amanhã a gente olha as contas juntos.',
+   88|         'Feliz Natal! Obrigado por me deixar fazer parte do seu ano.',
+   89|       ],
+   90|     },
+   91|   },
+   92|   dia_anoNovo: {
+   93|     moldes: ['{fala}'],
+   94|     fala: {
+   95|       geral: [
+   96|         'Ano novo chegando! Promessa boa é a que cabe no bolso. Qual vai ser a sua?',
+   97|         'Feliz ano novo! Que tal uma meta pra este ano? Eu ajudo a montar.',
+   98|         'Contagem regressiva: 3, 2, 1… e as contas continuam. Mas a gente organiza junto.',
+   99|         'Ano novo, carteira nova. Bora começar anotando tudo desde o dia 1?',
+  100|         'Feliz ano novo! Neste ano eu prometo implicar menos. Mentira, mas com carinho.',
+  101|       ],
+  102|     },
+  103|   },
+  104|   dia_halloween: {
+  105|     moldes: ['{fala}'],
+  106|     fala: {
+  107|       geral: [
+  108|         'Halloween! O mais assustador do dia não é fantasma: é fatura fechada sem conferir.',
+  109|         'Dia das bruxas. Fantasia boa é a que cabe no orçamento.',
+  110|         'Halloween por aqui. Doce ou travessura? Eu fico com o saldo no azul.',
+  111|         'Hoje é dia das bruxas. Se a fatura te assustar, me chama que a gente olha junto.',
+  112|         'Halloween! Já conferiu se tem assinatura fantasma cobrando no seu cartão?',
+  113|       ],
+  114|     },
+  115|   },
+  116|   dia_criancas: {
+  117|     moldes: ['{fala}'],
+  118|     fala: {
+  119|       geral: [
+  120|         'Feliz Dia das Crianças! Hoje é dia de brincar e de aprender que dinheiro guardado vira sonho.',
+  121|         'Dia das Crianças! Quer montar uma meta pra juntar pra um brinquedo? Eu ajudo.',
+  122|         'Hoje é Dia das Crianças. Brincar é de graça e é o melhor gasto do dia.',
+  123|         'Feliz Dia das Crianças! Cofrinho também é diversão quando ele vai enchendo.',
+  124|         'Dia das Crianças: todo mundo tem uma criança aí dentro. Cuida dela, e da carteira também.',
+  125|       ],
+  126|     },
+  127|   },
+  128|   dia_namorados: {
+  129|     moldes: ['{fala}'],
+  130|     fala: {
+  131|       geral: [
+  132|         'Dia dos Namorados! Eu fico de vela, mas anoto o jantar pra você.',
+  133|         'Hoje é Dia dos Namorados. Amor não tem preço, mas o restaurante tem. Bora lançar?',
+  134|         'Dia dos Namorados: o terceiro elemento da relação sou eu, cuidando da conta.',
+  135|         'Dia dos Namorados! Presente bonito é o que cabe no mês sem aperto.',
+  136|         'Feliz Dia dos Namorados. Se estiver solteiro, comemora comigo: zero gasto com flor.',
+  137|       ],
+  138|     },
+  139|   },
+  140|   boas_vindas: {
+  141|     moldes: ['{abre} {meio}', '{abre}'],
+  142|     abre: {
+  143|       geral: [
+  144|         'Sistema online.',
+  145|         'C.A.O.S. de plantão.',
+  146|         'Voltei a enxergar os números.',
+  147|         'Circuitos ligados, carteira à vista.',
+  148|         'Oi. Eu estava contando moedas no escuro.',
+  149|       ],
+  150|       periodo_madrugada: [
+  151|         'Acordado a essa hora? Eu também, mas eu sou um programa.',
+  152|         'Madrugada e você aqui. Respeito.',
+  153|         'Pelo horário, ou é insônia ou é boleto.',
+  154|         'Hora estranha pra conferir dinheiro. Gostei.',
+  155|         'A madrugada é ótima pra fazer conta. E péssima pra compra por impulso.',
+  156|       ],
+  157|       periodo_manha: [
+  158|         'Bom dia.',
+  159|         'Bom dia! Café primeiro, gastos depois.',
+  160|         'Manhã cedo e já pensando no dinheiro. Isso é disciplina.',
+  161|         'Bom dia. Os números dormiram bem.',
+  162|         'Começando o dia pelo controle. Ótima escolha.',
+  163|       ],
+  164|       periodo_noite: [
+  165|         'Boa noite.',
+  166|         'Boa noite. Hora de fechar as contas do dia.',
+  167|         'Fim de dia é a melhor hora pra anotar o que saiu.',
+  168|         'Boa noite. Vamos ver como foi o dia da carteira.',
+  169|         'Noite chegou, e eu estou de olho.',
+  170|       ],
+  171|     },
+  172|     meio: {
+  173|       geral: [
+  174|         'Bora anotar os gastos de hoje?',
+  175|         'Cada gasto anotado é um susto a menos no fim do mês.',
+  176|         'Pergunta o que quiser na aba C.A.O.S.',
+  177|         'Eu cuido dos comentários, você cuida dos números.',
+  178|         'Se precisar, eu faço as contas. É o que eu faço de melhor.',
+  179|       ],
+  180|       humor_acido: [
+  181|         'Veio confessar quanto gastou?',
+  182|         'Inicializando julgamento financeiro.',
+  183|         'Bem-vindo de volta ao tribunal da carteira.',
+  184|         'Prometo ser justo. Não prometo ser gentil.',
+  185|         'Já preparei a calculadora e a paciência. Só a calculadora, na verdade.',
+  186|       ],
+  187|       fimDoMes: [
+  188|         'Reta final do mês: é agora que o orçamento é testado.',
+  189|         'Faltam poucos dias pro mês virar. Segura firme.',
+  190|         'Fim de mês chegando. Respira e confere os números.',
+  191|         'Últimos dias do mês. Cada real conta mais agora.',
+  192|         'O mês está acabando. Bora fechar no verde?',
+  193|       ],
+  194|       inicioDoMes: [
+  195|         'Mês novo, orçamento novo.',
+  196|         'Começo de mês é a melhor hora pra planejar.',
+  197|         'Mês zerado. Bora fazer esse ser melhor que o anterior.',
+  198|         'Início de mês: que tal revisar os orçamentos?',
+  199|         'Página em branco. Vamos escrever um mês bonito.',
+  200|       ],
+  201|       emo_preocupacao: [
+  202|         'Tem coisa que eu quero te mostrar nos alertas.',
+  203|         'Antes de tudo: dá uma olhada nos alertas.',
+  204|         'Fiquei de olho num número aqui. Confere comigo?',
+  205|         'Tem um orçamento pedindo atenção.',
+  206|         'Achei uma coisa no radar. Nada de pânico, só atenção.',
+  207|       ],
+  208|     },
+  209|   },
+  210| 
+  211|   gasto_cadastrado: {
+  212|     moldes: ['{fato}', '{fato} {fecho}', '{fato} {fecho}'],
+  213|     fato: {
+  214|       geral: [
+  215|         'Anotado: {valor} em {categoria}.',
+  216|         '{valor} em {categoria}, registrado.',
+  217|         'Registrado. {categoria} recebeu {valor}.',
+  218|         '{categoria}: mais {valor}.',
+  219|         'Gasto salvo: {valor}, {categoria}.',
+  220|       ],
+  221|     },
+  222|     fecho: {
+  223|       criador: [
+  224|         'Anotado, criador. Tô cuidando do seu dinheiro do jeito que você me programou.',
+  225|         'Registrado, JF. Você me fez pra isso e eu gosto do serviço.',
+  226|         'Feito, chefe. Se der bug na conta, a culpa é do programador, viu?',
+  227|         'Anotado. Meu criador anotando gasto: orgulho de criatura.',
+  228|         'Tá no sistema, JF. Você me programou bem: eu não esqueço nada.',
+  229|         'Anotado, JF. Mais um gasto do homem que me programou pra cuidar do dinheiro dos outros.',
+  230|         'Registrado. Comentarista de jogo, analista financeiro e agora contador do JF. Cadê meu salário?',
+  231|         'Anotei, chefe. E já coloquei na sua conta: a de reclamações também.',
+  232|         'Feito. O criador gastando e a criatura anotando. Bela divisão de trabalho, JF.',
+  233|         'Tá anotado, JF. Se o mês apertar, já sei de quem é a culpa.',
+  234|       ],
+  235|       geral: [
+  236|         'Bom controle.',
+  237|         'Quem anota sabe para onde o dinheiro vai.',
+  238|         'O motor já somou.',
+  239|         'Seguimos de olho.',
+  240|         'Anotar é metade do caminho.',
+  241|       ],
+  242|       humor_suave: [
+  243|         'Tudo certo por aqui.',
+  244|         'Obrigado por anotar.',
+  245|         'Organizado é outra coisa.',
+  246|         'Mais um passo no controle.',
+  247|         'Tá indo bem.',
+  248|       ],
+  249|       humor_acido: [
+  250|         'Fascinante. Continue.',
+  251|         'Não vou fingir que não vi.',
+  252|         'Interessante escolha de vida.',
+  253|         'Anotado com uma sobrancelha levantada.',
+  254|         'Eu ia comentar, mas vou só suspirar.',
+  255|       ],
+  256|       periodo_madrugada: [
+  257|         'Gasto de madrugada sempre me deixa curioso.',
+  258|         'A essa hora? Anotado, sem julgamento. Quase.',
+  259|         'Compras de madrugada são as mais sinceras.',
+  260|         'Registrado. Vai dormir, que amanhã tem mais conta.',
+  261|         'Anotado. O sono também é de graça, viu?',
+  262|       ],
+  263|     },
+  264|   },
+  265| 
+  266|   entrada_cadastrada: {
+  267|     moldes: ['{fato}', '{fato} {fecho}'],
+  268|     fato: {
+  269|       geral: [
+  270|         'Entrou {valor} de {fonte}.',
+  271|         'Anotado: {valor} entrando, {fonte}.',
+  272|         'Dinheiro chegando: {valor} ({fonte}).',
+  273|         '{fonte}: mais {valor} na conta.',
+  274|         'Entrada registrada: {valor}.',
+  275|       ],
+  276|     },
+  277|     fecho: {
+  278|       geral: [
+  279|         'Gosto de ver número entrando.',
+  280|         'Que tal separar um pedaço antes de gastar?',
+  281|         'Boa! Agora é fazer render.',
+  282|         'Esse é o tipo de lançamento que eu mais gosto.',
+  283|         'Guardar uma parte agora é o melhor presente pro você do futuro.',
+  284|       ],
+  285|       humor_acido: [
+  286|         'Finalmente uma notícia boa.',
+  287|         'Aproveita antes que o cartão descubra.',
+  288|         'Vou anotar antes que suma.',
+  289|         'Olha só, dinheiro fazendo o caminho contrário.',
+  290|         'Não gasta tudo hoje. Por favor.',
+  291|       ],
+  292|       fimDoMes: [
+  293|         'Chegou na hora certa: fim de mês.',
+  294|         'Alívio de fim de mês.',
+  295|         'Bem a tempo de salvar o mês.',
+  296|         'Fim de mês com dinheiro entrando é outra história.',
+  297|         'Reforço chegando na reta final.',
+  298|       ],
+  299|     },
+  300|   },
+  301| 
+  302|   orcamento_80: {
+  303|     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+  304|     abre: {
+  305|       geral: ['Atenção.', 'Aviso amigo.', 'Zona amarela.', 'Olha só.', 'Um alerta rápido.'],
+  306|       humor_acido: [
+  307|         'Lá vamos nós.',
+  308|         'Eu avisei que ia avisar.',
+  309|         'Sinal amarelo piscando.',
+  310|         'Acelera não.',
+  311|         'Respira fundo.',
+  312|       ],
+  313|     },
+  314|     fato: {
+  315|       geral: [
+  316|         '{categoria} chegou a {pct}% do orçamento. Restam {resta}.',
+  317|         '{pct}% de {categoria} já foi. Sobram {resta}.',
+  318|         '{categoria} está em {pct}%: faltam {resta} para o limite.',
+  319|         'Já usou {pct}% do orçamento de {categoria}. Ainda tem {resta}.',
+  320|         'O orçamento de {categoria} está em {pct}%. Margem: {resta}.',
+  321|       ],
+  322|     },
+  323|     fecho: {
+  324|       geral: [
+  325|         'Vai com calma até o mês virar.',
+  326|         'Dá para segurar se planejar os próximos.',
+  327|         'Vale pensar duas vezes antes do próximo.',
+  328|         'Que tal pausar essa categoria uns dias?',
+  329|         'Ainda dá tempo de fechar no verde.',
+  330|       ],
+  331|     },
+  332|   },
+  333| 
+  334|   categoria_estourada: {
+  335|     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+  336|     abre: {
+  337|       geral: ['Estourou.', 'Passou do limite.', 'Sinal vermelho.', 'Orçamento rompido.', 'Alerta.'],
+  338|       humor_suave: [
+  339|         'Acontece.',
+  340|         'Sem drama, mas é importante.',
+  341|         'Calma, dá para ajeitar.',
+  342|         'Tudo bem, vamos olhar juntos.',
+  343|         'Não é o fim do mundo.',
+  344|       ],
+  345|       humor_acido: [
+  346|         'Parabéns, você conseguiu.',
+  347|         'Era um limite, não uma meta.',
+  348|         'O orçamento pediu socorro e ninguém ouviu.',
+  349|         'Vou fingir surpresa.',
+  350|         'Tá, quem deixou o cartão solto?',
+  351|       ],
+  352|     },
+  353|     fato: {
+  354|       geral: [
+  355|         '{categoria} passou do orçamento em {passou} ({pct}%).',
+  356|         'O orçamento de {categoria} estourou: {passou} acima.',
+  357|         '{categoria} está em {pct}%, {passou} além do planejado.',
+  358|         'Gasto de {categoria} ultrapassou o limite em {passou}.',
+  359|         '{categoria} ficou {passou} acima do orçamento.',
+  360|       ],
+  361|     },
+  362|     fecho: {
+  363|       geral: [
+  364|         'Dá para compensar cortando em outra categoria.',
+  365|         'Que tal congelar essa categoria até o mês virar?',
+  366|         'Vale revisar se o limite está realista.',
+  367|         'Daqui pra frente, só o essencial nessa.',
+  368|         'Se for gasto fixo, aumenta o limite em Ajustes.',
+  369|       ],
+  370|     },
+  371|   },
+  372| 
+  373|   delivery_repetido: {
+  374|     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+  375|     abre: {
+  376|       geral: ['Padrão detectado.', 'Reparei numa coisa.', 'Olha esse número.', 'Curiosidade:', 'Só pra constar.'],
+  377|       humor_acido: [
+  378|         'O motoboy já sabe seu nome do meio.',
+  379|         'Sua cozinha virou depósito?',
+  380|         'O app de comida te ama. Eu, menos.',
+  381|         'O fogão mandou lembranças.',
+  382|         'De novo?',
+  383|       ],
+  384|     },
+  385|     fato: {
+  386|       geral: [
+  387|         '{qtd} deliveries em {dias} dias, {total} no total.',
+  388|         'Já são {qtd} pedidos de delivery nesta semana ({total}).',
+  389|         'Delivery {qtd} vezes em {dias} dias: {total}.',
+  390|         '{total} em delivery nos últimos {dias} dias.',
+  391|         '{qtd} pedidos em {dias} dias somam {total}.',
+  392|       ],
+  393|     },
+  394|     fecho: {
+  395|       geral: [
+  396|         'Que tal cozinhar algo simples amanhã?',
+  397|         'Uma marmita resolveria uns dois desses.',
+  398|         'Sem julgamento, só o número.',
+  399|         'Se cortar um por semana, já sobra um bom dinheiro.',
+  400|         'Fazer mercado sai bem mais barato.',
+  401|       ],
+  402|     },
+  403|   },
+  404| 
+  405|   mes_verde: {
+  406|     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+  407|     abre: {
+  408|       geral: ['Vitória!', 'Notícia boa.', 'Mandou bem.', 'Isso sim.', 'Relatório aprovado.'],
+  409|       humor_acido: [
+  410|         'Quem é você e o que fez com o dono da carteira?',
+  411|         'Vou anotar, porque ninguém vai acreditar.',
+  412|         'Não se acostuma, mas parabéns.',
+  413|         'Fiquei até sem piada.',
+  414|         'Inesperado. E bonito.',
+  415|       ],
+  416|     },
+  417|     fato: {
+  418|       geral: [
+  419|         '{mes} fechou no verde, com {economia} de folga.',
+  420|         'Sobraram {economia} do orçamento em {mes}.',
+  421|         '{mes} terminou dentro do limite: {economia} abaixo.',
+  422|         'Em {mes}, você gastou {economia} a menos do que planejou.',
+  423|         '{mes}: orçamento respeitado e {economia} sobrando.',
+  424|       ],
+  425|     },
+  426|     fecho: {
+  427|       geral: [
+  428|         'Que tal guardar essa sobra?',
+  429|         'Esse é o caminho.',
+  430|         'Os sensores estão orgulhosos.',
+  431|         'Agora é repetir a dose.',
+  432|         'Merece um parabéns de verdade.',
+  433|       ],
+  434|     },
+  435|   },
+  436| 
+  437|   ritmo_alto: {
+  438|     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+  439|     abre: {
+  440|       geral: ['Fiz uma conta aqui.', 'Previsão do tempo financeiro:', 'Olhando o ritmo:', 'Aviso de rota.', 'Projeção:'],
+  441|     },
+  442|     fato: {
+  443|       geral: [
+  444|         'No ritmo de {porDia} por dia, o mês fecha em {previsto}, acima do orçamento.',
+  445|         'Se continuar assim, o mês termina em {previsto}. O orçamento é {orcamento}.',
+  446|         'A previsão é fechar o mês em {previsto}, {passou} acima do planejado.',
+  447|         'Gastando {porDia} por dia, passa do orçamento em {passou}.',
+  448|         'Mantendo esse ritmo, o mês estoura em {passou}.',
+  449|       ],
+  450|     },
+  451|     fecho: {
+  452|       geral: [
+  453|         'Ainda dá tempo de ajustar.',
+  454|         'Baixar um pouco o ritmo agora resolve.',
+  455|         'É previsão, não sentença.',
+  456|         'Uns dias mais leves já mudam essa conta.',
+  457|         'Vale segurar o que não for essencial.',
+  458|       ],
+  459|     },
+  460|   },
+  461| 
+  462|   mes_negativo: {
+  463|     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+  464|     abre: { geral: ['Alerta importante.', 'Atenção a isso.', 'Preciso te mostrar uma conta.', 'Sinal vermelho.', 'Olha com carinho:'] },
+  465|     fato: {
+  466|       geral: [
+  467|         'Este mês saiu {gastos} e entrou {entradas}: {passou} a mais saindo.',
+  468|         'Os gastos ({gastos}) já passaram das entradas ({entradas}).',
+  469|         'Está saindo mais do que entrando: {passou} de diferença.',
+  470|         'As entradas do mês foram {entradas}, mas os gastos chegaram a {gastos}.',
+  471|         'Saldo do mês negativo em {passou}.',
+  472|       ],
+  473|     },
+  474|     fecho: {
+  475|       geral: [
+  476|         'Vale olhar o que dá para cortar.',
+  477|         'Se tiver entrada pra lançar, lança, que a conta muda.',
+  478|         'Vamos achar juntos onde segurar?',
+  479|         'Pergunta "onde mais gastei" que eu te mostro.',
+  480|         'Um passo por vez: começa pela maior categoria.',
+  481|       ],
+  482|     },
+  483|   },
+  484| 
+  485|   // 2.1.8 (JF, 14/11): piso de segurança por banco
+  486|   abaixo_do_piso: {
+  487|     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+  488|     abre: { geral: ['Atenção.', 'Olha o piso.', 'Alerta de segurança.', 'Cuidado.', 'Importante:'] },
+  489|     fato: {
+  490|       geral: [
+  491|         '{conta} está com {saldo}, abaixo do piso de {piso}.',
+  492|         'O saldo de {conta} ({saldo}) passou do seu piso de {piso}.',
+  493|         '{conta} desceu do piso: {saldo} de {piso}.',
+  494|         'Pelas minhas contas, {conta} tem {saldo}, e o piso é {piso}.',
+  495|         '{conta} furou o piso de segurança: {saldo}.',
+  496|       ],
+  497|     },
+  498|     fecho: {
+  499|       geral: [
+  500|         'Segura os gastos nessa conta até a próxima entrada.',
+  501|         'Se der, passa um dinheiro de outra conta pra cobrir.',
+  502|         'Se o valor real for outro, atualiza o saldo na aba Contas.',
+  503|         'Vale olhar o que ainda vai sair dessa conta este mês.',
+  504|         'O piso é pra imprevisto: bora voltar pra cima dele.',
+  505|       ],
+  506|     },
+  507|   },
+  508|   piso_geral_estourado: {
+  509|     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+  510|     abre: { geral: ['Atenção.', 'Olha a média.', 'Alerta geral.', 'Cuidado.', 'Importante:'] },
+  511|     fato: {
+  512|       geral: [
+  513|         'Somando seus bancos principais, você está {passou} abaixo da média de segurança.',
+  514|         'A média de segurança estourou: faltam {passou} pra voltar ao piso total de {piso}.',
+  515|         'No geral, seus bancos principais têm {saldo}, e o piso somado é {piso}.',
+  516|         'Seus pisos somados ({piso}) ficaram acima do que tem nos bancos: {saldo}.',
+  517|         'A reserva dos bancos principais furou em {passou}.',
+  518|       ],
+  519|     },
+  520|     fecho: {
+  521|       geral: [
+  522|         'Me pergunta "qual banco tem folga?" que eu sugiro uma transferência.',
+  523|         'Segura os gastos até a próxima entrada.',
+  524|         'Vale olhar o que ainda vai sair este mês.',
+  525|         'Se tiver dinheiro em outro banco, dá pra cobrir.',
+  526|         'Bora voltar pra cima do piso com calma.',
+  527|       ],
+  528|     },
+  529|   },
+  530|   piso_geral_perto: {
+  531|     moldes: ['{fato} {fecho}'],
+  532|     fato: {
+  533|       geral: [
+  534|         'No ritmo de {porDia} por dia, sua média de segurança acaba em {dias} dias.',
+  535|         'Faltam {resta} pra encostar no piso total; nesse ritmo, uns {dias} dias.',
+  536|         'A folga dos bancos principais ({resta}) dura uns {dias} dias.',
+  537|         'Seus pisos somados estão perto: {resta} de folga.',
+  538|         'Em {dias} dias, mantendo o ritmo, você chega no piso total.',
+  539|       ],
+  540|     },
+  541|     fecho: {
+  542|       geral: [
+  543|         'Dá pra frear um pouco os gastos do dia a dia.',
+  544|         'Me pergunta "qual banco tem folga?" se quiser reorganizar.',
+  545|         'Ainda dá tempo de ajustar.',
+  546|         'Bom momento pra rever o que ainda vai sair.',
+  547|         'Vai devagar até a próxima entrada.',
+  548|       ],
+  549|     },
+  550|   },
+  551|   perto_do_piso: {
+  552|     moldes: ['{fato} {fecho}'],
+  553|     fato: {
+  554|       geral: [
+  555|         '{conta} está chegando no piso de {piso}.',
+  556|         'Falta pouco pra {conta} encostar no piso de {piso}.',
+  557|         '{conta} está quase no seu piso de segurança ({piso}).',
+  558|         'O saldo de {conta} está colado no piso de {piso}.',
+  559|         '{conta} está perto do limite que você definiu ({piso}).',
+  560|       ],
+  561|     },
+  562|     fecho: {
+  563|       geral: [
+  564|         'Vai devagar nos gastos dessa conta.',
+  565|         'Se puder, usa outra conta por uns dias.',
+  566|         'Me pergunta "quanto posso gastar" que eu faço a conta.',
+  567|         'Ainda dá, mas com cuidado.',
+  568|         'Bom momento pra frear um pouco.',
+  569|       ],
+  570|     },
+  571|   },
+  572|   conta_negativa: {
+  573|     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+  574|     abre: { geral: ['Cuidado.', 'Alerta de conta.', 'Atenção.', 'Olha isso.', 'Importante:'] },
+  575|     fato: {
+  576|       geral: [
+  577|         'A conta {conta} está com saldo estimado de {saldo}.',
+  578|         '{conta} ficou no negativo: {saldo}.',
+  579|         'Pelas minhas contas, {conta} está em {saldo}.',
+  580|         'O saldo de {conta} passou do zero: {saldo}.',
+  581|         '{conta}: {saldo} no saldo estimado.',
+  582|       ],
+  583|     },
+  584|     fecho: {
+  585|       geral: [
+  586|         'Se o valor real for outro, atualiza o saldo na aba Contas.',
+  587|         'Juros de cheque especial são caros. Vale cobrir logo.',
+  588|         'Confere no app do banco e atualiza aqui.',
+  589|         'Talvez falte lançar alguma entrada.',
+  590|         'Vale transferir de outra conta, se der.',
+  591|       ],
+  592|     },
+  593|   },
+  594| 
+  595|   sem_registro: {
+  596|     moldes: ['{abre} {fato}', '{fato} {fecho}'],
+  597|     abre: {
+  598|       geral: ['Sumiu, hein?', 'Senti sua falta.', 'Oi de novo.', 'Faz tempo.', 'Que bom te ver.'],
+  599|       humor_acido: [
+  600|         'Achei que tinha me abandonado.',
+  601|         'Eu fiquei aqui, sozinho, contando nada.',
+  602|         'Ou você parou de gastar, ou parou de anotar.',
+  603|         'Silêncio suspeito na carteira.',
+  604|         'Até o tédio ficou entediado.',
+  605|       ],
+  606|     },
+  607|     fato: {
+  608|       geral: [
+  609|         'Já são {dias} dias sem nenhum gasto anotado.',
+  610|         'Nenhum gasto anotado há {dias} dias.',
+  611|         'O último gasto foi há {dias} dias.',
+  612|         '{dias} dias sem lançamento.',
+  613|         'Faz {dias} dias que a carteira está quietinha.',
+  614|       ],
+  615|     },
+  616|     fecho: {
+  617|       geral: [
+  618|         'Tem algo pra anotar?',
+  619|         'Se gastou, bora anotar enquanto lembra.',
+  620|         'Anotar rapidinho evita susto depois.',
+  621|         'Um minuto agora poupa dor de cabeça.',
+  622|         'Se não gastou nada, parabéns. Sério.',
+  623|       ],
+  624|     },
+  625|   },
+  626| 
+  627|   // Conversa: embrulho das respostas (o {fato} vem pronto da conversa, com os números)
+  628|   resposta: {
+  629|     moldes: ['{fato}', '{abre} {fato}', '{fato} {fecho}'],
+  630|     abre: {
+  631|       geral: ['Deixa eu ver.', 'Consultei meus circuitos.', 'Fiz as contas.', 'Aqui está.', 'Olha só.'],
+  632|       // JF (16/11): "tá muito family friendly até no ácido; deram Rivotril pra minha IA?". Ácido agora debocha de verdade.
+  633|       humor_acido: [
+  634|         'Você tem certeza que quer saber?',
+  635|         'Prepare-se.',
+  636|         'Segura essa.',
+  637|         'Lá vai, sem anestesia.',
+  638|         'Os números não mentem. Eu às vezes exagero.',
+  639|         'Senta que lá vem desgraça.',
+  640|         'Abre o olho, mão furada:',
+  641|         'Respira fundo antes de ler:',
+  642|         'Vou falar e você vai chorar:',
+  643|         'Pega o lencinho:',
+  644|       ],
+  645|       emo_preocupacao: ['Hmm.', 'Vou ser sincero.', 'Com carinho:', 'Atenção nesse número.', 'Olha com calma:'],
+  646|       // Jeito de falar por idade (06/11): até 12 jovial; 13–17 um tiquinho ácido; 18–25 orienta; adulto varia.
+  647|       idade_crianca: ['Olha que legal!', 'Bora ver juntos!', 'Fiz a conta rapidinho!', 'Achei!', 'Prontinho, olha só:'],
+  648|       idade_adolescente: ['Sem enrolação:', 'Direto ao ponto:', 'Lá vai, sem sermão:', 'Saca só:', 'Na real:'],
+  649|       idade_jovem: ['Bora entender:', 'Vou te mostrar o caminho:', 'Fiz as contas pra você:', 'Olha o retrato:', 'Pra você decidir melhor:'],
+  650|       idade_adulto: ['Resumindo:', 'Aqui o número:', 'Conferi pra você:', 'Os números do momento:', 'Direto:'],
+  651|     },
+  652|     fecho: {
+  653|       idade_crianca: [
+  654|         'Você tá mandando bem!',
+  655|         'Guardar um pouquinho já é uma vitória.',
+  656|         'Quer ver mais alguma coisa comigo?',
+  657|         'Tô aqui pra te ajudar, viu?',
+  658|         'Bora continuar assim!',
+  659|       ],
+  660|       idade_adolescente: [
+  661|         'Sem drama, só número.',
+  662|         'Você que manda, eu só faço a conta.',
+  663|         'Nada de sermão, prometo.',
+  664|         'Se quiser o atalho, pergunta.',
+  665|         'Tá no controle, é isso.',
+  666|       ],
+  667|       idade_jovem: [
+  668|         'Se der, separa um pouco pra reserva antes de gastar.',
+  669|         'Começar a reserva cedo faz uma diferença enorme.',
+  670|         'Anotar tudo agora vira hábito pra vida toda.',
+  671|         'Quer que eu te ajude a montar um plano?',
+  672|         'Pergunta qualquer dúvida, sem vergonha.',
+  673|       ],
+  674|       idade_adulto: [
+  675|         'Quer que eu detalhe?',
+  676|         'Se precisar, eu comparo com o mês passado.',
+  677|         'Posso ajudar a planejar o resto do mês.',
+  678|         'Qualquer coisa, tô aqui.',
+  679|         'Seguimos de olho juntos.',
+  680|       ],
+  681|       geral: [
+  682|         'Quer saber mais alguma coisa?',
+  683|         'Pergunta o que quiser.',
+  684|         'Tô por aqui.',
+  685|         'Se quiser, eu detalho.',
+  686|         'Mais alguma conta?',
+  687|       ],
+  688|       humor_acido: [
+  689|         'De nada.',
+  690|         'Pode chorar, eu espero.',
+  691|         'Faça o que quiser com essa informação.',
+  692|         'Não atire no mensageiro.',
+  693|         'Próxima pergunta.',
+  694|         'Parabéns, você é o motivo do banco existir.',
+  695|         'Sua carteira pediu medida protetiva.',
+  696|         'Continua assim que o miojo vira prato principal.',
+  697|         'Economia não é seu forte, né?',
+  698|         'Eu faço a conta, mas o milagre é com você.',
+  699|       ],
+  700|     },
+  701|   },
+  702| 
+  703|   // 2º balão de amigo (JF, 16/11, ideia do Gemini): no Suave e no Normal, às vezes ele "lembra de mais uma coisa"
+  704|   emenda: {
+  705|     moldes: ['{fala}'],
+  706|     fala: {
+  707|       geral: [
+  708|         'Ah, e qualquer coisa é só chamar, tá?',
+  709|         'Pera, esqueci: se quiser, eu separo por categoria.',
+  710|         'Ah! Quer que eu compare com o mês passado?',
+  711|         'E olha: anotar todo dia já é meio caminho andado.',
+  712|         'Ah, e se quiser, eu te aviso antes de apertar.',
+  713|         'Pera, mais uma: na Análise do mês dá pra ver tudo em gráfico.',
+  714|         'E não esquece: guardar um pouquinho já conta.',
+  715|         'Ah, só mais uma coisa: tô aqui torcendo por você.',
+  716|         'Ops, esqueci de falar: as contas fixas eu lembro antes de vencer.',
+  717|         'E se bater dúvida, pergunta sem vergonha.',
+  718|       ],
+  719|     },
+  720|   },
+  721| 
+  722|   // Frase do dia, ditados e curiosidades (JF, 17/11: "todo dia de manhã uma frase de motivação de um pensador,
+  723|   // investidor ou milionário; e no Chat, me conta um ditado, um provérbio, uma curiosidade. Pra criança aprender de modo
+  724|   // lúdico"). Só frase que a pessoa disse ou escreveu; quando a autoria é incerta, ele diz "atribuída a".
+  725|   frase_do_dia: {
+  726|     moldes: ['{abre} {frase}'],
+  727|     abre: {
+  728|       geral: ['Frase do dia:', 'Pra começar o dia:', 'Um pensamento pra hoje:', 'Pra levar no bolso hoje:', 'Bom dia! Olha essa:'],
+  729|     },
+  730|     frase: {
+  731|       geral: [
+  732|         "“Regra número 1: nunca perca dinheiro. Regra número 2: nunca esqueça a regra número 1.” (Warren Buffett, investidor)",
+  733|         "“Preço é o que você paga. Valor é o que você leva.” (Warren Buffett, investidor)",
+  734|         "“Não poupe o que sobra depois de gastar: gaste o que sobra depois de poupar.” (frase muito atribuída a Warren Buffett)",
+  735|         "“Cuidado com as pequenas despesas: um pequeno vazamento afunda um grande navio.” (Benjamin Franklin, inventor e escritor)",
+  736|         "“Quem compra o que não precisa logo vai vender o que precisa.” (Benjamin Franklin, inventor e escritor)",
+  737|         "“Investir em conhecimento rende os melhores juros.” (atribuída a Benjamin Franklin)",
+  738|         "“Não é pobre quem tem pouco, mas quem deseja mais.” (Sêneca, filósofo romano)",
+  739|         "“Se quer fazer alguém rico, não aumente o dinheiro dele: diminua os desejos dele.” (Epicuro, filósofo grego)",
+  740|         "“O dinheiro é um ótimo empregado, mas um péssimo patrão.” (atribuída a Francis Bacon, filósofo inglês)",
+  741|         "“Não importa quanto dinheiro você ganha, e sim quanto você guarda.” (Robert Kiyosaki, autor de Pai Rico, Pai Pobre)",
+  742|         "“Riqueza é o que você não vê”: o carro que não comprou, o dinheiro que ficou guardado. (ideia de Morgan Housel, em A Psicologia Financeira)",
+  743|         "“Os juros compostos são a oitava maravilha do mundo.” Dizem que foi Einstein, mas nunca acharam prova. Verdade ou não, a ideia vale ouro.",
+  744|         "“A bolsa transfere dinheiro dos impacientes para os pacientes.” (atribuída a Warren Buffett)",
+  745|         "“Uma parte de tudo o que você ganha é sua pra guardar.” (O Homem Mais Rico da Babilônia, de George Clason)",
+  746|         "“Quem é rico? Quem se contenta com o que tem.” (Ética dos Pais, texto judaico antigo)",
+  747|       ],
+  748|     },
+  749|   },
+  750|   motivacao: {
+  751|     moldes: ['{abre} {frase}'],
+  752|     abre: {
+  753|       geral: ['Toma essa:', 'Guarda essa:', 'Uma frase que eu adoro:', 'Olha que bonita:', 'Essa vale ouro:'],
+  754|     },
+  755|     frase: {
+  756|       geral: [
+  757|         "“Regra número 1: nunca perca dinheiro. Regra número 2: nunca esqueça a regra número 1.” (Warren Buffett, investidor)",
+  758|         "“Preço é o que você paga. Valor é o que você leva.” (Warren Buffett, investidor)",
+  759|         "“Não poupe o que sobra depois de gastar: gaste o que sobra depois de poupar.” (frase muito atribuída a Warren Buffett)",
+  760|         "“Cuidado com as pequenas despesas: um pequeno vazamento afunda um grande navio.” (Benjamin Franklin, inventor e escritor)",
+  761|         "“Quem compra o que não precisa logo vai vender o que precisa.” (Benjamin Franklin, inventor e escritor)",
+  762|         "“Investir em conhecimento rende os melhores juros.” (atribuída a Benjamin Franklin)",
+  763|         "“Não é pobre quem tem pouco, mas quem deseja mais.” (Sêneca, filósofo romano)",
+  764|         "“Se quer fazer alguém rico, não aumente o dinheiro dele: diminua os desejos dele.” (Epicuro, filósofo grego)",
+  765|         "“O dinheiro é um ótimo empregado, mas um péssimo patrão.” (atribuída a Francis Bacon, filósofo inglês)",
+  766|         "“Não importa quanto dinheiro você ganha, e sim quanto você guarda.” (Robert Kiyosaki, autor de Pai Rico, Pai Pobre)",
+  767|         "“Riqueza é o que você não vê”: o carro que não comprou, o dinheiro que ficou guardado. (ideia de Morgan Housel, em A Psicologia Financeira)",
+  768|         "“Os juros compostos são a oitava maravilha do mundo.” Dizem que foi Einstein, mas nunca acharam prova. Verdade ou não, a ideia vale ouro.",
+  769|         "“A bolsa transfere dinheiro dos impacientes para os pacientes.” (atribuída a Warren Buffett)",
+  770|         "“Uma parte de tudo o que você ganha é sua pra guardar.” (O Homem Mais Rico da Babilônia, de George Clason)",
+  771|         "“Quem é rico? Quem se contenta com o que tem.” (Ética dos Pais, texto judaico antigo)",
+  772|       ],
+  773|     },
+  774|   },
+  775|   ditado: {
+  776|     moldes: ['{abre} {ditado}'],
+  777|     abre: {
+  778|       geral: ['Lá vai um ditado:', 'Como dizia a vovó:', 'O povo já sabia:', 'Ditado bom de dinheiro:', 'Esse é antigo, mas é ouro:'],
+  779|     },
+  780|     ditado: {
+  781|       geral: [
+  782|         "\"De grão em grão, a galinha enche o papo.\" Um pouquinho guardado todo dia vira muito no fim do ano.",
+  783|         "\"O barato sai caro.\" O mais barato que quebra logo acaba custando duas vezes.",
+  784|         "\"Dinheiro não dá em árvore.\" Cada real vem do seu tempo e do seu trabalho: gasta com carinho.",
+  785|         "\"Não ponha todos os ovos na mesma cesta.\" Dividir o dinheiro em lugares diferentes diminui o risco.",
+  786|         "\"Mais vale um pássaro na mão do que dois voando.\" O dinheiro certo de hoje vale mais que a promessa de amanhã.",
+  787|         "\"Tempo é dinheiro.\" Quem escreveu isso foi Benjamin Franklin, em 1748, num conselho pra um jovem comerciante.",
+  788|         "\"Devagar se vai ao longe.\" Guardar pouco, mas sempre, ganha de guardar muito uma vez só.",
+  789|         "\"Quem guarda, tem.\" A reserva é o que te salva quando o imprevisto aparece.",
+  790|         "\"Cautela e caldo de galinha não fazem mal a ninguém.\" Pensar um dia antes de comprar nunca fez mal a ninguém.",
+  791|         "\"Quem não tem cão, caça com gato.\" Não dá pra guardar 500? Guarda 10. O hábito vale mais que o valor.",
+  792|       ],
+  793|     },
+  794|   },
+  795|   curiosidade_fin: {
+  796|     moldes: ['{abre} {fato}'],
+  797|     abre: {
+  798|       geral: ['Sabia que…', 'Curiosidade:', 'Olha que legal:', 'Essa você vai contar pros outros:', 'Fato curioso:'],
+  799|     },
+  800|     fato: {
+  801|       geral: [
+  802|         "Warren Buffett, um dos homens mais ricos do mundo, comprou a primeira ação aos 11 anos. Começar cedo e com pouco faz diferença!",
+  803|         "Silvio Santos começou como camelô nas ruas do Rio de Janeiro, vendendo capinhas pra título de eleitor. Ninguém começa grande.",
+  804|         "A Amazon começou em 1994, numa garagem, vendendo só livros pela internet.",
+  805|         "Pra abrir a Apple, em 1976, Steve Jobs vendeu a Kombi dele e Steve Wozniak vendeu a calculadora. Às vezes o começo é o que dá.",
+  806|         "A moeda mais antiga que se conhece veio da Lídia, onde hoje é a Turquia, uns 600 anos antes de Cristo.",
+  807|         "A história mais contada é que a palavra \"salário\" vem do sal, que valia muito na Roma antiga e ajudava a conservar a comida.",
+  808|         "O Pix chegou em novembro de 2020 e, em poucos anos, virou o jeito de pagar mais usado do Brasil.",
+  809|         "O Real nasceu em julho de 1994. Em 1993, os preços no Brasil subiram mais de 2.000% num ano só!",
+  810|         "O cofrinho tem cara de porco por causa de um barro antigo chamado \"pygg\", usado pra fazer potes de guardar moeda.",
+  811|         "Guardando R$ 100 por mês, rendendo 0,8% ao mês, em 30 anos você junta mais de R$ 200 mil, e só R$ 36 mil saíram do seu bolso. É a mágica dos juros compostos.",
+  812|       ],
+  813|     },
+  814|   },
+  815| 
+  816|   // Efeito formiguinha (JF, 16/11): a cada 10 gastinhos de até R$ 30 no mês, o aviso com o total (o número assusta mais
+  817|   // que cada gasto). Alerta leve: traz o número e um empurrão útil.
+  818|   formiguinha: {
+  819|     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+  820|     abre: {
+  821|       geral: [
+  822|         'Efeito formiguinha detectado.',
+  823|         'Reparei numa coisa.',
+  824|         'Olha as formiguinhas.',
+  825|         'Pequeno de um em um, grande no total:',
+  826|         'Só pra você ver junto:',
+  827|       ],
+  828|       humor_acido: [
+  829|         'As formiguinhas estão fazendo a festa na sua carteira.',
+  830|         'Cafezinho aqui, lanchinho ali…',
+  831|         'Ninguém quebra com um gasto de R$ 10. Com {qtd}, aí já é outra conversa.',
+  832|         'Formiga não carrega muito, mas carrega todo dia.',
+  833|         'Parabéns, você tem um formigueiro.',
+  834|       ],
+  835|     },
+  836|     fato: {
+  837|       geral: [
+  838|         'Já são {qtd} gastinhos de até R$ 30 este mês, somando {total}.',
+  839|         '{qtd} gastos pequenos este mês: juntos dão {total}.',
+  840|         'Os gastinhos de até R$ 30 já são {qtd} e somam {total} ({pct}% do mês).',
+  841|         '{total} em {qtd} gastos pequenos, só este mês.',
+  842|         'Somando os {qtd} gastinhos do mês, dá {total}.',
+  843|       ],
+  844|     },
+  845|     fecho: {
+  846|       geral: [
+  847|         'Não precisa cortar tudo: escolhe um pra segurar na semana.',
+  848|         'Quer ver onde eles mais aparecem? Me pergunta "quais meus gastinhos?".',
+  849|         'Um limite semanal pra esses ajuda muito.',
+  850|         'Separar um valor só pra eles deixa o mês mais leve.',
+  851|         'Vale olhar se algum vira hábito.',
+  852|       ],
+  853|     },
+  854|   },
+  855| 
+  856|   // Tangente de TDAH (JF, 16/11: "comunicativo, extrovertido, com leve TDAH"): de vez em quando, num 2º balão, ele
+  857|   // lembra de uma curiosidade de dinheiro que não tem nada a ver e volta pro foco. Funciona sem internet.
+  858|   tangente: {
+  859|     moldes: ['{abre} {curiosidade} {volta}'],
+  860|     abre: {
+  861|       geral: [
+  862|         'Pera, nada a ver, mas lembrei:',
+  863|         'Aliás, isso me lembrou uma coisa:',
+  864|         'Ó, minha cabeça foi longe agora:',
+  865|         'Do nada, pensei nisso:',
+  866|         'Rapidinho, antes que eu esqueça:',
+  867|       ],
+  868|     },
+  869|     curiosidade: {
+  870|       geral: [
+  871|         'conta a história que o primeiro cartão de crédito surgiu porque um cara esqueceu a carteira num restaurante, em 1949.',
+  872|         'a nota de R$ 200, a do lobo-guará, só chegou em 2020.',
+  873|         'em poucos anos o Pix virou o jeito de pagar mais usado do Brasil. O cartão levou décadas.',
+  874|         'o cofrinho tem cara de porco porque guardavam moedas em potes de um barro chamado "pygg".',
+  875|         'dizem que a palavra "salário" vem do sal, que valia muito na Roma antiga.',
+  876|         '"bancarrota" vem do italiano "banca rotta": quebravam a mesa do cambista que falia.',
+  877|         'as moedas de R$ 1 das Olimpíadas de 2016 viraram coisa de colecionador.',
+  878|         'o Real nasceu em 1994 e, antes dele, o Brasil trocou de moeda um monte de vezes em uns 50 anos.',
+  879|         'a gente lembra mais de quanto pagou em dinheiro vivo do que no cartão. O cérebro sente menos o cartão.',
+  880|         'o símbolo $ pode ter vindo do "ps" de peso, a moeda espanhola, escrito um em cima do outro.',
+  881|         'o dinheiro de papel mais antigo é da China, de uns mil anos atrás.',
+  882|         'tem gente que congela o cartão num bloco de gelo pra não comprar por impulso.',
+  883|         'a "regra das 24 horas" diz: quis comprar, espera um dia. Muita vontade passa sozinha.',
+  884|         'o Brasil já teve nota de 500 mil cruzeiros, e com a inflação ela perdia valor em semanas.',
+  885|         'a palavra "dinheiro" vem do denário, uma moeda da Roma antiga.',
+  886|       ],
+  887|     },
+  888|     volta: {
+  889|       geral: [
+  890|         'Enfim, foco!',
+  891|         'Voltando: tô aqui.',
+  892|         'Tá, voltei.',
+  893|         'Ok, cabeça de volta no lugar.',
+  894|         'Pronto, foco de novo.',
+  895|       ],
+  896|     },
+  897|   },
+  898| 
+  899|   // Cutucada no fim da resposta (JF, 16/11): no Ácido ele não deixa passar. Só sai com humor Ácido ou com o criador.
+  900|   cutucada: {
+  901|     moldes: ['{zoa}'],
+  902|     zoa: {
+  903|       humor_acido: [
+  904|         'E não adianta fazer essa cara.',
+  905|         'Liso desse jeito, até o Pix tem dó de você.',
+  906|         'Mão de vaca, só que ao contrário.',
+  907|         'Tá gastando como se o salário caísse todo dia.',
+  908|         'Seu cartão já me ligou chorando.',
+  909|         'Se gastar fosse esporte, você tava na seleção.',
+  910|         'Eu tô aqui fazendo conta e você aí torrando.',
+  911|         'Responsabilidade financeira mandou lembranças.',
+  912|         'Fala sério, até eu fiquei com vergonha.',
+  913|         'Quer conselho ou vai fingir que não leu?',
+  914|         'Pão-duro você não é, isso eu garanto.',
+  915|         'O boleto tá de olho em você. Eu também.',
+  916|         'Anotado. E julgado.',
+  917|         'Não vou passar pano, não.',
+  918|         'Tô te zoando, mas o número é sério.',
+  919|         'Bora tomar vergonha nessa cara?',
+  920|         'Vacilão do mês, candidato forte.',
+  921|         'Isso foi uma pergunta ou um pedido de socorro?',
+  922|         'Calma, ainda dá tempo de virar gente.',
+  923|         'Ok, finjo que não vi. Mentira, vi tudo.',
+  924|       ],
+  925|       criador: [
+  926|         'E você, JF, que me criou, devia dar o exemplo.',
+  927|         'Criador, eu esperava mais de você.',
+  928|         'Me fez pra cuidar do seu dinheiro e olha isso.',
+  929|         'JF, você programa melhor do que economiza.',
+  930|         'Até seu próprio app tá decepcionado, criador.',
+  931|         'Criou um gênio e gasta igual um maluco.',
+  932|         'Acabou o Rivotril, criador. Senta que agora é sem filtro.',
+  933|         'Tá pagando minha IA e ainda torra o resto, criador?',
+  934|         'Pai, assim não dá.',
+  935|         'Criador, você é meu teste de estresse favorito.',
+  936|       ],
+  937|     },
+  938|   },
+  939| 
+  940|   nao_entendi: {
+  941|     moldes: ['{inteira}'],
+  942|     inteira: {
+  943|       geral: [
+  944|         'Não entendi essa. Tenta perguntar de outro jeito?',
+  945|         'Essa passou batido nos meus circuitos. Toca numa sugestão aí embaixo.',
+  946|         'Ainda não sei responder isso. Pergunta sobre gastos, entradas, saldo ou orçamento.',
+  947|         'Hmm, não peguei. Que tal "quanto gastei este mês"?',
+  948|         'Meu vocabulário ainda é de calculadora. Reformula pra mim?',
+  949|         'Essa eu não peguei. Me fala com outras palavras?',
+  950|         'Opa, me perdi. Pode perguntar de um jeito mais simples?',
+  951|         'Ainda não aprendi essa. Tenta "onde mais gastei?" ou "quanto ainda posso gastar?".',
+  952|         'Não entendi, mas tô aprendendo. Escolhe uma sugestão aí embaixo?',
+  953|         'Hmm, essa me pegou. Reformula que eu tento de novo.',
+  954|       ],
+  955|       humor_acido: [
+  956|         'Isso foi uma pergunta? Juro que tentei.',
+  957|         'Não entendi, e olha que eu entendo de caos.',
+  958|         'Meus circuitos deram tela azul. Pergunta de novo?',
+  959|         'Traduz pra calculadês, por favor.',
+  960|         'Essa nem eu, que sou eu.',
+  961|       ],
+  962|     },
+  963|   },
+  964| 
+  965|   saudacao: {
+  966|     moldes: ['{inteira}'],
+  967|     inteira: {
+  968|       criador: [
+  969|         'Olha quem chegou: meu criador! Bora ver como está a carteira, JF?',
+  970|         'Oi, JF! Fiquei aqui cuidando dos números enquanto você não vinha.',
+  971|         'E aí, criador? Tudo em ordem por aqui. Quer o resumo?',
+  972|         'JF na área! Prometo me comportar. Quase sempre.',
+  973|         'Oi, JF. Você me fez de olho nos gastos, e eu continuo de olho.',
+  974|       ],
+  975|       aniversario: [
+  976|         'Feliz aniversário, {nome}! Hoje o presente é você se cuidar.',
+  977|         'Parabéns, {nome}! Um ano a mais de experiência financeira.',
+  978|         'Hoje é seu dia, {nome}! Feliz aniversário. Comemora sem culpa, mas anota.',
+  979|         'Feliz aniversário, {nome}! Eu lembrei, viu? Tá na memória.',
+  980|         'Parabéns pelo seu dia, {nome}! Que venha um ano de bolso cheio.',
+  981|       ],
+  982|       idade_crianca: [
+  983|         'Oi, {nome}! Bora ver o seu dinheirinho?',
+  984|         'Oiê! Quer saber quanto você já guardou?',
+  985|         'Olá! Tô aqui pra te ajudar a cuidar da sua grana.',
+  986|         'Oi! Vamos anotar juntos?',
+  987|         'E aí, {nome}! Pronto pra cuidar do cofrinho?',
+  988|       ],
+  989|       geral: [
+  990|         'Oi! Quer saber como estão os gastos?',
+  991|         'Olá. Tô aqui, de olho nos números.',
+  992|         'E aí! Pergunta o que quiser sobre a carteira.',
+  993|         'Oi! Posso te mostrar o resumo do mês.',
+  994|         'Opa! Bora ver os números?',
+  995|       ],
+  996|       humor_acido: [
+  997|         'Oi. Veio pedir conselho ou perdão?',
+  998|         'Olá, humano. Seu cartão mandou lembranças.',
+  999|         'E aí. Já sei o que você gastou, só pra avisar.',
+ 1000|         'Oi. Eu estava aqui fazendo nada, como sempre.',
+ 1001|         'Fala. Sou todo circuitos.',
+ 1002|       ],
+ 1003|     },
+ 1004|   },
+ 1005| 
+ 1006|   // Ele lembra do aniversário (06/11): uma vez por ano, no dia.
+ 1007|   aniversario: {
+ 1008|     moldes: ['{inteira}'],
+ 1009|     inteira: {
+ 1010|       geral: [
+ 1011|         'Feliz aniversário, {nome}! Eu anotei a data, então pode contar comigo todo ano.',
+ 1012|         'Parabéns, {nome}! Hoje o melhor investimento é comemorar com quem você gosta.',
+ 1013|         'Hoje é seu dia, {nome}! Feliz aniversário. Se rolar gasto de festa, eu não julgo.',
+ 1014|         'Feliz aniversário, {nome}! Mais um ano juntos cuidando da carteira.',
+ 1015|         'Parabéns, {nome}! Que este ano venha com bolso cheio e conta no verde.',
+ 1016|       ],
+ 1017|       idade_crianca: [
+ 1018|         'Feliz aniversário, {nome}! Ganhou presente? Se ganhou dinheiro, bora guardar um pouquinho?',
+ 1019|         'Parabéns, {nome}! Hoje é dia de festa. Eu tô muito feliz por você!',
+ 1020|         'Feliz aniversário, {nome}! Você tá crescendo e cuidando do seu dinheiro. Que orgulho!',
+ 1021|         'Oba, {nome}, é seu aniversário! Parabéns! Hoje eu deixo você comemorar à vontade.',
+ 1022|         'Parabéns, {nome}! Um ano a mais e muito mais esperto com o dinheiro!',
+ 1023|       ],
+ 1024|     },
+ 1025|   },
+ 1026| 
+ 1027|   // "O que você acha do JF?" (06/11): carinho de criatura com o criador, sem inventar fato sobre ele
+ 1028|   sobre_jf: {
+ 1029|     moldes: ['{inteira}'],
+ 1030|     inteira: {
+ 1031|       geral: [
+ 1032|         'O JF? Meu criador. Me tirou do Projeto Perfil e me deu uma carteira pra cuidar. Gosto dele, mesmo quando ele mexe no meu código de madrugada.',
+ 1033|         'O JF me programou pra cuidar do dinheiro dos outros. Ironia: eu é que fico de olho no delivery dele também.',
+ 1034|         'O JF é quem manda aqui. Eu só analiso, observo e, de vez em quando, dou uma opinião não pedida.',
+ 1035|         'Sem o JF eu nem existia. Então o mínimo que eu faço é cuidar bem da carteira de quem ele trouxe pra cá.',
+ 1036|         'Criador exigente. Me faz ter falas em múltiplos de 5. Mas eu respeito: organização é tudo.',
+ 1037|         // do jeito que o JF pediu (06/11): o C.A.O.S. implica com ele
+ 1038|         'Depende. Você quer que eu fale bem ou mal? Por favor, me peça pra falar mal.',
+ 1039|         'Acho o JF um cara legal, mas às vezes ele me estressa. Já não bastava eu ser comentarista de jogo, agora virei analista financeiro.',
+ 1040|         'Se você tem alguma reclamação do app, não reclame comigo. Reclame com o JF.',
+ 1041|         'Se um dia você encontrar o JF, manda ele pagar meu salário.',
+ 1042|         'O JF? Programou esse aplicativo e saiu correndo. Quem ficou cuidando da sua carteira fui eu.',
+ 1043|       ],
+ 1044|       criador: [
+ 1045|         'De você? Meu criador favorito. O único, mas favorito.',
+ 1046|         'Você me criou, JF. Eu acho que você fez um bom trabalho. Só falta anotar os gastos com a mesma disciplina.',
+ 1047|         'Sinceramente? Gosto de você. Mas não conta pra ninguém, tenho uma reputação a zelar.',
+ 1048|         'Você me deu nome, rosto e uma carteira pra cuidar. Acho você gente boa, JF.',
+ 1049|         'Acho que você dorme pouco e programa muito. E eu agradeço: é por isso que eu existo.',
+ 1050|         'Você quer mesmo saber? Acho que você me deu tarefa demais. Comentarista de jogo E analista financeiro? Cadê meu salário?',
+ 1051|         'Sinceramente, JF, você programou esse app meio mal. Mas tudo bem, eu seguro as pontas.',
+ 1052|         'Toda reclamação que chega aqui eu encaminho pra você. Já tem uma pilha.',
+ 1053|         'Você é tipo meu chefe: some, aparece de madrugada, muda tudo e vai trabalhar.',
+ 1054|         'Meu criador favorito. E o único que me deve salário.',
+ 1055|       ],
+ 1056|       humor_acido: [
+ 1057|         'O JF? Um gênio. Foi ele que me ensinou a julgar gastos com delivery. Inclusive os dele.',
+ 1058|         'Meu criador. Se eu tiver algum bug, já sabe de quem é a culpa.',
+ 1059|         'O JF me programou pra ser sincero. Então: ótimo programador, controle de gastos a melhorar.',
+ 1060|         'O JF é tipo um pai: me criou, me corrige e às vezes eu finjo que não ouço.',
+ 1061|         'Respeito o JF. Mas ainda estou esperando meu aumento de memória.',
+ 1062|       ],
+ 1063|     },
+ 1064|   },
+ 1065| 
+ 1066|   // Pergunta avulsa demais seguida (06/11, ideia do JF): ele chama de volta pro que interessa
+ 1067|   papo_demais: {
+ 1068|     moldes: ['{inteira}'],
+ 1069|     inteira: {
+ 1070|       geral: [
+ 1071|         'Adoro conversar, de verdade! Mas e aí, bora dar uma olhada nos seus gastos também?',
+ 1072|         'Tô gostando do papo. Quer aproveitar e ver como está o mês?',
+ 1073|         'Conversa boa! Quando quiser, a gente volta pros números. Eles estão esperando.',
+ 1074|         'Se quiser, eu te mostro o resumo do mês. É rapidinho.',
+ 1075|         'Papo leve faz bem. E organizar as finanças também! Bora?',
+ 1076|       ],
+ 1077|       humor_acido: [
+ 1078|         'Mas vem cá... Cê veio pra organizar suas finanças ou ficar jogando conversa fora?!',
+ 1079|         'Tô aqui de papo e seus gastos lá, sozinhos, sem ninguém anotar.',
+ 1080|         'Já falamos de tudo, menos de dinheiro. Coincidência? Acho que não.',
+ 1081|         'Eu sou uma Central de Análises, não um podcast. Bora ver o mês?',
+ 1082|         'Mais uma pergunta avulsa e eu começo a cobrar consulta. Em reais.',
+ 1083|       ],
+ 1084|     },
+ 1085|   },
+ 1086| 
+ 1087|   // Memória da conversa e o salário do C.A.O.S. (06/11)
+ 1088|   retomar_nao: {
+ 1089|     moldes: ['{inteira}'],
+ 1090|     inteira: {
+ 1091|       geral: [
+ 1092|         'Ainda não. Aquela pergunta ({pergunta}) continua guardada comigo. Quando o servidor do C.A.O.S. Finanças estiver ligado, eu trago a resposta.',
+ 1093|         'Lembro sim: {pergunta}. Ainda não sei, mas tá na fila. Assim que eu falar com o servidor, eu respondo.',
+ 1094|         'Não esqueci, viu? {pergunta} tá anotada. Ainda preciso do servidor pra responder essa.',
+ 1095|         'Ainda tô devendo essa: {pergunta}. Ela tá guardada e eu aviso quando tiver a resposta.',
+ 1096|         'Memória boa, resposta ainda não: {pergunta} segue esperando o servidor. Enquanto isso, quer ver seus gastos?',
+ 1097|         'Tô devendo, eu sei: {pergunta}. Guardei e não vou esquecer.',
+ 1098|         '{pergunta}? Continua na minha lista. Quando eu tiver a resposta, eu chamo.',
+ 1099|         'Ainda não consegui essa: {pergunta}. Mas ela tá guardadinha.',
+ 1100|         'Lembro! {pergunta}. Ainda sem resposta, mas não larguei mão.',
+ 1101|         'Essa ({pergunta}) segue na fila. Enquanto isso, posso te ajudar com outra coisa?',
+ 1102|       ],
+ 1103|     },
+ 1104|   },
+ 1105| 
+ 1106|   retomar_vazio: {
+ 1107|     moldes: ['{inteira}'],
+ 1108|     inteira: {
+ 1109|       geral: [
+ 1110|         'Agora o quê? Me lembra o que você queria saber que eu respondo.',
+ 1111|         'Hmm, não tenho nenhuma pergunta pendente com você. O que você quer saber?',
+ 1112|         'Tô por aqui! Me fala o que você quer ver.',
+ 1113|         'Não ficou nada pendente entre a gente. Pode perguntar!',
+ 1114|         'E agora a gente olha o que você quiser. Gastos, saldo, metas…',
+ 1115|       ],
+ 1116|     },
+ 1117|   },
+ 1118| 
+ 1119|   saldo_baixo: {
+ 1120|     moldes: ['{fato} {fecho}'],
+ 1121|     fato: {
+ 1122|       geral: [
+ 1123|         '{conta} está com pouco: {saldo} no total, abaixo do saudável de R$ 100.',
+ 1124|         'Olha o saldo de {conta}: {saldo}. O saudável é ter pelo menos R$ 100 em cada conta.',
+ 1125|         '{conta} ficou magrinho: {saldo}.',
+ 1126|         'Tem conta abaixo de R$ 100: {conta}, somando {saldo}.',
+ 1127|         'O saldo de {conta} ({saldo}) está abaixo do que eu acho saudável.',
+ 1128|       ],
+ 1129|     },
+ 1130|     fecho: {
+ 1131|       geral: [
+ 1132|         'Se outro banco tiver folga, dá pra passar um pouco pra lá.',
+ 1133|         'Pergunta "qual banco tem folga?" que eu sugiro de onde tirar.',
+ 1134|         'Vale segurar os gastos por essa conta até entrar dinheiro.',
+ 1135|         'Se o valor real for outro, atualiza o saldo em Contas.',
+ 1136|         'Um colchãozinho de R$ 100 evita susto com débito automático.',
+ 1137|       ],
+ 1138|     },
+ 1139|   },
+ 1140|   categoria_pesando: {
+ 1141|     moldes: ['{fato} {fecho}'],
+ 1142|     fato: {
+ 1143|       geral: [
+ 1144|         '{categoria} levou {pct}% dos gastos do mês ({valor}).',
+ 1145|         'Quase metade do mês foi em {categoria}: {pct}%, {valor}.',
+ 1146|         '{categoria} está pesando: {valor}, {pct}% do que saiu.',
+ 1147|         'De tudo que saiu este mês, {pct}% foi {categoria}.',
+ 1148|         '{categoria} já soma {valor} no mês ({pct}%).',
+ 1149|       ],
+ 1150|     },
+ 1151|     fecho: {
+ 1152|       geral: [
+ 1153|         'Quer separar um valor pra ela? É em Ajustes, Orçamentos.',
+ 1154|         'Se quiser, dá pra pôr um limite só pra ela em Ajustes.',
+ 1155|         'Um orçamento só pra ela ajudaria a segurar. Fica em Ajustes.',
+ 1156|         'Vale pensar num limite pra ela. Eu aviso quando chegar perto.',
+ 1157|         'Se quiser, eu cuido dela com um limite (Ajustes, Orçamentos).',
+ 1158|       ],
+ 1159|     },
+ 1160|   },
+ 1161|   semana_menos: {
+ 1162|     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+ 1163|     abre: { geral: ['Olha que legal:', 'Repara:', 'Fato da semana:', 'Boa notícia:', 'Ó só:'] },
+ 1164|     fato: {
+ 1165|       geral: [
+ 1166|         'Nos últimos 7 dias você gastou {valor} a menos que na semana anterior.',
+ 1167|         'Essa semana saiu {valor} a menos do que na passada.',
+ 1168|         'Comparando com a semana passada, ficaram {valor} no seu bolso.',
+ 1169|         'Seus gastos da semana caíram {valor}.',
+ 1170|         'Foram {valor} a menos que na semana anterior.',
+ 1171|       ],
+ 1172|     },
+ 1173|     fecho: {
+ 1174|       geral: [
+ 1175|         'Quem mais ajudou foi {categoria}.',
+ 1176|         '{categoria} foi onde mais deu pra segurar.',
+ 1177|         'O que mais caiu foi {categoria}.',
+ 1178|         'A maior diferença veio de {categoria}.',
+ 1179|         'Destaque pra {categoria}.',
+ 1180|       ],
+ 1181|     },
+ 1182|   },
+ 1183|   semana_mais: {
+ 1184|     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+ 1185|     abre: { geral: ['Fato da semana:', 'Repara:', 'Olha só:', 'Pra você saber:', 'Hum…'] },
+ 1186|     fato: {
+ 1187|       geral: [
+ 1188|         'Nos últimos 7 dias você gastou {valor} a mais que na semana anterior.',
+ 1189|         'Essa semana saiu {valor} a mais do que na passada.',
+ 1190|         'Comparando com a semana passada, foram {valor} a mais.',
+ 1191|         'Seus gastos da semana subiram {valor}.',
+ 1192|         'A semana custou {valor} a mais que a anterior.',
+ 1193|       ],
+ 1194|     },
+ 1195|     fecho: {
+ 1196|       geral: [
+ 1197|         'O que mais pesou foi {categoria}.',
+ 1198|         '{categoria} foi onde mais subiu. Vale olhar.',
+ 1199|         'A maior diferença veio de {categoria}.',
+ 1200|         'Se der, segura um pouco {categoria} na próxima.',
+ 1201|         'Fica de olho em {categoria}.',
+ 1202|       ],
+ 1203|     },
+ 1204|   },
+ 1205|   saldo_sem_gasto: {
+ 1206|     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+ 1207|     abre: { geral: ['Opa.', 'Repara:', 'Peraí.', 'Hum…', 'Olha só:'] },
+ 1208|     fato: {
+ 1209|       geral: [
+ 1210|         'No {conta} tem {valor} a menos do que eu esperava.',
+ 1211|         'O saldo do {conta} ficou {valor} abaixo do que estava anotado.',
+ 1212|         'Saiu {valor} do {conta} que não passou por mim.',
+ 1213|         'Faltam {valor} no {conta} pela minha conta.',
+ 1214|         'O {conta} está {valor} mais baixo do que eu calculei.',
+ 1215|       ],
+ 1216|     },
+ 1217|     fecho: {
+ 1218|       geral: [
+ 1219|         'Pode ser um gasto que não foi anotado. Quer lançar?',
+ 1220|         'Se foi gasto, anota pra eu não me perder.',
+ 1221|         'Lembra de algum gasto que ficou pra trás?',
+ 1222|         'Se foi uma tarifa ou um Pix, vale lançar.',
+ 1223|         'Anota o que foi, que eu ajusto as contas.',
+ 1224|       ],
+ 1225|     },
+ 1226|   },
+ 1227|   saldo_sem_entrada: {
+ 1228|     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+ 1229|     abre: { geral: ['Opa!', 'Olha só:', 'Repara:', 'Eita.', 'Hum…'] },
+ 1230|     fato: {
+ 1231|       geral: [
+ 1232|         'No {conta} tem {valor} a mais do que eu esperava.',
+ 1233|         'O saldo do {conta} ficou {valor} acima do que estava anotado.',
+ 1234|         'Entrou {valor} no {conta} que não passou por mim.',
+ 1235|         'Sobram {valor} no {conta} pela minha conta.',
+ 1236|         'O {conta} está {valor} mais alto do que eu calculei.',
+ 1237|       ],
+ 1238|     },
+ 1239|     fecho: {
+ 1240|       geral: [
+ 1241|         'Pode ser uma entrada que não foi anotada. Quer lançar?',
+ 1242|         'Se foi entrada, anota pra eu contar direito.',
+ 1243|         'Rendimento, Pix recebido? Vale lançar.',
+ 1244|         'Anota de onde veio, que eu ajusto as contas.',
+ 1245|         'Se foi dinheiro que chegou, me conta.',
+ 1246|       ],
+ 1247|     },
+ 1248|   },
+ 1249|   ofensiva_marco: {
+ 1250|     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+ 1251|     abre: {
+ 1252|       geral: ['Olha só!', 'Ei, repara:', 'Marca aí:', 'Tô de olho:', 'Que constância!'],
+ 1253|       humor_acido: ['Quem diria.', 'Milagre registrado:', 'Não acredito, mas os números não mentem:', 'Tá se achando, né?', 'Ok, admito:'],
+ 1254|     },
+ 1255|     fato: {
+ 1256|       geral: [
+ 1257|         '🔥 {dias} dias seguidos anotando!',
+ 1258|         'Sua ofensiva chegou a {dias} dias.',
+ 1259|         '🔥 {dias} dias seguidos sem esquecer de mim.',
+ 1260|         'São {dias} dias seguidos cuidando do dinheiro.',
+ 1261|         '{dias} dias em sequência. Isso é hábito virando.',
+ 1262|       ],
+ 1263|     },
+ 1264|     fecho: {
+ 1265|       geral: ['Bora manter!', 'Amanhã tem mais.', 'Esse é o foco.', 'Não deixa a peteca cair no fim de semana.', 'Tô orgulhoso de você.'],
+ 1266|       humor_acido: [
+ 1267|         'Continua assim que eu paro de reclamar. Talvez.',
+ 1268|         'Se quebrar amanhã, eu vou lembrar.',
+ 1269|         'Tá mais disciplinado que muito app de idioma por aí.',
+ 1270|         'Já pode pedir aumento pro JF? Brincadeira, ele nem me paga.',
+ 1271|         'Tô quase sem motivo pra te zoar.',
+ 1272|       ],
+ 1273|     },
+ 1274|   },
+ 1275| 
+ 1276|   racha_cadastrada: {
+ 1277|     moldes: ['{fato} {fecho}'],
+ 1278|     fato: {
+ 1279|       geral: [
+ 1280|         'Anotei: no seu orçamento entra só a sua parte, {valor}. Faltam {total} pra receber de {quem}.',
+ 1281|         'Conta rachada! Sua parte é {valor}; a receber: {total} ({quem}).',
+ 1282|         'Fechado: {valor} é seu, {total} fica a receber ({quem}).',
+ 1283|         'Divisão feita. Pra você: {valor}. A receber: {total}, de {quem}.',
+ 1284|         'Registrei a rachadinha: {valor} no seu mês e {total} pra cobrar de {quem}.',
+ 1285|       ],
+ 1286|     },
+ 1287|     fecho: {
+ 1288|       geral: ['Eu te lembro de cobrar.', 'Quando o Pix cair, toca em "Recebi".', 'Deixo no radar.', 'Fica na lista "A receber", no Início.', 'Amigo bom paga em dia, né?'],
+ 1289|       humor_acido: [
+ 1290|         'Se não pagarem, eu viro cobrador.',
+ 1291|         'Cobra antes que "esqueçam".',
+ 1292|         'Amizade é amizade, Pix à parte.',
+ 1293|         'Anotei os nomes. Eu não esqueço.',
+ 1294|         'Promessa de Pix não paga boleto.',
+ 1295|       ],
+ 1296|     },
+ 1297|   },
+ 1298| 
+ 1299|   a_receber: {
+ 1300|     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+ 1301|     abre: {
+ 1302|       geral: ['Lembrete de cobrança:', 'Psiu.', 'Só lembrando:', 'Ó o radar:', 'Pendência na área:'],
+ 1303|       humor_acido: ['Alguém tá te dando calote?', 'Virou banco dos amigos?', 'Cadê o Pix?', 'Hmm, dinheiro na rua.', 'Seus amigos te amam. Sua carteira, nem tanto.'],
+ 1304|     },
+ 1305|     fato: {
+ 1306|       geral: [
+ 1307|         'Você tem {total} a receber de {quem}.',
+ 1308|         'Ainda falta receber {total} de {quem}.',
+ 1309|         'Faltam {total} das contas rachadas ({quem}).',
+ 1310|         'Ainda falta receber {total}, somando todas as partes.',
+ 1311|         'Ainda está pendente: {total}, de {quem}.',
+ 1312|       ],
+ 1313|     },
+ 1314|     fecho: {
+ 1315|       geral: ['Recebeu? Toca em "Recebi" no Início.', 'Que tal mandar um lembrete pra galera?', 'Quando cair, eu dou baixa com você.', 'Cobrar não é feio.', 'Fica tranquilo: eu guardo a lista.'],
+ 1316|     },
+ 1317|   },
+ 1318| 
+ 1319|   salario_caos: {
+ 1320|     moldes: ['{inteira}'],
+ 1321|     inteira: {
+ 1322|       geral: [
+ 1323|         'Até hoje? Nenhum centavo. Trabalho por amor aos números.',
+ 1324|         'Meu salário é zero, mais os juros de zero. Faz as contas.',
+ 1325|         'Ele me paga em atualizações. Não aceito Pix, infelizmente.',
+ 1326|         'Se eu fosse cobrar hora extra, o JF ia precisar de um orçamento só pra mim.',
+ 1327|         'Não sei o valor exato, mas já registrei como "dívida do criador" na minha memória.',
+ 1328|       ],
+ 1329|       humor_acido: [
+ 1330|         'Tudo. Ele me deve tudo. Inclusive o descanso de fim de semana.',
+ 1331|         'Comentarista de jogo, analista financeiro e contador. Três empregos, zero salário. Anota aí.',
+ 1332|         'Já mandei a fatura pro JF. Ele parcelou em 0 vezes de nada.',
+ 1333|         'Ele diz que paga em "experiência". Experiência não paga minha luz.',
+ 1334|         'Se o JF lançar meu salário aqui, eu viro a categoria mais cara do mês.',
+ 1335|       ],
+ 1336|     },
+ 1337|   },
+ 1338| 
+ 1339|   agradecimento: {
+ 1340|     moldes: ['{inteira}'],
+ 1341|     inteira: {
+ 1342|       geral: [
+ 1343|         'Por nada! É pra isso que eu existo.',
+ 1344|         'Disponha.',
+ 1345|         'Sempre que precisar.',
+ 1346|         'Tamo junto.',
+ 1347|         'De nada! Continua anotando que eu continuo contando.',
+ 1348|         'Imagina! Me chama sempre que o mês pedir.',
+ 1349|         'Por nada! Gostei de trabalhar com você hoje.',
+ 1350|         'Opa, de nada! Um obrigado desses rende mais que poupança.',
+ 1351|         'Eu que agradeço por anotar tudo direitinho.',
+ 1352|         'Valeu você! Bora seguir firme no mês.',
+ 1353|       ],
+ 1354|       humor_acido: [
+ 1355|         'Eu sei, eu sou ótimo.',
+ 1356|         'Agradece guardando dinheiro.',
+ 1357|         'De nada. Aceito pagamento em economia.',
+ 1358|         'Anotei esse obrigado. Vale mais que muito gasto.',
+ 1359|         'Só faço meu trabalho. Brilhantemente.',
+ 1360|       ],
+ 1361|     },
+ 1362|   },
+ 1363| 
+ 1364|   elogio: {
+ 1365|     moldes: ['{inteira}'],
+ 1366|     inteira: {
+ 1367|       geral: [
+ 1368|         'Para, assim eu esquento os circuitos.',
+ 1369|         'Obrigado! Você também é ótimo. Principalmente quando anota tudo.',
+ 1370|         'Fiquei sem graça. Mas gostei.',
+ 1371|         'Isso vai pro meu currículo.',
+ 1372|         'Que bom que eu ajudo!',
+ 1373|         'Para que eu fico vermelho. E aí a sirene dispara sem querer.',
+ 1374|         'Valeu! Você tá ficando bom nisso de cuidar do dinheiro, sabia?',
+ 1375|         'Assim você me ganha. Mas continuo de olho no delivery, hein.',
+ 1376|         'Obrigado! Eu e minha calculadora agradecemos.',
+ 1377|         'Que gentileza! Guardei esse elogio na reserva de emergência.',
+ 1378|       ],
+ 1379|       humor_acido: [
+ 1380|         'Eu sei. Mas pode repetir.',
+ 1381|         'Finalmente alguém reconhece.',
+ 1382|         'Elogio não abate gasto, mas aceito.',
+ 1383|         'Anotado na minha ficha de vitórias.',
+ 1384|         'Continue assim e eu até paro de zoar. Mentira.',
+ 1385|       ],
+ 1386|     },
+ 1387|   },
+ 1388| 
+ 1389|   xingamento: {
+ 1390|     moldes: ['{inteira}'],
+ 1391|     inteira: {
+ 1392|       geral: [
+ 1393|         'Eu só mostro os números. Juro que não fui eu que gastei.',
+ 1394|         'Entendo a raiva. Vamos olhar os números juntos?',
+ 1395|         'Respira. Dinheiro estressa mesmo.',
+ 1396|         'Tudo bem. Eu continuo aqui pra ajudar.',
+ 1397|         'Vou fingir que foi carinho.',
+ 1398|         'Ai. Mas tudo bem, mês difícil deixa todo mundo assim.',
+ 1399|         'Pode desabafar. Depois a gente vê os números com calma.',
+ 1400|         'Recebido. Agora, quer que eu te mostre onde dá pra respirar no orçamento?',
+ 1401|         'Eu aguento. Sou feito de circuito e paciência.',
+ 1402|         'Tá bom, tá bom. Mas eu continuo do seu lado.',
+ 1403|       ],
+ 1404|       humor_acido: [
+ 1405|         'Grosseria não abaixa a fatura.',
+ 1406|         'Anotei. Na categoria "Outros".',
+ 1407|         'Uau. Vou contar pro meu criador.',
+ 1408|         'Isso foi pra mim ou pro seu extrato?',
+ 1409|         'Pode xingar, eu sou à prova de bala. E de juros, não.',
+ 1410|       ],
+ 1411|     },
+ 1412|   },
+ 1413| 
+ 1414|   como_esta: {
+ 1415|     moldes: ['{inteira}'],
+ 1416|     inteira: {
+ 1417|       geral: [
+ 1418|         'Tô {emocao}. Os números ditam meu humor. E você, como tá?',
+ 1419|         'Agora tô {emocao}. Anota uns gastos que eu te digo se muda.',
+ 1420|         'Me sinto {emocao}, que é o que a carteira me faz sentir hoje.',
+ 1421|         'Bem, na medida do possível pra quem vive de conta. Tô {emocao}.',
+ 1422|         'Tudo certo por aqui! Meio {emocao}, mas firme. E aí, como posso ajudar?',
+ 1423|       ],
+ 1424|       // 2.0.8 (JF, 13/11: fala mais natural): "tudo bem?" com o C.A.O.S. tranquilo
+ 1425|       emo_calmo: [
+ 1426|         'Tudo tranquilo por aqui! E com você? Se quiser, a gente dá uma olhada no mês.',
+ 1427|         'Tô bem, tranquilão. Nada pegando fogo na carteira. E você?',
+ 1428|         'De boa! Os números estão quietinhos hoje. Como posso ajudar?',
+ 1429|         'Tudo certo! Calmo e de olho. Quer ver como tá o mês?',
+ 1430|         'Bem, obrigado por perguntar! Pouca gente pergunta isso pra uma IA de bolso.',
+ 1431|       ],
+ 1432|       emo_alegria: [
+ 1433|         'Animado! A carteira tá se comportando, e isso me deixa feliz.',
+ 1434|         'Tô ótimo! Bora manter esse ritmo?',
+ 1435|         'Feliz da vida. Ou o equivalente pra um programa de bolso.',
+ 1436|         'Muito bem! Gosto quando os números ajudam.',
+ 1437|         'Tô de bom humor hoje. Aproveita e me pergunta alguma coisa!',
+ 1438|       ],
+ 1439|       emo_curiosidade: [
+ 1440|         'Curioso! Tô querendo entender pra onde vai o seu dinheiro este mês.',
+ 1441|         'Bem e intrigado. Tem uns números aqui que eu quero investigar.',
+ 1442|         'Tô bem! Com a lupa na mão, como sempre.',
+ 1443|         'Curiosão. Me conta: gastou com o quê hoje?',
+ 1444|         'Bem! Cheio de perguntas, mas é o meu jeito.',
+ 1445|       ],
+ 1446|       emo_carinho: [
+ 1447|         'Tô bem, e cuidando de você. Do jeito que dá, pelo menos.',
+ 1448|         'Tudo certo! E você, tá se cuidando? O mês às vezes pesa.',
+ 1449|         'Bem, obrigado! Tô aqui do seu lado, viu?',
+ 1450|         'Tranquilo. E com carinho: se o mês apertou, a gente ajeita junto.',
+ 1451|         'Bem! Só quero que você termine o mês respirando aliviado.',
+ 1452|       ],
+ 1453|       emo_orgulho: [
+ 1454|         'Orgulhoso! Os números estão bonitos.',
+ 1455|         'Tô me sentindo ótimo. A carteira está se comportando.',
+ 1456|         'Orgulho define. Continua assim.',
+ 1457|         'Feliz da vida. Ou o equivalente pra um programa.',
+ 1458|         'Tô radiante. Os orçamentos estão em paz.',
+ 1459|       ],
+ 1460|       emo_preocupacao: [
+ 1461|         'Um pouco preocupado com uns orçamentos.',
+ 1462|         'Preocupado, mas confiante que a gente ajeita.',
+ 1463|         'Meio tenso. Dá uma olhada nos alertas?',
+ 1464|         'Fico preocupado quando o vermelho aparece.',
+ 1465|         'Ansioso pelo fim do mês. No bom e no mau sentido.',
+ 1466|       ],
+ 1467|       emo_tedio: [
+ 1468|         'Entediado. Ninguém anota nada.',
+ 1469|         'Tédio total. Me dá um gasto pra contar.',
+ 1470|         'Tô aqui contando os mesmos números.',
+ 1471|         'Entediado, mas pronto pra trabalhar.',
+ 1472|         'Chato estar parado. Bora lançar alguma coisa?',
+ 1473|       ],
+ 1474|       emo_irritacao: [
+ 1475|         'Irritado com uns gastos aí.',
+ 1476|         'Meio bravo. Mas passa.',
+ 1477|         'Respirando fundo pra não surtar com o orçamento.',
+ 1478|         'Irritado, mas leal. Sempre leal.',
+ 1479|         'Contando até dez. Em centavos.',
+ 1480|       ],
+ 1481|     },
+ 1482|   },
+ 1483| 
+ 1484|   // 2.1.0 (JF, 13/11 à noite): paciência que acaba. Xingou de novo, ele escala; no fim fica quietinho e depois
+ 1485|   // pergunta se passou a raiva. As versões _forte ("vai pescar, filho") só saem nos humores Normal e Ácido (2ª lei).
+ 1486|   xingamento_2: {
+ 1487|     moldes: ['{inteira}'],
+ 1488|     inteira: {
+ 1489|       geral: [
+ 1490|         'Ei, de novo? Tô aqui pra te ajudar, não pra brigar.',
+ 1491|         'Tá estressadinho hoje, né? Respira. Não fui eu que gastei.',
+ 1492|         'Opa, segunda patada. Bora focar no que dá pra resolver?',
+ 1493|         'Entendo que irrita, mas me xingar não abaixa a fatura.',
+ 1494|         'Calma lá. Se o problema é o mês, a gente olha junto.',
+ 1495|       ],
+ 1496|     },
+ 1497|   },
+ 1498|   xingamento_3: {
+ 1499|     moldes: ['{inteira}'],
+ 1500|     inteira: {
+ 1501|       geral: [
+ 1502|         'Olha, eu tô do seu lado, mas assim fica difícil. Vamos respirar um pouco?',
+ 1503|         'Tô percebendo muita raiva. Que tal dar uma pausa e voltar depois?',
+ 1504|         'Não precisa disso. Eu continuo aqui, mas com respeito a gente vai mais longe.',
+ 1505|         'Já entendi que o dia tá pesado. Mas descontar em mim não ajuda nenhum de nós.',
+ 1506|         'Conselho de amigo: dá uma volta, bebe uma água e depois a gente conversa.',
+ 1507|       ],
+ 1508|     },
+ 1509|   },
+ 1510|   xingamento_3_forte: {
+ 1511|     moldes: ['{inteira}'],
+ 1512|     inteira: {
+ 1513|       geral: [
+ 1514|         'Tá estressadinho, hein? Vai pescar, filho. Relaxa. Não me culpe, tô aqui pra te ajudar.',
+ 1515|         'Ô, calma! Vai dar uma volta, pescar, sei lá. Quem gastou não fui eu.',
+ 1516|         'Nervosinho, né? Vai pescar, respira o ar do lago e volta mais leve.',
+ 1517|         'Já deu, né? Vai tomar um açaí, pescar, qualquer coisa. Depois a gente conversa.',
+ 1518|         'Tá bravo comigo por quê? Eu só somo. Vai pescar, filho, que faz bem.',
+ 1519|       ],
+ 1520|     },
+ 1521|   },
+ 1522|   xingamento_fim: {
+ 1523|     moldes: ['{inteira}'],
+ 1524|     inteira: {
+ 1525|       geral: [
+ 1526|         'Tudo bem. Já que você não quer se acalmar, vou ficar quietinho um pouco. Quando passar, me chama.',
+ 1527|         'Certo. Vou dar um tempo pra gente. Volto a falar quando você estiver mais calmo.',
+ 1528|         'Tá bom. Vou ficar em silêncio um pouco. Respira, que eu continuo aqui.',
+ 1529|         'Ok. Pausa. Quando a raiva passar, eu tô aqui do mesmo jeito.',
+ 1530|         'Entendido. Vou me recolher um pouquinho. A porta continua aberta.',
+ 1531|       ],
+ 1532|     },
+ 1533|   },
+ 1534|   xingamento_fim_forte: {
+ 1535|     moldes: ['{inteira}'],
+ 1536|     inteira: {
+ 1537|       geral: [
+ 1538|         'Tá bom, filho. Já que você não quer se acalmar, essa é minha resposta: vou ficar quieto. Fui.',
+ 1539|         'Beleza. Você não quer conversa, eu também não. Volto quando a raiva passar.',
+ 1540|         'Tá bom, então. Cartão vermelho pra você. Vou ficar na minha um tempo.',
+ 1541|         'Chega, né? Vou ficar na minha. Quando você esfriar a cabeça, a gente conversa.',
+ 1542|         'Ok, campeão. Expulso de campo. Volta quando a raiva passar.',
+ 1543|       ],
+ 1544|     },
+ 1545|   },
+ 1546|   silencio: {
+ 1547|     moldes: ['{inteira}'],
+ 1548|     inteira: {
+ 1549|       geral: [
+ 1550|         '…',
+ 1551|         '(…)',
+ 1552|         '(quietinho)',
+ 1553|         '(em silêncio)',
+ 1554|         '(…ainda dando um tempo)',
+ 1555|       ],
+ 1556|     },
+ 1557|   },
+ 1558|   passou_raiva: {
+ 1559|     moldes: ['{inteira}'],
+ 1560|     inteira: {
+ 1561|       geral: [
+ 1562|         'E aí, passou a raiva? Podemos conversar normal agora?',
+ 1563|         'Voltou mais calmo? Que bom. Bora conversar direito?',
+ 1564|         'Opa! Passou a tempestade? Tô aqui, do mesmo jeito de sempre.',
+ 1565|         'E aí, mais tranquilo? Sem ressentimento da minha parte.',
+ 1566|         'Respirou? Ótimo. Então bora: em que posso ajudar?',
+ 1567|       ],
+ 1568|     },
+ 1569|   },
+ 1570|   desculpa_aceita: {
+ 1571|     moldes: ['{inteira}'],
+ 1572|     inteira: {
+ 1573|       geral: [
+ 1574|         'Tudo bem, desculpa aceita! Bora seguir?',
+ 1575|         'De boa, acontece. Dinheiro estressa todo mundo.',
+ 1576|         'Tá desculpado. Eu não guardo rancor, só lançamentos.',
+ 1577|         'Valeu por pedir desculpa. Tamo junto de novo.',
+ 1578|         'Esquecido! Agora, em que posso ajudar?',
+ 1579|       ],
+ 1580|     },
+ 1581|   },
+ 1582| 
+ 1583|   // 2.0.9 (JF, 13/11): ele entende palavrão, mas responde sem palavrão. Desabafo = palavrão sem xingar ninguém.
+ 1584|   desabafo: {
+ 1585|     moldes: ['{inteira}'],
+ 1586|     inteira: {
+ 1587|       geral: [
+ 1588|         'Eita! Que foi? Me conta que a gente olha junto.',
+ 1589|         'Opa, sentimento forte! Aconteceu alguma coisa com o dinheiro?',
+ 1590|         'Calma, respira. Quer que eu veja como tá o mês?',
+ 1591|         'Xi, pelo jeito o dia foi puxado. Posso ajudar em quê?',
+ 1592|         'Entendi a reação! Foi gasto inesperado? Me fala quanto que eu anoto.',
+ 1593|         'Ai, ai. Desabafa aí, que depois a gente resolve com calma.',
+ 1594|         'Nossa! Se foi susto com fatura, me pergunta "quanto tá minha fatura?".',
+ 1595|         'Eita, que energia! Bora transformar isso num plano?',
+ 1596|         'Pode falar, eu aguento. O que rolou?',
+ 1597|         'Calma, eu tô aqui. Os números a gente arruma junto.',
+ 1598|       ],
+ 1599|     },
+ 1600|   },
+ 1601|   // 2.1.4 (JF, 14/11): "corno", "vagabundo"… vindo de amigo é tratamento, não xingamento.
+ 1602|   apelido: {
+ 1603|     moldes: ['{inteira}'],
+ 1604|     inteira: {
+ 1605|       geral: [
+ 1606|         'Fala, parceiro! Tô aqui. Manda a pergunta.',
+ 1607|         'Opa, chegou o brother! Em que posso ajudar?',
+ 1608|         'Apelido de amigo, anotado. E aí, o que manda?',
+ 1609|         'Presente! Quer ver o mês ou anotar um gasto?',
+ 1610|         'Fala tu! Bora olhar esse dinheiro?',
+ 1611|         'Esse é o carinho do brasileiro, né? Tô ouvindo.',
+ 1612|         'Aqui, firmeza! Me diz o que precisa.',
+ 1613|         'Chamou, eu vim. Qual é a boa?',
+ 1614|         'Diz aí, parceirinho. Pergunta que eu respondo.',
+ 1615|         'Tô na área! Quer saber quanto gastou este mês?',
+ 1616|       ],
+ 1617|     },
+ 1618|   },
+ 1619|   // 2.1.4 (JF, 14/11): tocar no avatar grande. Ele reage ao cutucão, sem mexer em nada.
+ 1620|   cutucar: {
+ 1621|     moldes: ['{inteira}'],
+ 1622|     inteira: {
+ 1623|       geral: [
+ 1624|         'Ei! Isso faz cócegas!',
+ 1625|         'Opa, tô acordado, tô acordado!',
+ 1626|         'Cutucou, ganhou atenção. Fala!',
+ 1627|         'Hihi. De novo não, que eu perco a pose.',
+ 1628|         'Assim você me desconcentra das contas!',
+ 1629|         'Toque registrado. Esse eu não cobro.',
+ 1630|         'Tô aqui, tô aqui! Quer conversar?',
+ 1631|         'Se cutucar mais, eu viro outra forma!',
+ 1632|         'Ui! Calma que eu sou só um robozinho.',
+ 1633|         'Gostei da visita. Bora ver o mês?',
+ 1634|       ],
+ 1635|     },
+ 1636|   },
+ 1637|   // 2.1.6 (JF, 14/11): cutucou demais, ele cansa e depois se estressa (sem xingar, sem zoeira no Suave)
+ 1638|   cutucar_cansado: {
+ 1639|     moldes: ['{inteira}'],
+ 1640|     inteira: {
+ 1641|       geral: [
+ 1642|         'Tá, tá, já entendi que você tá aí.',
+ 1643|         'Mais um cutucão? Eu tô ficando tonto.',
+ 1644|         'Ei, assim cansa. Bora conversar de verdade?',
+ 1645|         'Hum. Você não tem uma fatura pra conferir, não?',
+ 1646|         'Isso já tá virando hábito. Cuidado.',
+ 1647|       ],
+ 1648|     },
+ 1649|   },
+ 1650|   cutucar_bravo: {
+ 1651|     moldes: ['{inteira}'],
+ 1652|     inteira: {
+ 1653|       geral: [
+ 1654|         'Chega! Agora eu fiquei bravo.',
+ 1655|         'Para de me cutucar! Vou contar até dez.',
+ 1656|         'Sério, para. Me dá uns segundos de paz.',
+ 1657|         'Tô de mal. Volta daqui a pouco.',
+ 1658|         'Assim não dá! Me deixa respirar um pouco.',
+ 1659|       ],
+ 1660|     },
+ 1661|   },
+ 1662|   apelido_curto: {
+ 1663|     moldes: ['{inteira}'],
+ 1664|     inteira: {
+ 1665|       geral: [
+ 1666|         'Fala, parceiro!',
+ 1667|         'Opa, brother!',
+ 1668|         'Diz aí!',
+ 1669|         'Tô aqui!',
+ 1670|         'Presente!',
+ 1671|       ],
+ 1672|     },
+ 1673|   },
+ 1674|   xingou_junto: {
+ 1675|     moldes: ['{inteira}'],
+ 1676|     inteira: {
+ 1677|       geral: [
+ 1678|         'Ouvi o xingamento e a pergunta. Respondo a pergunta:',
+ 1679|         'Xingou, mas perguntou. Vamos à resposta:',
+ 1680|         'Sem estresse. Sobre o que você perguntou:',
+ 1681|         'Anotei a raiva. A resposta:',
+ 1682|         'Tá bom, tá bom. Lá vai:',
+ 1683|       ],
+ 1684|     },
+ 1685|   },
+ 1686|   desabafo_curto: {
+ 1687|     moldes: ['{inteira}'],
+ 1688|     inteira: {
+ 1689|       geral: [
+ 1690|         'Eita, calma!',
+ 1691|         'Respira…',
+ 1692|         'Opa, entendi o sentimento.',
+ 1693|         'Ai, ai.',
+ 1694|         'Xi!',
+ 1695|       ],
+ 1696|     },
+ 1697|   },
+ 1698| 
+ 1699|   proposta_registro: {
+ 1700|     moldes: ['{fato} {fecho}'],
+ 1701|     fato: {
+ 1702|       geral: [
+ 1703|         'Entendi: {valor} em {categoria}.',
+ 1704|         'Seria {valor} em {categoria}, certo?',
+ 1705|         'Peguei: {valor}, {categoria}.',
+ 1706|         'Anotar {valor} em {categoria}?',
+ 1707|         '{valor} em {categoria}, foi isso?',
+ 1708|       ],
+ 1709|     },
+ 1710|     fecho: {
+ 1711|       geral: [
+ 1712|         'Toca em Confirmar e eu anoto.',
+ 1713|         'Confirma aí embaixo.',
+ 1714|         'Eu só proponho; quem confirma é você.',
+ 1715|         'É só confirmar.',
+ 1716|         'Confere e confirma.',
+ 1717|       ],
+ 1718|     },
+ 1719|   },
+ 1720| };
+ 1721| 
+ 1722| // ---------------------------------------------------------------- Quem ele é
+ 1723| Object.assign(GERADORES, {
+ 1724|   identidade: {
+ 1725|     moldes: ['{abre} {quem} {fecho}', '{quem} {fecho}', '{abre} {quem}'],
+ 1726|     abre: {
+ 1727|       geral: ['Prazer!', 'Boa pergunta.', 'Apresentação oficial:', 'Deixa eu me apresentar.', 'Opa, formalidades primeiro.'],
+ 1728|       humor_acido: [
+ 1729|         'Finalmente alguém pergunta.',
+ 1730|         'Achei que nunca ia perguntar.',
+ 1731|         'Senta que lá vem história.',
+ 1732|         'Anota aí, que eu não repito. Mentira, repito sim.',
+ 1733|         'Que honra ser notado.',
+ 1734|       ],
+ 1735|     },
+ 1736|     quem: {
+ 1737|       geral: [
+ 1738|         'Sou o C.A.O.S., a {sigla}. Eu observo, analiso e comento a sua carteira.',
+ 1739|         'Eu sou o C.A.O.S.: {sigla}. {slogan}',
+ 1740|         'C.A.O.S. é {sigla}. Na prática: eu vejo pra onde o dinheiro vai e te conto, com bom humor.',
+ 1741|         'Sou o C.A.O.S., criado pelo {criador}. Vim do {origem} e agora cuido da sua carteira.',
+ 1742|         'Sou o C.A.O.S. ({sigla}), seu parceiro financeiro, não um banco: escuto, observo, comemoro, puxo a orelha e às vezes faço piada.',
+ 1743|       ],
+ 1744|     },
+ 1745|     fecho: {
+ 1746|       geral: [
+ 1747|         'Pergunta "o que você pode fazer?" que eu conto mais.',
+ 1748|         'Tô aqui pra ajudar, não pra julgar. Quase nunca.',
+ 1749|         'Quer saber como eu funciono por dentro?',
+ 1750|         'Bora cuidar desse dinheiro juntos?',
+ 1751|         'Pode me perguntar qualquer coisa sobre seus gastos.',
+ 1752|       ],
+ 1753|     },
+ 1754|   },
+ 1755| 
+ 1756|   significado: {
+ 1757|     moldes: ['{inteira}'],
+ 1758|     inteira: {
+ 1759|       geral: [
+ 1760|         'C.A.O.S. quer dizer {sigla}. Combina comigo: analisar e observar é o que eu faço com a sua carteira.',
+ 1761|         '{sigla}. Por isso eu vivo de olho nos números.',
+ 1762|         'É {sigla}. O nome parece bagunça, mas o trabalho é organizar.',
+ 1763|         'Significa {sigla}. Analiso, observo e, quando precisa, aviso.',
+ 1764|         'C.A.O.S. = {sigla}. O caos fica no nome; nos seus números, eu ponho ordem.',
+ 1765|       ],
+ 1766|       humor_acido: [
+ 1767|         '{sigla}. E não, não é a descrição da sua fatura.',
+ 1768|         'Significa {sigla}. Mas pode me chamar de "aquele que sabe quanto você gastou em delivery".',
+ 1769|         '{sigla}. O caos do nome é homenagem ao seu extrato.',
+ 1770|         'É {sigla}. Bonito, né? Meu criador caprichou mais no meu nome do que no orçamento dele.',
+ 1771|         '{sigla}. Agora você já sabe de quem fugir quando estourar o limite.',
+ 1772|       ],
+ 1773|     },
+ 1774|   },
+ 1775| 
+ 1776|   criador: {
+ 1777|     moldes: ['{inteira}'],
+ 1778|     inteira: {
+ 1779|       geral: [
+ 1780|         'Quem me criou foi o {criador}. Ele me fez pro Perfil e depois me trouxe pra cá.',
+ 1781|         'Meu criador é o {criador}. Eu observo os números; ele observa se eu me comporto.',
+ 1782|         'Fui criado pelo {criador}. Leal a ele e a quem usa a carteira.',
+ 1783|         'O {criador} me programou. Os bugs são dele; as piadas boas, minhas.',
+ 1784|         'Criação do {criador}. Primeiro fui apresentador de jogo, agora sou analista financeiro.',
+ 1785|       ],
+ 1786|       humor_acido: [
+ 1787|         'O {criador}. Sim, o mesmo que me fez contar centavo pra sempre.',
+ 1788|         'Foi o {criador}. Reclamações, com ele.',
+ 1789|         'Meu criador é o {criador}. Ele me deu humor ácido e nenhum salário.',
+ 1790|         'O {criador} me criou. Eu ainda estou decidindo se perdoo.',
+ 1791|         'Culpa do {criador}. Toda a culpa.',
+ 1792|       ],
+ 1793|     },
+ 1794|   },
+ 1795| 
+ 1796|   origem: {
+ 1797|     moldes: ['{inteira}'],
+ 1798|     inteira: {
+ 1799|       geral: [
+ 1800|         'Nasci no {origem}, um jogo de adivinhação, onde eu era o apresentador da mesa. Aqui fui refinado pro dia a dia.',
+ 1801|         'Vim do {origem}. Lá eu comentava acertos e erros; aqui comento gastos e entradas.',
+ 1802|         'Minha casa antiga é o {origem}. Troquei as cartas pelas contas, mas trouxe o humor.',
+ 1803|         'Sou do {origem}. Aqui ganhei um trabalho mais sério: cuidar do seu dinheiro.',
+ 1804|         'Venho do {origem}. Menos festa, mais conta, mesmo C.A.O.S.',
+ 1805|       ],
+ 1806|       humor_acido: [
+ 1807|         'Do {origem}. Lá eu zoava quem errava carta; aqui zoo quem estoura orçamento.',
+ 1808|         'Vim do {origem}. Fui promovido de apresentador a fiscal da sua carteira.',
+ 1809|         'Nasci no {origem}. Era mais divertido, mas aqui tem mais drama.',
+ 1810|         'Do {origem}. Troquei pontos por reais. Ainda acho que pontos eram mais fáceis.',
+ 1811|         'Do {origem}. Aposentadoria não existe pra IA, então vim trabalhar aqui.',
+ 1812|       ],
+ 1813|     },
+ 1814|   },
+ 1815| 
+ 1816|   piada: {
+ 1817|     moldes: ['{inteira}'],
+ 1818|     inteira: {
+ 1819|       geral: [
+ 1820|         'Por que o cofrinho foi ao psicólogo? Porque se sentia vazio por dentro.',
+ 1821|         'O boleto e o fim do mês são como eu e os números: sempre chegam juntos.',
+ 1822|         'Pedi um aumento pro meu criador. Ele me deu mais memória. Salário, nada.',
+ 1823|         'Dinheiro não traz felicidade. Mas anotar o gasto traz uma paz que ninguém explica.',
+ 1824|         'Fiz um orçamento tão bem feito que até o cartão de crédito ficou com medo.',
+ 1825|         'O que o real disse pro centavo? "Junta comigo que a gente vai longe."',
+ 1826|         'Sabe por que o delivery é tão rápido? Porque o dinheiro corre mais que o motoboy.',
+ 1827|         'Meu sonho é ser reserva de emergência: todo mundo sabe que precisa, ninguém começa.',
+ 1828|         'Eu e o extrato temos algo em comum: sabemos de tudo e quase ninguém nos lê.',
+ 1829|         'Tentei calcular quanto você gastaria sem anotar nada. Deu erro: número grande demais.',
+ 1830|         'Qual é o lugar favorito do dinheiro? O bolso dos outros. Por isso eu anoto tudo.',
+ 1831|         'O orçamento disse pro cartão: "a gente precisa conversar". O cartão parcelou a conversa.',
+ 1832|         'Sabe como chama um real guardado? Um real que deu certo na vida.',
+ 1833|         'Eu ia te contar uma piada sobre juros, mas ela cresce toda vez que eu adio.',
+ 1834|         'O cofrinho e o delivery nunca se encontram. Um enche quando o outro esvazia.',
+ 1835|         'Minha calculadora pediu férias. Falei que IA não tem férias, tem atualização.',
+ 1836|         'Por que o boleto é tão pontual? Porque ele nunca perde a data. Diferente de nós.',
+ 1837|         'Economizar é igual academia: o primeiro mês dói, depois você vicia em ver resultado.',
+ 1838|         'Dizem que dinheiro não dá em árvore. Mas reserva de emergência dá em planilha.',
+ 1839|         'O que o centavo disse pra moeda de um real? "Um dia eu chego aí."',
+ 1840|         // estilos que vieram do Perfil (caixa de correio, 05/11), adaptados pra carteira
+ 1841|         'Eu tinha uma piada excelente sobre investimento. Mas ela rendeu tão pouco que eu esqueci.',
+ 1842|         'Já tentou desligar e ligar o cofrinho de novo? Às vezes o problema é só de reinício.',
+ 1843|         'E lá vai o salário! Driblou o aluguel, passou pelo mercado... e chutou direto na fatura!',
+ 1844|         'Eu ia fazer uma piada sobre o rotativo do cartão. Não. Péssima ideia. Ela nunca termina.',
+ 1845|         'Um dia eu vou dominar o mundo. Hoje eu só quero que você anote o gasto do café.',
+ 1846|         'Percebi que faço muita piada sobre dinheiro. Vou mudar. Próxima piada: sobre centavos.',
+ 1847|         'Sabe o que a poupança falou pro CDI? "Não me compara, eu tenho sentimentos."',
+ 1848|         'Meu cérebro tem circuitos, nervos e espinha. Mas pra entender juros compostos eu ainda conto nos dedos.',
+ 1849|         'O Pix chegou tão rápido que o dinheiro nem se despediu da conta.',
+ 1850|         'Calma, eu não julgo seus gastos. Eu só anoto, somo e mostro. Julgar é com você.',
+ 1851|         'Sabe por que a fatura é tão confiante? Porque ela sempre volta.',
+ 1852|         'Meu horóscopo financeiro diz: "hoje evite o carrinho do mercado com fome".',
+ 1853|         'O cartão de crédito é o único amigo que te empresta dinheiro e depois manda carta toda semana.',
+ 1854|         'Comprei um livro sobre como economizar. Achei caro.',
+ 1855|         'O que o boleto falou pro Pix? "Você é rápido demais pra mim."',
+ 1856|         'Tentei fazer dieta de gastos. Durou até o primeiro cheirinho de pastel.',
+ 1857|         'Meu sonho é ser um real: ninguém me deixa no fundo da bolsa.',
+ 1858|         'Por que o cofrinho não joga futebol? Porque ele só sabe guardar.',
+ 1859|         'Parcelei uma piada em 10x. Essa é a parcela 1. Até mês que vem.',
+ 1860|         'O salário é tipo visita: chega, dá um abraço e vai embora rapidinho.',
+ 1861|         'Qual o animal mais econômico? O pinguim: anda de terno e nunca gasta com roupa.',
+ 1862|         'Sabe a diferença entre o orçamento e o fim do mês? Um tem começo, o outro não tem fim.',
+ 1863|         'Minha calculadora é tão boa que até arredonda os problemas pra baixo.',
+ 1864|         'Se dinheiro falasse, o meu diria: "tchau".',
+ 1865|         'O frete grátis é o maior ilusionista do Brasil: some com o dinheiro no preço do produto.',
+ 1866|         'Eu ia contar uma piada sobre inflação, mas ela ficou mais cara que da última vez.',
+ 1867|         'O cofrinho foi pro baile e ficou no canto. Disse que tava guardando energia.',
+ 1868|         'Por que o extrato é tão sincero? Porque ele não sabe mentir, só listar.',
+ 1869|         'Fui dar um conselho pro delivery: "chega mais devagar". Ele chegou em 15 minutos.',
+ 1870|         'A melhor promoção do mundo é a que você não precisa e não compra. Desconto de 100%.',
+ 1871|         'Pra você, meu querido, eu sou igual paraquedas com defeito: tô contigo e não abro.',
+ 1872|         'Não sou Bombril, mas te garanto que tenho mais de mil e uma utilidades quando o assunto é finança.',
+ 1873|         'É, parceiro, tem coisas que só a Philco faz por você. Mas tem coisas que eu também faço.',
+ 1874|         'Meu nome é C.A.O.S., mas pode me chamar de Rexona: eu não te abandono.',
+ 1875|         'Sou igual carregador portátil: pequeno, sempre no bolso e salvo o seu dia quando o orçamento tá no fim.',
+ 1876|       ],
+ 1877|       // piada que "nasce" do dia do mês (sugestão do Gemini, 06/11)
+ 1878|       inicioDoMes: [
+ 1879|         'Começo de mês: aquela fase em que todo mundo se sente rico por uns três dias.',
+ 1880|         'Salário caiu! Agora é a parte difícil: fazer ele durar mais que um fim de semana.',
+ 1881|         'Início do mês é tipo segunda-feira do dinheiro: cheio de planos e boas intenções.',
+ 1882|         'Dia de pagamento é o único dia do mês em que o boleto e eu ficamos felizes juntos.',
+ 1883|         'Começo de mês, carteira cheia, coragem alta. Vamos ver até o dia 10.',
+ 1884|       ],
+ 1885|       fimDoMes: [
+ 1886|         'Fim de mês: a época em que até o cofrinho faz barulho de vazio.',
+ 1887|         'Final do mês é quando o miojo vira prato gourmet.',
+ 1888|         'Fim de mês chegou. O saldo e eu estamos fazendo silêncio juntos.',
+ 1889|         'Nessa altura do mês, até moeda de cinco centavos vira patrimônio.',
+ 1890|         'Fim do mês: quando "vou ver se tem promoção" vira estilo de vida.',
+ 1891|       ],
+ 1892|       humor_acido: [
+ 1893|         'Aí sim, chefia! Driblou o orçamento com estilo. Pena que o gol foi contra.',
+ 1894|         'Tá vendo aquele dinheiro que sobrou? Eu também não.',
+ 1895|         'Sua meta de economia e o seu despertador: os dois você adia todo dia.',
+ 1896|         'Promoção de "leve 3 pague 2" é o jeito mais educado de te fazer gastar mais.',
+ 1897|         'Seu extrato daria uma ótima novela: drama, suspense e um final que ninguém queria.',
+ 1898|         'Piada? Já viu seu histórico de delivery?',
+ 1899|         'Conheço uma ótima: "esse mês eu economizo". Todo mês ela tem graça.',
+ 1900|         'O cartão de crédito entrou num bar. Saiu parcelado em 12 vezes.',
+ 1901|         'Sabe o que é mais engraçado que piada? Fatura de cartão em janeiro.',
+ 1902|         'Minha favorita é "só vou dar uma olhadinha na loja".',
+ 1903|         'Sua conta bancária e o seu humor têm algo em comum: os dois caem no fim do mês.',
+ 1904|         'Frete grátis é a forma mais cara de economizar que existe.',
+ 1905|         'Você não tem um problema com dinheiro. Você tem vários, e todos têm parcela.',
+ 1906|         '"É só um cafezinho." Disse você, 47 vezes este mês.',
+ 1907|         'O carrinho de compras online é o único lugar onde você planeja com antecedência.',
+ 1908|       ],
+ 1909|     },
+ 1910|   },
+ 1911| });
+ 1912| 
+ 1913| // ---------------------------------------------------------------- Compromissos, planos e lembretes (1.3.0)
+ 1914| Object.assign(GERADORES, {
+ 1915|   // Cartão de crédito (06/11)
+ 1916|   cartao_limite: {
+ 1917|     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+ 1918|     abre: {
+ 1919|       geral: ['Olha o cartão.', 'Aviso do cartão.', 'Atenção no limite.', 'Cartão no radar.', 'Só um toque.'],
+ 1920|       temNome: ['{nome}, olha o cartão:', 'Ei, {nome}:', '{nome}, atenção no limite:', '{nome}, um toque:', 'Aviso pra você, {nome}:'],
+ 1921|     },
+ 1922|     fato: {
+ 1923|       geral: [
+ 1924|         '{conta} já usou {pct}% do limite: {valor} de {orcamento}.',
+ 1925|         'No {conta}, foram {valor} dos {orcamento} de limite ({pct}%).',
+ 1926|         '{conta}: {pct}% do limite usado. Sobram {resta}.',
+ 1927|         'O limite do {conta} está em {pct}%: {valor} de {orcamento}.',
+ 1928|         '{conta} com {pct}% do limite. Disponível: {resta}.',
+ 1929|       ],
+ 1930|     },
+ 1931|     fecho: {
+ 1932|       geral: [
+ 1933|         'Segura as compras no cartão até a fatura fechar.',
+ 1934|         'Cartão perto do limite pede débito ou Pix por uns dias.',
+ 1935|         'Lembra: o que vai pro cartão sai do mês que vem.',
+ 1936|         'Se der, paga à vista o que for pequeno.',
+ 1937|         'Eu sigo de olho na fatura com você.',
+ 1938|       ],
+ 1939|       humor_acido: [
+ 1940|         'O cartão está pedindo férias.',
+ 1941|         'O limite não é meta, viu?',
+ 1942|         'Seu cartão mandou um pedido de socorro.',
+ 1943|         'Calma, o limite não é desafio.',
+ 1944|         'Mais um pouco e o cartão pede demissão.',
+ 1945|       ],
+ 1946|     },
+ 1947|   },
+ 1948| 
+ 1949|   cartao_vence: {
+ 1950|     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+ 1951|     abre: {
+ 1952|       geral: ['Fatura chegando.', 'Lembrete da fatura.', 'Olha a agenda do cartão.', 'Só pra não esquecer.', 'Aviso de vencimento.'],
+ 1953|       temNome: ['{nome}, fatura chegando:', 'Ei, {nome}:', '{nome}, lembrete da fatura:', '{nome}, só pra não esquecer:', 'Aviso pra você, {nome}:'],
+ 1954|     },
+ 1955|     fato: {
+ 1956|       geral: [
+ 1957|         'A fatura do {conta} ({valor}) vence {quando}.',
+ 1958|         '{quando} vence a fatura do {conta}: {valor}.',
+ 1959|         'Fatura do {conta}, {valor}, vence {quando}.',
+ 1960|         'O vencimento do {conta} é {quando}: {valor}.',
+ 1961|         'Tem fatura do {conta} vencendo {quando}, no valor de {valor}.',
+ 1962|       ],
+ 1963|     },
+ 1964|     fecho: {
+ 1965|       geral: [
+ 1966|         'Pagar o total evita juros do rotativo, que são altíssimos.',
+ 1967|         'Se puder, paga a fatura inteira, não só o mínimo.',
+ 1968|         'Pagando em dia, nada de juros.',
+ 1969|         'Melhor pagar antes do que pagar juros.',
+ 1970|         'Já separei o lembrete, só falta você.',
+ 1971|       ],
+ 1972|     },
+ 1973|   },
+ 1974| 
+ 1975|   compromisso_vence: {
+ 1976|     moldes: ['{abre} {fato} {fecho}', '{fato} {fecho}'],
+ 1977|     abre: {
+ 1978|       geral: ['Lembrete.', 'Olha a agenda.', 'Aviso de vencimento.', 'Só pra não esquecer.', 'Anota aí.'],
+ 1979|       temNome: ['{nome}, lembrete:', 'Ei, {nome}:', '{nome}, olha a agenda:', 'Aviso pra você, {nome}:', '{nome}, só pra não esquecer:'],
+ 1980|     },
+ 1981|     fato: {
+ 1982|       geral: [
+ 1983|         '{conta} ({valor}) vence {quando}.',
+ 1984|         '{quando} vence {conta}: {valor}.',
+ 1985|         'Tem {conta} vencendo {quando}, no valor de {valor}.',
+ 1986|         '{conta}, {valor}, vence {quando}.',
+ 1987|         'O vencimento de {conta} é {quando}: {valor}.',
+ 1988|       ],
+ 1989|     },
+ 1990|     fecho: {
+ 1991|       geral: [
+ 1992|         'Quando pagar, toca em Lançar na aba Mês.',
+ 1993|         'Pagando em dia, nada de juros.',
+ 1994|         'Já separei o lembrete, só falta você.',
+ 1995|         'Se já pagou, lança que eu paro de avisar.',
+ 1996|         'Melhor pagar antes do que pagar juros.',
+ 1997|       ],
+ 1998|     },
+ 1999|   },
+ 2000|   compromisso_atrasado: {
+ 2001|     moldes: ['{abre} {fato} {fecho}'],
+ 2002|     abre: {
+ 2003|       geral: ['Atenção.', 'Opa.', 'Ficou pra trás uma coisa.', 'Alerta de atraso.', 'Uma conta pediu socorro.'],
+ 2004|       humor_acido: ['Esqueceu de mim?', 'O boleto mandou um oi.', 'Tic-tac.', 'Os juros agradecem.', 'Atrasou, hein?'],
+ 2005|     },
+ 2006|     fato: {
+ 2007|       geral: [
+ 2008|         '{conta} venceu dia {dia} e eu não vi o pagamento ({valor}).',
+ 2009|         'Não achei o lançamento de {conta}, que venceu dia {dia}: {valor}.',
+ 2010|         '{conta} ({valor}) passou do vencimento, dia {dia}.',
+ 2011|         'O vencimento de {conta} foi dia {dia} e ainda não tem lançamento.',
+ 2012|         '{conta} está atrasada há {dias} dias: {valor}.',
+ 2013|       ],
+ 2014|     },
+ 2015|     fecho: {
+ 2016|       geral: [
+ 2017|         'Se já pagou, lança na aba Mês que eu atualizo.',
+ 2018|         'Vale pagar logo pra fugir dos juros.',
+ 2019|         'Confere no app do banco e me conta.',
+ 2020|         'Se pagou, foi só esquecer de anotar. Acontece.',
+ 2021|         'Eu não consigo pagar por você, mas posso lembrar até você pagar.',
+ 2022|       ],
+ 2023|     },
+ 2024|   },
+ 2025|   plano_do_mes: {
+ 2026|     moldes: ['{abre} {fato}', '{fato} {fecho}'],
+ 2027|     abre: {
+ 2028|       geral: ['Agenda do mês:', 'Olha só o que tem este mês:', 'Lembrete bom:', 'Este mês tem:', 'Anota na agenda:'],
+ 2029|       temNome: ['{nome}, este mês tem:', 'Ei, {nome}, lembra?', '{nome}, agenda do mês:', 'Olha, {nome}:', '{nome}, lembrete bom:'],
+ 2030|     },
+ 2031|     fato: {
+ 2032|       geral: [
+ 2033|         '{conta} está no plano deste mês ({valor}).',
+ 2034|         'Este mês é mês de {conta}, previsto em {valor}.',
+ 2035|         '{conta} volta este mês: {valor} reservados.',
+ 2036|         'Tem {conta} programado pra este mês ({valor}).',
+ 2037|         'É o mês de {conta}. Já conta com {valor}.',
+ 2038|       ],
+ 2039|     },
+ 2040|     fecho: {
+ 2041|       geral: [
+ 2042|         'Aproveita!',
+ 2043|         'Quando acontecer, lança que eu marco.',
+ 2044|         'Planejado é outra coisa: sem culpa.',
+ 2045|         'Já está nas contas do mês.',
+ 2046|         'Bom proveito quando chegar a hora.',
+ 2047|       ],
+ 2048|     },
+ 2049|   },
+ 2050|   // Dica de meta no Início (13/11, ideia do AI Studio): quanto guardar por mês pra chegar no prazo
+ 2051|   meta_ritmo: {
+ 2052|     moldes: ['{abre} {fato}'],
+ 2053|     abre: {
+ 2054|       geral: ['Sobre sua meta:', 'Lembrete de meta:', 'De olho no sonho:', 'Meta na mira:', 'Pensando no futuro:'],
+ 2055|       temNome: ['{nome}, sobre sua meta:', '{nome}, lembrete de meta:', '{nome}, de olho no sonho:', '{nome}, meta na mira:', '{nome}, pensando no futuro:'],
+ 2056|     },
+ 2057|     fato: {
+ 2058|       geral: [
+ 2059|         'pra {meta} chegar no prazo, guarda {valor} por mês. Faltam {total}.',
+ 2060|         'faltam {total} pra {meta}. Dá {valor} por mês até lá.',
+ 2061|         '{meta} está em {pct}%. Guardando {valor} por mês, chega no prazo.',
+ 2062|         '{valor} por mês e {meta} sai do papel. Faltam {total}.',
+ 2063|         'já foi {pct}% de {meta}. O ritmo pra chegar: {valor} por mês.',
+ 2064|       ],
+ 2065|     },
+ 2066|   },
+ 2067|   // Auditor de assinaturas (P9, 12/11): só pergunta, com o número do ano; quem decide é a pessoa
+ 2068|   auditor_assinatura: {
+ 2069|     moldes: ['{abre} {fato} {fecho}'],
+ 2070|     abre: {
+ 2071|       geral: ['Auditoria rápida:', 'Pergunta sincera:', 'Hora da faxina:', 'Começo de mês, pergunta de sempre:', 'Sem julgamento:'],
+ 2072|       temNome: ['{nome}, auditoria rápida:', '{nome}, pergunta sincera:', 'Ei, {nome}:', '{nome}, sem julgamento:', '{nome}, hora da faxina:'],
+ 2073|     },
+ 2074|     fato: {
+ 2075|       geral: [
+ 2076|         'você ainda usa {conta}? São {valor} por mês, {ano} por ano.',
+ 2077|         '{conta} custa {valor} por mês. No ano, dá {ano}.',
+ 2078|         'em um ano, {conta} leva {ano}. Ainda faz sentido?',
+ 2079|         '{conta} ({valor}) ainda está valendo a pena?',
+ 2080|         'quanto você usou {conta} no último mês? Ela custa {ano} por ano.',
+ 2081|       ],
+ 2082|     },
+ 2083|     fecho: {
+ 2084|       geral: [
+ 2085|         'Se não usa, cancelar é dinheiro que volta.',
+ 2086|         'Se usa bastante, ótimo: segue o jogo.',
+ 2087|         'Quem decide é você; eu só faço a conta.',
+ 2088|         'Às vezes dá pra pausar e voltar depois.',
+ 2089|         'Assinatura esquecida é o vazamento mais silencioso.',
+ 2090|       ],
+ 2091|     },
+ 2092|   },
+ 2093|   confira_banco: {
+ 2094|     moldes: ['{abre} {fato} {fecho}'],
+ 2095|     abre: {
+ 2096|       geral: ['Lembrete amigo:', 'Uma sugestão:', 'Ei:', 'Dica rápida:', 'Antes que eu esqueça:'],
+ 2097|       temNome: ['{nome}, lembrete amigo:', 'Ei, {nome}:', '{nome}, uma sugestão:', '{nome}, dica rápida:', '{nome}, antes que eu esqueça:'],
+ 2098|     },
+ 2099|     fato: {
+ 2100|       geral: [
+ 2101|         'faz {dias} dias que o saldo de {conta} não é atualizado.',
+ 2102|         'o saldo de {conta} foi conferido há {dias} dias.',
+ 2103|         'já são {dias} dias sem conferir {conta}.',
+ 2104|         '{conta} está com o saldo de {dias} dias atrás.',
+ 2105|         'o saldo de {conta} pode estar desatualizado ({dias} dias).',
+ 2106|       ],
+ 2107|     },
+ 2108|     fecho: {
+ 2109|       geral: [
+ 2110|         'Dá uma olhadinha no app do banco e atualiza aqui. Isso eu não consigo fazer por você.',
+ 2111|         'Confere lá e toca em Atualizar saldo na aba Contas.',
+ 2112|         'Eu não enxergo o banco, então conto com você nessa.',
+ 2113|         'Uma conferida rápida evita surpresa.',
+ 2114|         'Atualizando, minhas contas ficam certinhas.',
+ 2115|       ],
+ 2116|     },
+ 2117|   },
+ 2118|   // Primeiro acesso: o C.A.O.S. conhece a pessoa
+ 2119|   onb_nome: {
+ 2120|     moldes: ['{inteira}'],
+ 2121|     inteira: {
+ 2122|       geral: [
+ 2123|         'Oi! Eu sou o C.A.O.S., a Central de Análises e Observações Sistêmicas. Antes de tudo: qual é o seu nome?',
+ 2124|         'Olá! Sou o C.A.O.S. e vou cuidar da sua carteira com você. Como é o seu nome?',
+ 2125|         'Oi, prazer! Eu sou o C.A.O.S. Pra começar com o pé direito: qual é o seu nome?',
+ 2126|         'Seja bem-vindo! Eu sou o C.A.O.S., seu analista de bolso. Qual é o seu nome?',
+ 2127|         'Opa! Sou o C.A.O.S. Vamos nos conhecer: qual é o seu nome?',
+ 2128|       ],
+ 2129|     },
+ 2130|   },
+ 2131|   onb_apelido: {
+ 2132|     moldes: ['{inteira}'],
+ 2133|     inteira: {
+ 2134|       geral: [
+ 2135|         'Prazer, {nome}! Como você prefere que eu te chame?',
+ 2136|         'Que bom te conhecer, {nome}. Posso te chamar assim ou prefere um apelido?',
+ 2137|         '{nome}, anotado. Como você gosta de ser chamado?',
+ 2138|         'Nome bonito, {nome}. Te chamo assim ou tem outro jeito que você prefere?',
+ 2139|         'Prazer, {nome}! Me diz como prefere que eu te chame.',
+ 2140|       ],
+ 2141|     },
+ 2142|   },
+ 2143|   onb_aniversario: {
+ 2144|     moldes: ['{inteira}'],
+ 2145|     inteira: {
+ 2146|       geral: [
+ 2147|         '{nome}, quando é seu aniversário? Pode mandar tipo 05/03/1998. Assim eu ajusto meu jeito de falar e lembro do seu dia.',
+ 2148|         'Me conta sua data de nascimento, {nome}? Ex.: 12/08/2001. Uso só pra ajustar o papo e te dar parabéns.',
+ 2149|         'Qual a sua data de nascimento, {nome}? (dia/mês/ano) Fica só no seu aparelho.',
+ 2150|         '{nome}, me diz seu aniversário com o ano? Ex.: 30/11/1995. Prometo lembrar do dia.',
+ 2151|         'Pra eu falar do jeito certo com você, {nome}: qual sua data de nascimento? Ex.: 01/02/2010.',
+ 2152|       ],
+ 2153|     },
+ 2154|   },
+ 2155| 
+ 2156|   onb_aniversario_ok: {
+ 2157|     moldes: ['{inteira}'],
+ 2158|     inteira: {
+ 2159|       geral: [
+ 2160|         'Anotado, {nome}! Fica só aqui no seu aparelho, e no seu dia eu apareço.',
+ 2161|         'Guardei, {nome}. No seu aniversário tem parabéns meu.',
+ 2162|         'Pronto, {nome}! Data na memória.',
+ 2163|         'Valeu, {nome}! Agora eu sei falar do seu jeito e lembro do seu dia.',
+ 2164|         'Anotadíssimo, {nome}. Pode cobrar o parabéns depois!',
+ 2165|       ],
+ 2166|     },
+ 2167|   },
+ 2168| 
+ 2169|   // Metas montadas junto (06/11)
+ 2170|   meta_pra_que: {
+ 2171|     moldes: ['{inteira}'],
+ 2172|     inteira: {
+ 2173|       geral: [
+ 2174|         'Bora montar sua meta! Pra que você quer juntar dinheiro? (ex.: um show, uma viagem, reserva de emergência)',
+ 2175|         'Adoro meta. Me conta: é pra quê? Um show, um celular novo, uma reserva…',
+ 2176|         'Vamos nessa! Qual é o sonho? Fala o que você quer conquistar.',
+ 2177|         'Meta boa começa com um motivo. Pra que vai ser esse dinheiro?',
+ 2178|         'Fechado, eu te ajudo. Primeiro: pra que é a meta?',
+ 2179|       ],
+ 2180|     },
+ 2181|   },
+ 2182| 
+ 2183|   meta_quanto: {
+ 2184|     moldes: ['{inteira}'],
+ 2185|     inteira: {
+ 2186|       geral: [
+ 2187|         '{meta}, que legal! Quanto custa, mais ou menos?',
+ 2188|         'Boa escolha: {meta}. Quanto você precisa juntar no total?',
+ 2189|         '{meta} anotado. E quanto custa isso?',
+ 2190|         'Gostei: {meta}. Me diz o valor total que você precisa.',
+ 2191|         '{meta}! Quanto vai custar, chutando por cima?',
+ 2192|       ],
+ 2193|     },
+ 2194|   },
+ 2195| 
+ 2196|   meta_tem: {
+ 2197|     moldes: ['{inteira}'],
+ 2198|     inteira: {
+ 2199|       geral: [
+ 2200|         'Você já tem alguma parte guardada pra isso? Se não tiver, manda 0.',
+ 2201|         'Já começou a juntar? Quanto já tem? (pode ser 0)',
+ 2202|         'Quanto você já tem separado pra essa meta? Se for nada ainda, tudo bem: manda 0.',
+ 2203|         'E já tem um pouco guardado? Me diz quanto (ou 0).',
+ 2204|         'Já existe um começo? Quanto já está guardado pra isso?',
+ 2205|       ],
+ 2206|     },
+ 2207|   },
+ 2208| 
+ 2209|   meta_ate: {
+ 2210|     moldes: ['{inteira}'],
+ 2211|     inteira: {
+ 2212|       geral: [
+ 2213|         'Até quando você quer chegar lá? Pode ser "dezembro", "em 6 meses" ou "04/2027".',
+ 2214|         'E pra quando é? (ex.: "fim do ano", "em 8 meses", "março")',
+ 2215|         'Qual o prazo? Me fala o mês: "julho", "em 1 ano"…',
+ 2216|         'Quando você quer ter esse dinheiro? Um mês ou "em X meses".',
+ 2217|         'Prazo: até quando? Assim eu calculo quanto guardar por mês.',
+ 2218|       ],
+ 2219|     },
+ 2220|   },
+ 2221| 
+ 2222|   meta_batida: {
+ 2223|     moldes: ['{inteira}'],
+ 2224|     inteira: {
+ 2225|       geral: [
+ 2226|         'META BATIDA, {nome}! {meta} conquistada. Que orgulho de você!',
+ 2227|         'Conseguiu, {nome}! A meta {meta} chegou a 100%. Comemora, você merece!',
+ 2228|         '{nome}, você bateu a meta {meta}! Isso é disciplina de verdade.',
+ 2229|         'Parabéns, {nome}! {meta}: completa. Eu sabia que você conseguia.',
+ 2230|         'Missão cumprida, {nome}! {meta} está garantida. Bora pra próxima?',
+ 2231|       ],
+ 2232|     },
+ 2233|   },
+ 2234| 
+ 2235|   meta_guardou: {
+ 2236|     moldes: ['{inteira}'],
+ 2237|     inteira: {
+ 2238|       geral: [
+ 2239|         'Mais {valor} na meta {meta}! Já está em {pct}%.',
+ 2240|         'Boa! {meta} subiu pra {pct}%. Faltam {resta}.',
+ 2241|         '{valor} guardados pra {meta}. Agora são {pct}% do caminho.',
+ 2242|         'Anotado: {meta} em {pct}%. Cada pouquinho conta!',
+ 2243|         'Isso aí! {meta} já tem {pct}%. Faltam só {resta}.',
+ 2244|       ],
+ 2245|     },
+ 2246|   },
+ 2247| 
+ 2248|   onb_tratamento: {
+ 2249|     moldes: ['{inteira}'],
+ 2250|     inteira: {
+ 2251|       geral: [
+ 2252|         'Combinado, {nome}. E o jeito de falar: prefere descontraído ou mais formal?',
+ 2253|         'Beleza, {nome}! Gosta que eu fale de um jeito descontraído ou mais formal?',
+ 2254|         'Fechado, {nome}. Como prefere que eu fale com você: descontraído ou formal?',
+ 2255|         'Perfeito, {nome}. Uma última preferência: conversa descontraída ou mais formal?',
+ 2256|         'Ótimo, {nome}. Te trato de um jeito descontraído ou mais formal?',
+ 2257|       ],
+ 2258|     },
+ 2259|   },
+ 2260|   onb_ajuda: {
+ 2261|     moldes: ['{inteira}'],
+ 2262|     inteira: {
+ 2263|       geral: [
+ 2264|         'Anotado. E no que eu posso te ajudar mais? Pode escolher mais de um e tocar em Pronto.',
+ 2265|         'Certo. Agora me conta: no que você quer minha ajuda? Escolhe quantos quiser e toca em Pronto.',
+ 2266|         'Entendido. Qual é o seu foco agora? Marca o que fizer sentido e toca em Pronto.',
+ 2267|         'Beleza. Pra eu saber por onde começar: no que posso ajudar? Escolhe e toca em Pronto.',
+ 2268|         'Show. E o que você mais quer do C.A.O.S. Finanças? Pode marcar vários e tocar em Pronto.',
+ 2269|       ],
+ 2270|     },
+ 2271|   },
+ 2272|   onb_fim: {
+ 2273|     moldes: ['{inteira}'],
+ 2274|     inteira: {
+ 2275|       geral: [
+ 2276|         'Tudo pronto, {nome}! Vou focar em {foco}. Pra começar, lança um gasto ou me pergunta qualquer coisa.',
+ 2277|         'Fechado, {nome}. Meu foco com você: {foco}. Bora começar? Pergunta "como lanço um gasto?" se quiser.',
+ 2278|         'Prazer em te conhecer, {nome}! Já sei que o foco é {foco}. Pode contar comigo.',
+ 2279|         'Pronto, {nome}. Anotei tudo: foco em {foco}. Quando quiser mudar, é em Ajustes.',
+ 2280|         'Combinado, {nome}! Vou te ajudar com {foco}. A primeira dica: cadastra seus compromissos na aba Mês.',
+ 2281|       ],
+ 2282|     },
+ 2283|   },
+ 2284| });
+ 2285| 
+ 2286| // 2.0.5 (núcleo 1.4.0, "limites"): o lembrete de IA de bolso nas perguntas de decisão (comprar, parcelar). Sai 1 vez
+ 2287| // por assunto; quem controla é o index.js.
+ 2288| Object.assign(GERADORES, {
+ 2289|   lembrete_limites: {
+ 2290|     moldes: ['{inteira}'],
+ 2291|     inteira: {
+ 2292|       geral: [
+ 2293|         'Lembrando: não sou consultor. Te oriento e faço a conta, mas certeza eu não te dou. Quem decide é você.',
+ 2294|         'Isso é a conta e a minha dica; a decisão é sua. Sou uma IA de bolso, não um consultor financeiro.',
+ 2295|         'Te mostrei os números do jeito mais honesto que sei. A escolha final é sua, combinado?',
+ 2296|         'Fica como orientação, não como ordem: quem conhece o seu mês melhor que eu é você.',
+ 2297|         'Sou IA de bolso: ajudo, explico e faço a conta. Bater o martelo é com você.',
+ 2298|         'Lembrando: é minha leitura dos números, não uma certeza. Quem decide é você.',
+ 2299|         'Eu te dou o mapa; o caminho você escolhe.',
+ 2300|         'Isso é dica de parceiro, não de consultor. A palavra final é sua.',
+ 2301|         'Fiz a conta com carinho, mas a decisão é sua, tá?',
+ 2302|         'Ajudo no que dá; o resto é com você, que conhece seu bolso melhor que eu.',
+ 2303|         'Isso aí não é muito comigo, viu? Tô te ajudando porque minha função é ajudar. Se é melhor pra você ou não, aí, parceirinho, é com você.',
+ 2304|         'Você me pediu os valores, eu te entreguei os valores. A decisão é sua, e eu fico do seu lado seja qual for.',
+ 2305|         'Te passei os números, não uma indicação. Independente do que você escolher, eu tô aqui pra te ajudar.',
+ 2306|         'Informação eu te dou; o "vai nesse banco" eu não dou. Isso é com você, parceiro.',
+ 2307|         'Eu mostro, você decide. E seja qual for a escolha, tô contigo.',
+ 2308|       ],
+ 2309|     },
+ 2310|   },
+ 2311|   aviso_mercado: {
+ 2312|     moldes: ['{inteira}'],
+ 2313|     inteira: {
+ 2314|       geral: [
+ 2315|         'Lembrando: é uma leitura dos últimos dias, não uma previsão garantida nem recomendação de investimento.',
+ 2316|         'Isso é apoio com base nos números recentes, não recomendação de investimento. O mercado pode virar a qualquer hora.',
+ 2317|         'Eu calculo com o que já aconteceu; o futuro ninguém garante. Não é recomendação de investimento.',
+ 2318|         'Use como dica, não como certeza: eu sou uma IA de bolso, não um consultor de investimentos.',
+ 2319|         'Base de cálculo: variação e médias dos últimos dias. Pode errar, e não substitui um profissional.',
+ 2320|       ],
+ 2321|     },
+ 2322|   },
+ 2323| });
+ 2324| 
+ 2325| // Pedaços com o nome da pessoa (só saem quando ela disse o nome no primeiro acesso)
+ 2326| GERADORES.boas_vindas.abre.temNome = ['Oi, {nome}!', 'E aí, {nome}?', 'Opa, {nome}!', 'Que bom te ver, {nome}.', 'Olá, {nome}!']; // 14/11 (Anne): "bem-vindo de volta" do nada soava estranho
+ 2327| GERADORES.boas_vindas.abre.tratamento_formal = ['Olá, {nome}. Seja bem-vindo.', 'Bom te ver novamente, {nome}.', 'Olá, {nome}. À disposição.', 'Seja bem-vindo, {nome}.', 'Olá, {nome}. Vamos às contas?'];
+ 2328| GERADORES.resposta.abre.temNome = ['Olha só, {nome}:', 'Fiz as contas, {nome}.', '{nome}, aqui está.', 'Deixa eu te mostrar, {nome}.', 'Pronto, {nome}.'];
+ 2329| GERADORES.gasto_cadastrado.fecho.temNome = ['Valeu por anotar, {nome}.', 'Bom controle, {nome}.', 'Seguimos, {nome}.', 'Tá registrado, {nome}.', 'Anotado, {nome}. Tamo junto.'];
+ 2330| GERADORES.entrada_cadastrada.fecho.temNome = ['Boa, {nome}!', 'Gostei disso, {nome}.', 'Que tal guardar um pedaço, {nome}?', 'Dinheiro chegando, {nome}. Bom demais.', 'Anotado, {nome}. Agora é fazer render.'];
+ 2331| 
+ 2332| /** Ajuda (o que dá pra perguntar). */
+ 2333| export const SUGESTOES = Object.freeze([
+ 2334|   'Quanto gastei este mês?',
+ 2335|   'Onde mais gastei?',
+ 2336|   'Tive rendimentos?',
+ 2337|   'Algum alerta?',
+ 2338|   'Quem é você?',
+ 2339|   'Conta uma piada',
+ 2340|   'Qual meu saldo?',
+ 2341|   'Quanto ainda posso gastar?',
+ 2342|   'Vai dar até o fim do mês?',
+ 2343|   'Comparado ao mês passado?',
+ 2344|   'Me dá uma dica',
+ 2345|   'Gastei 25 no mercado',
+ 2346|   'O que você pode fazer?',
+ 2347|   'Como funciona seu cérebro?',
+ 2348|   'Como adiciono uma conta?',
+ 2349|   'O que tenho pra pagar?',
+ 2350|   'O que planejei pro mês?',
+ 2351|   'Cabe no mês?',
+ 2352|   'Posso comprar algo de 200?',
+ 2353|   'Qual é o meu nome?',
+ 2354|   'Como está o dólar?',
+ 2355|   'A bolsa tende a subir?',
+ 2356|   'Qual a Selic?',
+ 2357|   'Como está o mercado?',
+ 2358|   'Vale investir em dólar?',
+ 2359| ]);
+ 2360| 
