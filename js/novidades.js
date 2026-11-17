@@ -8,6 +8,7 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.3.3 Alfa',
+    ate: '2.3.3.1',
     data: '17/11/2026',
     nome: 'Do Seu Jeito',
     t: 'O app se ajusta à sua idade, e o C.A.O.S. entende quando pagaram pra você.',
@@ -19,7 +20,10 @@ export const NOVIDADES = Object.freeze([
       '🧒 Pra criança: sem cartão de crédito na tela. Já tem um? Ligue "Já tenho cartão" em Seu perfil.',
       '📖 Mais palavras no glossário: regra 50/30/20, pague-se primeiro, 52 semanas, envelopes e 3 cofrinhos.',
     ],
-    qol: [],
+    qol: [
+      '🙋 Do seu jeito: o C.A.O.S. pergunta como te chamar (Dona, Seu, Senhora, seu nome ou o que inventar). Muda em Seu perfil.',
+      '⏰ Lembretes combinados: ele pergunta uma vez se você quer avisos e em que horário. Muda em Ajustes → Lembretes.',
+    ],
   },
   {
     v: '2.3.2 Alfa',

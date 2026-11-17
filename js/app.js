@@ -12,7 +12,7 @@ import {
   TIPOS_INVESTIMENTO, createInvestimento, atualizarInvestimento, resumoInvestimentos,
   valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, depoisDoSaldo, folgaDoPiso, diferencaDoSaldo, fatoDaSemana, podeGastar, resumoEntradas, progressoOrcamentoDiario, mascaraCentavos, valorForaDoComum, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
-import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, rostoEspantado, nomeAlerta, diaEspecial } from './caos/index.js';
+import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, rostoEspantado, nomeAlerta, diaEspecial , comoChamar } from './caos/index.js';
 import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
 import { GLOSSARIO, ATUALIZADO_EM, GLOS_TEMAS, temaDoTermo } from './caos/glossario.js';
 import { fraseDoPrint, resumoDoPrint } from './caos/ofertas.js';
@@ -657,6 +657,7 @@ export function renderPerfil() {
     : 'O C.A.O.S. ainda não te conhece.';
   $('#perfil-aniversario').value = p?.aniversario || '';
   $('#perfil-aniversario').max = toISODate();
+  $('#perfil-chamar').value = comoChamar(p) || '';
   ajustarPelaIdade();
 }
 
@@ -830,7 +831,7 @@ function ligarMeAjuda() {
 
 function meAjuda() {
   location.hash = 'conversa';
-  const nome = state.perfil?.apelido;
+  const nome = comoChamar(state.perfil);
   addMsg({ de: 'caos', texto: `${nome ? `${nome}, ` : ''}tô aqui pra ajudar! Toca no que você quer fazer, ou escreve com suas palavras ("quero anotar um gasto", "como funciona o cartão"…).`, sugestoes: AJUDAS, rosto: rostoAvulso('elogio', { mood: state.settings.mood, memory: state.caosMemory }) });
 }
 
@@ -963,6 +964,65 @@ async function perguntarAniversarioUmaVez() {
   caosDiz('onb_aniversario', { nome: p.apelido }, ['Prefiro não dizer']);
 }
 
+// ---------- Como te chamo e quando te aviso (2.3.3, JF 17/11) ----------
+// "O C.A.O.S. pergunta como a pessoa quer ser chamada: senhor, senhora, dona, seu, ou outro (até 'mestre supremo do
+// universo'). Não é regra dele: cada um é chamado do jeito que quiser. E pergunta dos lembretes. Sem virar questionário:
+// é educação e cuidado." Cada pergunta vem uma vez só, uma por vez.
+function perguntarComoChamar(apelido, aniversario) {
+  const idade = idadeDe(aniversario, toISODate());
+  // pelo nome não dá pra saber se é Dona ou Seu: a pessoa escolhe
+  const opcoes = idade != null && idade >= 40
+    ? [apelido, `Dona ${apelido}`, `Seu ${apelido}`, 'Senhora', 'Senhor', 'Outro jeito']
+    : [`${apelido} mesmo`, 'Outro jeito'];
+  addMsg({ de: 'caos', texto: `${idade != null && idade >= 40 ? 'Com todo o respeito: ' : ''}como você prefere que eu te chame? Pode escolher aqui ou escrever do seu jeito.`, sugestoes: opcoes });
+  if (state.settings.voice) falar('Como você prefere que eu te chame?');
+}
+
+/** O que a pessoa respondeu vira o jeito de chamar (null = o apelido mesmo). */
+function escolhaDeChamar(t, apelido, livre) {
+  const v = String(t || '').trim().replace(/^(me chama de|pode me chamar de|quero ser chamad[oa] de|me chame de)\s+/i, '').replace(/[.!]+$/, '').slice(0, 40);
+  if (!livre && /^outro( jeito)?$/i.test(v)) return 'outro';
+  if (!v || v.toLowerCase() === String(apelido).toLowerCase() || v.toLowerCase() === `${apelido} mesmo`.toLowerCase()) return null;
+  return v[0].toUpperCase() + v.slice(1);
+}
+
+async function perguntarChamarUmaVez() {
+  const p = state.perfil;
+  if (!p || p.pulou || !p.apelido || p.chamarPerguntado || state.onboarding) return false;
+  state.perfil = { ...p, chamarPerguntado: true };
+  await db.setMeta('perfil', state.perfil);
+  state.onboarding = { passo: 'chamar', unico: true, dados: { apelido: p.apelido, foco: [] } };
+  perguntarComoChamar(p.apelido, p.aniversario);
+  return true;
+}
+
+async function perguntarLembreteUmaVez() {
+  const p = state.perfil;
+  if (!p || p.pulou || !p.apelido || p.lembretePerguntado || state.onboarding) return false;
+  const c = await lembretes.config().catch(() => null);
+  state.perfil = { ...p, lembretePerguntado: true };
+  await db.setMeta('perfil', state.perfil);
+  if (c?.ativo) return false;
+  state.onboarding = { passo: 'lembrete', unico: true, dados: { foco: [] } };
+  addMsg({ de: 'caos', texto: `${comoChamar(state.perfil)}, posso te avisar das contas pra vencer e do dinheiro pra receber? Que horário fica melhor pra você?`, sugestoes: ['De manhã (9h)', 'No almoço (12h)', 'À noite (20h30)', 'Agora não'] });
+  return true;
+}
+
+async function responderLembrete(t) {
+  const hora = /manh|9h|9:00/i.test(t) ? '09:00' : /almo|12h|meio.?dia/i.test(t) ? '12:00' : /noite|20h|20:30|21h/i.test(t) ? '20:30' : (t.match(/\b([01]?\d|2[0-3])[:h]([0-5]\d)?\b/) ? `${t.match(/\b([01]?\d|2[0-3])[:h]([0-5]\d)?\b/)[1].padStart(2, '0')}:${t.match(/\b([01]?\d|2[0-3])[:h]([0-5]\d)?\b/)[2] || '00'}` : null);
+  if (!hora) {
+    addMsg({ de: 'caos', texto: 'Tudo bem, sem lembrete por enquanto. Se mudar de ideia, é em Ajustes → Lembretes.', sugestoes: SUGESTOES.slice(0, 6) });
+    return;
+  }
+  $('#remind-time').value = hora;
+  const box = $('#remind-toggle');
+  box.checked = true;
+  await onRemindToggle({ target: box });
+  addMsg({ de: 'caos', texto: box.checked
+    ? `Combinado! Te aviso às ${hora.replace(':00', 'h').replace(':', 'h')}. Pra eu lembrar de uma conta, cadastra em 📅 Mês → Compromissos. Dá pra mudar o horário em Ajustes → Lembretes.`
+    : `Quase: o celular não deixou eu mandar aviso (${$('#remind-status').textContent || 'permissão negada'}). Dá pra tentar de novo em Ajustes → Lembretes.`, sugestoes: SUGESTOES.slice(0, 6) });
+}
+
 /** No dia do aniversário, ele dá parabéns uma vez por ano. */
 async function parabensSeForODia() {
   const p = state.perfil;
@@ -970,7 +1030,7 @@ async function parabensSeForODia() {
   if (!p?.aniversario || !ehAniversario(p.aniversario, hoje) || p.parabensAno === hoje.slice(0, 4)) return;
   state.perfil = { ...p, parabensAno: hoje.slice(0, 4) };
   await db.setMeta('perfil', state.perfil);
-  caosDiz('aniversario', { nome: p.apelido || 'pessoa querida' }, SUGESTOES.slice(0, 6));
+  caosDiz('aniversario', { nome: comoChamar(p) || 'pessoa querida' }, SUGESTOES.slice(0, 6));
   const ult = [...state.chat].reverse().find(m => m.de === 'caos');
   if (ult) $('#caos-line').textContent = ult.texto;
 }
@@ -1020,13 +1080,13 @@ export async function onboardingResposta(t) {
     const limpo = t.replace(/^✓\s*/, '');
     if (/^pronto$/i.test(limpo)) {
       addMsg({ de: 'eu', texto: d.foco.length ? d.foco.join(', ') : 'Pronto' });
-      state.perfil = { nome: d.nome, apelido: d.apelido, tratamento: d.tratamento, foco: d.foco, aniversario: d.aniversario || null, aniversarioPerguntado: true, criadoEm: Date.now() };
+      state.perfil = { nome: d.nome, apelido: d.apelido, chamarDe: d.chamarDe || null, chamarPerguntado: true, tratamento: d.tratamento, foco: d.foco, aniversario: d.aniversario || null, aniversarioPerguntado: true, criadoEm: Date.now() };
       state.onboarding = null;
       await db.setMeta('perfil', state.perfil);
       renderPerfil();
       const foco = d.foco.length ? d.foco.join(', ').toLowerCase() : 'cuidar da carteira no dia a dia';
       // quem quer juntar dinheiro já sai com a sugestão de montar a meta junto
-      caosDiz('onb_fim', { nome: d.apelido, foco }, d.foco.includes('Juntar dinheiro') ? ['Quero montar uma meta', ...SUGESTOES.slice(0, 5)] : SUGESTOES.slice(0, 6));
+      caosDiz('onb_fim', { nome: d.chamarDe || d.apelido, foco }, d.foco.includes('Juntar dinheiro') ? ['Quero montar uma meta', ...SUGESTOES.slice(0, 5)] : SUGESTOES.slice(0, 6));
       return;
     }
     if (FOCOS.includes(limpo)) d.foco = d.foco.includes(limpo) ? d.foco.filter(x => x !== limpo) : [...d.foco, limpo];
@@ -1075,16 +1135,33 @@ export async function onboardingResposta(t) {
       state.onboarding = null;
       await db.setMeta('perfil', state.perfil);
       renderPerfil();
-      if (data) caosDiz('onb_aniversario_ok', { nome: state.perfil.apelido }, SUGESTOES.slice(0, 6));
+      if (data) caosDiz('onb_aniversario_ok', { nome: comoChamar(state.perfil) }, SUGESTOES.slice(0, 6));
       else addMsg({ de: 'caos', texto: 'Tudo bem! Se mudar de ideia, é só ir em Ajustes → Seu perfil.', sugestoes: SUGESTOES.slice(0, 6) });
       return;
     }
+    o.passo = 'chamar';
+    perguntarComoChamar(d.apelido, d.aniversario);
+  } else if (o.passo === 'chamar' || o.passo === 'chamar_outro') {
+    const esc = escolhaDeChamar(t, d.apelido, o.passo === 'chamar_outro');
+    if (esc === 'outro') { o.passo = 'chamar_outro'; addMsg({ de: 'caos', texto: 'Me fala como! Pode ser sério ou de brincadeira, tipo "Mestre Supremo do Universo". Eu respeito.' }); return; }
+    d.chamarDe = esc;
+    if (o.unico) {
+      state.perfil = { ...state.perfil, chamarDe: esc, chamarPerguntado: true };
+      state.onboarding = null;
+      await db.setMeta('perfil', state.perfil);
+      renderPerfil();
+      addMsg({ de: 'caos', texto: `Combinado, ${esc || d.apelido}! Vou te chamar assim. Se quiser mudar, é só me dizer "me chama de…" ou ir em Ajustes → Seu perfil.`, sugestoes: SUGESTOES.slice(0, 6) });
+      return;
+    }
     o.passo = 'tratamento';
-    caosDiz('onb_tratamento', { nome: d.apelido }, ['Descontraído', 'Mais formal']);
+    caosDiz('onb_tratamento', { nome: esc || d.apelido }, ['Descontraído', 'Mais formal']);
+  } else if (o.passo === 'lembrete') {
+    state.onboarding = null;
+    await responderLembrete(t);
   } else if (o.passo === 'tratamento') {
     d.tratamento = /formal/i.test(t) && !/descontra/i.test(t) ? 'formal' : 'descontraido';
     o.passo = 'ajuda';
-    caosDiz('onb_ajuda', { nome: d.apelido }, sugestoesFoco());
+    caosDiz('onb_ajuda', { nome: d.chamarDe || d.apelido }, sugestoesFoco());
   }
 }
 
@@ -1577,6 +1654,14 @@ function bind() {
     renderPerfil();
     toast(v ? 'Pronto, anotei seu aniversário.' : 'Aniversário apagado.');
   });
+  $('#perfil-chamar').addEventListener('change', async e => {
+    const v = e.target.value.trim().slice(0, 40);
+    if (!state.perfil?.apelido && !v) return;
+    state.perfil = { ...(state.perfil || { nome: null, apelido: null, tratamento: 'descontraido', foco: [] }), chamarDe: v && v !== state.perfil?.apelido ? v : null, chamarPerguntado: true, ...(state.perfil?.apelido ? {} : { apelido: v, nome: v }) };
+    await db.setMeta('perfil', state.perfil);
+    renderPerfil();
+    toast(v ? `Pronto: vou te chamar de ${v}.` : 'Volto a te chamar pelo apelido.');
+  });
   $('#mostrar-cartao').addEventListener('change', e => { state.settings.mostrarCartao = e.target.checked; saveSettings(); ajustarPelaIdade(); });
   $('#note').addEventListener('input', sugerirPelaDescricao);
 
@@ -1694,7 +1779,9 @@ async function init() {
   // 17/11 (JF): antes, a tela "Você é novo por aqui?" oferece o tutorial guiado; a apresentação vem depois dele
   if (!state.perfil && !state.settings.tourVisto) abrirBoasVindas({ primeiraVez: true, desistirSe: () => !!state.perfil, depois: () => { if (!state.perfil) iniciarOnboarding(); } });
   else if (!state.perfil) iniciarOnboarding();
-  else { await parabensSeForODia(); await perguntarAniversarioUmaVez(); }
+  else { await parabensSeForODia(); await perguntarAniversarioUmaVez(); if (!state.onboarding) await perguntarChamarUmaVez(); }
+  // 2.3.3: o lembrete fica pra outra abertura (uma pergunta por vez, sem questionário)
+  if (!state.onboarding && state.perfil?.chamarPerguntado && !state.perfil?.lembretePerguntado && state.perfil?.criadoEm && Date.now() - state.perfil.criadoEm > 60_000) await perguntarLembreteUmaVez();
   $('#install-hint').textContent = installHint();
 
   const today = toISODate();

@@ -4,7 +4,7 @@
 
 import { $, catById, dados, esc, renderizar, state } from '../estado.js';
 import { FORMAS, formaPara, rostoDaForma } from '../avatar.js';
-import { IDENTIDADE, SUGESTOES, conversar, curiosidadeDoGasto, humorParaIA, emocaoDoMomento, rostoAvulso } from '../caos/index.js';
+import { IDENTIDADE, SUGESTOES, comoChamar, conversar, curiosidadeDoGasto, humorParaIA, emocaoDoMomento, rostoAvulso } from '../caos/index.js';
 import { accountLabel, createTransferencia, depoisDoSaldo, marcarRecebido, editarConta, editarLancamento, formatBRL, sugerirCategoria, toISODate } from '../engine.js';
 import * as conta from '../conta.js';
 import { assuntoDeDinheiro, lerPagamento, respostaForaDoFoco, seguirPagamento } from '../caos/conversa.js';
@@ -27,7 +27,7 @@ export function trocarNome(texto, nome) {
 }
 
 export function addMsg(msg) {
-  if (msg.texto) msg.texto = trocarNome(msg.texto, state.perfil?.apelido);
+  if (msg.texto) msg.texto = trocarNome(msg.texto, comoChamar(state.perfil));
   if (msg.de === 'caos' && !msg.rosto) {
     msg.rosto = msg.temp
       ? rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory })
@@ -153,7 +153,7 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
       // 2.3.2: depois da média pesquisada, os botões de "quer juntar pra isso?" / "só curiosidade"
       addMsg({ de: 'caos', texto: resposta, ia: true, sugestoes: fala.intent === 'custo_medio' ? fala.sugestoes : SUGESTOES.slice(0, 5), rosto: fala.rosto });
       pintarRosto(fala.rosto);
-      if (state.settings.voice) falar(trocarNome(resposta, state.perfil?.apelido).replace(/\*\*/g, ''));
+      if (state.settings.voice) falar(trocarNome(resposta, comoChamar(state.perfil)).replace(/\*\*/g, ''));
       return;
     } catch (e) {
       state.chat = state.chat.filter(m => !m.temp);
@@ -306,7 +306,8 @@ export async function confirmarAcao(i, ok) {
       return;
     }
     if (a.tipo === 'mudar_apelido') {
-      state.perfil = { ...(state.perfil || {}), apelido: a.apelido, nome: state.perfil?.nome || a.apelido };
+      // 2.3.3: "me chama de…" vale na hora, por cima do tratamento escolhido antes (Dona, Senhor…)
+      state.perfil = { ...(state.perfil || {}), apelido: a.apelido, chamarDe: null, chamarPerguntado: true, nome: state.perfil?.nome || a.apelido };
       await db.setMeta('perfil', state.perfil);
       renderPerfil();
       addMsg({ de: 'caos', texto: `Fechado! A partir de agora te chamo de ${a.apelido}.` });
@@ -425,7 +426,7 @@ export async function explicarPrint(img, duvida) {
       const texto = await ia.explicarImagem(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob), duvida, humor: humorParaIA(state.settings.mood, state.perfil) });
       state.chat = state.chat.filter(m => !m.temp);
       addMsg({ de: 'caos', ia: true, texto });
-      if (state.settings.voice) falar(trocarNome(texto, state.perfil?.apelido).replace(/\*\*/g, ''));
+      if (state.settings.voice) falar(trocarNome(texto, comoChamar(state.perfil)).replace(/\*\*/g, ''));
       return;
     } catch {
       state.chat = state.chat.filter(m => !m.temp);
