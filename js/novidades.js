@@ -8,7 +8,7 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.3.4 Alfa',
-    ate: '2.3.4.2',
+    ate: '2.3.4.3',
     data: '17/11/2026',
     nome: 'Bolso Atento',
     t: 'Apostas e pet com categoria própria, e o C.A.O.S. repara quando a saúde (sua ou do bicho) pesa.',
@@ -22,6 +22,7 @@ export const NOVIDADES = Object.freeze([
     qol: [
       '💬 Aviso do trabalho: nos Alertas do Início, toque em "Contar pro C.A.O.S." e responda no Chat.',
       '✂️ Texto curtinho: mensagem muito longa no Chat, ele pede pra resumir e sugere o que entendeu.',
+      '🧭 Avatares novos: Farmacêutico, Faz-Tudo, Sacoleiro, Sortudo e Colega de Trabalho aparecem conforme o assunto.',
     ],
   },
   {

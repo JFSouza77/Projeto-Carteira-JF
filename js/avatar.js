@@ -38,6 +38,11 @@ const POR_ASSUNTO = Object.freeze({
   plano_pet: 'petlover', plano_moradia: 'corretor', plano_viagem: 'turista', plano_transporte: 'frentista', plano_economizar: 'economista', plano_produto: 'pesquisador', plano_lazer: 'pesquisador',
   motivacao: 'treinador', frase_do_dia: 'treinador', ditado: 'vovo', curiosidade_fin: 'professor', // 17/11 (JF)
   formiguinha: 'formiga', curiosidade: 'curioso', tangente: 'distraido', pesquisa_compra: 'pesquisador', // 16 e 17/11 (JF): avatares próprios
+  // 2.3.4.3 (JF, 17/11): sem resposta → Recalculando (GPS); saúde pesando → Farmacêutico; conserto → Faz-Tudo;
+  // compra demais → Sacoleiro; loteria e fezinha → Sortudo; trabalho e salário → Colega de Trabalho
+  nao_entendi: 'recalculando', texto_longo: 'recalculando', ia_acordando: 'recalculando', fora_do_foco: 'recalculando',
+  cuidado_saude: 'farmaceutico', cuidado_pet: 'farmaceutico', faz_tudo: 'faztudo', compras_demais: 'sacoleiro',
+  loteria: 'sortudo', apostas_maneirar: 'alerta', piso_salarial: 'trabalhador', trabalho: 'trabalhador', sair_dividas: 'economista',
   desabafo: 'parceiro', limite_investido: 'banqueiro', bancos: 'investidor', conta: 'contador', glossario: 'professor', privacidade: 'anjinho', como_esta: 'calmo',
 });
 
@@ -53,6 +58,7 @@ export const EMO_DA_FORMA = Object.freeze({
   vermelho: 'raiva', treinador: 'festa', vovo: 'ombros', gamer: 'festa',
   guia: 'carinho', curioso: 'pensando', distraido: 'surpresa', formiga: 'preocupado', pesquisador: 'analista',
   frentista: 'calmo', petlover: 'carinho', corretor: 'orgulho', turista: 'festa', chef: 'festa',
+  farmaceutico: 'carinho', faztudo: 'pensando', sacoleiro: 'preocupado', sortudo: 'festa', trabalhador: 'orgulho', // 2.3.4.3
 });
 
 // 2.1.3.2 (JF, 16/11: "os rostinhos não acompanham os avatares; avatar pensador com rostinho tímido não dá"):
@@ -103,6 +109,8 @@ export const KAOMOJI_DA_FORMA = Object.freeze({
   corretor: ['(•‿•)🏠', '(•ᴗ•)🔑'],
   turista: ['(⌐■‿■)✈️', '(•ᴗ•)📸'],
   chef: ['(•‿•)🍳', '(•ᴗ•)🥄'],
+  farmaceutico: ['(•‿•)💊', '(•ᴗ•)✚'], faztudo: ['(•_•)🔧', '(•ᴗ•)🪛'], sacoleiro: ['(°o°)🛍️', '(•_•)🛍️🛍️'],
+  sortudo: ['(•‿•)🍀', '(☆ᴗ☆)🍀'], trabalhador: ['(•_•)💼', '(•ᴗ•)💼 ✓'], // 2.3.4.3
   vovo: ['(ᵔ_ᵔ)', '(ᵔᴗᵔ) ~'],
 });
 
@@ -313,6 +321,27 @@ export const FORMAS = Object.freeze({
     acc:['chapeuChef','colher'], corpo:'rotate(2deg)',
     olhoE:{ d:'M150 204 Q 161 194, 172 204', cheio:false }, olhoD:{ d:'M228 204 Q 239 194, 250 204', cheio:false },
     sob:'', boca:'M178 242 Q 200 258, 222 242', extra:'' },
+  // 2.3.4.3 (JF, 17/11: "Farmacêutico, Faz-Tudo, compras… pensa no que falta pra fechar o 0 ou 5"): 55 → 60
+  farmaceutico:{ nome:'💊 Farmacêutico', quando:'remédio e saúde pesando (sua ou do pet)', cor:'#34d399', modo:'abraco', grupo:'jf5',
+    acc:['cruzFarmacia','pilula','bochechas'], corpo:'translateY(-3px)',
+    olhoE:{ d:'M150 202 Q 161 192, 172 202', cheio:false }, olhoD:{ d:'M228 202 Q 239 192, 250 202', cheio:false },
+    sob:'', boca:'M182 242 Q 200 254, 218 242', extra:'' },
+  faztudo:   { nome:'🔧 Faz-Tudo', quando:'mecânico, eletricista, encanador, conserto', cor:'#f59e0b', modo:'calmo', grupo:'jf5',
+    acc:['capacete','chaveInglesa'], corpo:'rotate(-2deg)',
+    olhoE:{ d:'M152 196 h18 v16 h-18 z', cheio:true }, olhoD:{ d:'M230 196 h18 v16 h-18 z', cheio:true },
+    sob:'', boca:'M178 244 Q 200 256, 222 242', extra:'' },
+  sacoleiro: { nome:'🛍️ Sacoleiro', quando:'muita compra no mês', cor:'#e879f9', modo:'agitado', grupo:'jf5',
+    acc:['sacolas','suor'], corpo:'rotate(3deg)', anim:'balanca',
+    olhoE:{ d:'M150 202 a11 11 0 1 0 22 0 a11 11 0 1 0 -22 0', cheio:true }, olhoD:{ d:'M228 202 a11 11 0 1 0 22 0 a11 11 0 1 0 -22 0', cheio:true },
+    sob:'', boca:'M186 246 a14 12 0 1 0 28 0 a14 12 0 1 0 -28 0', extra:'' },
+  sortudo:   { nome:'🍀 Sortudo', quando:'loteria e fezinha', cor:'#4ade80', modo:'festa', grupo:'jf5',
+    acc:['trevo','bochechas'], corpo:'translateY(-6px)', anim:'balanca',
+    olhoE:{ d:'M150 200 Q 161 190, 172 200', cheio:false }, olhoD:{ d:'M228 200 Q 239 190, 250 200', cheio:false },
+    sob:'', boca:'M170 238 Q 200 266, 230 238', extra:'' },
+  trabalhador:{ nome:'💼 Colega de Trabalho', quando:'trabalho, salário, piso e plantão', cor:'#60a5fa', modo:'anel', grupo:'jf5',
+    acc:['cracha','maleta'], corpo:'translateY(-2px)',
+    olhoE:{ d:'M152 198 h18 v14 h-18 z', cheio:true }, olhoD:{ d:'M230 198 h18 v14 h-18 z', cheio:true },
+    sob:'', boca:'M176 242 Q 200 258, 224 242', extra:'' },
   simulador: { nome:'🛒 Simulador', quando:'"vale comprar agora ou esperar?"', cor:'#facc15', modo:'lento', grupo:'jf2',
     acc:['balanca','calculadora','calendario'], corpo:'rotate(-2deg)',
     olhoE:{ d:'M156 190 h16 v18 h-16 z', cheio:true }, olhoD:{ d:'M236 190 h16 v18 h-16 z', cheio:true },
@@ -363,6 +392,7 @@ const ANIM_ACC = Object.freeze({
   alvo:'pulsa', calendario:'balanca', cartola:'sobe', chapeuPraia:'balanca', touca:'balanca', corado:'pulsa', sobrancelhoes:'sobe',
   bigodao:'bigode', bigode:'bigode', chapeu:'balanca', coroa:'balanca', gravata:'balanca', terno:'sobe', tesoura:'balanca',
   boneCobrador:'sobe', faixa:'sobe', viseira:'sobe', chapeuDetetive:'balanca', turbante:'sobe', nariz:'pulsa', microfone:'balanca',
+  cruzFarmacia:'pulsa', pilula:'vaivem', capacete:'sobe', chaveInglesa:'balanca', sacolas:'balanca', trevo:'pulsa', cracha:'balanca', // 2.3.4.3
   bombaGas:'balanca', orelhasPet:'balanca', osso:'vaivem', casinha:'pulsa', chave:'balanca', camera:'balanca', mala:'vaivem', chapeuChef:'balanca', colher:'vaivem', // 17/11
   chapeuGuia:'balanca', bandeira:'balanca', interrogacao:'pulsa', borboleta:'vaivem', formigas:'vaivem', binoculo:'sobe', // 17/11
   medidor:'balanca', evolucao:'sobe', capelo:'balanca', bochechas:'pulsa', monoculo:'balanca', fone:'sobe', controle:'balanca', bilhete:'balanca', olheiras:'pulsa',
@@ -714,6 +744,40 @@ d="M150 96 C 136 96, 132 76, 148 72 C 150 56, 174 52, 182 66 C 192 50, 222 54, 2
 <g class="acc" data-acc="chapeuChef">
 <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M150 142 q -24 -42 18 -52 q 8 -32 40 -20 q 30 -18 46 12 q 38 6 22 60 z"/>
 <path class="neon" fill="#0f1320" stroke-width="4" d="M150 128 h104 v16 h-104 z"/>
+</g>
+<g class="acc" data-acc="cruzFarmacia"><g class="av-cruzFarmacia">
+<path class="neon" fill="color-mix(in srgb, var(--cor) 30%, #0f1320)" stroke-width="4" stroke-linejoin="round" d="M306 196 h20 v20 h20 v20 h-20 v20 h-20 v-20 h-20 v-20 h20 z"/>
+</g></g>
+<g class="acc" data-acc="pilula"><g class="av-pilula">
+<path class="neon" fill="#0f1320" stroke-width="4" d="M62 330 l 30 -30 a12 12 0 0 1 17 17 l -30 30 a12 12 0 0 1 -17 -17 z"/>
+<path class="neon" fill="color-mix(in srgb, var(--cor) 40%, transparent)" stroke-width="3" d="M77 315 l 15 -15 a12 12 0 0 1 17 17 l -15 15 z"/>
+</g></g>
+<g class="acc" data-acc="capacete">
+<path class="neon" fill="color-mix(in srgb, var(--cor) 25%, #0f1320)" stroke-width="4" stroke-linejoin="round" d="M138 146 Q 140 96, 200 96 Q 260 96, 262 146 Z"/>
+<path class="neon" fill="none" stroke-width="4" d="M128 146 h144 M200 96 v24 M178 100 v20 M222 100 v20"/>
+</g>
+<g class="acc" data-acc="chaveInglesa"><g class="av-chaveInglesa">
+<path class="neon" fill="none" stroke-width="8" stroke-linecap="round" d="M300 310 L 344 252"/>
+<path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M336 244 a18 18 0 1 1 22 20 l -8 -4 l 6 -10 l -8 -6 l -8 8 z"/>
+</g></g>
+<g class="acc" data-acc="sacolas"><g class="av-sacolas">
+<path class="neon" fill="color-mix(in srgb, var(--cor) 22%, #0f1320)" stroke-width="4" stroke-linejoin="round" d="M300 262 h40 l 4 54 h-48 z"/>
+<path class="neon" fill="none" stroke-width="3" d="M310 262 q 10 -22 20 0"/>
+<path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M56 270 h36 l 4 46 h-44 z"/>
+<path class="neon" fill="none" stroke-width="3" d="M64 270 q 10 -20 20 0"/>
+</g></g>
+<g class="acc" data-acc="trevo"><g class="av-trevo">
+<circle class="neon" cx="320" cy="200" r="12" fill="color-mix(in srgb, var(--cor) 30%, #0f1320)" stroke-width="3"/>
+<circle class="neon" cx="344" cy="200" r="12" fill="color-mix(in srgb, var(--cor) 30%, #0f1320)" stroke-width="3"/>
+<circle class="neon" cx="320" cy="224" r="12" fill="color-mix(in srgb, var(--cor) 30%, #0f1320)" stroke-width="3"/>
+<circle class="neon" cx="344" cy="224" r="12" fill="color-mix(in srgb, var(--cor) 30%, #0f1320)" stroke-width="3"/>
+<path class="neon" fill="none" stroke-width="4" stroke-linecap="round" d="M332 224 q 6 30 -6 54"/>
+</g></g>
+<g class="acc" data-acc="cracha">
+<path class="neon" fill="none" stroke-width="3" d="M182 286 L 200 312 L 218 286"/>
+<rect class="neon" x="186" y="312" width="28" height="34" rx="4" fill="#0f1320" stroke-width="3"/>
+<path class="neon" fill="none" stroke-width="3" d="M192 334 h16 M192 340 h10"/>
+<circle class="neon" cx="200" cy="322" r="5" fill="var(--cor)" stroke-width="1"/>
 </g>
 <g class="acc" data-acc="colher"><g class="av-colher">
 <path class="neon" fill="none" stroke-width="6" stroke-linecap="round" d="M300 300 L 318 214"/>
