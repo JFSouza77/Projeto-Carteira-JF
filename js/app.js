@@ -1653,19 +1653,38 @@ async function init() {
   window.addEventListener('online', () => atualizarMercado().then(processarFila));
   if ('serviceWorker' in navigator) {
     // atualização mais rápida (JF, 13/11: "tá demorando muito a att o app"): procura versão nova ao abrir e sempre
-    // que o app volta pra frente; quando a nova assume, recarrega sozinho (se a pessoa não estiver digitando)
+    // que o app volta pra frente.
+    // 2.1.9.2 (JF, 17/11: "quando abro o app ele dá uma engasgada, pisca e recarrega"): antes a versão nova assumia
+    // logo e o app recarregava na cara da pessoa. Agora ela fica esperando e a troca é feita quando a pessoa sai do
+    // app (vai pra tela inicial ou troca de app): recarrega escondido e, na volta, já está na versão nova.
     const tinhaControle = !!navigator.serviceWorker.controller;
+    let registro = null;
+    const trocarSeEscondido = () => {
+      if (document.visibilityState === 'hidden' && registro?.waiting) registro.waiting.postMessage('trocar');
+    };
     navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(reg => {
+      registro = reg;
       reg.update().catch(() => {});
-      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') reg.update().catch(() => {});
+        else trocarSeEscondido();
+      });
+      addEventListener('pagehide', trocarSeEscondido);
     }).catch(err => console.warn('SW não registrado', err));
     let recarregou = false;
+    let recarregarAoSair = false;
+    const recarregar = () => { if (recarregou) return; recarregou = true; location.reload(); };
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (!tinhaControle || recarregou) return;
-      const digitando = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) && document.activeElement.value;
-      if (digitando) { toast('Tem versão nova do app: feche e abra de novo pra atualizar.'); return; }
-      recarregou = true;
-      location.reload();
+      // a troca chegou com o app na frente (mensagem atrasada): espera a pessoa sair pra não piscar
+      if (document.visibilityState === 'visible') {
+        if (!recarregarAoSair) {
+          recarregarAoSair = true;
+          document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') recarregar(); });
+        }
+        return;
+      }
+      recarregar();
     });
   }
 }

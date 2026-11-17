@@ -1,6 +1,6 @@
 // Service worker: app shell em cache para funcionar offline + lembretes.
 // Mudou algum arquivo abaixo? Suba CACHE_VERSION.
-const CACHE_VERSION = 'v150';
+const CACHE_VERSION = 'v151';
 const CACHE = `carteira-jf-${CACHE_VERSION}`;
 const APP_SHELL = [
   './',
@@ -56,7 +56,14 @@ const APP_SHELL = [
 ];
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(c => c.addAll(APP_SHELL)).then(() => self.skipWaiting()));
+  // 2.1.9.2 (JF, 17/11: "ainda dá uma engasgada, pisca e recarrega"): a versão nova não assume sozinha no meio do uso.
+  // Ela espera; o app pede a troca (mensagem 'trocar') quando a pessoa sai dele, e recarrega sem ninguém ver.
+  // Na 1ª instalação não há versão velha, então ela assume direto mesmo assim.
+  event.waitUntil(caches.open(CACHE).then(c => c.addAll(APP_SHELL)));
+});
+
+self.addEventListener('message', event => {
+  if (event.data === 'trocar') self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {

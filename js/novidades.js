@@ -8,7 +8,7 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.1.9 Alfa',
-    ate: '2.1.9.1',
+    ate: '2.1.9.2',
     data: '17/11/2026',
     nome: 'Posto',
     t: 'O C.A.O.S. agora entende de combustível: preço, rumo do petróleo e etanol ou gasolina.',
@@ -19,6 +19,7 @@ export const NOVIDADES = Object.freeze([
     ],
     qol: [
       '🧑‍🔧 Mais 5 jeitos do C.A.O.S.: Frentista, Pet Lover, Corretor de Imóveis, Turista e Chef aparecem quando o assunto é com eles.',
+      '✨ Abrir sem piscar: a versão nova do app agora entra quando você sai dele, sem a tela piscar e recarregar.',
     ],
   },
   {
