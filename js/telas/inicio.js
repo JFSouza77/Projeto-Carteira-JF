@@ -362,7 +362,7 @@ export function renderComece() {
 }
 
 // 3º quadrinho do cartão (JF, 16/11, imagens do GPT): contraste com a aba. No Gasto, os dois primeiros são laranja e o
-// 3º é a Sobra do mês (verde: entradas − gastos). Nas Entradas, os dois primeiros são verdes e o 3º é o Déficit do mês
+// 3º é a Sobra do mês (verde: entradas − gastos). Nas Entradas, os dois primeiros são verdes e o 3º é o "Já saiu" (era Déficit do mês até a 2.3.2.1)
 // (laranja: o que já saiu das entradas, ou seja, os gastos do mês). Se saiu mais do que entrou, no Gasto ele vira
 // "Déficit do mês" em laranja, com a diferença (a cor não esconde número ruim).
 export function pintarTerceiroQuadrinho(modo = state.resumoModo || 'gasto') {
@@ -371,7 +371,8 @@ export function pintarTerceiroQuadrinho(modo = state.resumoModo || 'gasto') {
   const entrou = doMes(state.incomes), saiu = doMes(state.expenses);
   const box = $('#stat-net-box'); // na aba Transferir, fica a conta do Gasto (sobra ou déficit de verdade)
   let tit, valor, tipo;
-  if (modo === 'entrada') { tit = 'Déficit do mês'; valor = saiu; tipo = 'deficit'; }
+  // 2.3.2.1 (JF): na aba Entradas o número é o que já saiu; "Déficit" confundia com o da aba Gasto
+  if (modo === 'entrada') { tit = 'Já saiu'; valor = saiu; tipo = 'deficit'; }
   else if (saiu > entrou) { tit = 'Déficit do mês'; valor = saiu - entrou; tipo = 'deficit'; }
   else { tit = 'Sobra do mês'; valor = entrou - saiu; tipo = 'sobra'; }
   $('#stat-net-tit').textContent = tit;

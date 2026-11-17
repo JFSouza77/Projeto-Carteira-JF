@@ -61,7 +61,7 @@ que abre ao tocar, login na abertura e "Entrar como JF".
 **Servidor (no ar: `carteira-jf.caos-financas.workers.dev`):** conta e sincronização ✅, mercado ✅, IA online ✅ (chave
 pré-paga), selo de criador `jf` ✅, humores da IA ✅ (deploy de 13/11 à noite).
 Deploy de 17/11 (JF): regra do combustível na IA e 5 moedas novas (iene, dólar canadense, franco suíço, yuan, rublo). As moedas
-aparecem na próxima atualização do mercado (dia útil, depois das 10h05). Falta o JF confirmar a voz no iPhone ("Testar a voz").
+aparecem na próxima atualização do mercado (dia útil, depois das 10h05). Deploy de 17/11 à tarde (JF): regra do foco "Só finanças" na IA. Falta o JF confirmar a voz no iPhone ("Testar a voz").
 
 1. **Conferência rápida (JF, 2 min):** `/saude` com `"ia":true`; Sair e entrar de novo como **JF** (nome maiúsculo +
    selo); perguntar "quem te criou?"; mudar o humor pra Ácido se quiser a zoeira.
