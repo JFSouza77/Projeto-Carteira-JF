@@ -8,7 +8,7 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.3.3 Alfa',
-    ate: '2.3.3.2',
+    ate: '2.3.3.3',
     data: '17/11/2026',
     nome: 'Do Seu Jeito',
     t: 'O app se ajusta à sua idade, e o C.A.O.S. entende quando pagaram pra você.',

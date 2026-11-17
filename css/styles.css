@@ -1567,3 +1567,10 @@ li.feito .passo-n { background: transparent; color: var(--ok); box-shadow: inset
 .photo-row .file-btn .ico { width: 20px; height: 20px; }
 #perfil-refazer { width: 100%; }
 .exp-list .icon-btn.edit, .exp-list .icon-btn.del { width: 32px; }
+
+/* 2.3.3.2 (print do JF, 17/11): em Ajustes as caixas ficavam coladas umas nas outras (campo encostado no botão,
+   texto encostado no "Testar a voz"). Cada peça do cartão ganha um respiro embaixo; o rótulo continua perto do campo dele */
+#tela-ajustes details.card > :is(input, select, button, .switch, .backup, fieldset, p, .check):not(:last-child) { margin-bottom: 14px; }
+#tela-ajustes details.card > p:not(:last-child) { margin-top: 0; }
+#tela-ajustes details.card > .field-label { margin-top: 4px; }
+#tela-ajustes details.card > .backup { margin-top: 0; }

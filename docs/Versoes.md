@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 2.3.3.3 Alfa | 17/11/2026 | (print do JF) Ajustes: as caixas dos cartões não ficam mais coladas (campo, botão, texto e "Testar a voz" ganham respiro; o rótulo continua junto do campo). |
 | 2.3.3.2 Alfa | 17/11/2026 | (prints do JF) Telas na medida: o espaço do "Me ajuda" no fim da tela era somado duas vezes (body e `.tela main`) e sobravam ~220 px vazios em toda aba; agora sobra só o do "?". "Adicionar conta" e "Calculadora de juros" com ícone próprio; foto do comprovante e "Refazer apresentação" ocupam a linha; "Últimos lançamentos" sem apertar o título ("5 itens"); lápis e × mais juntos. |
 | 2.3.3.1 Alfa | 17/11/2026 | (JF) Como te chamo: o C.A.O.S. pergunta uma vez como a pessoa quer ser chamada (40+: Dona/Seu/Senhora/Senhor com o nome, ou outro; todo mundo: o nome ou "Outro jeito", que aceita qualquer coisa); `perfil.chamarDe` e `comoChamar()` no lugar do apelido nas falas e na IA; campo em Ajustes → Seu perfil; "me chama de…" passa por cima. Lembrete: numa outra abertura, ele pergunta uma vez se quer avisos e em que horário (9h, 12h, 20h30 ou outro) e liga. C.A.O.S. 2.5.3. Recado do Code (respostas do dia) lido. |
 | 2.3.3 Alfa (núcleo) | 17/11/2026 | Núcleo 1.9.0 (ok do JF): `fala.porIdade`, o jeito de tratar acompanha a idade (criança, adolescente, jovem, adulto, 50 a 59, 60+), cada casa aplicando com o seu motor. Proposta mandada pro Perfil (JFSouza77/Projeto_Perfil_JF#219). C.A.O.S. 2.5.2. |
