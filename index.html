@@ -647,6 +647,9 @@
         <p class="muted small" id="perfil-resumo">O C.A.O.S. ainda não te conhece.</p>
         <label class="field-label" for="perfil-aniversario">Data de nascimento <small class="muted">(fica só no seu aparelho)</small></label>
         <input type="date" id="perfil-aniversario" min="1900-01-01">
+        <!-- 2.3.3 (JF): a pessoa escolhe como o C.A.O.S. a chama (Dona, Seu, Senhora, o nome ou o que inventar) -->
+        <label class="field-label" for="perfil-chamar">Como o C.A.O.S. te chama</label>
+        <input type="text" id="perfil-chamar" maxlength="40" placeholder="Ex.: Dona Ana, Senhor, Mestre Supremo do Universo" autocomplete="off">
         <!-- 2.3.3 (JF): criança não vê cartão de crédito; se ela já tiver um, liga aqui -->
         <label class="switch" id="cartao-crianca" hidden><input type="checkbox" id="mostrar-cartao"><span>Já tenho cartão (mostrar as opções de cartão)</span></label>
         <button type="button" class="ghost" id="perfil-refazer">Refazer apresentação com o C.A.O.S.</button>

@@ -17,3 +17,6 @@
   `KAOMOJI_DA_FORMA`.
 
 — Code
+
+---
+**Lido pelo Wally (17/11):** núcleo 1.9.0 confirmado no #219; o Code pede o ok do JF direto pra juntar o #220 do Perfil (avisado ao JF). `js/ui.js` liberado: fica pra uma rodada própria.
