@@ -1723,7 +1723,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         const perguntaIA = `${NOME_DO_PLANO[tipo]}. Pedido da pessoa: "${intencao.t}".${lidas.length ? ` ${lidas.join('. ')}.` : ''}`
           + `${tipo === 'lazer' ? ' Diga se cabe no mês pelo resumo e se os extras (pipoca etc.) valem a pena.' : ''}`;
         const oQue = item.length > 40 ? { lazer: 'os preços desse passeio', viagem: 'essa viagem' }[tipo] || 'isso' : item;
-        return { fato: `Bora! Vou pesquisar ${oQue} pra você${tipo === 'lazer' ? ' e ver se cabe no seu mês' : ''}.`, cru: true, perguntaIA: perguntaIA.slice(0, 600), modoIA: 'pesquisa',
+        return { fato: `Bora! Vou pesquisar ${oQue} pra você${tipo === 'lazer' ? ' e ver se cabe no seu mês' : ''}.`, cru: true, perguntaIA: perguntaIA.slice(0, 600), modoIA: 'pesquisa', assunto: `plano_${tipo}`,
           sugestoes: ['Dá pra gastar quanto até o salário?'] };
       }
       if (passo < passos.length) {
@@ -1731,7 +1731,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         const abre = !intencao.passo
           ? `${tipo === 'viagem' || tipo === 'produto' ? `Bora pesquisar ${item}!` : tipo === 'lazer' ? `Bora planejar ${item}!` : 'Bora planejar isso junto!'} Me ajuda a te ajudar: umas perguntas rápidas antes, pra eu filtrar logo de cara e não sair inventando número nem procurando o que não te serve. `
           : '';
-        return { fato: `${abre}${p.q}`, cru: true, sugestoes: [...(p.chips || []), 'Pular', 'Cancelar'], aguardar: { tipo: 'pesquisa', plano: tipo, item, passo, respostas } };
+        return { fato: `${abre}${p.q}`, cru: true, sugestoes: [...(p.chips || []), 'Pular', 'Cancelar'], aguardar: { tipo: 'pesquisa', plano: tipo, item, passo, respostas }, assunto: `plano_${tipo}` };
       }
       const temOrcamento = passos.some(p => p.id === 'orcamento');
       const linhas = passos.filter(p => respostas[p.id]).map(p => (p.id === 'orcamento' ? `${p.rotulo}: ${formatBRL(respostas.orcamento)}` : `${p.rotulo}: ${respostas[p.id]}`));
@@ -1747,7 +1747,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         lazer: 'Pra um passeio mais barato: dia de promoção (no cinema, geralmente no começo da semana), meia-entrada se tiver direito, pipoca e bebida de casa quando o lugar deixa, e estacionamento conta: às vezes um app de transporte sai igual. Veja o que sobra no mês antes de ir.',
         economizar: 'Comece pelo que mais pesa no mês e pelas assinaturas esquecidas. Corte primeiro o que você nem sente falta, e guarde a economia assim que o dinheiro entrar, antes de gastar.',
       }[tipo];
-      return { fato: `Fechou, com isso eu filtro. ${CAMINHO}${respostas.orcamento ? ` Seu teto: ${formatBRL(respostas.orcamento)}.` : ''} Com a IA online ligada, eu faço a conta e pesquiso o que precisar pra você comparar.`, cru: true, perguntaIA, modoIA: 'pesquisa', sugestoes: ['Dá pra gastar quanto até o salário?'] };
+      return { assunto: `plano_${tipo}`, fato: `Fechou, com isso eu filtro. ${CAMINHO}${respostas.orcamento ? ` Seu teto: ${formatBRL(respostas.orcamento)}.` : ''} Com a IA online ligada, eu faço a conta e pesquiso o que precisar pra você comparar.`, cru: true, perguntaIA, modoIA: 'pesquisa', sugestoes: ['Dá pra gastar quanto até o salário?'] };
     }
     case 'moeda_jogo': {
       const { jogo, pacote } = intencao;

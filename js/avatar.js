@@ -26,14 +26,15 @@ const POR_ASSUNTO = Object.freeze({
   comparar_ofertas: 'simulador', oferta_unica: 'simulador', porcentagem: 'contador', vale_parcelar: 'simulador',
   a_receber: 'cobrador', ofensiva: 'treinador', meta_ritmo: 'amigao', mes_verde: 'feliz', mes_negativo: 'triste',
   categoria_estourada: 'bronca', orcamento_80: 'preocupado', cartao_limite: 'alerta', conta_negativa: 'recalculando',
-  cartao_vence: 'lembrete', compromisso_vence: 'lembrete', compromisso_atrasado: 'alerta', delivery_repetido: 'nojinho',
+  cartao_vence: 'lembrete', compromisso_vence: 'lembrete', compromisso_atrasado: 'alerta', delivery_repetido: 'chef',
   ritmo_alto: 'medo', fechamento: 'contador', resumo_mes: 'contador', meus_investimentos: 'investidor', mercado: 'investidor',
   investir: 'investidor', salario_caiu: 'rico', boas_vindas: 'anjinho',
   // paciência (13/11): firme → decepcionado → cartão vermelho → sem reação (quietinho) → de volta
   xingamento: 'parceiro', xingamento_2: 'desconfiado', xingamento_3: 'decepcionado', xingamento_3_forte: 'decepcionado',
   xingamento_fim: 'chocado', xingamento_fim_forte: 'vermelho', silencio: 'chocado', passou_raiva: 'anjinho', desculpa_aceita: 'parceiro',
   moeda_jogo: 'gamer', // 15/11 (JF): moedas de jogo
-  combustivel: 'pesquisador', etanol_ou_gasolina: 'contador', // 17/11 (JF): combustível
+  combustivel: 'frentista', etanol_ou_gasolina: 'frentista', // 17/11 (JF): combustível
+  plano_pet: 'petlover', plano_moradia: 'corretor', plano_viagem: 'turista', plano_transporte: 'frentista', plano_economizar: 'economista', plano_produto: 'pesquisador', plano_lazer: 'pesquisador',
   motivacao: 'treinador', frase_do_dia: 'treinador', ditado: 'vovo', curiosidade_fin: 'professor', // 17/11 (JF)
   formiguinha: 'formiga', curiosidade: 'curioso', tangente: 'distraido', pesquisa_compra: 'pesquisador', // 16 e 17/11 (JF): avatares próprios
   desabafo: 'parceiro', limite_investido: 'banqueiro', bancos: 'investidor', conta: 'contador', glossario: 'professor', privacidade: 'anjinho', como_esta: 'calmo',
@@ -50,6 +51,7 @@ export const EMO_DA_FORMA = Object.freeze({
   ferias: 'alivio', simulador: 'analista', auditor: 'julgando', cobrador: 'julgando', surpreso: 'espantado', confiante: 'orgulho',
   vermelho: 'raiva', treinador: 'festa', vovo: 'ombros', gamer: 'festa',
   guia: 'carinho', curioso: 'pensando', distraido: 'surpresa', formiga: 'preocupado', pesquisador: 'analista',
+  frentista: 'calmo', petlover: 'carinho', corretor: 'orgulho', turista: 'festa', chef: 'festa',
 });
 
 // 2.1.3.2 (JF, 16/11: "os rostinhos não acompanham os avatares; avatar pensador com rostinho tímido não dá"):
@@ -95,6 +97,11 @@ export const KAOMOJI_DA_FORMA = Object.freeze({
   distraido: ['(°▽°)~🦋', '(￣▽￣)🦋'],
   formiga: ['(・_・)🐜', '(¬_¬)🐜🐜'],
   pesquisador: ['(•_•)🔭', '(•ᴗ•)🔎'],
+  frentista: ['(•_•)⛽', '(•ᴗ•)⛽ ✓'],
+  petlover: ['(ᵔᴥᵔ)🐾', '(◕ᴥ◕) ♡'],
+  corretor: ['(•‿•)🏠', '(•ᴗ•)🔑'],
+  turista: ['(⌐■‿■)✈️', '(•ᴗ•)📸'],
+  chef: ['(•‿•)🍳', '(•ᴗ•)🥄'],
   vovo: ['(ᵔ_ᵔ)', '(ᵔᴗᵔ) ~'],
 });
 
@@ -283,6 +290,28 @@ export const FORMAS = Object.freeze({
     acc:['binoculo','prancheta'], corpo:'rotate(-3deg)',
     olhoE:{ d:'M152 194 h18 v20 h-18 z', cheio:true }, olhoD:{ d:'M230 194 h18 v20 h-18 z', cheio:true },
     sob:'M150 180 L 172 184', boca:'M180 248 Q 202 258, 224 244', extra:'' },
+  // 17/11 (JF: "faltou o Frentista; tem que ter o Pet Lover, o Corretor de Imóveis, o Turista e mais um"): cada plano
+  // guiado ganha o seu profissional; o Chef entra no aviso de delivery repetido (o empurrão é cozinhar em casa). 50 → 55
+  frentista: { nome:'⛽ Frentista', quando:'combustível e transporte', cor:'#ef4444', modo:'calmo', grupo:'jf4',
+    acc:['bone','bombaGas'], corpo:'rotate(-2deg)',
+    olhoE:{ d:'M152 196 h18 v16 h-18 z', cheio:true }, olhoD:{ d:'M230 196 h18 v16 h-18 z', cheio:true },
+    sob:'', boca:'M176 242 Q 200 260, 224 242', extra:'' },
+  petlover:  { nome:'🐾 Pet Lover', quando:'plano de pet', cor:'#f9a8d4', modo:'abraco', grupo:'jf4',
+    acc:['orelhasPet','osso','bochechas'], corpo:'translateY(-4px) rotate(3deg)', anim:'balanca',
+    olhoE:{ d:'M150 202 a11 11 0 1 0 22 0 a11 11 0 1 0 -22 0', cheio:true }, olhoD:{ d:'M228 202 a11 11 0 1 0 22 0 a11 11 0 1 0 -22 0', cheio:true },
+    sob:'', boca:'M184 240 q 8 10 16 0 q 8 10 16 0', extra:'' },
+  corretor:  { nome:'🏠 Corretor de Imóveis', quando:'plano de moradia e aluguel', cor:'#14b8a6', modo:'anel', grupo:'jf4',
+    acc:['gravata','casinha','chave'], corpo:'translateY(-4px)',
+    olhoE:{ d:'M150 200 Q 161 190, 172 200', cheio:false }, olhoD:{ d:'M228 200 Q 239 190, 250 200', cheio:false },
+    sob:'', boca:'M170 238 Q 200 266, 230 238', extra:'' },
+  turista:   { nome:'✈️ Turista', quando:'pesquisa de viagem', cor:'#0ea5e9', modo:'festa', grupo:'jf4',
+    acc:['oculosEscuros','camera','mala'], corpo:'translateY(-6px) rotate(-3deg)', anim:'balanca',
+    olhoE:{ d:'M152 196 h18 v16 h-18 z', cheio:true }, olhoD:{ d:'M230 196 h18 v16 h-18 z', cheio:true },
+    sob:'', boca:'M170 240 Q 200 268, 230 240', extra:'' },
+  chef:      { nome:'👨‍🍳 Chef', quando:'delivery demais: bora cozinhar', cor:'#fde68a', modo:'lento', grupo:'jf4',
+    acc:['chapeuChef','colher'], corpo:'rotate(2deg)',
+    olhoE:{ d:'M150 204 Q 161 194, 172 204', cheio:false }, olhoD:{ d:'M228 204 Q 239 194, 250 204', cheio:false },
+    sob:'', boca:'M178 242 Q 200 258, 222 242', extra:'' },
   simulador: { nome:'🛒 Simulador', quando:'"vale comprar agora ou esperar?"', cor:'#facc15', modo:'lento', grupo:'jf2',
     acc:['balanca','calculadora','calendario'], corpo:'rotate(-2deg)',
     olhoE:{ d:'M156 190 h16 v18 h-16 z', cheio:true }, olhoD:{ d:'M236 190 h16 v18 h-16 z', cheio:true },
@@ -333,6 +362,7 @@ const ANIM_ACC = Object.freeze({
   alvo:'pulsa', calendario:'balanca', cartola:'sobe', chapeuPraia:'balanca', touca:'balanca', corado:'pulsa', sobrancelhoes:'sobe',
   bigodao:'bigode', bigode:'bigode', chapeu:'balanca', coroa:'balanca', gravata:'balanca', terno:'sobe', tesoura:'balanca',
   boneCobrador:'sobe', faixa:'sobe', viseira:'sobe', chapeuDetetive:'balanca', turbante:'sobe', nariz:'pulsa', microfone:'balanca',
+  bombaGas:'balanca', orelhasPet:'balanca', osso:'vaivem', casinha:'pulsa', chave:'balanca', camera:'balanca', mala:'vaivem', chapeuChef:'balanca', colher:'vaivem', // 17/11
   chapeuGuia:'balanca', bandeira:'balanca', interrogacao:'pulsa', borboleta:'vaivem', formigas:'vaivem', binoculo:'sobe', // 17/11
   medidor:'balanca', evolucao:'sobe', capelo:'balanca', bochechas:'pulsa', monoculo:'balanca', fone:'sobe', controle:'balanca', bilhete:'balanca', olheiras:'pulsa',
 });
@@ -646,6 +676,47 @@ d="M150 96 C 136 96, 132 76, 148 72 C 150 56, 174 52, 182 66 C 192 50, 222 54, 2
 <circle class="neon" cx="334" cy="196" r="18" fill="color-mix(in srgb, var(--cor) 14%, #0f1320)" stroke-width="5"/>
 <path class="neon" fill="none" stroke-width="6" stroke-linecap="round" d="M306 192 h 12"/>
 <path fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="3" stroke-linecap="round" d="M282 188 q 4 -6 10 -6 M326 188 q 4 -6 10 -6"/>
+</g></g>
+<g class="acc" data-acc="bombaGas"><g class="av-bombaGas">
+<path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M296 214 h44 v96 h-44 z"/>
+<path class="neon" fill="color-mix(in srgb, var(--cor) 25%, transparent)" stroke-width="3" d="M304 226 h28 v20 h-28 z"/>
+<path class="neon" fill="none" stroke-width="5" stroke-linecap="round" d="M340 236 q 26 8 18 52 l -10 12"/>
+<path class="neon" fill="#0f1320" stroke-width="3" stroke-linejoin="round" d="M340 296 l 14 -6 l 6 14 l -14 6 z"/>
+</g></g>
+<g class="acc" data-acc="orelhasPet">
+<path class="neon" fill="color-mix(in srgb, var(--cor) 30%, #0f1320)" stroke-width="4" stroke-linejoin="round" d="M122 150 q -46 -8 -58 54 q 14 24 36 4 q 6 -34 26 -46 z"/>
+<path class="neon" fill="color-mix(in srgb, var(--cor) 30%, #0f1320)" stroke-width="4" stroke-linejoin="round" d="M278 150 q 46 -8 58 54 q -14 24 -36 4 q -6 -34 -26 -46 z"/>
+</g>
+<g class="acc" data-acc="osso"><g class="av-osso">
+<path class="neon" fill="none" stroke-width="10" stroke-linecap="round" d="M70 330 h44"/>
+<circle class="neon" cx="66" cy="323" r="8" fill="#0f1320" stroke-width="3"/><circle class="neon" cx="66" cy="337" r="8" fill="#0f1320" stroke-width="3"/>
+<circle class="neon" cx="118" cy="323" r="8" fill="#0f1320" stroke-width="3"/><circle class="neon" cx="118" cy="337" r="8" fill="#0f1320" stroke-width="3"/>
+</g></g>
+<g class="acc" data-acc="casinha"><g class="av-casinha">
+<path class="neon" fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" d="M284 226 L 320 194 L 356 226"/>
+<path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M294 222 v44 h52 v-44"/>
+<path class="neon" fill="color-mix(in srgb, var(--cor) 35%, transparent)" stroke-width="3" d="M313 266 v-22 h14 v22"/>
+</g></g>
+<g class="acc" data-acc="chave"><g class="av-chave">
+<circle class="neon" cx="76" cy="268" r="13" fill="none" stroke-width="5"/>
+<path class="neon" fill="none" stroke-width="5" stroke-linecap="round" d="M89 268 h36 M114 268 v10 M123 268 v7"/>
+</g></g>
+<g class="acc" data-acc="camera"><g class="av-camera">
+<path class="neon" fill="none" stroke-width="3" d="M176 304 L 146 276 M224 304 L 254 276"/>
+<path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M172 302 h56 v34 h-56 z M188 302 v-6 h14 v6"/>
+<circle class="neon" cx="200" cy="319" r="10" fill="color-mix(in srgb, var(--cor) 25%, transparent)" stroke-width="3"/>
+</g></g>
+<g class="acc" data-acc="mala"><g class="av-mala">
+<path class="neon" fill="color-mix(in srgb, var(--cor) 18%, #0f1320)" stroke-width="4" stroke-linejoin="round" d="M52 282 h58 v48 h-58 z"/>
+<path class="neon" fill="none" stroke-width="4" d="M70 282 v-12 h22 v12 M66 282 v48 M96 282 v48"/>
+</g></g>
+<g class="acc" data-acc="chapeuChef">
+<path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M150 142 q -24 -42 18 -52 q 8 -32 40 -20 q 30 -18 46 12 q 38 6 22 60 z"/>
+<path class="neon" fill="#0f1320" stroke-width="4" d="M150 128 h104 v16 h-104 z"/>
+</g>
+<g class="acc" data-acc="colher"><g class="av-colher">
+<path class="neon" fill="none" stroke-width="6" stroke-linecap="round" d="M300 300 L 318 214"/>
+<ellipse class="neon" cx="322" cy="196" rx="11" ry="18" fill="color-mix(in srgb, var(--cor) 20%, #0f1320)" stroke-width="4"/>
 </g></g>
 <g class="acc" data-acc="chapeuPraia">
 <path class="neon" fill="#0f1320" stroke-width="4" stroke-linejoin="round" d="M90 146 Q 200 116, 310 146 Q 200 160, 90 146 Z"/>
