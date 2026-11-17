@@ -7,7 +7,7 @@ import { FORMAS, formaPara, rostoDaForma } from '../avatar.js';
 import { IDENTIDADE, SUGESTOES, conversar, curiosidadeDoGasto, humorParaIA, emocaoDoMomento, rostoAvulso } from '../caos/index.js';
 import { accountLabel, createTransferencia, depoisDoSaldo, marcarRecebido, editarConta, editarLancamento, formatBRL, sugerirCategoria, toISODate } from '../engine.js';
 import * as conta from '../conta.js';
-import { lerPagamento, seguirPagamento } from '../caos/conversa.js';
+import { assuntoDeDinheiro, lerPagamento, respostaForaDoFoco, seguirPagamento } from '../caos/conversa.js';
 import * as db from '../db.js';
 import { falar, falaTerminou } from '../voz.js';
 import { fraseDoPrint, resumoDoPrint } from '../caos/ofertas.js';
@@ -96,6 +96,11 @@ async function anotarUso(tipo) {
   } catch { /* contador é só informação: se falhar, a conversa segue */ }
 }
 
+/** Foco da conversa (2.3.1): 'financas' (padrão) ou 'livre'. O criador começa no livre (JF: "pode me responder assim"). */
+export function focoAtual() {
+  return state.settings.iaFoco || (state.perfil?.seloCriador ? 'livre' : 'financas');
+}
+
 export async function enviarPergunta(texto, { doPrint = false } = {}) {
   const t = String(texto || '').trim();
   if (!t) return;
@@ -118,6 +123,18 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
     await anotarUso('memoria');
     return;
   }
+  // 2.3.1 (JF, 17/11: "o pessoal pode perder o foco e usar o C.A.O.S. como chatbot comum"): no foco "Só finanças"
+  // (padrão), pergunta sem nada de dinheiro não vai pra IA; ele responde aqui e puxa de volta pro bolso. A pesquisa que
+  // o próprio C.A.O.S. montou (planos, combustível, piso…) segue normal.
+  if (!fala.entendeu && !fala.perguntaIA && focoAtual() === 'financas' && !assuntoDeDinheiro(t)) {
+    const texto = respostaForaDoFoco(t);
+    await respiro(texto);
+    addMsg({ de: 'caos', texto, sugestoes: ['Quanto gastei este mês?', 'Me dá uma dica', 'O que é juros compostos?'], rosto: fala.rosto, assunto: 'fora_do_foco' });
+    pintarRosto(fala.rosto);
+    if (state.settings.voice) falar(texto, fala.emocao);
+    await anotarUso('local');
+    return;
+  }
   const usoIA = await usoDaIAHoje();
   // o criador não tem limite no aparelho (JF, 16/11: "quem tá pagando sou eu"); o servidor também libera pelo selo da conta
   const iaCansada = !fala.entendeu && state.settings.aiOn && state.settings.aiUrl && usoIA.n >= IA_POR_DIA && !state.perfil?.seloCriador;
@@ -128,7 +145,7 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
     pintarRosto(pensando);
     addMsg({ de: 'caos', texto: 'Deixa eu pensar com a IA…', temp: true, rosto: pensando });
     try {
-      const resposta = await ia.perguntar(state.settings.aiUrl, { pergunta: textoIA, humor: humorIA, dados: dados(), modo: fala.modoIA, semBusca: fala.intent === 'papo_pessoal', emocao: fala.emocao });
+      const resposta = await ia.perguntar(state.settings.aiUrl, { pergunta: textoIA, humor: humorIA, dados: dados(), modo: fala.modoIA, semBusca: fala.intent === 'papo_pessoal', emocao: fala.emocao, foco: focoAtual() });
       await db.setMeta('iaUso', { dia: toISODate(), n: usoIA.n + 1 });
       await anotarUso(ia.motivoDaIA(fala));
       iaRecentes.set(chaveIA, { texto: resposta, em: Date.now() });

@@ -34,7 +34,7 @@ import { guardarEmMeta, iniciarMeta, lancarCompromisso, marcarPlano, onAddCompro
 import { exportarCSV, exportarPDF, filtroDeBusca, grafico, lancamentosDoMes, marcarSeg, renderGraficos, renderMeses, renderRitmo, renderRosca } from './telas/analise.js';
 import { editar, lerFotoComIA, limparFoto, mostrarFoto, onDelete, onFoto, onSubmit, perguntarContaDoPix, previaParcelas, previaRacha, renderLancar, salvarEdicao, verFoto } from './telas/lancar.js';
 import { abrirLimiteDiario, atalho, fecharGuia, guiar, hojeNaoGastei, mostrarEntradas, recebi, renderAReceber, renderComece, renderHoje, renderOfensiva, renderPainel, renderPodeGastar, renderResumoEntradas, renderUltimos, salvarLimiteDiario } from './telas/inicio.js';
-import { ESTILO_DESC, abrirNovidades, alternarAntigas, alternarEstudio, comecarDoZero, exportBackup, importBackup, montarInfoCaos, onBudgetChange, onRemindTime, onRemindToggle, renderAvisoNovidade, renderBudgets, renderCalculadora, renderGlossario, renderSettings, zerarSaldosDosBancos } from './telas/ajustes.js';
+import { ESTILO_DESC, FOCO_DESC, abrirNovidades, alternarAntigas, alternarEstudio, comecarDoZero, exportBackup, importBackup, montarInfoCaos, onBudgetChange, onRemindTime, onRemindToggle, renderAvisoNovidade, renderBudgets, renderCalculadora, renderGlossario, renderSettings, zerarSaldosDosBancos } from './telas/ajustes.js';
 
 definirRender(render);
 
@@ -1407,6 +1407,12 @@ function bind() {
   });
   $('#voz-vel').addEventListener('change', () => { saveSettings(); if (state.settings.voice) falar('Assim que eu vou falar.'); });
   $('#menos-mov').addEventListener('change', e => { state.settings.menosMov = e.target.checked; saveSettings(); aplicarAcessibilidade(); });
+  // 2.3.1 (JF): foco da conversa
+  for (const r of document.querySelectorAll('input[name="iafoco"]')) r.addEventListener('change', e => {
+    state.settings.iaFoco = e.target.value;
+    saveSettings();
+    $('#iafoco-desc').textContent = FOCO_DESC[e.target.value];
+  });
   $('#voice-toggle').addEventListener('change', e => {
     state.settings.voice = e.target.checked;
     saveSettings();

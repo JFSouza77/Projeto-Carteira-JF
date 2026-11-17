@@ -229,6 +229,8 @@ async function iaPerguntar(req, env) {
   const humor = HUMORES[corpo.humor] ? corpo.humor : 'suave';
   // 16/11 (revisão do Gemini): papo pessoal não precisa de internet; sem a ferramenta de busca, a pergunta sai mais barata
   const semBusca = corpo.semBusca === true && !pesquisa;
+  // 2.3.1 (JF, 17/11): foco "Só finanças" (padrão no app). O app já segura o que não é de dinheiro; aqui é o reforço.
+  const foco = corpo.foco === 'financas';
   // emoção do momento (JF, 16/11, ideia do Gemini): o rosto dele no app já está assim; a IA deixa transparecer no tom
   const emocao = /^[a-z_]{3,20}$/.test(String(corpo.emocao || '')) ? corpo.emocao : null;
   const resumo = corpo.resumo && typeof corpo.resumo === 'object' ? corpo.resumo : {};
@@ -249,7 +251,7 @@ async function iaPerguntar(req, env) {
   // pergunta, só pra assunto de dinheiro (JF: "senão a IA gasta os créditos à toa"; a regra está no SISTEMA_CONVERSA). A busca é feita pelo servidor da IA; o que vai nela é só o assunto da pergunta, nunca os dados da pessoa.
   const messages = [{
     role: 'user',
-    content: `Humor escolhido: ${humorIA}. ${HUMORES[humorIA]}${criador ? `\n\n${COM_O_CRIADOR}` : ''}${pesquisa ? `\n\n${PESQUISA_COMPRA}` : ''}${emocao ? `\n\nComo você está agora (é a emoção do seu rosto no app): ${NOME_EMOCAO[emocao] || emocao}. Deixe isso aparecer de leve no tom, sem dizer o nome da emoção e sem exagero.` : ''}\n\nResumo do mês (só totais, em centavos):\n${resumoTxt}\n\nPergunta: ${pergunta}`,
+    content: `Humor escolhido: ${humorIA}. ${HUMORES[humorIA]}${criador ? `\n\n${COM_O_CRIADOR}` : ''}${pesquisa ? `\n\n${PESQUISA_COMPRA}` : ''}${foco ? `\n\n${FOCO_FINANCAS}` : ''}${emocao ? `\n\nComo você está agora (é a emoção do seu rosto no app): ${NOME_EMOCAO[emocao] || emocao}. Deixe isso aparecer de leve no tom, sem dizer o nome da emoção e sem exagero.` : ''}\n\nResumo do mês (só totais, em centavos):\n${resumoTxt}\n\nPergunta: ${pergunta}`,
   }];
   let r;
   for (let volta = 0; volta < 3; volta++) {
@@ -304,6 +306,9 @@ async function iaBancos(req, env) {
 const SISTEMA_EXPLICAR = `Você é o C.A.O.S., assistente do app Carteira JF. A pessoa mandou um print do app do banco, de uma fatura ou de um extrato porque não entendeu o que está escrito.
 Explique em português simples, em até 6 frases curtas: o que é a tela, o que significam os termos e números principais (ex.: fatura fechada, pagamento mínimo, rotativo, limite disponível, IOF, juros, saldo bloqueado, CDI) e o que a pessoa deveria olhar com atenção.
 Nunca recomende investimento ou produto específico. Não repita números de conta, cartão, CPF ou nomes que aparecerem. Se a imagem não for de banco ou estiver ilegível, diga isso com gentileza.`;
+
+// 2.3.1 (JF): a pessoa escolheu o foco "Só finanças"
+const FOCO_FINANCAS = 'FOCO: a pessoa escolheu "Só finanças". Responda só o que tiver a ver com dinheiro (gastos, contas, preços, salário, investimentos, economia, compras, planos). Se a pergunta fugir disso, não responda o conteúdo: diga numa frase gentil que isso foge do seu papel de parceiro financeiro, sugira buscar no Google e puxe de volta pras finanças. Desabafo pessoal: acolha em uma frase, sem conselho amoroso, e lembre de não decidir dinheiro no calor da emoção.';
 
 /** "Explica o print do banco" (06/11): devolve um texto curto explicando a tela. A imagem só chega aqui quando a pessoa pede. */
 async function iaExplicar(req, env) {

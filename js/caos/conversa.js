@@ -82,6 +82,32 @@ function acharPeriodo(t) {
   return 'mes';
 }
 
+// ---------- Foco da conversa (2.3.1, JF 17/11) ----------
+// A namorada do JF testou e achou que o C.A.O.S. "se perdeu na IA": respondia produtor dos Vingadores e distância entre
+// estados, virando chatbot comum. Agora a pessoa escolhe em Ajustes: "Só finanças" (padrão) ou "Papo livre". No foco,
+// pergunta sem nada de dinheiro não vai pra IA: ele responde aqui, de um jeito amigável, e puxa de volta pro dinheiro.
+const DE_DINHEIRO = /\b(dinheiro|grana|reais|real|r\$|gast\w*|pag\w*|compr\w*|vend\w*|prec\w*|cust\w*|car[oa]s?|barat\w*|salari\w*|renda|contas|conta (de|do|da|no|na|bancaria|corrente|fixa|poupanca)|minha conta|na conta|banco|bancos|cartao|cartoes|fatura|credito|debito|pix|boleto|invest\w*|juros|rend\w*|poup\w*|econom\w*|orcament\w*|divida\w*|emprestimo\w*|financ\w*|impost\w*|taxa\w*|tarifa\w*|valor\w*|lucr\w*|prejuizo|bolsa|acoes|dolar\w*|euro\w*|moeda\w*|cripto\w*|bitcoin|aluguel|parcel\w*|desconto\w*|promoc\w*|ofert\w*|loja\w*|frete|ingresso\w*|passage\w*|orcar|troco|mesada|heranca|seguro\w*|aposentad\w*|inss|fgts|cdb|tesouro|selic|inflacao|cotac\w*|bilheteria|fatur\w*|ganh(o|os|ar|a|ei|amos)|negocio\w*|empresa\w*|empreend\w*|freela\w*|emprego\w*|trabalho|plantao|piso|pib|loteria|aposta\w*|premio\w*|cofrinho|caixinha|meta|metas|boleto|cobranca\w*|golpe\w*|vale a pena|quanto (custa|custou|sai|saiu|fica|ficou|vale|ganha|paga|gasta|gastei|rende|cobra|tenho|devo))\b/;
+/** A pergunta tem a ver com dinheiro? (o foco "Só finanças" só manda pra IA o que tiver) */
+export function assuntoDeDinheiro(texto) {
+  return DE_DINHEIRO.test(norm(texto));
+}
+const SENTIMENTO = /\b(traiu|traicao|terminou|terminamos|separ\w*|brig\w*|chorei|chorando|triste|tristeza|deprimid\w*|depressao|ansios\w*|ansiedade|sozinh\w*|magoad\w*|coracao partido|luto|morreu|faleceu|solidao)\b/;
+// 5 jeitos de voltar pro foco (regra do 0 ou 5)
+const FORA_DO_FOCO = Object.freeze([
+  'Essa foge do meu quintal: eu sou especialista em dinheiro, não em tudo. Pra isso, o Google resolve rapidinho. Agora, se tiver gasto pra anotar ou conta pra fazer, é comigo!',
+  'Boa pergunta, mas eu sou do time das finanças. Pergunta pro Google que ele sabe. Enquanto isso: quer ver como está o seu mês?',
+  'Aí você me pegou fora da minha área! Eu cuido do seu dinheiro: gastos, contas, metas e planos. Pra essa, melhor uma busca na internet.',
+  'Eu até queria saber, mas meu cérebro é todo de finanças. Pra essa, vale o Google. Se tiver algo de dinheiro no meio, me conta que eu ajudo.',
+  'Isso não é bem a minha praia: eu sou o parceiro do seu bolso. Se quiser que eu responda de tudo um pouco, liga o "Papo livre" em Ajustes. Fora isso, bora pras contas?',
+]);
+/** Resposta sem IA pra pergunta fora do foco. Desabafo ganha acolhimento, não "pergunta pro Google". */
+export function respostaForaDoFoco(texto, rng = Math.random) {
+  if (SENTIMENTO.test(norm(texto))) {
+    return 'Poxa, sinto muito. Eu não sou bom de conselho do coração, mas tô aqui. Se o peso estiver grande, o CVV atende de graça no 188, a qualquer hora. E uma dica de amigo: nada de decisão de dinheiro no calor da emoção (compra por impulso, pagar coisa por alguém). Quando quiser, a gente cuida das finanças junto.';
+  }
+  return FORA_DO_FOCO[Math.floor(rng() * FORA_DO_FOCO.length) % FORA_DO_FOCO.length];
+}
+
 // ---------- Fezinha: loterias (2.3.0.1, JF 17/11) ----------
 // "Ele entende mega-sena, raspadinha (não o sorvete), quina, mega da virada... essas fezinhas." Chance é conta fixa
 // (combinação de números), então sai aqui sem IA; prêmio, sorteio e resultado mudam toda semana e vão pra IA pesquisar.

@@ -63,9 +63,9 @@ export function saude(base) {
   return chamar(base, '/saude');
 }
 
-export async function perguntar(base, { pergunta, humor, dados, modo = null, semBusca = false, emocao = null }) {
+export async function perguntar(base, { pergunta, humor, dados, modo = null, semBusca = false, emocao = null, foco = null }) {
   // modo 'pesquisa' (16/11): pesquisa de compra ou viagem, com mais buscas e resposta em lista
-  const j = await chamar(base, '/ia/perguntar', { pergunta: String(pergunta).slice(0, modo === 'pesquisa' ? 800 : 500), humor, resumo: resumoAgregado(dados), ...(modo ? { modo } : {}), ...(semBusca ? { semBusca: true } : {}), ...(emocao ? { emocao } : {}) });
+  const j = await chamar(base, '/ia/perguntar', { pergunta: String(pergunta).slice(0, modo === 'pesquisa' ? 800 : 500), humor, resumo: resumoAgregado(dados), ...(modo ? { modo } : {}), ...(semBusca ? { semBusca: true } : {}), ...(emocao ? { emocao } : {}), ...(foco === 'financas' ? { foco } : {}) });
   return j.texto;
 }
 

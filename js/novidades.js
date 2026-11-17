@@ -7,6 +7,19 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.3.1 Alfa',
+    data: '17/11/2026',
+    nome: 'Foco',
+    t: 'O C.A.O.S. fica no que importa: o seu dinheiro. E o Início ficou mais calmo de olhar.',
+    itens: [
+      '🎯 Foco da conversa: em Ajustes → C.A.O.S., escolha "Só finanças" (padrão) ou "Papo livre" pra ele falar de tudo.',
+      '💰 Só finanças: pergunta que não é de dinheiro ele não responde com a IA. Ele te manda pro Google, com jeitinho.',
+      '🫂 Dia difícil: num desabafo, ele acolhe e lembra de não decidir dinheiro no calor da emoção.',
+      '🎨 Início mais calmo: menos cor e menos brilho. A cor agora só aparece no que importa: alerta, sobra e o próximo passo.',
+    ],
+    qol: [],
+  },
+  {
     v: '2.3.0 Alfa',
     ate: '2.3.0.1',
     data: '17/11/2026',
