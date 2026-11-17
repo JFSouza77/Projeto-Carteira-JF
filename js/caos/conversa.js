@@ -82,8 +82,11 @@ function acharPeriodo(t) {
   return 'mes';
 }
 
+// Pergunta de "quanto custa / em média / o que é mais barato" (2.3.2): resposta curta, pesquisada pela IA
+const CUSTO_MEDIO = /(em media|media nacional|preco medio|valor medio|custo medio|quanto (ta|esta|anda) custando|quanto (custa|custaria|sai|saia|sairia|cobram|cobra)|quanto (eu )?(pago|pagaria|vou pagar) (pra|para|por)|quanto (e|eh|fica) (pra|para) (tirar|fazer|emplacar|transferir|regularizar|renovar)|(o que|qual) (costuma ser|e|eh|sai) mais (barato|em conta)|mais barato ficar|custa caro)/;
+
 // ---------- Foco da conversa (2.3.1, JF 17/11) ----------
-// A namorada do JF testou e achou que o C.A.O.S. "se perdeu na IA": respondia produtor dos Vingadores e distância entre
+// A Anne testou e achou que o C.A.O.S. "se perdeu na IA": respondia produtor dos Vingadores e distância entre
 // estados, virando chatbot comum. Agora a pessoa escolhe em Ajustes: "Só finanças" (padrão) ou "Papo livre". No foco,
 // pergunta sem nada de dinheiro não vai pra IA: ele responde aqui, de um jeito amigável, e puxa de volta pro dinheiro.
 const DE_DINHEIRO = /\b(dinheiro|grana|reais|real|r\$|gast\w*|pag\w*|compr\w*|vend\w*|prec\w*|cust\w*|car[oa]s?|barat\w*|salari\w*|renda|contas|conta (de|do|da|no|na|bancaria|corrente|fixa|poupanca)|minha conta|na conta|banco|bancos|cartao|cartoes|fatura|credito|debito|pix|boleto|invest\w*|juros|rend\w*|poup\w*|econom\w*|orcament\w*|divida\w*|emprestimo\w*|financ\w*|impost\w*|taxa\w*|tarifa\w*|valor\w*|lucr\w*|prejuizo|bolsa|acoes|dolar\w*|euro\w*|moeda\w*|cripto\w*|bitcoin|aluguel|parcel\w*|desconto\w*|promoc\w*|ofert\w*|loja\w*|frete|ingresso\w*|passage\w*|orcar|troco|mesada|heranca|seguro\w*|aposentad\w*|inss|fgts|cdb|tesouro|selic|inflacao|cotac\w*|bilheteria|fatur\w*|ganh(o|os|ar|a|ei|amos)|negocio\w*|empresa\w*|empreend\w*|freela\w*|emprego\w*|trabalho|plantao|piso|pib|loteria|aposta\w*|premio\w*|cofrinho|caixinha|meta|metas|boleto|cobranca\w*|golpe\w*|vale a pena|quanto (custa|custou|sai|saiu|fica|ficou|vale|ganha|paga|gasta|gastei|rende|cobra|tenho|devo))\b/;
@@ -668,12 +671,34 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   const pergunta = /\b(quanto|qual|quais|onde|como|tive|teve|tenho|vai|posso|consigo|algum|alguma)\b|\?/.test(t);
 
   if (!t) return { ...r, intent: 'nao_entendi' };
+  if (/^(so|era so|e so) (curiosidade|pra saber|informacao)$/.test(t)) return { ...r, categoria: null, intent: 'so_curiosidade' };
   // Fezinha (2.3.0.1): pergunta de loteria; "joguei 6 na mega" continua sendo gasto (vai pra Lazer)
   if (LOTERIA.test(t) && !(r.valor && /\b(joguei|apostei|gastei|paguei|comprei|fiz)\b/.test(t)) && !/raspadinha de (gelo|morango|uva|limao|groselha|frutas?)/.test(t)) {
     const oQueE = /^(o que (e|sao|significa)|me explica|explica|que e)\b/.test(t);
     if (/(quanto (eu )?(gastei|gasto|ja gastei|torrei)|meus gastos?|gastei quanto)/.test(t)) return { ...r, categoria: null, intent: 'loteria', pede: 'gasto' };
     if (/(chance|chances|probabilidade|possibilidade|dificil|facil de ganhar|quantas pessoas|vale a pena|compensa|da pra ganhar|como (eu )?ganh|ficar rico|estrategia|numeros? da sorte|melhor jogo|qual (a |e a )?melhor loteria)/.test(t)) return { ...r, categoria: null, intent: 'loteria', pede: 'chance' };
     if (/(premio|acumul|resultado|sorteio|sorteados|quando (e|sai|vai ser)|que dia|ganhador|ganhou|valor da aposta|quanto custa|preco)/.test(t) && !oQueE) return { ...r, categoria: null, intent: 'loteria', pede: 'pesquisa' };
+  }
+  // Perguntas de custo e gasto demais (2.3.2, JF 17/11: "ele responde em média quanto custa, curto, sem explicar o
+  // passo a passo, e pergunta se é plano seu; e olha os seus gastos quando você diz que tá gastando demais com algo")
+  {
+    const demais = t.match(/\b(?:gastando|gasto|gastei|torrando|torrei|torro) (?:demais|muito|bastante|horrores|uma nota) (?:com|de|em|no|na|nos|nas)\s+(.+)$/);
+    const comendoFora = /\b(almocando|jantando|comendo|lanchando|almoco|almocei|janto|como) (muito|demais|bastante|toda hora|todo dia) (fora|na rua)\b|\b(almocando|comendo|jantando) fora (muito|demais|toda hora|todo dia)\b/.test(t);
+    if (comendoFora) return { ...r, categoria: categories.find(c => c.id === 'restaurante') || null, intent: 'gasto_demais', item: null, fora: true };
+    if (demais && !/\b(gasolina|combustivel|etanol|uber|99|transporte|aluguel|condominio|pet|racao|cachorro|gato|carro|moto)\b/.test(demais[1])) {
+      const item = demais[1].split(/\s+(?:na|no|da|do|em|nas|nos|esse|este|essa|esta|ultimamente|de novo)\b/)[0].replace(/\b(o|a|os|as|um|uma)\b/g, ' ').trim().split(/\s+/).slice(0, 3).join(' ');
+      return { ...r, categoria: acharCategoria(item, categories) || acharCategoria(demais[1], categories), intent: 'gasto_demais', item };
+    }
+    const custo = CUSTO_MEDIO.test(t) && !/\b(gastei|gastou|gastamos|meus? gastos?|minhas? (contas?|faturas?|gastos?)|meu orcamento|por dia|robux|v ?bucks|diamantes|ingresso|cinema|show|teatro|gasolina|etanol|diesel|kwh|chuveiro|mega|quina|loteria|piso|salario)\b/.test(t) && !LAZER.test(t);
+    // plano guiado (viagem pra um lugar, pet, casa, transporte) continua com as perguntas dele; a comparação curta
+    // ("o que costuma ser mais barato, hotel ou pousada?") e o "quanto custa X" avulso ficam aqui
+    const guiado = custo ? acharPesquisa(t, r.valor) : null;
+    const comparar = /((o que|qual) (costuma ser|e|eh|sai) mais (barato|em conta)|mais barato ficar)/.test(t);
+    if (custo && (comparar || !guiado || guiado.tipo === 'produto')) {
+      const m = t.match(/(?:custa|custando|custaria|sai|saindo|pago (?:pra|para)|preco (?:medio )?(?:de|do|da|pra|para)|valor (?:medio )?(?:de|do|da|pra|para)|caro|barato|cobram (?:pra|para|por))\s+(?:pra |para |o |a |um |uma )*([a-z ]{3,40})/);
+      const item = (m ? m[1] : '').replace(/\b(hoje|hoje em dia|atualmente|no brasil|em media|mais ou menos|agora|em 20\d\d)\b.*$/, '').trim().split(/\s+/).slice(0, 4).join(' ');
+      return { ...r, categoria: null, intent: 'custo_medio', item: item || null };
+    }
   }
   // Trabalho e renda (2.3.0, JF 17/11): salário mínimo, PIB, piso de profissão e mesada
   if (!r.valor || /\bpib\b/.test(t)) {
@@ -1819,6 +1844,46 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         fato: `Este mês foram ${vezes} de até ${lim}, somando ${formatBRL(f.totalCents)} (${f.pct}% de tudo que você gastou). Onde mais aparecem: ${top}.${f.count >= 10 ? ' Escolher um deles pra segurar na semana já faz diferença.' : ''}`,
         sugestoes: ['Onde mais gastei?', 'Quanto gastei este mês?'],
       };
+    }
+    case 'so_curiosidade':
+      return { fato: 'Beleza, fica a informação! Meu foco é o seu dinheiro: se um dia virar plano, é só me chamar que a gente organiza.', cru: true, sugestoes: ['Quanto gastei este mês?'] };
+    case 'gasto_demais': {
+      // 2.3.2 (JF: "acho que tô gastando demais com cafezinho na padaria" → "esse mês você comprou café umas 5 vezes")
+      const doMes = expenses.filter(e => e.date.slice(0, 7) === mes);
+      const de7 = toISODate(new Date(new Date(`${today}T12:00:00`).getTime() - 6 * 86_400_000));
+      const raiz = w => norm(w).replace(/(zinhos?|zinhas?|inhos?|inhas?|s)$/, '');
+      const chave = intencao.item ? raiz(intencao.item.split(' ')[0]) : '';
+      let lista = chave.length >= 3 ? doMes.filter(e => norm(e.note || '').split(/\s+/).some(w => w.startsWith(chave))) : [];
+      let nome = intencao.item;
+      if (!lista.length && intencao.categoria) { lista = doMes.filter(e => e.categoryId === intencao.categoria.id); nome = intencao.categoria.name; }
+      if (intencao.fora) nome = 'comer fora (restaurante, almoço, lanche)';
+      if (!lista.length) {
+        return { fato: `Não achei gasto com ${nome || 'isso'} anotado este mês. Anota quando rolar (tipo "gastei 7 de café na padaria") que eu fico de olho e te aviso se começar a pesar.`, cru: true, sugestoes: ['Onde mais gastei?'] };
+      }
+      const tot = lista.reduce((x, e) => x + e.amountCents, 0);
+      const semana = lista.filter(e => e.date >= de7);
+      const vezes = lista.length === 1 ? '1 vez' : `${lista.length} vezes`;
+      const media = Math.round(tot / lista.length);
+      const delivery = intencao.fora ? doMes.filter(e => e.categoryId === 'delivery').reduce((x, e) => x + e.amountCents, 0) : 0;
+      const corte = Math.round(tot / 2);
+      return { fato: `Vamos ver: este mês foram ${vezes} com ${nome}, somando ${formatBRL(tot)} (uns ${formatBRL(media)} por vez)${semana.length ? `; só nos últimos 7 dias, ${semana.length === 1 ? '1 vez' : `${semana.length} vezes`} e ${formatBRL(semana.reduce((x, e) => x + e.amountCents, 0))}` : ''}.${delivery ? ` Fora isso, ${formatBRL(delivery)} de delivery.` : ''} ${lista.length >= 4 ? `Se cortar pela metade, sobram uns ${formatBRL(corte)} no mês, ${formatBRL(corte * 12)} no ano.` : 'Ainda tá tranquilo, mas fico de olho.'}`,
+        cru: true, sugestoes: ['Onde mais gastei?', 'Me dá uma dica'] };
+    }
+    case 'custo_medio': {
+      // 2.3.2 (JF): "em média quanto custa…": a IA pesquisa a média e responde curto; ele não explica o passo a passo
+      // nem indica loja, e pergunta se é plano da pessoa (aí vira meta). Sem IA, diz onde ver e oferece anotar.
+      const item = intencao.item;
+      const perguntaIA = `Custo médio. Pedido da pessoa: "${intencao.t}". Responda CURTO (2 ou 3 frases): a média ou faixa de preço no Brasil hoje, com a fonte e o mês; se for taxa de governo (Detran, cartório…), diga que muda por estado. Se for comparação (ex.: hotel ou pousada), diga qual costuma sair mais barato e por quê, em uma frase. Não explique o passo a passo nem indique loja. Termine perguntando se é um plano da pessoa e se ela quer que você anote ou ajude a juntar o dinheiro.`;
+      const detran = /\b(emplac\w*|placa|cnh|carteira de motorista|habilitacao|transferencia|transferir o carro|licenciamento|vistoria|multa\w*|detran|crlv)\b/.test(intencao.t);
+      const hospeda = /\b(hotel|hoteis|pousada\w*|airbnb|hostel|hospedagem|aluguel por temporada)\b/.test(intencao.t);
+      const semIA = hospeda
+        ? 'Sem a IA online eu não sei os preços de hoje, mas a regra costuma ser: pousada sai mais em conta que hotel em praia e interior; hostel é o mais barato; e aluguel por temporada compensa pra família ou grupo (olha a taxa de limpeza). Compara sempre o preço total, com café e transporte.'
+        : detran
+          ? 'Sem a IA online eu não sei o valor de hoje: taxa de Detran muda de estado pra estado. Confere no site do Detran do seu estado.'
+          : 'Sem a IA online eu não sei a média de hoje: preço muda com o tempo e de loja pra loja. Vale olhar em 2 ou 3 lojas antes.';
+      return { fato: `${semIA} Se for um plano seu, me fala que eu te ajudo a juntar o dinheiro.`,
+        cru: true, perguntaIA: perguntaIA.slice(0, 700), modoIA: 'pesquisa',
+        sugestoes: [item ? `Quero juntar pra ${item}`.slice(0, 40) : 'Quero criar uma meta', 'Só curiosidade'] };
     }
     case 'loteria': {
       // 2.3.0.1 (JF): fezinha é diversão; ele mostra a conta da chance e o quanto já foi no mês, sem sermão
