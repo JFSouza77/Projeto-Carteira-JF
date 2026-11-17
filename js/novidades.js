@@ -7,6 +7,18 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.1.6 Alfa',
+    data: '17/11/2026',
+    nome: 'Guia Turístico',
+    t: 'Quem chega agora ganha um tutorial guiado, como em jogo, com o C.A.O.S. de guia.',
+    itens: [
+      '🧭 Tutorial guiado: na primeira vez, o app pergunta se você é novo e o C.A.O.S. mostra o app parte por parte, acendendo só o que importa.',
+      '⚡ Do seu jeito: escolha ver tudo (10 passos), só o básico (5) ou uma coisa só, tipo "como anoto um gasto". Ou pule.',
+      '🔁 Ver de novo: o tutorial fica em Ajustes, logo abaixo de Novidades, e no botão de ajuda.',
+    ],
+    qol: [],
+  },
+  {
     v: '2.1.5 Alfa',
     ate: '2.1.5.1',
     data: '16/11/2026',
