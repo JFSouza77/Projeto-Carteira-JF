@@ -724,6 +724,10 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   if (/(como voce funciona|como (e|funciona) (o )?seu cerebro|seu cerebro|sistema nervoso|sua espinha|seus bracos|voce pensa|voce sente|como voce e feito|do que voce e feito)/.test(t)) return { ...r, intent: 'como_funciona' };
   if (/(o que voce (nao )?pode|o que voce nao faz|seus limites|voce (pode|consegue) (mexer|apagar|alterar|gastar|acessar|ver)|acessa (meu|o) banco|ve minha conta|minhas regras|suas regras|suas leis)/.test(t)) return { ...r, intent: 'limites' };
   if (/(quem e voce|quem (e|eh) tu|quem es tu|o que (e|eh) voce|se apresent|apresente.se|qual (e )?(o )?seu nome|como (voce )?se chama|voce e (uma )?(ia|inteligencia|robo|humano|gente|pessoa)|^caos\??$)/.test(t)) return { ...r, intent: 'identidade' };
+  // 2.4.3 (JF, 17/11): frase de pensador ou investidor, ditado popular e curiosidade de dinheiro, sem gastar IA
+  if (/(frase (do dia|de motivacao|motivacional|inspiradora|de (um |algum )?(pensador|filosofo|investidor|milionario|bilionario|famoso))|outra frase|me (motiva|inspira|anima)|motivacao|pensamento do dia|citacao)/.test(t) && !r.valor) return { ...r, intent: 'motivacao' };
+  if (/(ditado|proverbio|outro ditado)/.test(t) && !r.valor) return { ...r, intent: 'ditado' };
+  if (/(curiosidade|me conta (algo|alguma coisa|uma coisa) (legal|interessante|curiosa)|fato curioso|me ensina (algo|alguma coisa)|coisa interessante sobre (dinheiro|financas))/.test(t) && !/(gast|paguei|anot)/.test(t) && !r.valor) return { ...r, intent: 'curiosidade_fin' };
   if (/(piada|me faz rir|algo engracado|anedota|charada|me alegra)/.test(t)) return { ...r, intent: 'piada' };
   // Ensinar a usar o app ("como faço pra lançar um gasto?")
   const verboComo = /\b(como|onde)\b.*\b(faco|faz|fazer|coloco|colocar|cadastro|cadastrar|adiciono|adicionar|lanco|lancar|registro|registrar|anoto|anotar|crio|criar|mudo|mudar|troco|trocar|ativo|ativar|ligo|ligar|uso|usar|mando|mandar|envio|enviar|instalo|instalar|exporto|exportar|importo|importar|defino|definir|ponho|por|vejo|ver|apago|apagar|configuro|configurar|divido|dividir|racho|rachar)\b/;
@@ -1746,6 +1750,12 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       return { gatilho: 'sobre_jf', vars: { criador: IDENTIDADE.criador }, sugestoes: SUG_IDENTIDADE };
     case 'vida':
       return { fato: textoVida(), sugestoes: SUG_IDENTIDADE };
+    case 'motivacao':
+      return { gatilho: 'motivacao', sugestoes: ['Outra frase', 'Me conta um ditado', 'Me conta uma curiosidade'] };
+    case 'ditado':
+      return { gatilho: 'ditado', sugestoes: ['Outro ditado', 'Me manda uma frase de motivação', 'Me conta uma curiosidade'] };
+    case 'curiosidade_fin':
+      return { gatilho: 'curiosidade_fin', sugestoes: ['Outra curiosidade', 'Me conta um ditado', 'Me manda uma frase de motivação'] };
     case 'significado': case 'criador': case 'origem': case 'identidade': case 'piada':
       return { gatilho: intencao.intent, vars: { sigla: IDENTIDADE.sigla, criador: IDENTIDADE.criador, origem: IDENTIDADE.origem, slogan: IDENTIDADE.slogan }, sugestoes: SUG_IDENTIDADE };
     case 'como_funciona':

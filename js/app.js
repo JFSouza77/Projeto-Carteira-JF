@@ -1626,7 +1626,10 @@ async function init() {
   const dicaMeta = meta ? [{ type: 'meta_ritmo', metaNome: meta.nome, amountCents: meta.porMesCents, totalCents: meta.faltaCents, pct: meta.pct }] : [];
   // fato da semana (15/11, no lugar da ofensiva): só quando tem diferença de verdade, 1 vez por semana (cooldown)
   const fato = fatoDaSemana(state.expenses, state.categories, today);
-  narrate([...closing, ...radar, ...especial, ...dicaMeta, ...(fato ? [fato] : []), { type: 'boas_vindas' }]);
+  // frase do dia (JF, 17/11): de manhã, na 1ª abertura do dia, uma frase de quem entende de dinheiro (aviso vem antes)
+  const hora = new Date().getHours();
+  const fraseDia = hora >= 5 && hora < 12 ? [{ type: 'frase_do_dia' }] : [];
+  narrate([...closing, ...radar, ...especial, ...dicaMeta, ...(fato ? [fato] : []), ...fraseDia, { type: 'boas_vindas' }]);
   if ($('#caos-line').textContent === 'Iniciando…') $('#caos-line').textContent = 'De olho nos seus gastos. Toque aqui pra conversar.';
   pintarOlho();
 

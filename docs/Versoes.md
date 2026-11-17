@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 2.1.8 Alfa | 17/11/2026 | Sabedoria (ideia do JF): frase do dia de manhã no Início (15 frases conferidas, autoria incerta avisada), e no Chat frase de motivação, ditado (10, com o que quer dizer) e curiosidade de dinheiro (10). Sem IA. C.A.O.S. 2.4.3. |
 | 2.1.7.2 Alfa | 17/11/2026 | (JF) boca parada: a "respiração" da boca (.oscila) ganhava da animação de falar no CSS; agora a fala manda. Pergunta de recomendação vai pra IA pesquisar; categoria sozinha não vira "quanto gastei". Servidor: regra de recomendação no prompt (precisa deploy). C.A.O.S. 2.4.2. |
 | 2.1.7.1 Alfa | 17/11/2026 | (JF: voz robótica e boca parada) botão Testar a voz em Ajustes (diz qual voz respondeu ou o erro); iPhone: áudio "interrupted" volta antes de tocar, tempo-limite que funciona no iOS 15, a boca começa junto com a voz do aparelho. Servidor: /voz/estado diz quais vozes e expõe x-voz (precisa deploy). |
 | 2.1.7 Alfa | 17/11/2026 | Voz de Verdade (JF): voz natural da Azure igual ao Perfil (`servidor/voz.js`: mai + padrão, cache no KV, teto 100 mil letras/mês), reserva na voz do aparelho em 4 s; boca do avatar segue o volume da fala (analisador do WebAudio) e, na voz do aparelho, mexe do começo ao fim. Servidor precisa dos segredos AZURE_SPEECH_KEY/REGION. |
