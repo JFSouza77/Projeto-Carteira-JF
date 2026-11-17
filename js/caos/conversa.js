@@ -855,6 +855,24 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
     const pct = lerPorcentagem(t);
     if (pct) return { ...r, intent: 'porcentagem', pct };
   }
+  // 2.3.3.6 (JF, 17/11, prometido pra Dona Débora): "apaga a entrada que lancei errado", "remove o último gasto",
+  // "exclui o gasto de 50 do mercado". Ele acha o lançamento e PROPÕE apagar; quem apaga é o app, depois do Confirmar
+  // (1ª lei: ele nunca mexe sozinho). "Como apago?" continua sendo explicação; conversa/chat/memória não entram aqui.
+  // "você consegue apagar um gasto?" é pergunta: ganha a explicação (que agora diz que ele apaga com o seu ok)
+  if (/\b(voce|vc|tu) (consegue|pode|sabe|apaga)\b/.test(t) && /\b(apag\w*|remov\w*|exclu\w*|delet\w*)/.test(t) && /\b(gasto|entrada|lancamento|valor|registro)/.test(t)) return { ...r, intent: 'tutorial', tema: 'apagar' };
+  if (!/\b(conversa|chat|historico|memoria|mensage\w*|conta bancaria|banco|cartao|meta|plano|orcamento|lembrete)\b/.test(t)
+    && !/^(como|onde)\b/.test(t)
+    && (/\b(apag\w*|remov\w*|exclu\w*|delet\w*|tir(a|e|ar) (fora )?(esse|essa|aquele|aquela|o|a|meu|minha))\b/.test(t)
+      && /\b(gasto|gastos|despesa|compra|entrada|entradas|salario|lancamento|lancamentos|lancei|anotei|registro|valor|ultimo|ultima|errad[oa]|de \d)/.test(t)
+      || /\b(lancei|anotei|registrei|coloquei|botei) (uma |um |a |o )?(entrada|gasto|lancamento|valor|salario)?\s*(errad[oa]|duplicad[oa]|duas vezes|a mais|sem querer)/.test(t))) {
+    const kind = /\b(entrada|entradas|salario|recebi|recebido|renda|ganho|plantao|freela)\b/.test(t) ? 'entrada' : /\b(gasto|gastos|despesa|compra)\b/.test(t) ? 'gasto' : null;
+    return { ...r, intent: 'apagar_lancamento', kind };
+  }
+  // frase curta só com o nome ("exclui o mercado", "apaga a farmácia"): só vale se achar um lançamento com esse nome
+  if (!/\b(conversa|chat|historico|memoria|mensage\w*|conta|banco|cartao|meta|plano|orcamento|lembrete|foto)\b/.test(t)
+    && /^(apag\w*|remov\w*|exclu\w*|delet\w*) (o|a|os|as|esse|essa|aquele|aquela|meu|minha) \w+( \w+)?$/.test(t)) {
+    return { ...r, intent: 'apagar_lancamento', kind: null, soNome: true };
+  }
   // Corrigir o VALOR do último gasto (revisão do Gemini, 16/11): "errei, foi 45, não 50" virava um gasto novo de R$ 45
   if (r.valor && !pergunta && (/^(errei|ops|opa|na verdade|corrigindo|corrige|digitei errado|anotei errado)\b/.test(t)
     || /\b(foi|era|foram|eram) (r\$ ?)?\d+([.,]\d{1,2})?( reais)?,? (e )?(nao|n) (r\$ ?)?\d/.test(t)
@@ -1089,7 +1107,7 @@ const TUTORIAL = {
   backup: 'Pra fazer backup: ⚙️ Ajustes → Backup → Exportar backup. Pra levar pra outro aparelho, abre o app lá e usa Importar backup com o arquivo. As fotos não entram no backup.',
   ia: 'A IA online é opcional: ⚙️ Ajustes → IA online, cola o endereço do servidor, liga e toca em Testar conexão. Ela lê foto de comprovante e responde o que eu não entendo sozinho.',
   humor: 'Pra mudar meu jeito: ⚙️ Ajustes → C.A.O.S. Humor Suave (gentil, o padrão), Normal ou Ácido (zoeira liberada). Ali também liga a minha voz.',
-  apagar: 'Pra apagar um lançamento: na aba 🏠 Início, em Lançamentos do mês, toca no × do lado dele. Eu mesmo não apago nada: essa é uma das minhas leis.',
+  apagar: 'Pra apagar um lançamento: na aba ➕ Lançar, em Últimos lançamentos, toca no × do lado dele. Ou me fala aqui: "apaga a entrada que lancei errado" ou "apaga o gasto de 50". Eu te mostro qual é e você confirma: sem o seu ok, eu não apago nada.',
   geral: 'Na barra de baixo: ➕ Lançar (gastos e entradas), 📅 Mês (planejamento), 🏠 Início no meio (resumo e alertas), 💬 C.A.O.S. (eu!) e 🏦 Contas (bancos e saldos). Dá pra trocar de aba arrastando a tela pro lado. Os ⚙️ Ajustes (orçamentos, humor, lembretes, backup) ficam na engrenagem, no alto do Início. Pergunta "como lanço um gasto?" ou "como ponho orçamento?" que eu explico cada uma.',
 };
 
@@ -1391,6 +1409,32 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
     }
     case 'pagamento_resposta':
       return intencao.resposta;
+    case 'apagar_lancamento': {
+      // 2.3.3.6 (JF): acha o lançamento mais recente que bate com a frase (tipo, valor, nome) e propõe apagar
+      const fonteNome = id => INCOME_SOURCES.find(s => s.id === id)?.name || 'entrada';
+      const todos = [
+        ...(intencao.kind === 'entrada' ? [] : expenses.map(x => ({ x, kind: 'gasto', nome: x.note || categories.find(c => c.id === x.categoryId)?.name || 'gasto' }))),
+        ...(intencao.kind === 'gasto' ? [] : incomes.map(x => ({ x, kind: 'entrada', nome: x.note || fonteNome(x.sourceId) }))),
+      ];
+      const palavras = intencao.t.split(/\s+/).filter(w => w.length >= 4 && !/^(apag|remov|exclu|delet|gasto|entrada|lanc|anotei|errad|ultim|aquel|esse|essa|minha|valor|reais|registr|coloquei|duplic|querer)/.test(w));
+      const bateNome = c => palavras.some(w => norm(c.nome).includes(w) || norm(categories.find(k => k.id === c.x.categoryId)?.name || '').includes(w));
+      let lista = todos.filter(c => !intencao.valor || c.x.amountCents === intencao.valor);
+      const porNome = lista.filter(bateNome);
+      if (porNome.length) lista = porNome;
+      else if (intencao.soNome) lista = [];
+      lista.sort((a, b) => (b.x.createdAt || 0) - (a.x.createdAt || 0) || String(b.x.date).localeCompare(String(a.x.date)));
+      const alvo = lista[0];
+      const oQue = intencao.kind === 'entrada' ? 'entrada' : intencao.kind === 'gasto' ? 'gasto' : 'lançamento';
+      if (!alvo) {
+        return { fato: `Não achei ${oQue === 'entrada' ? 'essa entrada' : oQue === 'gasto' ? 'esse gasto' : 'esse lançamento'}${intencao.valor ? ` de ${formatBRL(intencao.valor)}` : ''}. Me fala o valor ou o nome dele (tipo "apaga a entrada de 2550") que eu procuro. Ou, na aba ➕ Lançar, em Últimos lançamentos, toca no × do lado dele.`, cru: true, sugestoes: [] };
+      }
+      const dm = iso => `${Number(String(iso).slice(8, 10))}/${Number(String(iso).slice(5, 7))}`;
+      const tipoTxt = alvo.kind === 'entrada' ? 'a entrada' : 'o gasto';
+      return {
+        fato: `Achei: ${tipoTxt} "${alvo.nome}" de ${formatBRL(alvo.x.amountCents)}, do dia ${dm(alvo.x.date)}. Quer que eu apague? Toca em Confirmar. Se não for esse, me fala o valor ou o nome.`,
+        cru: true, sugestoes: [], acao: { tipo: 'apagar_lancamento', kind: alvo.kind, id: alvo.x.id },
+      };
+    }
     case 'corrigir_valor': {
       const ult = [...expenses].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
       if (!ult) return { fato: 'Não achei gasto pra corrigir. Me fala de novo o valor e onde foi, que eu anoto.', cru: true, sugestoes: [] };
