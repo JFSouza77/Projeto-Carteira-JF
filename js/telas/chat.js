@@ -445,7 +445,7 @@ export function tirarAnexo() {
   $('#chat-input').placeholder = 'Pergunte ao C.A.O.S.…';
 }
 
-// 2.3.0 (JF, 18/11: "fotos com legendas no chat pra ajudar a explicar o gasto"): a foto do que foi comprado (não
+// 2.3.0 (JF, 17/11: "fotos com legendas no chat pra ajudar a explicar o gasto"): a foto do que foi comprado (não
 // comprovante) com a legenda contando o gasto ("comprei esse tênis por 250 no cartão"). Sem IA, ou quando a IA não acha
 // valor na foto, a legenda vira o lançamento e a foto vai junto. Se ele ainda perguntar "pagou como?", a foto espera
 // 10 minutos pela confirmação.
