@@ -7,7 +7,7 @@ import { FORMAS, formaPara, rostoDaForma } from '../avatar.js';
 import { IDENTIDADE, SUGESTOES, comoChamar, conversar, curiosidadeDoGasto, humorParaIA, emocaoDoMomento, rostoAvulso } from '../caos/index.js';
 import { accountLabel, createTransferencia, depoisDoSaldo, marcarRecebido, editarConta, editarLancamento, formatBRL, sugerirCategoria, toISODate } from '../engine.js';
 import * as conta from '../conta.js';
-import { assuntoDeDinheiro, lerPagamento, perguntaDePesquisaGeral, respostaAcordando, respostaTextoLongo, textoLongoDemais, respostaForaDoFoco, respostaPapoLivre, seguirPagamento } from '../caos/conversa.js';
+import { assuntoDeDinheiro, lerPagamento, perguntaDePesquisaGeral, PESADA_ESGOTADA, PESADA_USADA, respostaAcordando, respostaTextoLongo, textoLongoDemais, respostaForaDoFoco, respostaPapoLivre, seguirPagamento } from '../caos/conversa.js';
 import * as db from '../db.js';
 import { falar, falaTerminou } from '../voz.js';
 import { fraseDoPrint, resumoDoPrint } from '../caos/ofertas.js';
@@ -148,6 +148,20 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
     await anotarUso('local');
     return;
   }
+  // 2.3.4.6 (JF): pesquisa pesada (tecnologia, conferir link) é uma por dia por aparelho; depois ele indica outras IAs
+  // e dá o caminho das pedras, sem deixar a pessoa na mão. O criador não tem esse limite (como no resto da IA).
+  if (fala.pesada && state.settings.aiOn && state.settings.aiUrl && !state.perfil?.seloCriador) {
+    const pesada = await db.getMeta('pesquisaPesada', null);
+    if (pesada?.dia === toISODate()) {
+      const texto = `${PESADA_ESGOTADA[Math.floor(Math.random() * PESADA_ESGOTADA.length)]} ${fala.caminho || ''}`.trim();
+      await respiro(texto);
+      addMsg({ de: 'caos', texto, sugestoes: ['Dá pra gastar quanto até o salário?', 'Me dá uma dica'], rosto: fala.rosto, assunto: 'ti' });
+      pintarRosto(fala.rosto, 'ti');
+      if (state.settings.voice) falar(texto, fala.emocao);
+      await anotarUso('local');
+      return;
+    }
+  }
   const usoIA = await usoDaIAHoje();
   // o criador não tem limite no aparelho (JF, 16/11: "quem tá pagando sou eu"); o servidor também libera pelo selo da conta
   const iaCansada = !fala.entendeu && state.settings.aiOn && state.settings.aiUrl && usoIA.n >= IA_POR_DIA && !state.perfil?.seloCriador;
@@ -167,6 +181,12 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
       addMsg({ de: 'caos', texto: resposta, ia: true, sugestoes: fala.intent === 'custo_medio' ? fala.sugestoes : SUGESTOES.slice(0, 5), rosto: fala.rosto, assunto: fala.avatar || null });
       pintarRosto(fala.rosto, fala.avatar || null);
       if (state.settings.voice) falar(trocarNome(resposta, comoChamar(state.perfil)).replace(/\*\*/g, ''));
+      // 2.3.4.6: marcou a pesquisa pesada do dia e avisa, num 2º balão, que pra ir além vale outra IA
+      if (fala.pesada && !state.perfil?.seloCriador) {
+        await db.setMeta('pesquisaPesada', { dia: toISODate() });
+        await respiro(PESADA_USADA);
+        addMsg({ de: 'caos', texto: PESADA_USADA, rosto: fala.rosto, assunto: 'ti' });
+      }
       return;
     } catch (e) {
       state.chat = state.chat.filter(m => !m.temp);
