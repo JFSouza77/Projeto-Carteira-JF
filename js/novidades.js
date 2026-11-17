@@ -8,6 +8,7 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.1.6 Alfa',
+    ate: '2.1.6.1',
     data: '17/11/2026',
     nome: 'Guia Turístico',
     t: 'Quem chega agora ganha um tutorial guiado, como em jogo, com o C.A.O.S. de guia.',
@@ -16,7 +17,10 @@ export const NOVIDADES = Object.freeze([
       '⚡ Do seu jeito: escolha ver tudo (10 passos), só o básico (5) ou uma coisa só, tipo "como anoto um gasto". Ou pule.',
       '🔁 Ver de novo: o tutorial fica em Ajustes, logo abaixo de Novidades, e no botão de ajuda.',
     ],
-    qol: [],
+    qol: [
+      '🧭 Avatar Guia Turístico: no tutorial, o C.A.O.S. aparece de chapéu de explorador e bandeirinha de guia.',
+      '🦋 Mais 4 avatares: no Chat, ele fica Curioso na pergunta de amigo, Distraído na tangente e Pesquisador na pesquisa.',
+    ],
   },
   {
     v: '2.1.5 Alfa',

@@ -161,8 +161,8 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
     if (state.settings.voice) await falaTerminou();
     else await new Promise(r => setTimeout(r, MENOS_MOVIMENTO.matches ? 300 : Math.min(2500, 700 + fala.texto.length * 12)));
     await respiro(fala.posTexto);
-    addMsg({ de: 'caos', texto: fala.posTexto, rosto: fala.rosto, assunto: fala.intent });
-    pintarRosto(fala.rosto, fala.intent); // 2.1.3.2: o "digitando…" deixava o topo preso no pensador
+    addMsg({ de: 'caos', texto: fala.posTexto, rosto: fala.rosto, assunto: fala.posAssunto || fala.intent });
+    pintarRosto(fala.rosto, fala.posAssunto || fala.intent); // 2.1.3.2: o "digitando…" deixava o topo preso no pensador
     avatarFala(Math.min(2000, 400 + fala.posTexto.length * 22));
     if (state.settings.voice) falar(fala.posTexto, fala.emocao, { emenda: true });
   }

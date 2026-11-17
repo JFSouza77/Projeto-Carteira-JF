@@ -56,7 +56,7 @@ export async function abrirBoasVindas({ depois = null, primeiraVez = false } = {
       </div>
     </div>`;
   document.body.appendChild(el);
-  try { avatarBoas = criarAvatar($('#tour-boas-avatar'), { tamanho: 'grande', forma: 'anjinho' }); } catch { avatarBoas = null; }
+  try { avatarBoas = criarAvatar($('#tour-boas-avatar'), { tamanho: 'grande', forma: 'guia' }); } catch { avatarBoas = null; }
   el.querySelector('[data-tour]')?.focus();
   el.addEventListener('click', async e => {
     const b = e.target.closest('[data-tour]');
@@ -66,7 +66,7 @@ export async function abrirBoasVindas({ depois = null, primeiraVez = false } = {
       $('#tour-opcoes').hidden = q === 'temas';
       $('#tour-temas').hidden = q !== 'temas';
       el.querySelector(`#${q === 'temas' ? 'tour-temas' : 'tour-opcoes'} [data-tour]`)?.focus();
-      avatarBoas?.mostrar(q === 'temas' ? 'pensando' : 'anjinho');
+      avatarBoas?.mostrar(q === 'temas' ? 'curioso' : 'guia');
       return;
     }
     fecharBoasVindas();
