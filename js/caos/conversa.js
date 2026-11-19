@@ -19,6 +19,8 @@ import { textoTendencia, quandoFoi, mercadoVelho } from '../mercado.js';
 const norm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   .replace(/\bc\.\s?a\.\s?o\.\s?s\b\.?/g, 'caos') // "C.A.O.S." = "caos"
   .replace(/%/g, ' porcento ') // "1%" vira "1 porcento" (a calculadora de juros precisa)
+  // 2.3.5.7: "13º" e "parcela do 13" são o décimo terceiro, não R$ 13
+  .replace(/(\d)\s?[º°ª]/g, '$1o').replace(/\b(do|o|meu|seu|nosso|primeira parcela do|segunda parcela do) 13\b(?! ?(reais|real|mil|conto|pila|porcento|o\b))/g, '$1 13o')
   .replace(/\braspadinha (de )?(gelo|morango|uva|limao|groselha|frutas?|maracuja|abacaxi)\b/g, 'sorvete de $2') // 2.3.0.1: essa raspadinha é de comer
   .replace(/[^\w\s,.$+*/×÷-]/g, ' ').replace(/\s+/g, ' ').trim(); // + * / × ÷ ficam: matemática básica (13/11)
 
@@ -30,7 +32,7 @@ const SINONIMOS = {
   restaurante: ['restaurante', 'almoco', 'jantar', 'lanche', 'lanchonete', 'bar', 'cafe', 'pizza', 'pizzaria', 'hamburguer', 'sorvete', 'casquinha', 'acai', 'pastel', 'salgado', 'coxinha', 'mcdonalds', 'mcdonald s', 'mc donalds', 'burger king', 'subway', 'bobs'],
   transporte: ['transporte', 'uber', '99', 'onibus', 'metro', 'gasolina', 'combustivel', 'estacionamento', 'pedagio', 'taxi', 'carro', 'posto', 'etanol', 'alcool', 'diesel'],
   moradia: ['moradia', 'aluguel', 'condominio', 'iptu', 'casa', 'armario', 'guarda roupa', 'sofa', 'colchao', 'estante', 'rack', 'movel', 'moveis', 'cortina', 'geladeira', 'fogao', 'maquina de lavar', 'micro ondas'], // 2.3.4.9: móvel e eletrodoméstico são da casa
-  contas: ['contas', 'conta de luz', 'luz', 'agua', 'internet', 'celular', 'telefone', 'gas', 'energia', 'boleto'],
+  contas: ['contas', 'conta de luz', 'luz', 'agua', 'internet', 'celular', 'telefone', 'gas', 'energia', 'boleto', 'pensao alimenticia', 'pensao'], // 2.3.5.7: pensão paga é conta do mês
   // 2.3.5.5 (Dona Débora): nome de farmácia também é Saúde
   saude: ['saude', 'farmacia', 'drogaria', 'drogasil', 'raia', 'drogaraia', 'pague menos', 'panvel', 'pacheco', 'remedio', 'medico', 'consulta', 'exame', 'dentista', 'plano de saude', 'academia'],
   lazer: ['lazer', 'cinema', 'show', 'festa', 'viagem', 'passeio',
@@ -55,7 +57,13 @@ const SINONIMOS = {
   outros: ['outros', 'outro', 'diversos'],
 };
 
+// 2.3.5.7 (JF, 19/11): as fontes novas vêm antes do salário ("13o salario" é 13º, "vale transporte" é auxílio)
 const FONTES = {
+  decimo: ['13o', '13 salario', 'decimo terceiro', 'decimo 3', 'primeira parcela do 13', 'segunda parcela do 13'],
+  fgts: ['fgts', 'fundo de garantia', 'saque aniversario'],
+  aposentadoria: ['aposentadoria', 'aposentado', 'aposentada', 'pensao', 'pensionista', 'inss', 'previdencia'],
+  beneficio: ['auxilio', 'beneficio', 'bolsa familia', 'bpc', 'loas', 'vale transporte', 'vale alimentacao', 'vale refeicao', 'vale gas', 'seguro desemprego', 'pe de meia'],
+  ferias: ['ferias', 'plr', 'participacao nos lucros', 'ppr', 'bonus', 'bonificacao'],
   salario: ['salario', 'pagamento', 'holerite', 'vale'],
   freela: ['freela', 'freelance', 'bico', 'extra', 'servico', 'trampo', 'plantao', 'plantoes', 'hora extra', 'horas extras'], // 2.3.0: plantão é extra
   rendimento: ['rendimento', 'rendimentos', 'juros', 'dividendo', 'dividendos', 'investimento', 'cdb', 'poupanca', 'tesouro'],
@@ -529,7 +537,8 @@ const HORAS = /\b\d{1,2}[:h]\d{2}\b|\b\d{1,2}h\b|\bas \d{1,2}(?:h| horas?)?\b|\b
 const BANCO_COM_NUMERO = /\b(c6( bank)?|99( ?pay| ?food)?|bs2|b3|n26)\b/g;
 function acharValor(t) {
   // 2.3.5.5 (Dona Débora, 18/11: "03/11 farmácia 45" virava R$ 3,00): data dd/mm não é valor
-  t = String(t).replace(HORAS, ' ').replace(BANCO_COM_NUMERO, ' ').replace(/\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b/g, ' ');
+  t = String(t).replace(HORAS, ' ').replace(BANCO_COM_NUMERO, ' ').replace(/\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b/g, ' ')
+    .replace(/\b13 ?(o|º|°)(?=\s|$)|\b13 salario\b/g, ' decimo '); // 2.3.5.7: "recebi meu 13º de 2500" não é R$ 13
   const m = t.match(/(?:r\$\s?)?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(reais|real|conto|pila|r\$)?/);
   return m ? parseAmount(m[1]) : null;
 }
@@ -1771,8 +1780,8 @@ function notaDaEntrada(t, fonte, accounts = []) {
   const m = String(t).match(/\b(?:de|do|da|pelo|pela|pra|por)\s+([a-z0-9 ]{3,60})$/);
   let d = m ? m[1] : '';
   d = limparPagamento(d.replace(/\b(no|na)\s+[a-z0-9 ]+$/, ''), accounts) || '';
-  d = d.replace(/\b(dia \d{1,2}|ontem|hoje|anteontem)\b/g, '').trim();
-  if (!d || norm(fonte.name).includes(d) || /^(salario|pagamento|freela|extra)$/.test(d)) return '';
+  d = d.replace(/\b(dia \d{1,2}|ontem|hoje|anteontem)\b/g, '').replace(/\b\d[\d.,]*\b|\b(reais|real|r\$)\b/g, ' ').replace(/\s+/g, ' ').trim(); // 2.3.5.7: o valor não entra na nota
+  if (!d || norm(fonte.name).includes(d) || /^(salario|pagamento|freela|extra|decimo|13o|fgts|inss|ferias|plr)$/.test(d)) return '';
   return (d[0].toUpperCase() + d.slice(1)).slice(0, 60);
 }
 
@@ -2041,8 +2050,16 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
           dicaPlantao = `${semN >= 3 ? `É o ${semN}º plantão em 7 dias` : `É o ${mesN}º plantão em 30 dias`}. O extra ajuda muito, e quem decide é você: só não esquece de descansar. Cansado, a gente gasta mais (delivery, corrida de app, compra por impulso) e o extra vai embora.`;
         }
       }
+      // 2.3.5.7 (JF): entrada especial ganha um conselho curto (só quando já entrou)
+      const DICA_FONTE = {
+        decimo: 'Dica: o 13º rende mais quitando uma dívida cara ou indo pra reserva de emergência. Separa uma parte antes das festas!',
+        fgts: 'Dica: FGTS é dinheiro de emergência. Se não tem dívida cara, vale guardar uma parte em vez de gastar tudo de uma vez.',
+        ferias: 'Aproveita! Só lembra: o pagamento de férias vem adiantado, e o salário do mês seguinte costuma vir menor.',
+        aposentadoria: null, beneficio: null,
+      };
+      const dicaFonte = !intencao.prevista ? DICA_FONTE[fonte.id] : null;
       return {
-        ...(dicaPlantao ? { dica: dicaPlantao } : {}),
+        ...(dicaPlantao || dicaFonte ? { dica: dicaPlantao || dicaFonte } : {}),
         gatilho: 'proposta_registro',
         vars: { valor: formatBRL(intencao.valor), categoria: intencao.prevista ? `entrada prevista pra ${data.slice(8, 10)}/${data.slice(5, 7)} (${fonte.name})` : `entrada (${fonte.name})` },
         // "recebi 1500 de salário no nubank": a entrada cai na conta (achado do Gemini); cartão nunca recebe entrada

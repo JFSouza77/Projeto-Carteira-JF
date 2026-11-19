@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 2.3.5.7 Alfa | 19/11/2026 | (JF, pela Dona Débora) Entradas novas (10 fontes): Aposentadoria / pensão, Auxílio / benefício, 13º salário, Férias / PLR e FGTS, com ícone; o Chat entende 13º, FGTS, INSS, pensão, auxílios e PLR (e "13º" não vira R$ 13); pensão paga vai pra Contas. C.A.O.S. 2.7.2. |
 | 2.3.5.6 Alfa | 19/11/2026 | (JF, pela Dona Débora) Excluir conta: em Ajustes → Sua conta, "Excluir uma conta" (apelido + senha, 2 confirmações) apaga a conta e os dados dela no servidor; os dados do aparelho ficam. Servidor: rota `/conta/apagar` e sessão de conta apagada não vale mais (precisa publicar o servidor). |
 | 2.3.5.5 Alfa | 18/11/2026 | (Dona Débora) Lista do caderno no Chat: gasto novo não vira resposta da pergunta anterior (e ele avisa o que ficou sem anotar); data dd/mm não vira valor; farmácia pelo nome; "quero zerar tudo" leva ao Recomeçar; apelido com e-mail ganha explicação clara (antes: "Apelido inválido."). C.A.O.S. 2.7.1. |
 | 2.3.5.4 Alfa | 17/11/2026 | (JF) Carro e moto viram pesquisa média guiada (novo ou usado, modelo, uso, pagamento, orçamento) com a Tabela FIPE e o custo de manter; recorde de preço ("o carro mais caro do mundo") ganha resposta brincando, sem IA; 10 piadas novas com pergunta, pausa e virada. C.A.O.S. 2.7.0. |

@@ -129,7 +129,7 @@ Pedido grande; nesta semana (até 25/11) a Carteira só recebe ajuste pontual. O
 3. **Lembrar dos presentes:** "dia 10 você gastou R$ 80 com presente pra sua mãe; tem outro aniversário este mês?" e o
    total de presentes do mês. Antes de datas grandes (Dia das Mães, dos Pais, dos Namorados, das Crianças, Natal), ele
    lembra do que gastou no ano passado e ajuda a separar.
-4. **Entradas que ele entende:** 13º, FGTS, aposentadoria, INSS, auxílio (transporte, alimentação, Bolsa Família),
+4. ✅ (2.3.5.7, 19/11) **Entradas que ele entende:** 13º, FGTS, aposentadoria, INSS, auxílio (transporte, alimentação, Bolsa Família),
    PLR, férias, restituição do IR. Cada uma com a fonte certa e um conselho curto (13º: quitar dívida ou reserva; FGTS:
    não torrar).
 5. **Comemorar conquistas:** "comprei a geladeira que eu queria", "quitei o cartão", "bati a meta": festa de verdade
