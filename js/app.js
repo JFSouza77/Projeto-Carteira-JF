@@ -1457,6 +1457,14 @@ function bind() {
     else state.selectedSource = b.dataset.cat;
     renderLancar();
   });
+  // 2.3.5.8: o tipo do auxílio vai pra descrição ("Auxílio transporte", "Bolsa Família")
+  $('#auxilio-tipos').addEventListener('click', e => {
+    const b = e.target.closest('[data-aux]');
+    if (!b) return;
+    const x = b.dataset.aux;
+    $('#note').value = x === 'Outro' ? '' : /^(Bolsa|BPC)/.test(x) ? x : `Auxílio ${x.toLowerCase()}`;
+    $('#auxilio-tipos').querySelectorAll('[data-aux]').forEach(c => c.setAttribute('aria-pressed', String(c === b)));
+  });
   // valor rápido (V2 do AI Studio, 13/11): soma ao que já está digitado; Limpar zera
   $('#valor-rapido').addEventListener('click', e => {
     const b = e.target.closest('[data-somar]');

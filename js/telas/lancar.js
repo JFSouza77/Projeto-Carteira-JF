@@ -74,6 +74,13 @@ export function renderLancar() {
   $('#category-chips').innerHTML = opcoes.map(c => `
     <button type="button" class="chip colorido" style="--cor-chip:${gasto ? corCategoria(c.id) : corFonte(c.id)}" role="radio" aria-checked="${c.id === sel}" data-cat="${esc(c.id)}">${gasto ? icCat(c) : icFonte(c)} ${esc(c.name)}</button>`).join('');
   $('#cat-label').textContent = gasto ? 'Categoria' : 'De onde veio';
+  // 2.3.5.8 (JF: "deixar o De onde veio mais bonitinho, coloridinho, sem carnaval"): na entrada são só 10 opções,
+  // então viram botões com ícone e cor (cada cor é um grupo); no gasto continua a lista, que é maior
+  $('#category-chips').hidden = gasto;
+  $('#category-select').hidden = !gasto;
+  const tiposAux = ['Transporte', 'Alimentação', 'Refeição', 'Moradia', 'Saúde', 'Creche', 'Gás', 'Bolsa Família', 'BPC', 'Outro'];
+  $('#auxilio-tipos').hidden = gasto || sel !== 'beneficio';
+  $('#auxilio-tipos').innerHTML = '<span class="muted small">Qual auxílio?</span>' + tiposAux.map(x => `<button type="button" class="chip" data-aux="${esc(x)}">${esc(x)}</button>`).join('');
   $('#category-select').innerHTML = `<option value="">${gasto ? 'Escolha a categoria' : 'Escolha de onde veio'}</option>`
     + opcoes.map(c => `<option value="${esc(c.id)}"${c.id === sel ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
   $('#entry-form').dataset.kind = gasto ? 'gasto' : 'entrada';
