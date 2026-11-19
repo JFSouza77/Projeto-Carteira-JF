@@ -8,12 +8,13 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.3.5 Alfa',
-    ate: '2.3.5.7',
+    ate: '2.3.5.8',
     data: '17/11/2026',
     nome: 'Pé no Chão',
     t: 'O C.A.O.S. deixa claro o que pesquisa, quanto pesquisa por dia e o que fica com você.',
     itens: [
-      '💰 Entradas novas: em ➕ Lançar → Entrada, escolha Aposentadoria, Auxílio, 13º, Férias ou FGTS.',
+      '💰 Entradas novas: em ➕ Lançar → Entrada, toque em Aposentadoria, Auxílio (e diga qual), 13º, Férias ou FGTS.',
+      '📖 Glossário maior: no Chat, pergunte "o que é PLR?", "o que é saque-aniversário?" ou "o que é pensão?".',
       '🎚️ Pesquisa em níveis: preço rápido até 7 por dia; tecnologia, passagem e link de loja, 1 por dia.',
       '❓ Pergunte os limites: no Chat, diga "o que você pode pesquisar?" e ele explica o que faz e o que não faz.',
       '🏋️ Academia no Chat: diga "quero me inscrever numa academia" e ele pergunta tipo, bairro e orçamento.',

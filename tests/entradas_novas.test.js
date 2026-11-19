@@ -42,3 +42,24 @@ test('pensão paga vai pra Contas', () => {
   assert.equal(a.tipo, 'registrar_gasto');
   assert.equal(a.categoryId, 'contas');
 });
+
+// 2.3.5.8 (JF): auxílio sem dizer qual → ele pergunta; o tipo vira a descrição. Glossário com os termos de renda.
+test('"recebi o auxílio 300" pergunta qual, e a resposta vira a descrição', () => {
+  let r = conversar('recebi o auxílio 300', d, { now });
+  assert.match(r.fala.texto, /Qual é/);
+  assert.ok(!r.fala.acao, 'não propõe antes de saber qual');
+  r = conversar('Transporte', d, { now, memory: r.memoria });
+  assert.equal(r.fala.acao?.sourceId, 'beneficio');
+  assert.equal(r.fala.acao?.note, 'Auxílio transporte');
+  assert.equal(r.fala.acao?.amountCents, 30000);
+  assert.equal(acao('recebi o vale refeição 600').note, 'Vale-refeição');
+  assert.equal(acao('caiu o bolsa família 600').note, 'Bolsa Família');
+  assert.equal(acao('recebi o bônus de aniversário da empresa 300').sourceId, 'ferias');
+});
+
+test('glossário: freela, PLR, pensão, aposentadoria, saque-aniversário, Banco Pan, vales e auxílio-moradia', () => {
+  for (const f of ['o que é PLR?', 'o que é saque aniversário?', 'o que é o banco pan?', 'o que é freela?', 'o que é pensão alimentícia?',
+    'o que é aposentadoria?', 'o que é vale refeição?', 'o que é auxílio moradia?', 'o que é pensão por morte?', 'o que é vale transporte?']) {
+    assert.equal(conversar(f, d, { now }).fala.intent, 'glossario', f);
+  }
+});

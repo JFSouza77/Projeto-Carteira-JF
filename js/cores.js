@@ -9,7 +9,9 @@ const CATEGORIA = Object.freeze(Object.fromEntries(
 ));
 
 const FONTE = Object.freeze({
-  salario: 'var(--ok)', aposentadoria: 'var(--ok)', beneficio: 'var(--cyan)', decimo: 'var(--accent)', ferias: 'var(--cyan)', fgts: 'var(--indigo)', freela: 'var(--cyan)', rendimento: 'var(--accent)', presente: 'var(--violet)', outros: 'var(--indigo)',
+  // 2.3.5.8 (JF: "colorido, sem carnaval"): cada cor é um grupo. Verde = renda de todo mês; ciano = extra do trabalho;
+  // índigo = governo e benefício; amarelo = dinheiro rendendo; violeta = presente; cinza = outros
+  salario: 'var(--ok)', aposentadoria: 'var(--ok)', decimo: 'var(--cyan)', ferias: 'var(--cyan)', freela: 'var(--cyan)', beneficio: 'var(--indigo)', fgts: 'var(--indigo)', rendimento: 'var(--accent)', presente: 'var(--violet)', outros: 'var(--muted)',
 });
 
 const FORMA = Object.freeze({ pix: 'var(--cyan)', credito: 'var(--violet)', debito: 'var(--indigo)', dinheiro: 'var(--ok)' });

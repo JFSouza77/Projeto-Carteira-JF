@@ -473,7 +473,7 @@ export const INCOME_SOURCES = Object.freeze([
   { id: 'aposentadoria', name: 'Aposentadoria / pensão', emoji: '🧓' },
   { id: 'beneficio', name: 'Auxílio / benefício', emoji: '🤝' },
   { id: 'decimo', name: '13º salário', emoji: '🎄' },
-  { id: 'ferias', name: 'Férias / PLR', emoji: '🏖️' },
+  { id: 'ferias', name: 'Férias / PLR / bônus', emoji: '🏖️' }, // 2.3.5.8: bônus (até o de aniversário da empresa)
   { id: 'fgts', name: 'FGTS', emoji: '🏦' },
   { id: 'freela', name: 'Freela / extra', emoji: '🛠️' },
   { id: 'rendimento', name: 'Rendimentos', emoji: '📈' },

@@ -63,13 +63,29 @@ const FONTES = {
   fgts: ['fgts', 'fundo de garantia', 'saque aniversario'],
   aposentadoria: ['aposentadoria', 'aposentado', 'aposentada', 'pensao', 'pensionista', 'inss', 'previdencia'],
   beneficio: ['auxilio', 'beneficio', 'bolsa familia', 'bpc', 'loas', 'vale transporte', 'vale alimentacao', 'vale refeicao', 'vale gas', 'seguro desemprego', 'pe de meia'],
-  ferias: ['ferias', 'plr', 'participacao nos lucros', 'ppr', 'bonus', 'bonificacao'],
+  ferias: ['ferias', 'plr', 'participacao nos lucros', 'ppr', 'bonus', 'bonificacao', 'aniversario da empresa', 'presente de aniversario da empresa', 'premio da empresa', 'premiacao'], // 2.3.5.8: bônus de aniversário da empresa
   salario: ['salario', 'pagamento', 'holerite', 'vale'],
   freela: ['freela', 'freelance', 'bico', 'extra', 'servico', 'trampo', 'plantao', 'plantoes', 'hora extra', 'horas extras'], // 2.3.0: plantão é extra
   rendimento: ['rendimento', 'rendimentos', 'juros', 'dividendo', 'dividendos', 'investimento', 'cdb', 'poupanca', 'tesouro'],
   presente: ['presente', 'pix', 'me deu', 'ganhei', 'mesada'],
   outros: ['outros', 'outro'],
 };
+
+// 2.3.5.8 (JF, 19/11: "no auxílio ele vai ter que perguntar qual: transporte, moradia, vale-refeição…"): o tipo vira a
+// descrição da entrada (10 tipos, regra do 0 ou 5)
+const TIPOS_AUXILIO = [
+  ['Auxílio transporte', /\b(transporte|vale transporte|vt)\b/], ['Vale-alimentação', /\b(alimentacao|vale alimentacao|va|cesta basica)\b/],
+  ['Vale-refeição', /\b(refeicao|vale refeicao|vr)\b/], ['Auxílio moradia', /\b(moradia|aluguel social)\b/],
+  ['Auxílio saúde', /\b(saude|medico|plano)\b/], ['Auxílio creche', /\b(creche|escola|educacao)\b/],
+  ['Bolsa Família', /\bbolsa familia\b/], ['BPC', /\b(bpc|loas)\b/], ['Seguro-desemprego', /\bseguro desemprego\b/],
+  ['Auxílio gás', /\b(gas|vale gas|auxilio gas)\b/],
+];
+export const CHIPS_AUXILIO = ['Transporte', 'Alimentação', 'Refeição', 'Moradia', 'Saúde', 'Outro'];
+/** Qual auxílio é ("vale transporte" → "Auxílio transporte"); null se a frase não diz. */
+export function tipoDeAuxilio(texto) {
+  const t = norm(texto);
+  return (TIPOS_AUXILIO.find(([, re]) => re.test(t)) || [])[0] || null;
+}
 
 function acharCategoria(t, categorias) {
   let melhor = null;
@@ -2057,13 +2073,22 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         ferias: 'Aproveita! Só lembra: o pagamento de férias vem adiantado, e o salário do mês seguinte costuma vir menor.',
         aposentadoria: null, beneficio: null,
       };
-      const dicaFonte = !intencao.prevista ? DICA_FONTE[fonte.id] : null;
+      const dicaFonte = intencao.prevista ? null : fonte.id === 'ferias' && !/\bferias\b/.test(intencao.t)
+        ? 'Bônus é ótimo pra adiantar uma meta ou a reserva: que tal separar uma parte antes de gastar?' : DICA_FONTE[fonte.id];
+      // 2.3.5.8 (JF): auxílio sem dizer qual → ele pergunta (vira a descrição); dizendo, já anota com o nome
+      const auxilio = fonte.id === 'beneficio' ? tipoDeAuxilio(intencao.t) : null;
+      if (fonte.id === 'beneficio' && !auxilio) {
+        const acaoAux = { tipo: 'registrar_entrada', amountCents: intencao.valor, sourceId: fonte.id, date: data, note: '', ...(intencao.prevista ? { prevista: true } : {}),
+          accountId: lerPagamento(intencao.t, (dados.accounts || []).filter(a => a.tipo !== 'cartao')).accountId || null };
+        return { fato: `Anotando ${formatBRL(intencao.valor)} de auxílio. Qual é? Transporte, alimentação, refeição, moradia, saúde…`, cru: true,
+          sugestoes: [...CHIPS_AUXILIO, 'Deixa pra depois'], aguardar: { tipo: 'auxilio', acao: acaoAux } };
+      }
       return {
         ...(dicaPlantao || dicaFonte ? { dica: dicaPlantao || dicaFonte } : {}),
         gatilho: 'proposta_registro',
         vars: { valor: formatBRL(intencao.valor), categoria: intencao.prevista ? `entrada prevista pra ${data.slice(8, 10)}/${data.slice(5, 7)} (${fonte.name})` : `entrada (${fonte.name})` },
         // "recebi 1500 de salário no nubank": a entrada cai na conta (achado do Gemini); cartão nunca recebe entrada
-        acao: { tipo: 'registrar_entrada', amountCents: intencao.valor, sourceId: fonte.id, date: data, note: ehPlantao ? 'Plantão' : notaDaEntrada(intencao.t, fonte, dados.accounts), ...(intencao.prevista ? { prevista: true } : {}),
+        acao: { tipo: 'registrar_entrada', amountCents: intencao.valor, sourceId: fonte.id, date: data, note: ehPlantao ? 'Plantão' : auxilio || notaDaEntrada(intencao.t, fonte, dados.accounts), ...(intencao.prevista ? { prevista: true } : {}),
           accountId: lerPagamento(intencao.t, (dados.accounts || []).filter(a => a.tipo !== 'cartao')).accountId || null },
       };
     }
