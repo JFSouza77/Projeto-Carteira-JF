@@ -143,3 +143,6 @@ Pedido grande; nesta semana (até 25/11) a Carteira só recebe ajuste pontual. O
 8. **Datas comemorativas:** usar o calendário de temporadas do Perfil (`docs/Temporadas.md` de lá) como base: Natal,
    Halloween, São João, Carnaval, Páscoa, Dia das Mães, dos Pais, dos Namorados, das Crianças. Falas da data e o
    avatar da temporada. O que for característica do C.A.O.S. (datas que ele comemora) vai pro núcleo com o ok do JF.
+9. **Rendeu desde que atualizou (André, 19/11; ok do JF pra sexta 27/11):** no cartão da conta ou caixinha que rende %
+   do CDI, mostrar "rendeu uns R$ X desde que você atualizou o saldo" (estimativa pelo CDI, em dia útil, antes do
+   imposto). O saldo guardado não muda (quem atualiza é a pessoa). O mesmo pros investimentos de renda fixa.

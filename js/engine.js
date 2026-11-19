@@ -1526,6 +1526,26 @@ export function faturaDoCartao(cartao, expenses, today = toISODate()) {
   };
 }
 
+/**
+ * 2.3.5.9 (André, amigo do JF, 19/11: "quanto tá agendado pros meses seguintes"): as próximas faturas, mês a mês, com
+ * o que já está parcelado (a fatura aberta fica de fora: ela ainda recebe compras). Só soma; não grava nada.
+ */
+export function faturasFuturas(cartao, expenses, today = toISODate(), meses = 6) {
+  const f = faturaDoCartao(cartao, expenses, today);
+  const parcelas = expenses.filter(e => e.accountId === cartao.id).flatMap(e => parcelasDe(e).map(p => ({ date: p.date, v: p.valorCents })));
+  const out = [];
+  let de = f.fechamento;
+  for (let i = 0; i < meses; i++) {
+    const ate = diaDoMes(shiftMonth(de.slice(0, 7), 1), cartao.fechamentoDia);
+    const valorCents = parcelas.filter(p => p.date > de && p.date <= ate).reduce((s, p) => s + p.v, 0);
+    const vNoMes = diaDoMes(ate.slice(0, 7), cartao.vencimentoDia);
+    const vencimento = vNoMes > ate ? vNoMes : diaDoMes(shiftMonth(ate.slice(0, 7), 1), cartao.vencimentoDia);
+    if (valorCents > 0) out.push({ fechamento: ate, vencimento, mes: vencimento.slice(0, 7), valorCents });
+    de = ate;
+  }
+  return out;
+}
+
 // ---------- Metas (06/11) ----------
 // Meta = pra quê, quanto custa, quanto já tem, até quando. Fica em meta/metas (só no aparelho).
 

@@ -2,7 +2,7 @@
 // entre contas. Mudou só de arquivo, o jeito de funcionar é o mesmo.
 
 import { $, centsToInput, esc, state, renderizar } from '../estado.js';
-import { BANKS, TIPOS_CONTA, TIPOS_INVESTIMENTO, accountBalance, accountLabel, agruparPorBanco, atualizarInvestimento, comReforco, createAccount, createCartao, createExpense, createIncome, createInvestimento, createTransferencia, diferencaDoSaldo, editarConta, faturaDoCartao, folgaDoPiso, formatBRL, parseAmount, parseSignedAmount, raioXCartao, rendimentoEstimado, QUANDO_GUARDA, resumoInvestimentos, toISODate, totalBalance } from '../engine.js';
+import { faturasFuturas, monthLabel, BANKS, TIPOS_CONTA, TIPOS_INVESTIMENTO, accountBalance, accountLabel, agruparPorBanco, atualizarInvestimento, comReforco, createAccount, createCartao, createExpense, createIncome, createInvestimento, createTransferencia, diferencaDoSaldo, editarConta, faturaDoCartao, folgaDoPiso, formatBRL, parseAmount, parseSignedAmount, raioXCartao, rendimentoEstimado, QUANDO_GUARDA, resumoInvestimentos, toISODate, totalBalance } from '../engine.js';
 import * as db from '../db.js';
 import { temaBanco } from '../cores.js';
 import { ic, narrate, pintarOlhos, saldoTxt, saldoVisivel, toast } from '../app.js';
@@ -309,6 +309,8 @@ export async function informarCdi() {
 
 export function itemCartao(a) {
   const f = faturaDoCartao(comReforco(a, state.accounts, state.expenses, state.incomes, state.transferencias), state.expenses, toISODate());
+  // 2.3.5.9 (André): o que já está agendado, mês a mês (pelo mês em que a fatura vence)
+  const proximas = faturasFuturas(a, state.expenses, toISODate());
   const cls = f.pct >= 100 ? 'cheio' : f.pct >= 80 ? 'alto' : '';
   const dia = iso => `${iso.slice(8)}/${iso.slice(5, 7)}`;
   const sit = f.pct >= 100 ? ['critico', 'Limite crítico'] : f.pct >= 80 ? ['atencao', 'Atenção'] : ['saudavel', 'Saudável'];
@@ -317,6 +319,7 @@ export function itemCartao(a) {
       <div class="account-head"><strong>${ic('a-cartao')} ${esc(accountLabel(a))} <span class="sit-limite ${sit[0]}">${sit[1]}</span></strong><span class="num ${f.pct >= 100 ? 'bad' : ''}">${formatBRL(f.disponivelCents)} livre</span></div>${f.reforcoCents ? `<small class="muted">Limite ${formatBRL(a.limiteCents)} + ${formatBRL(f.reforcoCents)} do cofrinho.</small>` : ''}
       <div class="limite-bar ${cls}" role="img" aria-label="${f.pct}% do limite usado"><i style="width:${Math.min(100, Math.max(0, f.pct))}%"></i></div>
       <small class="muted">Usado ${formatBRL(f.usadoCents)} de ${formatBRL(f.limiteCents)} (${f.pct}%). Fatura aberta ${formatBRL(f.abertaCents)}, fecha ${dia(f.fechamento)}.${f.fechadaCents ? ` Fatura fechada ${formatBRL(f.fechadaCents)} vence ${dia(f.vencimento)}.` : ''}${f.futurasCents ? ` Parcelas das próximas faturas: ${formatBRL(f.futurasCents)}${f.presoFuturoCents ? ` (${formatBRL(f.presoFuturoCents)} preso no limite)` : ''}.` : ''}</small>
+      ${proximas.length ? `<small class="muted proximas-faturas">Próximas faturas (já parcelado): ${proximas.map(p => `${esc(monthLabel(p.mes).split(' ')[0].slice(0, 3))} ${formatBRL(p.valorCents)}`).join(' · ')}</small>` : ''}
       ${f.atrasada ? `<small class="bad">A fatura de ${formatBRL(f.fechadaCents)} venceu dia ${dia(f.vencimento)}. Já pagou? Marca aqui que ela sai do limite.</small>` : ''}
       <div class="account-actions">
         <button class="ghost" data-compra-cartao="${esc(a.id)}">＋ Lançar compra neste cartão</button>

@@ -5,7 +5,7 @@
 import {
   formatBRL, parseAmount, periodRange, ofensiva, aReceber, comReforco, sumInRange, topCategories, summarizeMonth, forecastMonth,
   incomeIn, monthKey, shiftMonth, monthLabel, accountBalance, accountLabel, totalBalance, analyze, folgaDoPiso, dividirEntrePisos, resumoPisos, sugerirTransferencias,
-  spentIn, toISODate, INCOME_SOURCES, idadeDe, faixaEtaria, situacaoCompromissos, analisarPlanejamento, cabeNoMes, sugerirCategoria, palavrasDe, faturaDoCartao, progressoMeta, resumoInvestimentos,
+  spentIn, toISODate, faturasFuturas, parcelasDe, INCOME_SOURCES, idadeDe, faixaEtaria, situacaoCompromissos, analisarPlanejamento, cabeNoMes, sugerirCategoria, palavrasDe, faturaDoCartao, progressoMeta, resumoInvestimentos,
   formiguinhas, FORMIGA_LIMITE_CENTS,
 } from '../engine.js';
 import { IDENTIDADE, textoPodeNaoPode, textoVida, textoComoFunciona, textoPrivacidade } from './identidade.js';
@@ -1437,6 +1437,9 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   const perguntaDeSignificado = /^(o que (e|sao|significa|quer dizer)|me explica|explica|me ensina)\b/.test(t) && acharTermo(t);
   // 2.3.4 (JF): "como funciona o cartão de crédito/débito?" é aula, não os cartões da pessoa
   if (/como funciona(m)? (o |a |os |um )?(cartao|cartoes)/.test(t)) return { ...r, intent: 'glossario', termo: acharTermo(/debito/.test(t) ? 'debito' : 'credito'), quem: null, comMais: true };
+  // 2.3.5.9 (André): "o que tenho parcelado?", "quanto tenho de limite?"
+  if (!perguntaDeSignificado && /\b(o que (eu )?tenho parcelado|minhas parcelas|quais (sao )?(as |minhas )?parcelas|compras parceladas|quanto falta (pagar )?(das|de) parcelas|parcelas (que faltam|pra pagar|futuras))\b/.test(t)) return { ...r, intent: 'parcelados' };
+  if (!perguntaDeSignificado && /\b(quanto (eu )?(tenho|resta|sobra|ainda tenho) de limite|meu limite|limite disponivel|limite livre)\b/.test(t)) return { ...r, intent: 'cartao' };
   if (!perguntaDeSignificado && /(cartao|fatura|limite (do|no) cartao)/.test(t) && !/\b(como|onde|quero|preciso|queria)\b.*\b(cadastr|adicion|registr|coloc|ponho|crio|criar)/.test(t)) return { ...r, intent: 'cartao' };
   if (/((o que|quanto) (eu )?(ainda )?tenho (pra|para|de) pagar|falta pagar|contas? (do|deste|desse) mes|vencimento|quando vence|o que vence|tenho conta|compromissos?|minhas contas fixas|assinaturas)/.test(t)) return { ...r, intent: 'pagar' };
   const querFazer = /\b(quero|preciso|queria|gostaria de) (anotar|lancar|registrar|adicionar|cadastrar|colocar|planejar|fazer|ligar|instalar|mandar)\b/.test(t);
@@ -2250,9 +2253,36 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         const f = faturaDoCartao(comReforco(c, accounts, expenses, incomes, dados.transferencias || []), expenses, today);
         const fech = f.diasParaFechar === 0 ? 'fecha hoje' : `fecha em ${f.diasParaFechar} ${f.diasParaFechar === 1 ? 'dia' : 'dias'}`;
         const venc = f.fechadaCents > 0 ? ` Fatura fechada de ${formatBRL(f.fechadaCents)} vence ${f.diasParaVencer === 0 ? 'hoje' : f.diasParaVencer === 1 ? 'amanhã' : `dia ${Number(f.vencimento.slice(8))}`}.` : '';
-        return `${f.nome}: ${formatBRL(f.usadoCents)} de ${formatBRL(f.limiteCents)} do limite (${f.pct}%), sobram ${formatBRL(f.disponivelCents)}. A fatura aberta está em ${formatBRL(f.abertaCents)} e ${fech}.${venc}`;
+        // 2.3.5.9 (André): o que já está agendado nas próximas faturas, mês a mês (ou só o mês perguntado)
+        const prox = faturasFuturas(c, expenses, today);
+        const MES_TXT = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+        const pedido = MES_TXT.findIndex(m => new RegExp(`\\b${m}\\b`).test(intencao.t));
+        let futuro = '';
+        if (pedido >= 0) {
+          const alvo = prox.find(p => Number(p.mes.slice(5)) === pedido + 1);
+          const mFech = Number(f.fechamento.slice(5, 7)), abertaVenceMes = Number(f.fechamento.slice(8, 10)) < c.vencimentoDia ? mFech : (mFech % 12) + 1;
+          const ehAberta = abertaVenceMes === pedido + 1;
+          futuro = ehAberta ? ` A fatura que vence em ${MES_TXT[pedido].replace('marco', 'março')} é a aberta: ${formatBRL(f.abertaCents)} até agora.`
+            : ` Na fatura que vence em ${MES_TXT[pedido].replace('marco', 'março')}, já tem ${formatBRL(alvo ? alvo.valorCents : 0)} de parcelas${alvo ? '' : ' (nada agendado ainda)'}; o que você comprar depois entra junto.`;
+        } else if (prox.length) {
+          futuro = ` Já agendado em parcelas: ${prox.map(p => `${formatBRL(p.valorCents)} na fatura que vence em ${monthLabel(p.mes).split(' ')[0]}`).join(', ')}.`;
+        }
+        return `${f.nome}: ${formatBRL(f.usadoCents)} de ${formatBRL(f.limiteCents)} do limite (${f.pct}%), sobram ${formatBRL(f.disponivelCents)}. A fatura aberta está em ${formatBRL(f.abertaCents)} e ${fech}.${venc}${futuro}`;
       });
-      return { fato: partes.join(' '), sugestoes: ['O que tenho pra pagar?', 'Cabe no mês?'] };
+      return { fato: partes.join(' '), sugestoes: ['O que tenho parcelado?', 'O que tenho pra pagar?', 'Cabe no mês?'] };
+    }
+    case 'parcelados': { // 2.3.5.9 (André): cada compra parcelada, quantas faltam e até quando
+      const hoje = today;
+      const lista = expenses.filter(e => e.parcelas > 1).map(e => {
+        const ps = parcelasDe(e);
+        const faltam = ps.filter(p => p.date > hoje);
+        return { e, ps, faltam };
+      }).filter(x => x.faltam.length);
+      if (!lista.length) return { fato: 'Você não tem compra parcelada com parcela pra vir. Quando parcelar no crédito, me fala "comprei 900 em 3x no cartão" que eu acompanho mês a mês.', cru: true, sugestoes: ['Como está meu cartão?'] };
+      const nomeDe = e => e.note || categories.find(c => c.id === e.categoryId)?.name || 'Compra';
+      const total = lista.reduce((s, x) => s + x.faltam.reduce((a, p) => a + p.valorCents, 0), 0);
+      const linhas = lista.slice(0, 6).map(({ e, ps, faltam }) => `${nomeDe(e)} (${formatBRL(e.amountCents)} em ${ps.length}x): ${faltam.length === 1 ? 'falta 1' : `faltam ${faltam.length}`} de ${formatBRL(faltam[0].valorCents)}`);
+      return { fato: `${linhas.join('; ')}.${lista.length > 6 ? ` E mais ${lista.length - 6}.` : ''} Ao todo, ainda faltam ${formatBRL(total)} em parcelas.`, cru: true, sugestoes: ['Como está meu cartão?', 'Quanto vem na próxima fatura?'] };
     }
     case 'saldo': {
       if (!accounts.length) {
@@ -2264,6 +2294,8 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       if (uma) {
         return { fato: `${accountLabel(uma)}: saldo estimado de ${formatBRL(accountBalance(uma, expenses, incomes, dados.transferencias || []))}.`, sugestoes: ['Algum alerta?'] };
       }
+      // 2.3.5.9: só cartão cadastrado saía "R$ 0,00 ()"
+      if (!contas.length) return { fato: 'Você só cadastrou cartão de crédito, nenhuma conta com saldo. Pra ver o limite, pergunta "como está meu cartão?". Pra eu saber o saldo, cadastra o banco em 🏦 Contas.', sugestoes: ['Como está meu cartão?'] };
       const lista = contas.map(a => `${accountLabel(a)} ${formatBRL(accountBalance(a, expenses, incomes, dados.transferencias || []))}`).join(', ');
       return {
         fato: `Saldo estimado total: ${formatBRL(totalBalance(accounts, expenses, incomes, dados.transferencias || []))} (${lista}). É o saldo que você informou mais o que foi lançado depois.`,

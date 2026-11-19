@@ -1589,3 +1589,6 @@ li.feito .passo-n { background: transparent; color: var(--ok); box-shadow: inset
 .auxilio-tipos:not([hidden]) { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
 .auxilio-tipos .muted { width: 100%; }
 .auxilio-tipos .chip[aria-pressed="true"] { border-color: var(--indigo); box-shadow: inset 0 0 0 1px var(--indigo); color: var(--text); }
+
+/* 2.3.5.9 (André): próximas faturas mês a mês no cartão */
+.cartao-item .proximas-faturas { display: block; margin-top: 2px; }
