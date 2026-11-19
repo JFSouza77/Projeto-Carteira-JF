@@ -113,3 +113,33 @@ O JF quer alternar entre "meu dinheiro" e "dinheiro da empresa" no mesmo app. É
 Já entrou (2.3.4): a pergunta "você trabalha com quê?" guarda se a pessoa tem empresa e o ramo, e o glossário tem
 conta PJ, MEI e fluxo de caixa. Próximo passo quando o JF der o ok: a etapa 1.
 
+
+## Vida e datas (JF, 19/11) · plano do Wally
+
+O C.A.O.S. tem que entender a vida em volta do dinheiro: pra quem foi, de quem veio, que data é, que conquista foi.
+Pedido grande; nesta semana (até 25/11) a Carteira só recebe ajuste pontual. Ordem recomendada:
+
+1. **Categorias novas:** Presentes 🎁, Cuidados pessoais 💇 (salão, barbeiro, manicure, maquiagem, perfume, skincare) e
+   Joias e acessórios 💍 (brinco, colar, cordão, anel, pulseira, relógio, bijuteria). Roupa continua em Compras, com o
+   tema "fashion". Lista final de 20 categorias (regra do 0 ou 5).
+2. **Pra quem e de quem:** família e pessoas (mãe, pai, avó, avô, tio, tia, primo, prima, irmão, irmã, filho, filha,
+   namorada, namorado, marido, esposa, mulher, amigo…). "Comprei uma blusa de presente pra minha mãe" → Presentes, com
+   "pra mãe" anotado; "recebi 200 da minha avó" → entrada com "da avó". Guarda só o parentesco ou o apelido que a
+   pessoa disser, no aparelho.
+3. **Lembrar dos presentes:** "dia 10 você gastou R$ 80 com presente pra sua mãe; tem outro aniversário este mês?" e o
+   total de presentes do mês. Antes de datas grandes (Dia das Mães, dos Pais, dos Namorados, das Crianças, Natal), ele
+   lembra do que gastou no ano passado e ajuda a separar.
+4. **Entradas que ele entende:** 13º, FGTS, aposentadoria, INSS, auxílio (transporte, alimentação, Bolsa Família),
+   PLR, férias, restituição do IR. Cada uma com a fonte certa e um conselho curto (13º: quitar dívida ou reserva; FGTS:
+   não torrar).
+5. **Comemorar conquistas:** "comprei a geladeira que eu queria", "quitei o cartão", "bati a meta": festa de verdade
+   (rosto de festa, fala própria), sem precisar ter anotado antes. Se tiver meta com aquele nome, oferece fechar.
+6. **Jeitos de pagar novos:** carteira digital (Mercado Pago, PicPay, PayPal) com saldo + crédito parcelado no mesmo
+   gasto ("paguei 300 no Mercado Pago, 100 do saldo e 200 parcelado em 3x"): divide em 2 lançamentos e marca as
+   parcelas no mês certo.
+7. **Avatares novos (5, regra do 0 ou 5):** Joalheiro (joias), Fashion (roupa e maquiagem: "alguém vai pra Paris
+   Fashion Week?"), Cabeleireiro (salão e barbeiro), Papai Noel/Natalino e Junino (São João). Halloween fica pra
+   leva das datas. Brincadeira leve em todo humor, inclusive criança.
+8. **Datas comemorativas:** usar o calendário de temporadas do Perfil (`docs/Temporadas.md` de lá) como base: Natal,
+   Halloween, São João, Carnaval, Páscoa, Dia das Mães, dos Pais, dos Namorados, das Crianças. Falas da data e o
+   avatar da temporada. O que for característica do C.A.O.S. (datas que ele comemora) vai pro núcleo com o ok do JF.
