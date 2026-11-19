@@ -31,7 +31,8 @@ const SINONIMOS = {
   transporte: ['transporte', 'uber', '99', 'onibus', 'metro', 'gasolina', 'combustivel', 'estacionamento', 'pedagio', 'taxi', 'carro', 'posto', 'etanol', 'alcool', 'diesel'],
   moradia: ['moradia', 'aluguel', 'condominio', 'iptu', 'casa', 'armario', 'guarda roupa', 'sofa', 'colchao', 'estante', 'rack', 'movel', 'moveis', 'cortina', 'geladeira', 'fogao', 'maquina de lavar', 'micro ondas'], // 2.3.4.9: móvel e eletrodoméstico são da casa
   contas: ['contas', 'conta de luz', 'luz', 'agua', 'internet', 'celular', 'telefone', 'gas', 'energia', 'boleto'],
-  saude: ['saude', 'farmacia', 'remedio', 'medico', 'consulta', 'exame', 'dentista', 'plano de saude', 'academia'],
+  // 2.3.5.5 (Dona Débora): nome de farmácia também é Saúde
+  saude: ['saude', 'farmacia', 'drogaria', 'drogasil', 'raia', 'drogaraia', 'pague menos', 'panvel', 'pacheco', 'remedio', 'medico', 'consulta', 'exame', 'dentista', 'plano de saude', 'academia'],
   lazer: ['lazer', 'cinema', 'show', 'festa', 'viagem', 'passeio',
     // 2.3.0.1 (JF): as fezinhas (loteria) contam como Lazer
     'boliche', 'patinacao', 'pista de patinacao', 'patinacao no gelo', 'rinque', 'beisebol', 'jogo de beisebol', 'kart', 'paintball', 'fliperama', 'teatro', 'museu', // 2.3.4.7
@@ -527,7 +528,8 @@ const HORAS = /\b\d{1,2}[:h]\d{2}\b|\b\d{1,2}h\b|\bas \d{1,2}(?:h| horas?)?\b|\b
 // Nome de banco com número não é valor (16/11: "já paguei a fatura do C6" virava gasto de R$ 6)
 const BANCO_COM_NUMERO = /\b(c6( bank)?|99( ?pay| ?food)?|bs2|b3|n26)\b/g;
 function acharValor(t) {
-  t = String(t).replace(HORAS, ' ').replace(BANCO_COM_NUMERO, ' ');
+  // 2.3.5.5 (Dona Débora, 18/11: "03/11 farmácia 45" virava R$ 3,00): data dd/mm não é valor
+  t = String(t).replace(HORAS, ' ').replace(BANCO_COM_NUMERO, ' ').replace(/\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b/g, ' ');
   const m = t.match(/(?:r\$\s?)?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(reais|real|conto|pila|r\$)?/);
   return m ? parseAmount(m[1]) : null;
 }
@@ -1109,7 +1111,7 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   // 2.3.5.2: "comprei 3 cervejas de 15": o 3 é quantidade; o valor é o que vem depois de "de/por"
   const qtdItens = t.match(/\b\d{1,2} [a-z]{3,}s\b.*?\b(?:por|de|custou|custaram|deu|paguei) (?:r\$ ?)?(\d+(?:[.,]\d{1,2})?)\b/);
   // 2.3.5.2: quantidade ("100 kg de peixe por 800") não vira valor
-  const r = { t, categoria: acharCategoria(t, categories), periodo: acharPeriodo(t), valor: acharValor(t.replace(/\bdia \d{1,2}\b/g, ' ').replace(MOEDA_QTD, ' ').replace(/\b\d+([.,]\d+)? ?(kg|quilos?|gramas?|litros?|ml|unidades?|duzias?)\b/g, ' ')), fonte: acharFonte(t) };
+  const r = { t, categoria: acharCategoria(t, categories), periodo: acharPeriodo(t), valor: acharValor(t.replace(/\bdia \d{1,2}(\/\d{1,2}(\/\d{2,4})?)?\b/g, ' ').replace(MOEDA_QTD, ' ').replace(/\b\d+([.,]\d+)? ?(kg|quilos?|gramas?|litros?|ml|unidades?|duzias?)\b/g, ' ')), fonte: acharFonte(t) };
   if (qtdItens && !/\b(reais|r\$)\b/.test(t.slice(0, t.indexOf(qtdItens[0]) + 4))) r.valor = Math.round(Number(qtdItens[1].replace(',', '.')) * 100);
   const pergunta = /\b(quanto|qual|quais|onde|como|tive|teve|tenho|vai|posso|consigo|algum|alguma)\b|\?/.test(t);
 
@@ -1280,6 +1282,11 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   // 2.3.3.6 (JF, 17/11, prometido pra Dona Débora): "apaga a entrada que lancei errado", "remove o último gasto",
   // "exclui o gasto de 50 do mercado". Ele acha o lançamento e PROPÕE apagar; quem apaga é o app, depois do Confirmar
   // (1ª lei: ele nunca mexe sozinho). "Como apago?" continua sendo explicação; conversa/chat/memória não entram aqui.
+  // 2.3.5.5 (Dona Débora, 18/11: "queria zerar tudo e começar de novo, mas não achei onde"): ele mostra o caminho e
+  // leva até o Recomeçar (quem apaga é a pessoa, lá, com 2 confirmações; 1ª lei)
+  if (/\b(zerar|zera|zero|apagar|apaga|limpar|limpa|resetar|reseta|recomecar|comecar de novo|comecar do zero|do zero)\b/.test(t)
+    && /\b(tudo|todos|todas|do zero|de novo|o app|o aplicativo|meus dados|recomecar|tudo que (eu )?(lancei|anotei|fiz))\b/.test(t)
+    && !/\b(conversa|chat|historico da conversa|memoria|saldo|saldos)\b/.test(t)) return { ...r, categoria: null, valor: null, intent: 'recomecar' };
   // "você consegue apagar um gasto?" é pergunta: ganha a explicação (que agora diz que ele apaga com o seu ok)
   if (/\b(voce|vc|tu) (consegue|pode|sabe|apaga)\b/.test(t) && /\b(apag\w*|remov\w*|exclu\w*|delet\w*)/.test(t) && /\b(gasto|entrada|lancamento|valor|registro)/.test(t)) return { ...r, intent: 'tutorial', tema: 'apagar' };
   if (!/\b(conversa|chat|historico|memoria|mensage\w*|conta bancaria|banco|cartao|meta|plano|orcamento|lembrete)\b/.test(t)
@@ -2678,6 +2685,9 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         ? 'Eu torço pro seu bolso! 😄 Time eu não escolho: sou imparcial. Agora, se o ingresso ou a camisa do time tão pesando no mês, isso é comigo.'
         : 'Em política eu sou totalmente imparcial: não tenho lado, candidato nem partido. Meu negócio é o seu dinheiro. Se a dúvida for de imposto, benefício, salário mínimo ou como uma regra nova mexe no seu bolso, aí eu explico.',
         cru: true, sugestoes: ['O que é imposto de renda?', 'Quanto é o salário mínimo?'] };
+    case 'recomecar': // 2.3.5.5 (Dona Débora): o caminho pro "Começar do zero", sem apagar nada daqui
+      return { fato: 'Dá sim! Fica em ⚙️ Ajustes → Seus dados → Recomeçar → "Começar do zero": apaga todos os gastos e entradas e zera os saldos, mas deixa seus bancos e cartões cadastrados. Se quiser, antes faça um backup ali embaixo. Toca em Confirmar que eu te levo até lá.',
+        cru: true, sugestoes: [], acao: { tipo: 'abrir_recomecar' } };
     case 'curiosidade_cara': { // 2.3.5.4 (JF): brinca, sem gastar IA, e puxa pro bolso
       const fala = umaDe(CURIOSIDADE_RESPOSTAS, (intencao.t || '').length, '');
       return { fato: fala, cru: true, sugestoes: ['Quanto sobra este mês?', 'Quero juntar dinheiro', 'Conta uma piada'] };
