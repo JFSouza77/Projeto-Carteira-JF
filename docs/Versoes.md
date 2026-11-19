@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 2.3.6.1 Alfa | 19/11/2026 | (JF) O tipo do lugar decide a categoria sem precisar de marca (supermercado, mercadinho, atacadista, droga…, farma…, manipulação, ferragens); Multishow, Rede Show, Multimarketing; Mercado Pago é pagamento; remédio manipulado ou controlado com alerta. C.A.O.S. 2.7.8. |
 | 2.3.6 Alfa | 19/11/2026 | Tudo no Lugar (JF): 5 categorias novas (Roupas e calçados, Cuidados pessoais, Joias e acessórios, Presentes, Utilidades; 15 → 20); lojas, marcas e farmácias pelo nome; modelo de celular não vira valor; modo lista ("os próximos gastos são da feira"); imposto de renda ajuda a estimar com aviso (antes caía em entradas). C.A.O.S. 2.7.7. |
 | 2.3.5.11 Alfa | 19/11/2026 | (JF, no posto) Categoria pelo nome: carro (GNV, óleo, lavagem, pneu, mecânico) em Transporte; refrigerantes e redes de mercado; sorveteria e picolé; lojas (C&A, Renner, Youcom, Marisa, Avenida, Americanas…) em Compras. Vale no Chat, no Lançar e no comprovante. C.A.O.S. 2.7.6. |
 | 2.3.5.10 Alfa | 19/11/2026 | (André) Cartão: próximas faturas mês a mês (o que já está parcelado) em Contas e no Chat; "quanto vem na fatura de dezembro?", "o que tenho parcelado?" e "quanto tenho de limite?" respondem certo. C.A.O.S. 2.7.5. Créditos em Ajustes → Mais sobre o C.A.O.S. (Anne, Dona Débora e André). |
