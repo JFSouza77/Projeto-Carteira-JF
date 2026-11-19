@@ -1592,3 +1592,6 @@ li.feito .passo-n { background: transparent; color: var(--ok); box-shadow: inset
 
 /* 2.3.5.9 (André): próximas faturas mês a mês no cartão */
 .cartao-item .proximas-faturas { display: block; margin-top: 2px; }
+
+/* 2.3.5.10 (JF): créditos de quem testou */
+.creditos { margin: 0 0 8px; padding-left: 18px; display: grid; gap: 6px; }
