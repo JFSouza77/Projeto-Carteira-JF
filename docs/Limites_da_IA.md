@@ -8,7 +8,7 @@ sobem; a regra continua.
 | --- | --- | --- | --- | --- |
 | **Sem IA** | Tudo que o app sabe sozinho | gastos, saldo, metas, contas, glossário, cálculos, dicas, apagar/corrigir, conferir um preço que a pessoa digitou, questionários dos planos | sem limite | `js/caos/` (conversa local) |
 | **Leve** | Conversa com a IA, sem pesquisa de preço | desabafo, papo (no Papo livre), pergunta de finanças que ele não sabe sozinho | dentro do total de 20 por dia | `fala.nivelIA = 'leve'` |
-| **Média** | Pesquisa de preço rápida, resposta curta | ingresso (cinema, teatro, show, jogo), academia, custo médio, piso salarial, plano de pet/moradia/transporte, carro e moto (Tabela FIPE) | **7 por dia** | `nivelIA = 'media'`, `MEDIA_POR_DIA` |
+| **Média** | Pesquisa de preço rápida, resposta curta | ingresso (cinema, teatro, show, jogo), academia, custo médio, piso salarial, plano de pet/moradia/transporte, carro e moto (Tabela FIPE), estimativa de imposto de renda (sempre com o aviso de estimativa) | **7 por dia** | `nivelIA = 'media'`, `MEDIA_POR_DIA` |
 | **Pesada** | Várias buscas, compara lojas ou compatibilidade | tecnologia (celular, notebook, RAM, peça de PC), eletrodoméstico, impressora, passagem de viagem, conferir link de loja, venda de usado, compra que a pessoa pediu pra pesquisar | **1 por dia** | `fala.pesada`, `PESADA` |
 | **Não faz** | Fora do papel de parceiro financeiro | escolher roupa ou coisa pessoal, "o que comprar no shopping", procurar loja sem pedido, comprar ou reservar por você, curiosidade sem dinheiro (filme, futebol, capital) | nunca: indica Google ou outra IA, e ajuda no que é de dinheiro | `BALCONISTA`, `respostaForaDoFoco`, `respostaPapoLivre` |
 

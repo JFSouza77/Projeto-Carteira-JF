@@ -19,6 +19,8 @@ import { textoTendencia, quandoFoi, mercadoVelho } from '../mercado.js';
 const norm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   .replace(/\bc\.\s?a\.\s?o\.\s?s\b\.?/g, 'caos') // "C.A.O.S." = "caos"
   .replace(/%/g, ' porcento ') // "1%" vira "1 porcento" (a calculadora de juros precisa)
+  // 2.3.5.12: "Droga Líder", "Droga Raia" são farmácia (o "droga" sozinho é palavrão e sairia da frase)
+  .replace(/\bdroga (lider|mais|raia|sil|sao paulo|nossa|leste|bem|vida|popular|center|max|fuji)\b/g, 'droga$1').replace(/\bdrogasao paulo\b/g, 'drogaria sao paulo')
   // 2.3.5.7: "13º" e "parcela do 13" são o décimo terceiro, não R$ 13
   .replace(/(\d)\s?[º°ª]/g, '$1o').replace(/\b(do|o|meu|seu|nosso|primeira parcela do|segunda parcela do) 13\b(?! ?(reais|real|mil|conto|pila|porcento|o\b))/g, '$1 13o')
   .replace(/\braspadinha (de )?(gelo|morango|uva|limao|groselha|frutas?|maracuja|abacaxi)\b/g, 'sorvete de $2') // 2.3.0.1: essa raspadinha é de comer
@@ -30,7 +32,9 @@ const SINONIMOS = {
     'mercado', 'supermercado', 'feira', 'acougue', 'padaria', 'hortifruti', 'atacadao', 'compras do mes', 'cerveja', 'cervejas', 'refrigerante', 'refrigerantes', 'refri', 'coca', 'coca cola', 'bebida', 'bebidas',
     // 2.3.5.10 (JF, 19/11, no posto): refrigerante pelo nome e as redes de mercado
     'cocacola', 'coca-cola', 'coca zero', 'guarana', 'guarana antarctica', 'antarctica', 'fanta', 'sprite', 'pepsi', 'kuat', 'dolly', 'schweppes', 'h2oh', 'suco', 'agua mineral',
-    'carrefour', 'assai', 'mercado extra', 'pao de acucar', 'sams club', 'makro', 'supermercado dia', 'oba hortifruti', 'carone', 'perim', 'extrabom'],
+    'carrefour', 'assai', 'mercado extra', 'pao de acucar', 'sams club', 'makro', 'supermercado dia', 'oba hortifruti', 'carone', 'perim', 'extrabom', 'bh supermercados', 'supermercados bh', 'epa supermercados',
+    // 2.3.5.12 (JF): distribuidora e adega são bebida (de mercado)
+    'distribuidora', 'distribuidora de bebidas', 'adega', 'deposito de bebidas', 'conveniencia', 'loja de conveniencia', 'emporio', 'quitanda', 'mercearia', 'sacolao'],
   delivery: ['delivery', 'ifood', 'i food', 'rappi', 'pedido de comida', 'pedi comida', 'lanche em casa'],
   restaurante: ['restaurante', 'almoco', 'jantar', 'lanche', 'lanchonete', 'bar', 'cafe', 'pizza', 'pizzaria', 'hamburguer', 'sorvete', 'casquinha', 'acai', 'picole', 'sorveteria', 'milkshake', 'milk shake', 'gelato', 'acaiteria', 'cacau show', 'kopenhagen', 'chocolate', 'doceria', 'confeitaria', 'cafeteria', 'starbucks', 'habibs', 'giraffas', 'spoleto', 'outback', 'pastel', 'salgado', 'coxinha', 'mcdonalds', 'mcdonald s', 'mc donalds', 'burger king', 'subway', 'bobs'],
   transporte: ['transporte', 'uber', '99', 'onibus', 'metro', 'gasolina', 'combustivel', 'estacionamento', 'pedagio', 'taxi', 'carro', 'posto', 'etanol', 'alcool', 'diesel',
@@ -38,10 +42,10 @@ const SINONIMOS = {
     'gnv', 'gas natural', 'troca de oleo', 'oleo do carro', 'oleo da moto', 'lavagem', 'lavagem do carro', 'lava jato', 'lavajato', 'lava rapido', 'lava car', 'higienizacao',
     'pneu', 'pneus', 'borracharia', 'alinhamento', 'balanceamento', 'mecanico', 'oficina', 'revisao do carro', 'revisao da moto', 'freio', 'pastilha de freio', 'bateria do carro', 'filtro de oleo',
     'ipiranga', 'shell', 'posto br', 'posto ale', 'sem parar', 'conectcar', 'veloe', 'moto', 'motoboy'],
-  moradia: ['moradia', 'aluguel', 'condominio', 'iptu', 'casa', 'armario', 'guarda roupa', 'sofa', 'colchao', 'estante', 'rack', 'movel', 'moveis', 'cortina', 'geladeira', 'fogao', 'maquina de lavar', 'micro ondas'], // 2.3.4.9: móvel e eletrodoméstico são da casa
-  contas: ['contas', 'conta de luz', 'luz', 'agua', 'internet', 'celular', 'telefone', 'gas', 'energia', 'boleto', 'pensao alimenticia', 'pensao'], // 2.3.5.7: pensão paga é conta do mês
+  moradia: ['moradia', 'aluguel', 'condominio', 'iptu', 'casa', 'armario', 'guarda roupa', 'sofa', 'colchao', 'estante', 'rack', 'movel', 'moveis', 'cortina', 'geladeira', 'fogao', 'maquina de lavar', 'micro ondas', 'tok stok', 'mobly', 'madeiramadeira'], // 2.3.4.9: móvel e eletrodoméstico são da casa
+  contas: ['contas', 'conta de luz', 'luz', 'agua', 'internet', 'celular', 'telefone', 'gas', 'energia', 'boleto', 'pensao alimenticia', 'pensao', 'tv a cabo', 'sky', 'claro tv', 'recarga', 'recarga de celular', 'conta do celular'], // 2.3.5.7: pensão paga é conta do mês
   // 2.3.5.5 (Dona Débora): nome de farmácia também é Saúde
-  saude: ['saude', 'farmacia', 'drogaria', 'drogasil', 'raia', 'drogaraia', 'pague menos', 'panvel', 'pacheco', 'remedio', 'medico', 'consulta', 'exame', 'dentista', 'plano de saude', 'academia'],
+  saude: ['saude', 'farmacia', 'drogaria', 'drogasil', 'raia', 'drogaraia', 'pague menos', 'panvel', 'pacheco', 'farmacias', 'drogarias', 'drogazil', 'droga raia', 'droga lider', 'drogalider', 'drogamais', 'droga mais', 'drogasaopaulo', 'droganossa', 'drogaleste', 'drogabem', 'drogavida', 'drogapopular', 'drogacenter', 'drogamax', 'drogafuji', 'rede farma', 'redefarma', 'farmes', 'extrafarma', 'drogaria sao paulo', 'venancio', 'nissei', 'araujo', 'drogal', 'sao joao farmacias', 'farmacia popular', 'oculos de grau', 'otica', 'lente de contato', 'remedio', 'medico', 'consulta', 'exame', 'dentista', 'plano de saude', 'academia'],
   lazer: ['lazer', 'cinema', 'show', 'festa', 'viagem', 'passeio',
     // 2.3.0.1 (JF): as fezinhas (loteria) contam como Lazer
     'boliche', 'patinacao', 'pista de patinacao', 'patinacao no gelo', 'rinque', 'beisebol', 'jogo de beisebol', 'kart', 'paintball', 'fliperama', 'teatro', 'museu', // 2.3.4.7
@@ -54,11 +58,33 @@ const SINONIMOS = {
     'paramount plus', 'prime video', 'amazon prime', 'globoplay', 'apple tv', 'crunchyroll', 'spotify', 'deezer',
     'youtube premium', 'star plus', 'telecine', 'assinatura de filme'],
   compras: ['brinquedo', 'brinquedos', 'skate', 'patins', 'patinete', 'lego', 'boneca', // 2.3.5.2
-    'compras', 'roupa', 'roupas', 'camisa', 'camisa social', 'camiseta', 'calca', 'blusa', 'vestido', 'bermuda', 'saia', 'jaqueta', 'tenis', 'sapato', 'shopping', 'presente', 'eletronico', 'loja', 'shopee', 'amazon', 'mercado livre', 'shein', 'aliexpress',
-    // 2.3.5.10 (JF): lojas pelo nome (comprovante "C&A R$ 500" vira Compras, não Outros)
-    'c a', 'cea', 'renner', 'riachuelo', 'youcom', 'marisa', 'lojas avenida', 'avenida', 'pernambucanas', 'hering', 'zara', 'lojas leader', 'besni',
-    'centauro', 'netshoes', 'decathlon', 'havaianas', 'arezzo', 'boticario', 'o boticario', 'natura', 'avon', 'sephora', 'eudora', 'jequiti',
-    'americanas', 'lojas americanas', 'magalu', 'magazine luiza', 'casas bahia', 'ponto frio', 'kabum', 'fast shop', 'havan', 'tok stok', 'mobly', 'leroy merlin', 'temu'],
+    'compras', 'shopping', 'eletronico', 'eletronicos', 'loja', 'shopee', 'amazon', 'mercado livre', 'aliexpress', 'temu',
+    'americanas', 'lojas americanas', 'magalu', 'magazine luiza', 'casas bahia', 'ponto frio', 'kabum', 'fast shop', 'carrefour eletro',
+    // 2.3.5.12 (JF: "tem gente que fala iPhone 16 Pro Max de 256 GB"): celular, computador e afins pelo nome e pela marca
+    'comprei um celular', 'celular novo', 'iphone', 'samsung', 'galaxy', 'motorola', 'moto g', 'moto e', 'xiaomi', 'redmi', 'poco', 'realme', 'oppo', 'infinix',
+    'notebook', 'computador', 'macbook', 'tablet', 'ipad', 'fone de ouvido', 'airpods', 'jbl', 'caixa de som', 'smart tv', 'tv', 'televisao', 'carregador', 'capinha', 'pelicula'],
+  // 2.3.5.12: roupa e calçado ganham categoria própria (antes iam pra Compras), com as lojas e as marcas
+  roupas: ['roupa', 'roupas', 'camisa', 'camisa social', 'camiseta', 'calca', 'calca jeans', 'blusa', 'vestido', 'bermuda', 'short', 'saia', 'jaqueta', 'casaco', 'moletom',
+    'tenis', 'sapato', 'sandalia', 'chinelo', 'bota', 'meia', 'meias', 'cueca', 'calcinha', 'sutia', 'pijama', 'biquini', 'sunga', 'maio', 'bone', 'uniforme', 'roupa intima',
+    'c a', 'cea', 'renner', 'riachuelo', 'youcom', 'marisa', 'lojas avenida', 'avenida', 'pernambucanas', 'hering', 'zara', 'lojas leader', 'besni', 'torra torra', 'shein',
+    'centauro', 'netshoes', 'decathlon', 'havaianas', 'arezzo', 'schutz', 'melissa', 'nike', 'adidas', 'puma', 'olympikus', 'mizuno', 'fila', 'vans', 'converse', 'all star',
+    'lacoste', 'tommy', 'tommy hilfiger', 'calvin klein', 'levis', 'colcci', 'dzarm', 'cia maritima', 'brooksfield', 'aramis', 'osklen', 'animale', 'lupo', 'malwee'],
+  // 2.3.5.12: salão, barbeiro, unha, maquiagem, perfume
+  beleza: ['salao', 'salao de beleza', 'cabeleireiro', 'cabelereiro', 'cabeleleiro', 'corte de cabelo', 'barbeiro', 'barbearia', 'barba', 'manicure', 'pedicure', 'unha', 'unhas',
+    'sobrancelha', 'design de sobrancelha', 'depilacao', 'cilios', 'maquiagem', 'batom', 'rimel', 'perfume', 'perfumaria', 'skincare', 'hidratante', 'shampoo', 'condicionador',
+    'esmalte', 'tintura', 'progressiva', 'botox', 'estetica', 'massagem', 'spa', 'boticario', 'o boticario', 'natura', 'avon', 'sephora', 'eudora', 'jequiti', 'mary kay',
+    'quem disse berenice', 'mac', 'nivea', 'loreal', 'dove'],
+  // 2.3.5.12: joia, bijuteria, relógio e acessório
+  joias: ['joia', 'joias', 'bijuteria', 'bijuterias', 'brinco', 'brincos', 'colar', 'cordao', 'anel', 'aneis', 'alianca', 'aliancas', 'pulseira', 'pingente', 'piercing',
+    'relogio', 'relogios', 'oculos de sol', 'bolsa feminina', 'carteira de couro', 'cinto', 'vivara', 'pandora', 'monte carlo', 'life by vivara', 'rommanel',
+    'casio', 'technos', 'mondaine', 'orient', 'seiko', 'invicta', 'champion', 'ray ban', 'chilli beans'],
+  // 2.3.5.12: presente pra alguém (o quem e o lembrete vêm na leva "Vida e datas")
+  presentes: ['presente', 'presentes', 'presentinho', 'lembrancinha', 'lembrancinhas', 'amigo secreto', 'amigo oculto', 'cesta de natal', 'flores', 'floricultura', 'buque', 'cartao de presente', 'vale presente'],
+  // 2.3.5.12 (JF: "loja de construção, lojinha de 1,99, ferramenta, papelaria, chaveiro"): as coisas úteis do dia a dia
+  utilidades: ['utilidades', 'utilidade', 'material de construcao', 'loja de construcao', 'casa de construcao', 'construcao', 'cimento', 'tinta', 'tijolo', 'ferragem', 'ferragens',
+    'ferramenta', 'ferramentas', 'parafuso', 'parafusos', 'prego', 'pregos', 'furadeira', 'chave de fenda', 'martelo', 'lampada', 'pilha', 'pilhas', 'extensao', 'tomada', 'cadeado',
+    'chaveiro', 'copia de chave', 'chave extra', 'loja de 1,99', '1,99', 'loja de 1 99', 'loja de 199', '1 99', 'loja de 99', 'lojinha', 'loja de utilidades', 'bazar', 'armarinho', 'aviamentos',
+    'papelaria', 'caderno', 'caneta', 'canetas', 'lapis', 'xerox', 'impressao', 'grafica', 'assistencia tecnica', 'conserto de celular', 'havan', 'leroy merlin', 'telhanorte', 'c c', 'cec', 'casa e construcao'],
   // Educação (JF, 13/11): faculdade e bolsa de estudos
   // 2.3.4 (JF, num pet center): o que é do bicho vai pra Pet (ganha de Saúde quando o remédio é dele)
   pet: ['pet', 'petshop', 'pet shop', 'racao', 'petisco', 'areia de gato', 'areia do gato', 'tapete higienico', 'banho e tosa', 'tosa', 'veterinario', 'veterinaria', 'vet', 'vermifugo', 'antipulgas', 'antipulga', 'coleira', 'cobasi', 'petz', 'petlove', 'cachorro', 'cachorra', 'gato', 'gata', 'cao', 'filhote', 'remedio do cachorro', 'remedio do gato', 'remedio pro cachorro', 'remedio pro gato'],
@@ -261,8 +287,10 @@ function cuidadosDoGastoTudo(cat, intencao, expenses, incomes, mes) {
     } else if (n === 1 || n % 5 === 0) out.push(umaDe(BEBIDA_PIADA, n, ''));
   }
   // 2.3.4.3 (JF): compra demais no mês (a 5ª, 10ª… compra, ou a cada R$ 500): o Sacoleiro aparece, sem sermão
-  if (cat?.id === 'compras') {
-    const doMesC = expenses.filter(e => doMes(e) && e.categoryId === 'compras');
+  // 2.3.5.12: roupa e joia (categorias novas) também contam como compra pro Sacoleiro
+  const DE_COMPRA = ['compras', 'roupas', 'joias'];
+  if (DE_COMPRA.includes(cat?.id)) {
+    const doMesC = expenses.filter(e => doMes(e) && DE_COMPRA.includes(e.categoryId));
     const n = doMesC.length + 1;
     const antes = soma(doMesC), depois = antes + v;
     const passouValor = Math.floor(depois / 50000) > Math.floor(antes / 50000);
@@ -571,7 +599,11 @@ const BANCO_COM_NUMERO = /\b(c6( bank)?|99( ?pay| ?food)?|bs2|b3|n26)\b/g;
 function acharValor(t) {
   // 2.3.5.5 (Dona Débora, 18/11: "03/11 farmácia 45" virava R$ 3,00): data dd/mm não é valor
   t = String(t).replace(HORAS, ' ').replace(BANCO_COM_NUMERO, ' ').replace(/\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b/g, ' ')
-    .replace(/\b13 ?(o|º|°)(?=\s|$)|\b13 salario\b/g, ' decimo '); // 2.3.5.7: "recebi meu 13º de 2500" não é R$ 13
+    .replace(/\b13 ?(o|º|°)(?=\s|$)|\b13 salario\b/g, ' decimo ') // 2.3.5.7: "recebi meu 13º de 2500" não é R$ 13
+    // 2.3.5.12 (JF: "iPhone 16 Pro Max de 256 GB"): modelo e memória não são valor
+    .replace(/\b\d{1,4} ?(gb|tb|mb|mp|mah|hz|polegadas|pol)\b/g, ' ')
+    .replace(/\b(iphone|galaxy|redmi|redmi note|note|poco|moto [ge]|pixel|xiaomi|playstation|ps|xbox series|apple watch|watch|series) ?\d{1,3}( ?(pro|max|plus|ultra|mini|fe|lite|se|s|e))*\b/g, ' ')
+    .replace(/\b[sa]\d{2}( ?(ultra|plus|fe))?\b/g, ' ');
   // 2.3.5.9 (achado na pergunta do André): "2 mil", "1,5 mil", "3 mil e 500" viravam R$ 2,00 / R$ 1,50 / R$ 3,00
   const mil = t.match(/\b(\d{1,3}(?:[.,]\d{1,2})?) ?mil(?: e (\d{1,3}))?\b/);
   if (mil) return Math.round((Number(mil[1].replace(',', '.')) * 1000 + Number(mil[2] || 0)) * 100);
@@ -1177,6 +1209,16 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   if (POLITICA.test(t) && !r.valor && !/\b(imposto|inss|salario minimo|bolsa familia|aposentadoria|beneficio|irpf|imposto de renda)\b/.test(t)) return { ...r, categoria: null, intent: 'politica' };
   if (TIME_LADO.test(t) && !r.valor) return { ...r, categoria: null, intent: 'politica', time: true };
   if (PREVISAO_FORA.test(t) && !r.valor) return { ...r, categoria: null, intent: 'previsao_fora' };
+  // 2.3.5.12 (JF, 19/11: "ver se o C.A.O.S. está ajudando o imposto de renda direitinho; não é fazer, é ajudar a
+  // calcular junto e avisar que é estimativa"): antes caía em "entradas do mês"
+  if (/\b(imposto de renda|irpf|declaracao do ir|declarar o ir|declarar (o )?imposto|leao|malha fina|restituicao|aliquota do ir|isento do ir|isencao do ir)\b/.test(t)
+    && /\b(quanto|como|preciso|devo|tenho que|calcul\w*|declar\w*|pago|pagar|pagaria|vou pagar|restitui\w*|isent\w*|cai|caio|desconta|descontar|deduz\w*|ajuda)\b/.test(t)
+    && !/^(o que (e|eh|sao|significa))\b/.test(t)) return { ...r, categoria: null, intent: 'imposto_renda' };
+  // 2.3.5.12 (JF, 19/11: "os próximos gastos que eu lançar agora são da feira, coloca tudo na categoria tal"): modo lista
+  if (!r.valor && r.categoria && /\b(os proximos (gastos|lancamentos|valores)|as proximas (compras|notas)|tudo que eu (vou )?(lancar|anotar|mandar|passar)|daqui pra frente|a partir de agora|(esses|estes) (gastos|valores) (sao|e|foram))\b/.test(t)) {
+    return { ...r, intent: 'categoria_fixa' };
+  }
+  if (!r.valor && /^(pronto|acabou|terminei|finalizei|pode parar|chega|fim|so isso|era isso)[ .!]*$|\b(acabou|terminou|terminei) a (feira|lista|compra)\b/.test(t)) return { ...r, categoria: null, intent: 'categoria_fixa_fim' };
   // 2.3.5.9 (André, amigo do JF, 19/11: "ele calcula CDI? a conta rende todo dia, ele atualiza sozinho?"): "quanto rende
   // minha conta?" respondia o saldo e "quanto rende 5000 a 100% do CDI?" não era entendido
   {
@@ -2788,6 +2830,17 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         ? 'Eu torço pro seu bolso! 😄 Time eu não escolho: sou imparcial. Agora, se o ingresso ou a camisa do time tão pesando no mês, isso é comigo.'
         : 'Em política eu sou totalmente imparcial: não tenho lado, candidato nem partido. Meu negócio é o seu dinheiro. Se a dúvida for de imposto, benefício, salário mínimo ou como uma regra nova mexe no seu bolso, aí eu explico.',
         cru: true, sugestoes: ['O que é imposto de renda?', 'Quanto é o salário mínimo?'] };
+    case 'imposto_renda': { // 2.3.5.12 (JF): ajuda a estimar, mostra a conta e sempre avisa que é estimativa
+      const AVISO_IR = 'É só uma estimativa com o que você me contou: as regras e as tabelas mudam, e tem dedução (dependente, saúde, educação, previdência) que muda a conta. Não confie 100%: confira no simulador da Receita Federal (gov.br/receitafederal) ou com um contador.';
+      const perguntaIA = `Imposto de renda (pessoa física, Brasil, regras e tabela vigentes hoje). Pergunta da pessoa: "${intencao.t}".${intencao.valor ? ` Valor citado: ${formatBRL(intencao.valor)}.` : ''} Faça uma estimativa simples e mostre a conta em poucos passos (faixa, alíquota, parcela a deduzir); diga se a pessoa precisa declarar pelas regras atuais. Termine dizendo que é estimativa e que a conferência é no simulador da Receita. Resposta curta.`;
+      return { fato: `Calcular junto eu calculo, mas pra fazer a conta certa eu preciso da tabela do ano, que muda: com a IA online ligada, eu pesquiso e faço a estimativa passo a passo. Pra adiantar: separe o informe de rendimentos (do trabalho e do banco) e os recibos de saúde e educação, que podem diminuir o imposto. ${AVISO_IR}`,
+        cru: true, perguntaIA: perguntaIA.slice(0, 700), modoIA: 'pesquisa', depoisIA: AVISO_IR, sugestoes: ['O que é imposto de renda?', 'O que é restituição?'] };
+    }
+    case 'categoria_fixa': // 2.3.5.12: quem guarda o modo é o index.js (memória dele)
+      return { fato: `Fechado! Os próximos gastos vão todos pra ${intencao.categoria.name}. Pode mandar um atrás do outro, tipo "tomate 8" ou "carne 45". Quando acabar, diz "pronto".`, cru: true, sugestoes: ['Pronto'] };
+    case 'categoria_fixa_fim':
+      return intencao.tinhaFixa ? { fato: `Pronto! Parei de colocar tudo em ${intencao.tinhaFixa}. Agora volto a escolher a categoria por cada gasto.`, cru: true, sugestoes: ['Quanto gastei este mês?'] }
+        : { fato: 'Beleza! Se precisar de mais alguma coisa, é só chamar.', cru: true, sugestoes: [] };
     case 'recomecar': // 2.3.5.5 (Dona Débora): o caminho pro "Começar do zero", sem apagar nada daqui
       return { fato: 'Dá sim! Fica em ⚙️ Ajustes → Seus dados → Recomeçar → "Começar do zero": apaga todos os gastos e entradas e zera os saldos, mas deixa seus bancos e cartões cadastrados. Se quiser, antes faça um backup ali embaixo. Toca em Confirmar que eu te levo até lá.',
         cru: true, sugestoes: [], acao: { tipo: 'abrir_recomecar' } };

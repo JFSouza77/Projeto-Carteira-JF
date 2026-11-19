@@ -7,6 +7,23 @@
 
 export const NOVIDADES = Object.freeze([
   {
+    v: '2.3.6 Alfa',
+    data: '19/11/2026',
+    nome: 'Tudo no Lugar',
+    t: 'Cada gasto no lugar certo: categorias novas, lojas e marcas pelo nome e um jeito de passar a lista da feira.',
+    itens: [
+      '🗂️ Categorias novas: Roupas e calçados, Cuidados pessoais, Joias e acessórios, Presentes e Utilidades.',
+      '🔧 Utilidades: loja de construção, de 1,99, papelaria, chaveiro e ferramenta caem aqui sozinhos.',
+      '🏷️ Marca e loja pelo nome: anote "C&A 500", "iPhone 16 de 8000" ou "Droga Raia 40" e ele acerta.',
+      '🧺 Modo lista: no Chat, diga "os próximos gastos são da feira", mande um atrás do outro e diga "pronto".',
+      '🧾 Imposto de renda: no Chat, pergunte "quanto pago de imposto?"; ele estima junto e avisa que é estimativa.',
+    ],
+    qol: [
+      '💊 Farmácia pelo nome: Droga Raia, Drogasil, Droga Líder, Drogamais, Rede Farma e outras vão pra Saúde.',
+      '🥤 Distribuidora e adega: bebida comprada nelas vai pra Mercado.',
+    ],
+  },
+  {
     v: '2.3.5 Alfa',
     ate: '2.3.5.11',
     data: '17/11/2026',
@@ -28,7 +45,7 @@ export const NOVIDADES = Object.freeze([
       '🍻 Cuidado com o copo: anote a cerveja no Chat; ele brinca e, se o mês pesar, dá um conselho de graça.',
       '🚗 Carro e moto: no Chat, diga "quero trocar de carro"; ele pergunta e pesquisa pela tabela FIPE.',
       '📒 Lista do caderno: no Chat, mande um gasto atrás do outro; ele não mistura mais os valores.',
-      '🏷️ Loja pelo nome: anote "C&A 500" ou "troca de óleo 150" e ele já acerta a categoria.',
+      '😂 Piadas novas: no Chat, peça "conta uma piada" e ouça as do boleto que venceu e do salário que fugiu.',
     ],
   },
   {
