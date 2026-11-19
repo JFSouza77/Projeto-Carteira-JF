@@ -113,3 +113,21 @@ test('selo de criador: só a conta da lista CRIADOR_CONTAS, com a senha certa (1
   assert.equal(outro.status, 200);
   assert.equal(outro.j.criador, undefined); // apelido parecido com o do JF, sem estar na lista: não vale nada
 });
+
+// 2.3.5.6 (JF, 19/11): excluir a conta pede apelido e senha, apaga conta e dados, e a sessão aberta deixa de valer
+test('excluir conta: pede a senha, apaga conta e dados, e as sessões param de valer', async () => {
+  const env = envBase();
+  const c = await chamar(env, '/conta/criar', { apelido: 'apaga.teste', senha: A('senha-de-mentira') });
+  const outra = await chamar(env, '/conta/entrar', { apelido: 'apaga.teste', senha: A('senha-de-mentira') });
+  assert.equal((await chamar(env, '/sync', { desde: 0, mudancas: [{ store: 'expenses', id: 'g1', em: 1000, rec: C('gasto 1') }] }, c.j.token)).status, 200);
+  assert.ok(env.CARTEIRA_KV.m.has('dados:apaga.teste'));
+  assert.equal((await chamar(env, '/conta/apagar', { apelido: 'apaga.teste', senha: A('errada123') }, c.j.token)).status, 401);
+  assert.ok(env.CARTEIRA_KV.m.has('conta:apaga.teste'), 'senha errada não apaga');
+  assert.equal((await chamar(env, '/conta/apagar', { apelido: 'apaga.teste', senha: A('senha-de-mentira') }, c.j.token)).status, 200);
+  assert.ok(!env.CARTEIRA_KV.m.has('conta:apaga.teste') && !env.CARTEIRA_KV.m.has('dados:apaga.teste'));
+  assert.equal((await chamar(env, '/sync', { desde: 0, mudancas: [] }, outra.j.token)).status, 401, 'sessão de outro aparelho não vale mais');
+  assert.equal((await chamar(env, '/conta/entrar', { apelido: 'apaga.teste', senha: A('senha-de-mentira') })).status, 401);
+  // criou de novo com o mesmo apelido: a sessão antiga não abre a conta nova
+  await chamar(env, '/conta/criar', { apelido: 'apaga.teste', senha: A('outra-senha') });
+  assert.equal((await chamar(env, '/sync', { desde: 0, mudancas: [] }, outra.j.token)).status, 401);
+});

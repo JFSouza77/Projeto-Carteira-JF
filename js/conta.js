@@ -84,6 +84,20 @@ export async function contaDona() {
   return db.getMeta('contaDona', null);
 }
 
+/**
+ * 2.3.5.6 (JF, 19/11, pela Dona Débora, que criou duas contas sem querer): exclui a conta no servidor (pede apelido
+ * e senha de novo). O que está neste aparelho continua aqui; se era a conta aberta, sai dela.
+ */
+export async function apagarConta(base, { apelido, senha }) {
+  const { acesso } = await derivarChaves(apelido, senha);
+  const c = await contaAtual();
+  const r = await chamar(base, '/conta/apagar', { apelido, senha: acesso }, c?.token);
+  const ap = String(apelido).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  if (c?.apelido === ap) await guardar(null, null);
+  if ((await contaDona()) === ap) await db.setMeta('contaDona', null);
+  return r;
+}
+
 export async function sair(base) {
   const c = await contaAtual();
   if (c?.token) await chamar(base, '/conta/sair', {}, c.token).catch(() => {});

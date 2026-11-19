@@ -1712,6 +1712,45 @@ function bind() {
     renderConta();
   });
   $('#conta-sync').addEventListener('click', () => sincronizarAgora({ avisar: true }));
+  // 2.3.5.6 (JF, 19/11): excluir conta. Pede apelido e senha (os campos de Entrar), confirma 2 vezes; os dados deste
+  // aparelho ficam. Dentro da conta, o botão leva pra esses campos com o apelido já preenchido.
+  $('#conta-apagar-esta').addEventListener('click', async () => {
+    const c = await conta.contaAtual().catch(() => null);
+    if (!confirm('Excluir sua conta? Primeiro você sai dela neste aparelho; depois digita a senha pra confirmar a exclusão.')) return;
+    await conta.sair(servidor());
+    await marcarSelo(false);
+    renderConta();
+    $('#conta-apelido').value = c?.apelido || '';
+    $('#conta-senha').focus();
+    toast('Digite a senha da conta e toque em "Excluir uma conta".');
+  });
+  $('#conta-apagar').addEventListener('click', async () => {
+    const err = $('#conta-erro');
+    err.hidden = true;
+    const apelido = $('#conta-apelido').value.trim();
+    const senha = $('#conta-senha').value;
+    if (!servidor()) { err.textContent = 'Primeiro coloque o endereço do servidor do C.A.O.S. Finanças em "IA online e servidor".'; err.hidden = false; return; }
+    if (!normalizarApelido(apelido) || senha.length < 6) {
+      err.textContent = 'Pra excluir, escreva aqui em cima o apelido e a senha da conta que você quer excluir.';
+      err.hidden = false; return;
+    }
+    if (!confirm(`Excluir a conta "${apelido}"? A cópia dela no servidor é apagada e não dá pra desfazer. O que está neste aparelho continua aqui.`)) return;
+    if (!confirm('Tem certeza? Outros aparelhos que usam essa conta param de sincronizar.')) return;
+    const b = $('#conta-apagar');
+    b.disabled = true;
+    try {
+      await conta.apagarConta(servidor(), { apelido, senha });
+      $('#conta-senha').value = '';
+      $('#conta-apelido').value = '';
+      toast(`Conta "${apelido}" excluída. Seus dados neste aparelho continuam aqui.`);
+    } catch (e) {
+      err.textContent = e.message;
+      err.hidden = false;
+    } finally {
+      b.disabled = false;
+      renderConta();
+    }
+  });
   $('#conta-sair').addEventListener('click', async () => {
     if (!confirm('Sair da conta neste aparelho? Seus dados continuam aqui e na conta; só param de sincronizar.')) return;
     await conta.sair(servidor());
