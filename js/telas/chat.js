@@ -7,7 +7,7 @@ import { FORMAS, formaPara, rostoDaForma } from '../avatar.js';
 import { IDENTIDADE, SUGESTOES, comoChamar, conversar, curiosidadeDoGasto, humorParaIA, emocaoDoMomento, rostoAvulso } from '../caos/index.js';
 import { accountLabel, createTransferencia, depoisDoSaldo, marcarRecebido, editarConta, editarLancamento, formatBRL, sugerirCategoria, toISODate } from '../engine.js';
 import * as conta from '../conta.js';
-import { assuntoDeDinheiro, lerPagamento, perguntaDePesquisaGeral, MEDIA_ESGOTADA, MEDIA_POR_DIA, PESADA_ESGOTADA, PESADA_USADA, respostaAcordando, respostaTextoLongo, textoLongoDemais, respostaForaDoFoco, respostaPapoLivre, seguirPagamento } from '../caos/conversa.js';
+import { assuntoDeDinheiro, categoriaPeloNome, lerPagamento, perguntaDePesquisaGeral, MEDIA_ESGOTADA, MEDIA_POR_DIA, PESADA_ESGOTADA, PESADA_USADA, respostaAcordando, respostaTextoLongo, textoLongoDemais, respostaForaDoFoco, respostaPapoLivre, seguirPagamento } from '../caos/conversa.js';
 import * as db from '../db.js';
 import { falar, falaTerminou } from '../voz.js';
 import { fraseDoPrint, resumoDoPrint } from '../caos/ofertas.js';
@@ -587,13 +587,15 @@ export async function fotoNoChat(arquivo, legenda = '') {
     addMsg({ de: 'caos', texto: 'Lendo a foto com a IA…', temp: true });
     const r = await ia.lerImagem(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob), categorias: state.categories, legenda });
     state.chat = state.chat.filter(m => !m.temp);
-    const cat = catById(r.categoria) || catById('outros');
+    // 2.3.5.10 (JF: "gastou R$ 500 na C&A, é loja de roupa"): a IA não soube a categoria? o nome da loja decide
+    const peloNome = id => (id && id !== 'outros' ? id : null);
+    const cat = catById(peloNome(r.categoria)) || catById(peloNome(categoriaPeloNome(r.estabelecimento || '', state.categories))) || catById(r.categoria) || catById('outros');
     // vários pagamentos no mesmo print (14/11, JF: "leu os 5 e só lançou 1"): um Confirmar lança todos
     const itens = Array.isArray(r.itens) ? r.itens.filter(x => x.valor_centavos > 0) : [];
     if (itens.length > 1) {
       const hoje = toISODate();
       const lista = itens.map(x => {
-        const c = catById(x.categoria) || catById(sugerirCategoria(x.estabelecimento, state.expenses)?.categoryId) || catById('outros');
+        const c = catById(peloNome(x.categoria)) || catById(sugerirCategoria(x.estabelecimento, state.expenses)?.categoryId) || catById(peloNome(categoriaPeloNome(x.estabelecimento || '', state.categories))) || catById('outros');
         return { amountCents: x.valor_centavos, categoryId: c.id, date: /^\d{4}-\d{2}-\d{2}$/.test(x.data || '') ? x.data : hoje, note: (x.estabelecimento || '').slice(0, 120) };
       });
       const total = lista.reduce((t, x) => t + x.amountCents, 0);
