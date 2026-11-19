@@ -27,10 +27,17 @@ const norm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLow
 // Palavras que levam a cada categoria (além do próprio nome dela)
 const SINONIMOS = {
   mercado: ['peixe', 'peixaria', 'carne', 'frango', // 2.3.5.2
-    'mercado', 'supermercado', 'feira', 'acougue', 'padaria', 'hortifruti', 'atacadao', 'compras do mes', 'cerveja', 'cervejas', 'refrigerante', 'refrigerantes', 'refri', 'coca', 'coca cola', 'bebida', 'bebidas'],
+    'mercado', 'supermercado', 'feira', 'acougue', 'padaria', 'hortifruti', 'atacadao', 'compras do mes', 'cerveja', 'cervejas', 'refrigerante', 'refrigerantes', 'refri', 'coca', 'coca cola', 'bebida', 'bebidas',
+    // 2.3.5.10 (JF, 19/11, no posto): refrigerante pelo nome e as redes de mercado
+    'cocacola', 'coca-cola', 'coca zero', 'guarana', 'guarana antarctica', 'antarctica', 'fanta', 'sprite', 'pepsi', 'kuat', 'dolly', 'schweppes', 'h2oh', 'suco', 'agua mineral',
+    'carrefour', 'assai', 'mercado extra', 'pao de acucar', 'sams club', 'makro', 'supermercado dia', 'oba hortifruti', 'carone', 'perim', 'extrabom'],
   delivery: ['delivery', 'ifood', 'i food', 'rappi', 'pedido de comida', 'pedi comida', 'lanche em casa'],
-  restaurante: ['restaurante', 'almoco', 'jantar', 'lanche', 'lanchonete', 'bar', 'cafe', 'pizza', 'pizzaria', 'hamburguer', 'sorvete', 'casquinha', 'acai', 'pastel', 'salgado', 'coxinha', 'mcdonalds', 'mcdonald s', 'mc donalds', 'burger king', 'subway', 'bobs'],
-  transporte: ['transporte', 'uber', '99', 'onibus', 'metro', 'gasolina', 'combustivel', 'estacionamento', 'pedagio', 'taxi', 'carro', 'posto', 'etanol', 'alcool', 'diesel'],
+  restaurante: ['restaurante', 'almoco', 'jantar', 'lanche', 'lanchonete', 'bar', 'cafe', 'pizza', 'pizzaria', 'hamburguer', 'sorvete', 'casquinha', 'acai', 'picole', 'sorveteria', 'milkshake', 'milk shake', 'gelato', 'acaiteria', 'cacau show', 'kopenhagen', 'chocolate', 'doceria', 'confeitaria', 'cafeteria', 'starbucks', 'habibs', 'giraffas', 'spoleto', 'outback', 'pastel', 'salgado', 'coxinha', 'mcdonalds', 'mcdonald s', 'mc donalds', 'burger king', 'subway', 'bobs'],
+  transporte: ['transporte', 'uber', '99', 'onibus', 'metro', 'gasolina', 'combustivel', 'estacionamento', 'pedagio', 'taxi', 'carro', 'posto', 'etanol', 'alcool', 'diesel',
+    // 2.3.5.10 (JF, no posto): cuidados com o carro e a moto também são Transporte
+    'gnv', 'gas natural', 'troca de oleo', 'oleo do carro', 'oleo da moto', 'lavagem', 'lavagem do carro', 'lava jato', 'lavajato', 'lava rapido', 'lava car', 'higienizacao',
+    'pneu', 'pneus', 'borracharia', 'alinhamento', 'balanceamento', 'mecanico', 'oficina', 'revisao do carro', 'revisao da moto', 'freio', 'pastilha de freio', 'bateria do carro', 'filtro de oleo',
+    'ipiranga', 'shell', 'posto br', 'posto ale', 'sem parar', 'conectcar', 'veloe', 'moto', 'motoboy'],
   moradia: ['moradia', 'aluguel', 'condominio', 'iptu', 'casa', 'armario', 'guarda roupa', 'sofa', 'colchao', 'estante', 'rack', 'movel', 'moveis', 'cortina', 'geladeira', 'fogao', 'maquina de lavar', 'micro ondas'], // 2.3.4.9: móvel e eletrodoméstico são da casa
   contas: ['contas', 'conta de luz', 'luz', 'agua', 'internet', 'celular', 'telefone', 'gas', 'energia', 'boleto', 'pensao alimenticia', 'pensao'], // 2.3.5.7: pensão paga é conta do mês
   // 2.3.5.5 (Dona Débora): nome de farmácia também é Saúde
@@ -47,7 +54,11 @@ const SINONIMOS = {
     'paramount plus', 'prime video', 'amazon prime', 'globoplay', 'apple tv', 'crunchyroll', 'spotify', 'deezer',
     'youtube premium', 'star plus', 'telecine', 'assinatura de filme'],
   compras: ['brinquedo', 'brinquedos', 'skate', 'patins', 'patinete', 'lego', 'boneca', // 2.3.5.2
-    'compras', 'roupa', 'roupas', 'camisa', 'camisa social', 'camiseta', 'calca', 'blusa', 'vestido', 'bermuda', 'saia', 'jaqueta', 'tenis', 'sapato', 'shopping', 'presente', 'eletronico', 'loja', 'shopee', 'amazon', 'mercado livre', 'shein', 'aliexpress'],
+    'compras', 'roupa', 'roupas', 'camisa', 'camisa social', 'camiseta', 'calca', 'blusa', 'vestido', 'bermuda', 'saia', 'jaqueta', 'tenis', 'sapato', 'shopping', 'presente', 'eletronico', 'loja', 'shopee', 'amazon', 'mercado livre', 'shein', 'aliexpress',
+    // 2.3.5.10 (JF): lojas pelo nome (comprovante "C&A R$ 500" vira Compras, não Outros)
+    'c a', 'cea', 'renner', 'riachuelo', 'youcom', 'marisa', 'lojas avenida', 'avenida', 'pernambucanas', 'hering', 'zara', 'lojas leader', 'besni',
+    'centauro', 'netshoes', 'decathlon', 'havaianas', 'arezzo', 'boticario', 'o boticario', 'natura', 'avon', 'sephora', 'eudora', 'jequiti',
+    'americanas', 'lojas americanas', 'magalu', 'magazine luiza', 'casas bahia', 'ponto frio', 'kabum', 'fast shop', 'havan', 'tok stok', 'mobly', 'leroy merlin', 'temu'],
   // Educação (JF, 13/11): faculdade e bolsa de estudos
   // 2.3.4 (JF, num pet center): o que é do bicho vai pra Pet (ganha de Saúde quando o remédio é dele)
   pet: ['pet', 'petshop', 'pet shop', 'racao', 'petisco', 'areia de gato', 'areia do gato', 'tapete higienico', 'banho e tosa', 'tosa', 'veterinario', 'veterinaria', 'vet', 'vermifugo', 'antipulgas', 'antipulga', 'coleira', 'cobasi', 'petz', 'petlove', 'cachorro', 'cachorra', 'gato', 'gata', 'cao', 'filhote', 'remedio do cachorro', 'remedio do gato', 'remedio pro cachorro', 'remedio pro gato'],
@@ -85,6 +96,12 @@ export const CHIPS_AUXILIO = ['Transporte', 'Alimentação', 'Refeição', 'Mora
 export function tipoDeAuxilio(texto) {
   const t = norm(texto);
   return (TIPOS_AUXILIO.find(([, re]) => re.test(t)) || [])[0] || null;
+}
+
+/** 2.3.5.10: categoria pelo nome (loja, produto) pra UI usar no Lançar e no comprovante; null se não sabe. */
+export function categoriaPeloNome(texto, categorias) {
+  const t = norm(texto);
+  return t ? acharCategoria(t, categorias)?.id || null : null;
 }
 
 function acharCategoria(t, categorias) {

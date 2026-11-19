@@ -13,7 +13,7 @@ import {
   valorProprio, dividirIgual, juntarNomes, serieMensal, gastoPorDia, createTransferencia, TIPOS_CONTA, FORMAS_PAGAMENTO, agruparPorBanco, comReforco, aReceber, marcarRecebido, mensagemCobranca, calendarioOfensiva, editarLancamento, depoisDoSaldo, folgaDoPiso, diferencaDoSaldo, fatoDaSemana, podeGastar, resumoEntradas, progressoOrcamentoDiario, mascaraCentavos, valorForaDoComum, editarConta, rendimentoEstimado, raioXCartao, simularCompra, ofensiva, MARCOS_OFENSIVA,
 } from './engine.js';
 import { reagir, conversar, falaAvulsa, MOODS, DEFAULT_MOOD, CAOS_VERSAO, SUGESTOES, IDENTIDADE, memoriaInicial, emocaoDoMomento, rostoAvulso, rostoEspantado, nomeAlerta, diaEspecial , comoChamar } from './caos/index.js';
-import { extrairNome, textoMeta, calcularJuros } from './caos/conversa.js';
+import { extrairNome, textoMeta, calcularJuros, categoriaPeloNome } from './caos/conversa.js';
 import { GLOSSARIO, ATUALIZADO_EM, GLOS_TEMAS, temaDoTermo } from './caos/glossario.js';
 import { fraseDoPrint, resumoDoPrint } from './caos/ofertas.js';
 import { corCategoria, corFonte, corForma, temaBanco } from './cores.js';
@@ -1247,7 +1247,9 @@ function sugerirPelaDescricao() {
   if (state.kind !== 'gasto') return;
   const aviso = $('#cat-sugestao');
   if (state.selectedCategory && !state.catSugerida) return;
-  const s2 = sugerirCategoria($('#note').value, state.expenses);
+  // 2.3.5.10 (JF): sem histórico, o nome da loja ou do produto ("C&A", "troca de óleo") já diz a categoria
+  const porNome = categoriaPeloNome($('#note').value, state.categories);
+  const s2 = sugerirCategoria($('#note').value, state.expenses) || (porNome && porNome !== 'outros' ? { categoryId: porNome } : null);
   if (!s2) {
     if (state.catSugerida) { state.selectedCategory = null; state.catSugerida = false; renderLancar(); }
     aviso.hidden = true;
