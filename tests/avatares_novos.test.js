@@ -132,12 +132,12 @@ test('lazer: beisebol, boliche e patinação', async () => {
   assert.notEqual(fala('quem ganhou o jogo de beisebol ontem?').intent, 'plano_lazer');
 });
 
-test('2.3.4.9: comprei camisa vai pra Compras; armário pra Moradia com "investimento", sem aviso de conta do mês', async () => {
+test('2.3.4.9 (2.3.5.12: roupa tem categoria própria): comprei camisa vai pra Roupas; armário pra Moradia com "investimento", sem aviso de conta do mês', async () => {
   const { conversar } = await import('../js/caos/index.js');
   const { DEFAULT_CATEGORIES } = await import('../js/engine.js');
   const categories = DEFAULT_CATEGORIES.map(c => ({ ...c }));
   const fala = f => conversar(f, { expenses: [], incomes: [], accounts: [{ id: 'c', tipo: 'corrente', name: 'Inter' }], categories }, { mood: 'suave', memory: null, now: Date.now(), perfil: { apelido: 'Ana' } }).fala;
-  assert.equal(fala('comprei uma camisa social de 120 no pix').acao.categoryId, 'compras');
+  assert.equal(fala('comprei uma camisa social de 120 no pix').acao.categoryId, 'roupas');
   const a = fala('comprei um armário pra minha casa de 800 no pix');
   assert.equal(a.acao.categoryId, 'moradia');
   assert.match(a.texto, /investimento/);

@@ -15,6 +15,12 @@ export const DEFAULT_CATEGORIES = Object.freeze([
   { id: 'jogos', name: 'Jogos', emoji: '🎮', budgetCents: 0 }, // 15/11 (JF): moedas e gastos de jogo (Robux, V-Bucks, skins…)
   { id: 'streaming', name: 'Streaming', emoji: '📺', budgetCents: 0 },
   { id: 'compras', name: 'Compras', emoji: '🛍️', budgetCents: 0 },
+  // 2.3.5.12 (JF, 19/11: "categoria utilidades… marcas de roupa, de relógio… é refinamento"): 5 categorias (20, regra do 0 ou 5)
+  { id: 'roupas', name: 'Roupas e calçados', emoji: '👕', budgetCents: 0 },
+  { id: 'beleza', name: 'Cuidados pessoais', emoji: '💇', budgetCents: 0 },
+  { id: 'joias', name: 'Joias e acessórios', emoji: '💍', budgetCents: 0 },
+  { id: 'presentes', name: 'Presentes', emoji: '🎁', budgetCents: 0 },
+  { id: 'utilidades', name: 'Utilidades', emoji: '🔧', budgetCents: 0 },
   { id: 'educacao', name: 'Educação', emoji: '🎓', budgetCents: 0 }, // 13/11 (JF): faculdade, curso, escola, material
   { id: 'outros', name: 'Outros', emoji: '📦', budgetCents: 0 },
 ].map(c => Object.freeze(c)));

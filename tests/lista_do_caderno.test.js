@@ -23,7 +23,7 @@ test('gasto novo completo não vira resposta da pergunta pendente', () => {
 });
 
 test('a resposta de verdade ainda completa a pergunta pendente', () => {
-  let r = conversar('cabeleireiro 50', d, { now });
+  let r = conversar('quermesse 50', d, { now }); // 2.3.5.12: cabeleireiro agora tem categoria (Cuidados pessoais)
   assert.match(r.fala.texto, /Foi em quê/);
   r = conversar('beleza', d, { now, memory: r.memoria });
   assert.match(r.fala.texto, /R\$\s50,00.*Pagou como/, r.fala.texto);

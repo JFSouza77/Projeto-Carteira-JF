@@ -119,7 +119,7 @@ conta PJ, MEI e fluxo de caixa. Próximo passo quando o JF der o ok: a etapa 1.
 O C.A.O.S. tem que entender a vida em volta do dinheiro: pra quem foi, de quem veio, que data é, que conquista foi.
 Pedido grande; nesta semana (até 25/11) a Carteira só recebe ajuste pontual. Ordem recomendada:
 
-1. **Categorias novas:** Presentes 🎁, Cuidados pessoais 💇 (salão, barbeiro, manicure, maquiagem, perfume, skincare) e
+1. ✅ (2.3.6, 19/11; as 5 entraram, com Roupas e Utilidades) **Categorias novas:** Presentes 🎁, Cuidados pessoais 💇 (salão, barbeiro, manicure, maquiagem, perfume, skincare) e
    Joias e acessórios 💍 (brinco, colar, cordão, anel, pulseira, relógio, bijuteria). Roupa continua em Compras, com o
    tema "fashion". Lista final de 20 categorias (regra do 0 ou 5).
 2. **Pra quem e de quem:** família e pessoas (mãe, pai, avó, avô, tio, tia, primo, prima, irmão, irmã, filho, filha,
