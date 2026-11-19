@@ -555,6 +555,9 @@ function acharValor(t) {
   // 2.3.5.5 (Dona Débora, 18/11: "03/11 farmácia 45" virava R$ 3,00): data dd/mm não é valor
   t = String(t).replace(HORAS, ' ').replace(BANCO_COM_NUMERO, ' ').replace(/\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b/g, ' ')
     .replace(/\b13 ?(o|º|°)(?=\s|$)|\b13 salario\b/g, ' decimo '); // 2.3.5.7: "recebi meu 13º de 2500" não é R$ 13
+  // 2.3.5.9 (achado na pergunta do André): "2 mil", "1,5 mil", "3 mil e 500" viravam R$ 2,00 / R$ 1,50 / R$ 3,00
+  const mil = t.match(/\b(\d{1,3}(?:[.,]\d{1,2})?) ?mil(?: e (\d{1,3}))?\b/);
+  if (mil) return Math.round((Number(mil[1].replace(',', '.')) * 1000 + Number(mil[2] || 0)) * 100);
   const m = t.match(/(?:r\$\s?)?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(reais|real|conto|pila|r\$)?/);
   return m ? parseAmount(m[1]) : null;
 }
@@ -1157,6 +1160,15 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   if (POLITICA.test(t) && !r.valor && !/\b(imposto|inss|salario minimo|bolsa familia|aposentadoria|beneficio|irpf|imposto de renda)\b/.test(t)) return { ...r, categoria: null, intent: 'politica' };
   if (TIME_LADO.test(t) && !r.valor) return { ...r, categoria: null, intent: 'politica', time: true };
   if (PREVISAO_FORA.test(t) && !r.valor) return { ...r, categoria: null, intent: 'previsao_fora' };
+  // 2.3.5.9 (André, amigo do JF, 19/11: "ele calcula CDI? a conta rende todo dia, ele atualiza sozinho?"): "quanto rende
+  // minha conta?" respondia o saldo e "quanto rende 5000 a 100% do CDI?" não era entendido
+  {
+    const pctCdi = t.match(/\b(\d{1,3}(?:[.,]\d{1,2})?) ?porcento do cdi\b/);
+    const pergRende = /\b(quanto (rende|renderia|ta rendendo|esta rendendo|vai render|rendeu)|rendimento d[aoe]s? (minha|meu|minhas|meus|conta|contas|banco|caixinha|cofrinho)|(minha|meu) (conta|banco|caixinha|cofrinho|dinheiro|saldo) (rende|ta rendendo|esta rendendo)|rende (todo dia|por dia|sozinho)|atualiza (o saldo )?sozinho)\b/.test(t);
+    if ((pergRende || pctCdi) && !/\b(gastei|paguei|recebi|comprei)\b/.test(t)) {
+      return { ...r, categoria: null, intent: 'rende_conta', pctCdi: pctCdi ? Number(pctCdi[1].replace(',', '.')) : null };
+    }
+  }
   if (CURIOSIDADE_CARA.test(t) && !registra) {
     return { ...r, categoria: null, intent: 'curiosidade_cara' };
   }
@@ -2730,6 +2742,27 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
     case 'recomecar': // 2.3.5.5 (Dona Débora): o caminho pro "Começar do zero", sem apagar nada daqui
       return { fato: 'Dá sim! Fica em ⚙️ Ajustes → Seus dados → Recomeçar → "Começar do zero": apaga todos os gastos e entradas e zera os saldos, mas deixa seus bancos e cartões cadastrados. Se quiser, antes faça um backup ali embaixo. Toca em Confirmar que eu te levo até lá.',
         cru: true, sugestoes: [], acao: { tipo: 'abrir_recomecar' } };
+    case 'rende_conta': { // 2.3.5.9 (pergunta do André): estimativa pelo CDI, sem mexer no saldo (o motor nunca muda o saldo)
+      const cdi = Number(dados.mercado?.cdi?.valor) || Number(dados.perfil?.cdiAnualPct) || null;
+      const est = (saldo, pct) => {
+        const anual = (cdi / 100) * (pct / 100);
+        return { mes: Math.round(saldo * (Math.pow(1 + anual, 1 / 12) - 1)), dia: Math.round(saldo * (Math.pow(1 + anual, 1 / 252) - 1)) };
+      };
+      const AVISO_RENDE = 'É estimativa: só rende em dia útil, e o banco desconta o imposto de renda (de 22,5% a 15%, caindo com o tempo). Eu não mexo no seu saldo sozinho, porque não leio o banco: quando quiser, atualize o saldo em 🏦 Contas ou anote o rendimento em Entrada → Rendimentos.';
+      if (!cdi) return { fato: `Calculo sim! Só me falta o CDI de hoje: ele aparece em 🏦 Contas quando o app busca os números do mercado (com a IA online ligada), ou você informa lá. ${AVISO_RENDE}`, cru: true, sugestoes: ['O que é CDI?'] };
+      if (intencao.valor && intencao.pctCdi) {
+        const e = est(intencao.valor, intencao.pctCdi);
+        return { fato: `${formatBRL(intencao.valor)} a ${fmtPct(intencao.pctCdi)} do CDI (CDI em ${fmtPct(cdi)} ao ano) rendem uns ${formatBRL(e.mes)} por mês, perto de ${formatBRL(e.dia)} por dia útil, antes do imposto. ${AVISO_RENDE}`, cru: true, sugestoes: ['O que é CDI?', 'Quanto rende minha conta?'] };
+      }
+      const rendem = accounts.filter(a => a.rendeCdiPct > 0);
+      if (!rendem.length) return { fato: `Calculo sim, com o CDI em ${fmtPct(cdi)} ao ano. Mas nenhuma conta sua está marcada como "rende % do CDI". Em 🏦 Contas, toque no banco, depois em Editar, e preencha "Quanto rende (% do CDI)" (tipo 100). Aí eu mostro quanto rende por mês e por dia. ${AVISO_RENDE}`, cru: true, sugestoes: ['O que é CDI?'] };
+      const linhas = rendem.map(a => {
+        const saldo = accountBalance(a, expenses, incomes, dados.transferencias || []);
+        const e = est(Math.max(0, saldo), a.rendeCdiPct);
+        return `${accountLabel(a)} (${fmtPct(a.rendeCdiPct)} do CDI): uns ${formatBRL(e.mes)} por mês, perto de ${formatBRL(e.dia)} por dia útil`;
+      });
+      return { fato: `Com o CDI em ${fmtPct(cdi)} ao ano: ${linhas.join('; ')}. ${AVISO_RENDE}`, cru: true, sugestoes: ['O que é CDI?'] };
+    }
     case 'curiosidade_cara': { // 2.3.5.4 (JF): brinca, sem gastar IA, e puxa pro bolso
       const fala = umaDe(CURIOSIDADE_RESPOSTAS, (intencao.t || '').length, '');
       return { fato: fala, cru: true, sugestoes: ['Quanto sobra este mês?', 'Quero juntar dinheiro', 'Conta uma piada'] };
