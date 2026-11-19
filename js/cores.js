@@ -9,7 +9,7 @@ const CATEGORIA = Object.freeze(Object.fromEntries(
 ));
 
 const FONTE = Object.freeze({
-  salario: 'var(--ok)', freela: 'var(--cyan)', rendimento: 'var(--accent)', presente: 'var(--violet)', outros: 'var(--indigo)',
+  salario: 'var(--ok)', aposentadoria: 'var(--ok)', beneficio: 'var(--cyan)', decimo: 'var(--accent)', ferias: 'var(--cyan)', fgts: 'var(--indigo)', freela: 'var(--cyan)', rendimento: 'var(--accent)', presente: 'var(--violet)', outros: 'var(--indigo)',
 });
 
 const FORMA = Object.freeze({ pix: 'var(--cyan)', credito: 'var(--violet)', debito: 'var(--indigo)', dinheiro: 'var(--ok)' });

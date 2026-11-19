@@ -469,6 +469,12 @@ export function detectMonthClose({ expenses, categories, currentMonth }) {
 
 export const INCOME_SOURCES = Object.freeze([
   { id: 'salario', name: 'Salário', emoji: '💼' },
+  // 2.3.5.7 (JF, 19/11, pela Dona Débora, que recebe a aposentadoria do marido): entradas que faltavam (regra do 0 ou 5: 10)
+  { id: 'aposentadoria', name: 'Aposentadoria / pensão', emoji: '🧓' },
+  { id: 'beneficio', name: 'Auxílio / benefício', emoji: '🤝' },
+  { id: 'decimo', name: '13º salário', emoji: '🎄' },
+  { id: 'ferias', name: 'Férias / PLR', emoji: '🏖️' },
+  { id: 'fgts', name: 'FGTS', emoji: '🏦' },
   { id: 'freela', name: 'Freela / extra', emoji: '🛠️' },
   { id: 'rendimento', name: 'Rendimentos', emoji: '📈' },
   { id: 'presente', name: 'Presente / Pix recebido', emoji: '🎁' },
