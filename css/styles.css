@@ -1580,3 +1580,5 @@ li.feito .passo-n { background: transparent; color: var(--ok); box-shadow: inset
 .alert-list li.novo-aviso .ico { color: var(--caos); }
 .novo-aviso-botoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
 .novo-aviso-botoes .link-btn { background: none; border: 0; color: var(--muted); text-decoration: underline; font: inherit; font-size: .88rem; min-height: 40px; cursor: pointer; }
+/* 2.3.5.6 (JF, 19/11): excluir conta, discreto (link vermelho), longe dos botões de Entrar */
+#conta-card .link-btn { display: block; background: none; border: 0; box-shadow: none; color: var(--danger); text-decoration: underline; font: inherit; font-size: .88rem; min-height: 44px; margin-top: 10px; padding: 0; cursor: pointer; }

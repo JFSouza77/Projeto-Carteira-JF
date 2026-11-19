@@ -21,6 +21,7 @@
  *   POST /conta/criar     → { apelido, senha } → { apelido, token }      (06/11: login e sincronização)
  *   POST /conta/entrar    → { apelido, senha } → { apelido, token, criador? }  (criador: apelido na lista CRIADOR_CONTAS)
  *   POST /conta/sair      → (Authorization: Bearer token) → { ok }
+ *   POST /conta/apagar    → { apelido, senha } → { ok }   (19/11: exclui a conta e os dados dela no servidor)
  *   POST /sync            → (Authorization) { desde, mudancas:[{store,id,em,rec}] } → { versao, mudancas }
  *   cron (15 em 15 min)   → manda os lembretes do horário e, em dia útil depois das 10h, atualiza o mercado
  *
@@ -841,7 +842,27 @@ async function sessaoDe(req, env) {
   const chave = `sessao:${await sha256(m[1])}`;
   const s = JSON.parse((await env.CARTEIRA_KV.get(chave)) || 'null');
   if (!s?.apelido) throw new ErroHttp(401, 'Sessão expirada. Entre na sua conta de novo.');
+  // 2.3.5.6 (JF, 19/11: excluir conta): sessão de conta apagada (ou de uma conta antiga com o mesmo apelido, criada
+  // de novo depois) não vale mais
+  const conta = JSON.parse((await env.CARTEIRA_KV.get(`conta:${s.apelido}`)) || 'null');
+  if (!conta || (conta.criada && s.criada && s.criada < conta.criada)) throw new ErroHttp(401, 'Essa conta não existe mais. Entre ou crie uma conta de novo.');
   return { ...s, chave };
+}
+
+// 2.3.5.6 (JF, 19/11, pela Dona Débora, que criou duas contas sem querer): exclui a conta e os dados dela no servidor.
+// Pede apelido e senha de novo (não basta a sessão aberta): ninguém apaga a conta de outro só pegando o celular.
+// O que está no aparelho continua lá.
+async function contaApagar(req, env) {
+  precisaKV(env);
+  const corpo = await lerCorpo(req);
+  const { apelido, senha } = lerCredenciais(corpo);
+  await limiteTentativas(req, env, apelido);
+  const conta = JSON.parse((await env.CARTEIRA_KV.get(`conta:${apelido}`)) || 'null');
+  if (!conta || !igual(await hashSenha(senha, conta.sal), conta.hash)) throw new ErroHttp(401, 'Apelido ou senha não conferem.');
+  await Promise.all([env.CARTEIRA_KV.delete(`conta:${apelido}`), env.CARTEIRA_KV.delete(`dados:${apelido}`)]);
+  const m = /^Bearer ([a-f0-9]{64})$/.exec(req.headers.get('authorization') || '');
+  if (m) await env.CARTEIRA_KV.delete(`sessao:${await sha256(m[1])}`);
+  return { ok: true };
 }
 
 async function contaSair(req, env) {
@@ -895,7 +916,7 @@ export default {
       }
       if (req.method === 'POST') {
         const rotas = { '/ia/perguntar': iaPerguntar, '/ia/imagem': iaImagem, '/ia/ofertas': iaOfertas, '/ia/explicar': iaExplicar, '/ia/bancos': iaBancos, '/push/inscrever': pushInscrever, '/push/sair': pushSair,
-          '/conta/criar': contaCriar, '/conta/entrar': contaEntrar, '/conta/sair': contaSair, '/sync': sincronizar };
+          '/conta/criar': contaCriar, '/conta/entrar': contaEntrar, '/conta/sair': contaSair, '/conta/apagar': contaApagar, '/sync': sincronizar };
         const rota = rotas[url.pathname];
         if (rota) return json(await rota(req, env), 200, h);
       }
