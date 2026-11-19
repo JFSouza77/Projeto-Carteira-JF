@@ -37,7 +37,7 @@
         <button type="button" data-ir="mes"><svg class="ico" aria-hidden="true"><use href="#i-mes"/></svg>Meu mês</button>
       </div>
       <div class="abertura-form" id="abertura-form" hidden>
-        <input id="ab-apelido" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="30" placeholder="Apelido da conta" aria-label="Apelido da conta">
+        <input id="ab-apelido" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="30" placeholder="Apelido (não é o e-mail)" aria-label="Apelido da conta: um nome curto que você inventa, não o e-mail">
         <input id="ab-senha" type="password" autocomplete="current-password" maxlength="200" placeholder="Senha" aria-label="Senha">
         <p class="error" id="ab-erro" role="alert" hidden></p>
       </div>
@@ -624,7 +624,7 @@
         <summary><h2><svg class="ico" aria-hidden="true"><use href="#i-nuvem"/></svg> <span class="aj-tit">Sua conta<small class="aj-sub">Usar em vários aparelhos, com senha</small></span></h2></summary>
         <div id="conta-fora">
           <p class="muted small">Crie uma conta pra ver seus gastos no celular, no tablet e no computador. O que você anota num aparelho aparece nos outros sozinho. Sem internet, ele guarda e manda depois.</p>
-          <label class="field-label" for="conta-apelido">Apelido da conta</label>
+          <label class="field-label" for="conta-apelido">Apelido da conta <small class="muted">(um nome curto que você inventa, não o e-mail)</small></label>
           <input id="conta-apelido" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="30" placeholder="ex.: maria.silva">
           <label class="field-label" for="conta-senha">Senha <small class="muted">(pelo menos 6 letras ou números)</small></label>
           <input id="conta-senha" type="password" autocomplete="current-password" maxlength="200">

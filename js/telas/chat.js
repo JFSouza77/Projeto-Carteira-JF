@@ -380,6 +380,12 @@ export async function confirmarAcao(i, ok) {
       addMsg({ de: 'caos', texto: `Piso de ${accountLabel(novo)} salvo: ${formatBRL(a.pisoCents)}. Quando o saldo chegar perto, eu aviso.` });
       return;
     }
+    if (a.tipo === 'abrir_recomecar') {
+      // 2.3.5.5 (Dona Débora: "queria zerar tudo, mas não achei onde"): leva até o Recomeçar; quem apaga é a pessoa, lá
+      location.hash = 'ajustes';
+      setTimeout(() => { const c = document.querySelector('#recomecar-card'); if (c) { c.open = true; c.scrollIntoView({ block: 'start' }); } }, 350);
+      return;
+    }
     if (a.tipo === 'apagar_lancamento') {
       // 2.3.3.6 (JF): o C.A.O.S. achou e propôs; a pessoa confirmou; o app apaga (o mesmo caminho do ×)
       const lista = a.kind === 'entrada' ? state.incomes : state.expenses;

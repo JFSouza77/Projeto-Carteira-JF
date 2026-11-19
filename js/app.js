@@ -922,6 +922,14 @@ async function entrarNaConta(criar, campos = { apelido: '#conta-apelido', senha:
   if (!servidor()) { err.textContent = 'Primeiro coloque o endereço do servidor do C.A.O.S. Finanças em "IA online e servidor".'; err.hidden = false; return false; }
   if (apelido.length < 2) { err.textContent = 'Escolha um apelido com pelo menos 2 letras.'; err.hidden = false; return false; }
   if (senha.length < 6) { err.textContent = 'A senha precisa ter pelo menos 6 letras ou números.'; err.hidden = false; return false; }
+  // 2.3.5.5 (Dona Débora, 18/11: "botei o meu e-mail, que é o que eu faço em todo login, e não entra"): o apelido não
+  // é e-mail; antes aparecia só "Apelido inválido."
+  if (!normalizarApelido(apelido)) {
+    err.textContent = apelido.includes('@')
+      ? 'Aqui não vai o e-mail: o apelido é um nome curto que você inventa, tipo "debora" ou "maria.silva" (sem @ e sem espaço). Use o mesmo apelido em todos os aparelhos.'
+      : 'O apelido só pode ter letras, números, ponto, traço ou sublinhado (sem espaço), de 2 a 30. Tipo "maria.silva".';
+    err.hidden = false; return false;
+  }
   // Troca de conta (achado do GPT, 12/11): os dados deste aparelho são de outra conta? Não manda sem perguntar.
   const dona = await conta.contaDona().catch(() => null);
   const temDados = state.expenses.length + state.incomes.length + state.accounts.length > 0;
