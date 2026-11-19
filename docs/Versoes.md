@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 2.3.5.10 Alfa | 19/11/2026 | (André) Cartão: próximas faturas mês a mês (o que já está parcelado) em Contas e no Chat; "quanto vem na fatura de dezembro?", "o que tenho parcelado?" e "quanto tenho de limite?" respondem certo. C.A.O.S. 2.7.5. |
 | 2.3.5.9 Alfa | 19/11/2026 | (pergunta do André, amigo do JF) "Quanto rende minha conta?" e "quanto rende 5000 a 100% do CDI?" estimam pelo CDI (mês e dia útil, antes do imposto), sem mexer no saldo; "2 mil" não vira mais R$ 2,00. C.A.O.S. 2.7.4. |
 | 2.3.5.8 Alfa | 19/11/2026 | (JF) "De onde veio" em botões coloridos com ícone (cada cor é um grupo: renda do mês, extra do trabalho, governo e benefício, rendimento, presente); auxílio pergunta qual (no Lançar e no Chat) e o tipo vira a descrição; Férias / PLR / bônus (bônus de aniversário da empresa); glossário 150. C.A.O.S. 2.7.3. |
 | 2.3.5.7 Alfa | 19/11/2026 | (JF, pela Dona Débora) Entradas novas (10 fontes): Aposentadoria / pensão, Auxílio / benefício, 13º salário, Férias / PLR e FGTS, com ícone; o Chat entende 13º, FGTS, INSS, pensão, auxílios e PLR (e "13º" não vira R$ 13); pensão paga vai pra Contas. C.A.O.S. 2.7.2. |
