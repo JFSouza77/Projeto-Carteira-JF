@@ -20,7 +20,9 @@ const norm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLow
   .replace(/\bc\.\s?a\.\s?o\.\s?s\b\.?/g, 'caos') // "C.A.O.S." = "caos"
   .replace(/%/g, ' porcento ') // "1%" vira "1 porcento" (a calculadora de juros precisa)
   // 2.3.5.12: "Droga Líder", "Droga Raia" são farmácia (o "droga" sozinho é palavrão e sairia da frase)
-  .replace(/\bdroga (lider|mais|raia|sil|sao paulo|nossa|leste|bem|vida|popular|center|max|fuji)\b/g, 'droga$1').replace(/\bdrogasao paulo\b/g, 'drogaria sao paulo')
+  .replace(/\bdroga (lider|mais|raia|sil|sao paulo|nossa|leste|bem|vida|popular|center|max|fuji|mil|real|forte|top|net|ville|shop|express|norte|sul|oeste|ponto)\b/g, 'droga$1')
+  // 2.3.5.12b (JF: "estacionei do lado de uma farmácia chamada Droga Mil"): "na/da/pela droga X" é nome de farmácia
+  .replace(/\b(na|da|pela|farmacia|drogaria) droga ([a-z]{2,})\b/g, '$1 droga$2').replace(/\bdrogasao paulo\b/g, 'drogaria sao paulo')
   // 2.3.5.7: "13º" e "parcela do 13" são o décimo terceiro, não R$ 13
   .replace(/(\d)\s?[º°ª]/g, '$1o').replace(/\b(do|o|meu|seu|nosso|primeira parcela do|segunda parcela do) 13\b(?! ?(reais|real|mil|conto|pila|porcento|o\b))/g, '$1 13o')
   .replace(/\braspadinha (de )?(gelo|morango|uva|limao|groselha|frutas?|maracuja|abacaxi)\b/g, 'sorvete de $2') // 2.3.0.1: essa raspadinha é de comer
@@ -32,9 +34,9 @@ const SINONIMOS = {
     'mercado', 'supermercado', 'feira', 'acougue', 'padaria', 'hortifruti', 'atacadao', 'compras do mes', 'cerveja', 'cervejas', 'refrigerante', 'refrigerantes', 'refri', 'coca', 'coca cola', 'bebida', 'bebidas',
     // 2.3.5.10 (JF, 19/11, no posto): refrigerante pelo nome e as redes de mercado
     'cocacola', 'coca-cola', 'coca zero', 'guarana', 'guarana antarctica', 'antarctica', 'fanta', 'sprite', 'pepsi', 'kuat', 'dolly', 'schweppes', 'h2oh', 'suco', 'agua mineral',
-    'carrefour', 'assai', 'mercado extra', 'pao de acucar', 'sams club', 'makro', 'supermercado dia', 'oba hortifruti', 'carone', 'perim', 'extrabom', 'bh supermercados', 'supermercados bh', 'epa supermercados',
+    'carrefour', 'assai', 'mercado extra', 'pao de acucar', 'sams club', 'makro', 'supermercado dia', 'oba hortifruti', 'carone', 'perim', 'extrabom', 'bh supermercados', 'supermercados bh', 'epa supermercados', 'multishow', 'multi show', 'multimarketing', 'multi marketing', 'rede show', 'redeshow', 'atacadao', 'assai atacadista', 'bh atacadista',
     // 2.3.5.12 (JF): distribuidora e adega são bebida (de mercado)
-    'distribuidora', 'distribuidora de bebidas', 'adega', 'deposito de bebidas', 'conveniencia', 'loja de conveniencia', 'emporio', 'quitanda', 'mercearia', 'sacolao'],
+    'distribuidora', 'distribuidora de bebidas', 'adega', 'deposito de bebidas', 'conveniencia', 'loja de conveniencia', 'emporio', 'quitanda', 'mercearia', 'sacolao', 'panificadora', 'panificacao'],
   delivery: ['delivery', 'ifood', 'i food', 'rappi', 'pedido de comida', 'pedi comida', 'lanche em casa'],
   restaurante: ['restaurante', 'almoco', 'jantar', 'lanche', 'lanchonete', 'bar', 'cafe', 'pizza', 'pizzaria', 'hamburguer', 'sorvete', 'casquinha', 'acai', 'picole', 'sorveteria', 'milkshake', 'milk shake', 'gelato', 'acaiteria', 'cacau show', 'kopenhagen', 'chocolate', 'doceria', 'confeitaria', 'cafeteria', 'starbucks', 'habibs', 'giraffas', 'spoleto', 'outback', 'pastel', 'salgado', 'coxinha', 'mcdonalds', 'mcdonald s', 'mc donalds', 'burger king', 'subway', 'bobs'],
   transporte: ['transporte', 'uber', '99', 'onibus', 'metro', 'gasolina', 'combustivel', 'estacionamento', 'pedagio', 'taxi', 'carro', 'posto', 'etanol', 'alcool', 'diesel',
@@ -45,7 +47,7 @@ const SINONIMOS = {
   moradia: ['moradia', 'aluguel', 'condominio', 'iptu', 'casa', 'armario', 'guarda roupa', 'sofa', 'colchao', 'estante', 'rack', 'movel', 'moveis', 'cortina', 'geladeira', 'fogao', 'maquina de lavar', 'micro ondas', 'tok stok', 'mobly', 'madeiramadeira'], // 2.3.4.9: móvel e eletrodoméstico são da casa
   contas: ['contas', 'conta de luz', 'luz', 'agua', 'internet', 'celular', 'telefone', 'gas', 'energia', 'boleto', 'pensao alimenticia', 'pensao', 'tv a cabo', 'sky', 'claro tv', 'recarga', 'recarga de celular', 'conta do celular'], // 2.3.5.7: pensão paga é conta do mês
   // 2.3.5.5 (Dona Débora): nome de farmácia também é Saúde
-  saude: ['saude', 'farmacia', 'drogaria', 'drogasil', 'raia', 'drogaraia', 'pague menos', 'panvel', 'pacheco', 'farmacias', 'drogarias', 'drogazil', 'droga raia', 'droga lider', 'drogalider', 'drogamais', 'droga mais', 'drogasaopaulo', 'droganossa', 'drogaleste', 'drogabem', 'drogavida', 'drogapopular', 'drogacenter', 'drogamax', 'drogafuji', 'rede farma', 'redefarma', 'farmes', 'extrafarma', 'drogaria sao paulo', 'venancio', 'nissei', 'araujo', 'drogal', 'sao joao farmacias', 'farmacia popular', 'oculos de grau', 'otica', 'lente de contato', 'remedio', 'medico', 'consulta', 'exame', 'dentista', 'plano de saude', 'academia'],
+  saude: ['saude', 'farmacia', 'drogaria', 'drogasil', 'raia', 'drogaraia', 'pague menos', 'panvel', 'pacheco', 'farmacias', 'drogarias', 'drogazil', 'droga raia', 'droga lider', 'drogalider', 'drogamais', 'droga mais', 'drogasaopaulo', 'drogamil', 'efarma', 'e farma', 'farmic', 'farmacia de manipulacao', 'manipulacao', 'remedio manipulado', 'remedio controlado', 'manipulado', 'droganossa', 'drogaleste', 'drogabem', 'drogavida', 'drogapopular', 'drogacenter', 'drogamax', 'drogafuji', 'rede farma', 'redefarma', 'farmes', 'extrafarma', 'drogaria sao paulo', 'venancio', 'nissei', 'araujo', 'drogal', 'sao joao farmacias', 'farmacia popular', 'oculos de grau', 'otica', 'lente de contato', 'remedio', 'medico', 'consulta', 'exame', 'dentista', 'plano de saude', 'academia'],
   lazer: ['lazer', 'cinema', 'show', 'festa', 'viagem', 'passeio',
     // 2.3.0.1 (JF): as fezinhas (loteria) contam como Lazer
     'boliche', 'patinacao', 'pista de patinacao', 'patinacao no gelo', 'rinque', 'beisebol', 'jogo de beisebol', 'kart', 'paintball', 'fliperama', 'teatro', 'museu', // 2.3.4.7
@@ -124,6 +126,14 @@ export function tipoDeAuxilio(texto) {
   return (TIPOS_AUXILIO.find(([, re]) => re.test(t)) || [])[0] || null;
 }
 
+// 2.3.5.12b: o tipo do lugar pelo pedaço do nome (mercado de bairro, farmácia pequena, manipulação)
+const TIPO_DE_LUGAR = [
+  ['mercado', /\b\w*(super|hiper|mini)?mercad(o|inho|ao|os)\b(?! (livre|pago|play))|\batacad(ao|ista|o)\w*|\bmercearia\b|\bsacolao\b|\bhortifruti\w*|\bemporio\b|\bquitanda\b/],
+  ['saude', /\bdroga[a-z]{2,}\b|\b\w*farma\w*\b|\bfarmic\w*|\bfarmacia\w*|\bdrogaria\w*|\bmanipulacao\b|\bremedio\w*|\bmedicamento\w*/],
+  ['restaurante', /\b\w*(lanchonete|restaurante|pizzaria|padaria|confeitaria|sorveteria|churrascaria|pastelaria|hamburgueria)\b/],
+  ['utilidades', /\b\w*(ferragens|ferragem|construcao|utilidades|papelaria|armarinho|bazar)\b/],
+];
+
 /** 2.3.5.10: categoria pelo nome (loja, produto) pra UI usar no Lançar e no comprovante; null se não sabe. */
 export function categoriaPeloNome(texto, categorias) {
   const t = norm(texto);
@@ -131,6 +141,7 @@ export function categoriaPeloNome(texto, categorias) {
 }
 
 function acharCategoria(t, categorias) {
+  t = t.replace(/\b(no|pelo|via|com o|com|do|na conta do) mercado pago\b/g, ' '); // 2.3.5.12b: Mercado Pago é jeito de pagar, não mercado
   let melhor = null;
   const temJogos = categorias.some(c => c.id === 'jogos'); // sem a categoria Jogos, jogo continua em Lazer
   for (const c of categorias) {
@@ -141,6 +152,13 @@ function acharCategoria(t, categorias) {
         if (!melhor || k.length > melhor.k.length) melhor = { c, k };
       }
     }
+  }
+  // 2.3.5.12b (JF: "nem todo supermercado é de marca grande: Supermercado Ovelha, do Jajá… importa a categoria, não o
+  // nome"): sem palavra conhecida, o tipo do lugar decide (o nome fica na descrição)
+  if (!melhor) {
+    const tipo = TIPO_DE_LUGAR.find(([, re]) => re.test(t));
+    const c = tipo && categorias.find(x => x.id === tipo[0]);
+    if (c) melhor = { c, k: '' };
   }
   // 2.3.4 (JF): "remédio pro gato" é do bicho, não da pessoa
   if (melhor?.c.id === 'saude' && PET_ANIMAL.test(t)) return categorias.find(c => c.id === 'pet') || melhor.c;
@@ -273,6 +291,13 @@ function cuidadosDoGastoTudo(cat, intencao, expenses, incomes, mes) {
     const passado = soma(expenses.filter(e => String(e.date).slice(0, 7) === mesAnt && ehSaude(e)));
     const limite = Math.max(20000, Math.round(passado * 1.5));
     if (antes < limite && depois >= limite) { out.push(umaDe(CUIDADO_SAUDE, Math.floor(depois / 1000), formatBRL(depois))); assunto = 'cuidado_saude'; }
+  }
+  // 2.3.5.12b (JF: "remédio manipulado ou controlado entra na categoria, mas como alerta: esses são mais enjoados")
+  const especial = intencao.t.match(/\b(manipulad[oa]s?|controlad[oa]s?|tarja preta|receita controlada|receita azul|receita amarela)\b/);
+  if (cat?.id === 'saude' && especial) {
+    const tipo = /manipul/.test(especial[1]) ? 'manipulado' : 'controlado';
+    out.push(`Vai como remédio ${tipo}. Esse pede atenção: ${tipo === 'manipulado' ? 'demora uns dias pra ficar pronto' : 'precisa de receita'} e não pode faltar. Se for todo mês, cadastra em 📅 Mês → Contas fixas que eu te lembro antes de acabar.`);
+    assunto = assunto || 'cuidado_saude';
   }
   if (BEBIDA.test(intencao.t)) {
     const doMesB = expenses.filter(e => doMes(e) && BEBIDA.test(norm(e.note || '')));
