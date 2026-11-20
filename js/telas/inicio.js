@@ -79,7 +79,10 @@ export function renderResumoEntradas() {
   const prev = [...state.previstas].sort((a, b) => a.date.localeCompare(b.date));
   $('#previstas-box').hidden = !prev.length;
   $('#previstas-lista').innerHTML = prev.map(p => `<li><span>${p.date.slice(8, 10)}/${p.date.slice(5, 7)} · ${esc(srcById(p.sourceId)?.name || 'Entrada')}${p.note ? ` <small>${esc(p.note)}</small>` : ''}</span>`
-    + `<span class="num">${formatBRL(p.amountCents)}</span><button type="button" class="ghost small" data-recebi="${esc(p.id)}">Recebi</button></li>`).join('');
+    + `<span class="num">${formatBRL(p.amountCents)}</span><button type="button" class="ghost small" data-recebi="${esc(p.id)}">Recebi</button>`
+    // 2.3.6.2 (pendência de 15/11): a prevista também se edita e se apaga (antes só tinha "Recebi")
+    + `<button type="button" class="ghost small icone-so" data-prev-editar="${esc(p.id)}" aria-label="Editar">${ic('i-editar')}</button>`
+    + `<button type="button" class="ghost small icone-so" data-prev-apagar="${esc(p.id)}" aria-label="Apagar">${ic('i-limpar')}</button></li>`).join('');
   const box = $('#falta-receber');
   const doMesPrev = prev.filter(p => p.date.slice(0, 7) === state.viewMonth);
   if (doMesPrev.length) { // com previsto, o "falta receber" usa o que você lançou, não o mês passado

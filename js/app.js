@@ -1370,6 +1370,18 @@ function bind() {
   });
   // Recebi (15/11): a prevista vira entrada de verdade, com a data de hoje (é quando o dinheiro caiu)
   $('#previstas-lista').addEventListener('click', async e => {
+    // 2.3.6.2: editar e apagar a prevista
+    const ed = e.target.closest('[data-prev-editar]');
+    if (ed) return editar(ed.dataset.prevEditar, 'prevista');
+    const ap = e.target.closest('[data-prev-apagar]');
+    if (ap) {
+      const p = state.previstas.find(x => x.id === ap.dataset.prevApagar);
+      if (!p || !confirm(`Apagar a entrada prevista de ${formatBRL(p.amountCents)}?`)) return;
+      await db.remove(db.STORES.incomes, p.id);
+      state.previstas = state.previstas.filter(x => x.id !== p.id);
+      render();
+      return toast('Entrada prevista apagada.');
+    }
     const b = e.target.closest('[data-recebi]');
     if (!b) return;
     const p = state.previstas.find(x => x.id === b.dataset.recebi);

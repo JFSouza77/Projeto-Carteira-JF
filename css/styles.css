@@ -1595,3 +1595,9 @@ li.feito .passo-n { background: transparent; color: var(--ok); box-shadow: inset
 
 /* 2.3.5.10 (JF): créditos de quem testou */
 .creditos { margin: 0 0 8px; padding-left: 18px; display: grid; gap: 6px; }
+/* 2.3.6.2: editar e apagar a entrada prevista (ícone só, alvo de toque de 40px) */
+.previstas-lista .icone-so { min-width: 40px; min-height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.previstas-lista .icone-so .ico { width: 18px; height: 18px; }
+.previstas-lista li { flex-wrap: wrap; min-width: 0; }
+.previstas-lista li > span:first-child { flex: 1 1 100%; min-width: 0; }
+.previstas-lista li .num { margin-right: auto; }
