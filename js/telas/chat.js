@@ -5,7 +5,7 @@
 import { $, catById, dados, esc, renderizar, state } from '../estado.js';
 import { FORMAS, formaPara, rostoDaForma } from '../avatar.js';
 import { IDENTIDADE, SUGESTOES, comoChamar, conversar, curiosidadeDoGasto, humorParaIA, emocaoDoMomento, rostoAvulso } from '../caos/index.js';
-import { accountLabel, createTransferencia, depoisDoSaldo, marcarRecebido, editarConta, editarLancamento, formatBRL, sugerirCategoria, toISODate } from '../engine.js';
+import { transferenciasNaDataDoGasto, accountLabel, createTransferencia, depoisDoSaldo, marcarRecebido, editarConta, editarLancamento, formatBRL, sugerirCategoria, toISODate } from '../engine.js';
 import * as conta from '../conta.js';
 import { assuntoDeDinheiro, categoriaPeloNome, lerPagamento, perguntaDePesquisaGeral, MEDIA_ESGOTADA, MEDIA_POR_DIA, PESADA_ESGOTADA, PESADA_USADA, respostaAcordando, respostaTextoLongo, textoLongoDemais, respostaForaDoFoco, respostaPapoLivre, seguirPagamento } from '../caos/conversa.js';
 import * as db from '../db.js';
@@ -401,6 +401,9 @@ export async function confirmarAcao(i, ok) {
       const novo = editarLancamento(x, { amountCents: x.amountCents, note: x.note, date: a.date, categoryId: x.categoryId }, { kind: 'gasto', categories: state.categories });
       await db.put(db.STORES.expenses, novo);
       state.expenses = state.expenses.map(e => (e.id === x.id ? novo : e));
+      // 2.3.6.2: o "guardar a cada compra" acompanha a data nova
+      const tr = transferenciasNaDataDoGasto(state.transferencias, x.id, novo.date);
+      if (tr !== state.transferencias) { state.transferencias = tr; await db.setMeta('transferencias', tr); }
       renderizar();
       addMsg({ de: 'caos', texto: `Pronto: agora está no dia ${Number(a.date.slice(8, 10))}/${Number(a.date.slice(5, 7))}.` });
       return;

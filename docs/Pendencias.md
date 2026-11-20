@@ -15,7 +15,7 @@ Atualizada pelo Wally a cada rodada.
   roteiro pro GPT em `correio/para_o_gpt/2026-11-17_roteiro_debug.md` (iPhone 11, 13 e 15, claro e escuro).
 - **Code:** aplicar o núcleo 1.6.0 + 1.7.0 + 1.8.0 no Perfil (JFSouza77/Projeto_Perfil_JF#219); recado do dia em
   `correio/para_o_code/2026-11-17_resumo_do_dia.md`.
-- Ideia pra depois: "guardar a cada compra" segue a data do gasto ao editar (hoje a transferência guarda a data original).
+- ~~"Guardar a cada compra" segue a data do gasto ao editar~~ Feito em 20/11 (2.3.6.3).
 
 ## Recado do Code: Novidades e revisão (16/11)
 
@@ -28,7 +28,7 @@ Atualizada pelo Wally a cada rodada.
 ## Depois da 2.1.0 (15/11)
 
 - ~~Entrada prevista: ainda não dá pra editar ou apagar~~ Feito em 20/11 (2.3.6.2): lápis e lixeira ao lado do Recebi.
-- Gasto de jogo: fazer a pergunta "foi no crédito?" funcionar de verdade depois do registro.
+- ~~Gasto de jogo: "foi no crédito?"~~ Conferido em 20/11: o "Pagou como?" já fecha no cartão; `tests/jogo_credito.test.js` segura.
 - Opinião da Anne: o JF manda quando tiver (sem previsão). **Não perguntar de novo** (JF, 16/11).
 
 ## IA online: travas de crédito (15/11)
