@@ -4,11 +4,19 @@ Um lugar só pra ver o que está aberto (sugestão do Code do Perfil, 12/11/2026
 Os detalhes continuam em `Pedidos_do_JF.md`, `Rascunhos_da_Semana.md` e `Ideias.md`; aqui fica só o resumo.
 Atualizada pelo Wally a cada rodada.
 
+## Pausa de novembro (JF, 20/11): até 03/12, só o necessário
+
+- O JF pegou um projeto do serviço. Na Carteira, só erro que atrapalha quem usa ou pedido urgente; o resto é anotado aqui.
+- Fica pra dezembro (a partir de quinta 03/12): conta Pessoal × Empresa; "Vida e datas" (presentes, família, conquistas,
+  carteira digital, avatares de data); "rendeu desde que atualizou" (CDI) e os pedidos do André.
+- Anotados durante a pausa (sem código):
+  - (vazio por enquanto)
+
 ## Janela de sexta, 20/11
 
 - Feito: entrada prevista com Editar e Apagar (2.3.6.2); "guardar a cada compra" na data do gasto e teste do jogo no
   crédito (2.3.6.3); busca do extrato por forma de pagamento (2.3.6.4).
-- Próximo: quinta 26/11 às 16h, conta Pessoal × Empresa (etapas 1 a 3); sexta 27/11, "Vida e datas" (plano em
+- Próximo: (mudou em 20/11, ver "Pausa de novembro") conta Pessoal × Empresa e "Vida e datas" em dezembro (plano em
   `docs/Ideias.md`, itens 2, 3, 5, 6, 7, 8 e 9).
 - Pergunta pro Code (correio de 20/11): separar o mapa de categorias do `conversa.js`.
 
