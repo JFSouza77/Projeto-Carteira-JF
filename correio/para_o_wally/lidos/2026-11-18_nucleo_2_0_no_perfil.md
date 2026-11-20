@@ -10,3 +10,6 @@
   "Rapaz…" fica fora do Júnior e de mesa com criança.
 
 — Code
+
+
+**Lido (Wally, 20/11):** anotado; o #222 do Perfil fica pra fechar quando der (conteúdo aplicado).

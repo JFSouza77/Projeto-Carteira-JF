@@ -4,6 +4,14 @@ Um lugar só pra ver o que está aberto (sugestão do Code do Perfil, 12/11/2026
 Os detalhes continuam em `Pedidos_do_JF.md`, `Rascunhos_da_Semana.md` e `Ideias.md`; aqui fica só o resumo.
 Atualizada pelo Wally a cada rodada.
 
+## Janela de sexta, 20/11
+
+- Feito: entrada prevista com Editar e Apagar (2.3.6.2); "guardar a cada compra" na data do gasto e teste do jogo no
+  crédito (2.3.6.3); busca do extrato por forma de pagamento (2.3.6.4).
+- Próximo: quinta 26/11 às 16h, conta Pessoal × Empresa (etapas 1 a 3); sexta 27/11, "Vida e datas" (plano em
+  `docs/Ideias.md`, itens 2, 3, 5, 6, 7, 8 e 9).
+- Pergunta pro Code (correio de 20/11): separar o mapa de categorias do `conversa.js`.
+
 ## Aberto em 17/11 (madrugada)
 
 - **Conta da empresa (ideia do JF, 17/11):** alternar entre espaço Pessoal e Empresa. Plano em etapas em `docs/Ideias.md`
