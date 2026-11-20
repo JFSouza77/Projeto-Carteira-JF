@@ -27,7 +27,7 @@ Atualizada pelo Wally a cada rodada.
 
 ## Depois da 2.1.0 (15/11)
 
-- Entrada prevista: ainda não dá pra editar ou apagar (só "Recebi"). Próxima rodada.
+- ~~Entrada prevista: ainda não dá pra editar ou apagar~~ Feito em 20/11 (2.3.6.2): lápis e lixeira ao lado do Recebi.
 - Gasto de jogo: fazer a pergunta "foi no crédito?" funcionar de verdade depois do registro.
 - Opinião da Anne: o JF manda quando tiver (sem previsão). **Não perguntar de novo** (JF, 16/11).
 

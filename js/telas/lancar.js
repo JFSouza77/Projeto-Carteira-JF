@@ -296,12 +296,15 @@ export async function lerFotoComIA() {
   }
 }
 
+// 2.3.6.2 (pendência de 15/11): a entrada prevista também se edita, com a mesma janela (kind 'prevista')
+const listaDo = kind => (kind === 'prevista' ? state.previstas : kind === 'entrada' ? state.incomes : state.expenses);
+
 export async function editar(id, kind) {
-  const entrada = kind === 'entrada';
-  const x = (entrada ? state.incomes : state.expenses).find(i => i.id === id);
+  const entrada = kind === 'entrada' || kind === 'prevista';
+  const x = listaDo(kind).find(i => i.id === id);
   if (!x) return;
   const dlg = $('#editar-dialog');
-  $('#editar-titulo').textContent = entrada ? 'Editar entrada' : 'Editar gasto';
+  $('#editar-titulo').textContent = kind === 'prevista' ? 'Editar entrada prevista' : entrada ? 'Editar entrada' : 'Editar gasto';
   $('#ed-valor').value = centsToInput(x.amountCents);
   const rachada = Array.isArray(x.racha) && x.racha.length > 0;
   $('#ed-valor').disabled = rachada;
@@ -326,8 +329,9 @@ export async function salvarEdicao(ev) {
   const dlg = $('#editar-dialog');
   if (ev.submitter?.value !== 'ok') return; // Cancelar fecha sozinho
   ev.preventDefault();
-  const kind = dlg.dataset.kind === 'entrada' ? 'entrada' : 'gasto';
-  const lista = kind === 'entrada' ? state.incomes : state.expenses;
+  const tipo = ['entrada', 'prevista'].includes(dlg.dataset.kind) ? dlg.dataset.kind : 'gasto';
+  const kind = tipo === 'gasto' ? 'gasto' : 'entrada';
+  const lista = listaDo(tipo);
   const id = dlg.dataset.id;
   const x = lista.find(i => i.id === id);
   if (!x) return dlg.close();
@@ -338,11 +342,12 @@ export async function salvarEdicao(ev) {
       ...(kind === 'entrada' ? { sourceId: $('#ed-cat').value } : { categoryId: $('#ed-cat').value }),
     }, { kind, categories: state.categories });
     await db.put(kind === 'entrada' ? db.STORES.incomes : db.STORES.expenses, novo);
-    if (kind === 'entrada') state.incomes = state.incomes.map(i => (i.id === id ? novo : i));
+    if (tipo === 'prevista') state.previstas = state.previstas.map(i => (i.id === id ? novo : i));
+    else if (kind === 'entrada') state.incomes = state.incomes.map(i => (i.id === id ? novo : i));
     else state.expenses = state.expenses.map(i => (i.id === id ? novo : i));
     dlg.close();
     renderizar();
-    toast(kind === 'entrada' ? 'Entrada atualizada.' : 'Gasto atualizado.');
+    toast(tipo === 'prevista' ? 'Entrada prevista atualizada.' : kind === 'entrada' ? 'Entrada atualizada.' : 'Gasto atualizado.');
   } catch (e) {
     $('#ed-erro').textContent = e.message || 'Não deu para salvar.';
     $('#ed-erro').hidden = false;
