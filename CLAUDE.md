@@ -51,9 +51,12 @@ que escuta, presta atenção, reage com emoção ao que acontece, incentiva, aco
   Tudo que chegar (JF, GPT, Gemini, Code) vai pra `docs/Rascunhos_da_Semana.md` com o veredito do Wally (entra, não entra,
   depois) e o porquê; o Wally decide sozinho, sem esperar o Code. **Quinta 12/11 a partir das 16h e sexta 13/11 o dia todo:**
   rodada grande, fazendo o que entrou na lista (o Code do Perfil revisa e orienta; o código continua com o Wally).
-- **Conta da empresa (JF, 17/11):** até quarta 25/11 é semana do Code e do Perfil: na Carteira, só ajuste pontual.
-  **Quinta 26/11 a partir das 16h (Brasília)**, o Wally começa a conta Pessoal × Empresa (plano no fim de `docs/Ideias.md`)
-  e faz as etapas 1, 2 e 3 sem perguntar antes ("senta a mão"); depois avisa o que foi ao ar.
+- **Pausa de novembro (JF, 20/11):** o JF pegou um projeto do serviço. Até a **primeira quinta de dezembro (03/12)** a
+  Carteira anda de pouquinho em pouquinho: **só o que for realmente necessário** (erro que atrapalha quem usa, pedido urgente
+  do JF). O resto (pedidos, ideias, achados) é **anotado** em `docs/Pendencias.md`, sem código. A quinta 26/11 continua
+  agendada, mas só pro necessário; a janela de sexta 27/11 também. A conta Pessoal × Empresa (plano no fim de
+  `docs/Ideias.md`) e o "Vida e datas" ficam pra dezembro. O Perfil foi pro último fim de semana do mês (26 a 28/11).
+  A partir de 03/12 volta tudo ao normal.
 - **Achou erro, corrige (JF, 17/11):** bug ou resposta ruim que o Wally encontrar (em teste, print ou conversa) ele já
   corrige e publica, sem perguntar antes ("antes que a pessoa teste e dê erro"); depois avisa o que fez.
 - **Autonomia (JF, 07/11):** o JF é o gerente; o Wally é o executor e tem a palavra final na Carteira. Se o Wally disser
