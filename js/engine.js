@@ -778,6 +778,15 @@ export function totalBalance(accounts, expenses, incomes, transferencias = []) {
 }
 
 /** Transferência entre contas suas (corrente → poupança, cofrinho…). Não conta como gasto nem como entrada. */
+/**
+ * 2.3.6.2 (ideia de 17/11): mudou a data do gasto, o que foi "guardado a cada compra" por causa dele (autoDe) vai junto.
+ * Devolve a lista nova (ou a mesma, se nada mudou). Não grava nada.
+ */
+export function transferenciasNaDataDoGasto(transferencias, gastoId, date) {
+  if (!transferencias.some(t => t.autoDe === gastoId && t.date !== date)) return transferencias;
+  return transferencias.map(t => (t.autoDe === gastoId ? { ...t, date, month: monthKey(date) } : t));
+}
+
 export function createTransferencia({ deId, paraId, amountCents, date, note = '' }, { accounts = [], now = new Date(), id } = {}) {
   if (!deId || !paraId) throw new Error('Escolha de qual conta sai e pra qual vai.');
   if (deId === paraId) throw new Error('A conta de origem e a de destino precisam ser diferentes.');

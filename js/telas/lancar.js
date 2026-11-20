@@ -2,7 +2,7 @@
 // Mudou só de arquivo. Quem grava continua sendo a UI (via db.js).
 
 import { $, catById, centsToInput, esc, state, renderizar } from '../estado.js';
-import { FORMAS_PAGAMENTO, INCOME_SOURCES, accountBalance, accountLabel, comReforco, createExpense, createIncome, createTransferencia, guardarACadaCompra, depoisDoSaldo, detectExpenseEvents, dividirIgual, editarLancamento, faturaDoCartao, formatBRL, juntarNomes, parseAmount, toISODate, valorForaDoComum, valorProprio } from '../engine.js';
+import { transferenciasNaDataDoGasto, FORMAS_PAGAMENTO, INCOME_SOURCES, accountBalance, accountLabel, comReforco, createExpense, createIncome, createTransferencia, guardarACadaCompra, depoisDoSaldo, detectExpenseEvents, dividirIgual, editarLancamento, faturaDoCartao, formatBRL, juntarNomes, parseAmount, toISODate, valorForaDoComum, valorProprio } from '../engine.js';
 import * as conta from '../conta.js';
 import { corCategoria, corFonte, corForma } from '../cores.js';
 import * as db from '../db.js';
@@ -345,6 +345,11 @@ export async function salvarEdicao(ev) {
     if (tipo === 'prevista') state.previstas = state.previstas.map(i => (i.id === id ? novo : i));
     else if (kind === 'entrada') state.incomes = state.incomes.map(i => (i.id === id ? novo : i));
     else state.expenses = state.expenses.map(i => (i.id === id ? novo : i));
+    // 2.3.6.2 (ideia de 17/11): o "guardar a cada compra" acompanha a data nova do gasto
+    if (kind === 'gasto') {
+      const tr = transferenciasNaDataDoGasto(state.transferencias, id, novo.date);
+      if (tr !== state.transferencias) { state.transferencias = tr; await db.setMeta('transferencias', tr); }
+    }
     dlg.close();
     renderizar();
     toast(tipo === 'prevista' ? 'Entrada prevista atualizada.' : kind === 'entrada' ? 'Entrada atualizada.' : 'Gasto atualizado.');

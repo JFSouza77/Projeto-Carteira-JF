@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 2.3.6.3 Alfa | 20/11/2026 | (ideia de 17/11, janela de sexta) O "guardar a cada compra" acompanha a data nova do gasto, tanto na janela de editar quanto no "esse gasto foi na quarta" do Chat. Teste do "foi no crédito?" do gasto de jogo (já funcionava). |
 | 2.3.6.2 Alfa | 20/11/2026 | (pendência de 15/11, janela de sexta) Entrada prevista ganha Editar (a mesma janela das entradas) e Apagar, além do Recebi; a linha passa a quebrar em duas no celular. |
 | 2.3.6.1 Alfa | 19/11/2026 | (JF) O tipo do lugar decide a categoria sem precisar de marca (supermercado, mercadinho, atacadista, droga…, farma…, manipulação, ferragens); Multishow, Rede Show, Multimarketing; Mercado Pago é pagamento; remédio manipulado ou controlado com alerta. C.A.O.S. 2.7.8. |
 | 2.3.6 Alfa | 19/11/2026 | Tudo no Lugar (JF): 5 categorias novas (Roupas e calçados, Cuidados pessoais, Joias e acessórios, Presentes, Utilidades; 15 → 20); lojas, marcas e farmácias pelo nome; modelo de celular não vira valor; modo lista ("os próximos gastos são da feira"); imposto de renda ajuda a estimar com aviso (antes caía em entradas). C.A.O.S. 2.7.7. |
