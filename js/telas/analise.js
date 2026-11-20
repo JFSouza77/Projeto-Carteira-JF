@@ -1,7 +1,7 @@
 // Análise do mês (16/11, corte do app.js): gráficos feitos à mão, lista de lançamentos, busca e exportar CSV/PDF.
 
 import { $, cap, catById, esc, srcById, state } from '../estado.js';
-import { accountLabel, formatBRL, gastoPorDia, incomeIn, monthKey, monthLabel, parseAmount, serieMensal, summarizeMonth, toISODate, valorProprio } from '../engine.js';
+import { FORMAS_PAGAMENTO, accountLabel, formatBRL, gastoPorDia, incomeIn, monthKey, monthLabel, parseAmount, serieMensal, summarizeMonth, toISODate, valorProprio } from '../engine.js';
 import * as conta from '../conta.js';
 import { corCategoria } from '../cores.js';
 import { toast } from '../app.js';
@@ -264,6 +264,8 @@ export function filtroDeBusca(busca) {
     if (valor != null) return inteiro ? Math.floor(x.amountCents / 100) === valor / 100 : x.amountCents === valor;
     const conta = x.accountId && state.accounts.find(a => a.id === x.accountId);
     const nome = x.categoryId ? catById(x.categoryId)?.name : srcById(x.sourceId)?.name;
-    return [x.note, nome, conta ? accountLabel(conta) : ''].some(t => n(t).includes(q));
+    // 2.3.6.4 (repaginada, fase 2: "filtro por forma de pagamento no extrato"): "pix", "crédito", "débito" também filtram
+    const forma = x.forma ? FORMAS_PAGAMENTO[x.forma] || x.forma : '';
+    return [x.note, nome, conta ? accountLabel(conta) : '', forma].some(t => n(t).includes(q));
   };
 }

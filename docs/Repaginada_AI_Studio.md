@@ -32,7 +32,7 @@ Falta do celular: cabeçalho com rostinho e os 4 cartões de resumo.
 **Andamento (madrugada de 13/11, 1.26 e 1.27):** feito tudo, menos "C.A.O.S. reage enquanto você preenche" (fica pra
 próxima, porque mexe no C.A.O.S. e sobe a versão dele). O simulador saiu na versão simples (valor + parcelas → sobra antes e
 depois, e em quantas vezes caberia); "planos a adiar" e "limite do cartão antes/depois" ficam pra uma melhoria. Filtro por
-forma de pagamento no extrato também ficou pra depois (hoje: tipo, categoria e busca).
+forma de pagamento no extrato: feito em 20/11 (2.3.6.4), pela busca ("pix", "crédito").
 - ✅ **Transferência entre contas** (Lançar → Transferência): move dinheiro sem virar gasto nem entrada.
 - ✅ **Ritmo de gastos no mês:** acumulado real × linha ideal do orçamento/entrada.
 - ✅ **Fluxo dos últimos 6 meses em barras** (entradas × gastos) no lugar da nossa linha.
