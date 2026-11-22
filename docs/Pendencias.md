@@ -10,7 +10,11 @@ Atualizada pelo Wally a cada rodada.
 - Fica pra dezembro (a partir de quinta 03/12): conta Pessoal × Empresa; "Vida e datas" (presentes, família, conquistas,
   carteira digital, avatares de data); "rendeu desde que atualizou" (CDI) e os pedidos do André.
 - Anotados durante a pausa (sem código):
-  - (vazio por enquanto)
+  - **Pílulas do C.A.O.S. (JF, 22/11, vídeo "PARCELAR sem juros pode ser uma ARMADILHA??", canal Curiosfera):** ensinar
+    como os shorts de finanças: começa com uma pergunta que fisga ("parcelar sem juros é armadilha?"), resolve em 3 ou 4
+    frases com um exemplo de número e fecha com a lição. Ideia do Wally: "pílula" curta no Início ou no Chat ("me ensina
+    algo"), de vez em quando, ligada ao que a pessoa acabou de fazer (parcelou? vem a pílula do parcelamento). Sem IA, tudo
+    escrito à mão, em lista de 0 ou 5. O "vale a pena parcelar?" que já existe pode ganhar esse formato.
 
 ## Janela de sexta, 20/11
 
