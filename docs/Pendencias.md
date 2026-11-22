@@ -15,6 +15,15 @@ Atualizada pelo Wally a cada rodada.
     frases com um exemplo de número e fecha com a lição. Ideia do Wally: "pílula" curta no Início ou no Chat ("me ensina
     algo"), de vez em quando, ligada ao que a pessoa acabou de fazer (parcelou? vem a pílula do parcelamento). Sem IA, tudo
     escrito à mão, em lista de 0 ou 5. O "vale a pena parcelar?" que já existe pode ganhar esse formato.
+  - **Análise do Gemini do mesmo vídeo (22/11) e veredito do Wally:** o vídeo fala de 4 pontos: a ilusão da parcela pequena,
+    o orçamento travado por várias parcelas, o desconto à vista embutido no "sem juros" e 3 perguntas antes de parcelar
+    (preciso? cabe? sobra pra imprevisto?). Veredito: **entra em dezembro, nos dois lugares, aproveitando o que já existe**:
+    1. **Na hora de lançar** um parcelado (Chat ou Lançar): só quando pesa (compra alta, ou parcelas do mês passando de uns
+       30% da renda), ele faz as 3 perguntas já com os números do mês, sem sermão. Base: o "vale a pena parcelar?" e o
+       `faturasFuturas` (2.3.5.10).
+    2. **Termômetro de parcelas** em Mês/Contas: quanto da renda dos próximos meses já está preso em parcela (já temos as
+       próximas faturas mês a mês). Painel novo inteiro não: fica pesado e repete o que o cartão já mostra.
+    3. À vista com desconto × parcelado: o "vale a pena parcelar?" já compara; ganha a frase do custo de abrir mão do desconto.
 
 ## Janela de sexta, 20/11
 
