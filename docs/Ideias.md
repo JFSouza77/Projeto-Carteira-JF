@@ -146,3 +146,31 @@ Pedido grande; nesta semana (até 25/11) a Carteira só recebe ajuste pontual. O
 9. **Rendeu desde que atualizou (André, 19/11; ok do JF pra sexta 27/11):** no cartão da conta ou caixinha que rende %
    do CDI, mostrar "rendeu uns R$ X desde que você atualizou o saldo" (estimativa pelo CDI, em dia útil, antes do
    imposto). O saldo guardado não muda (quem atualiza é a pessoa). O mesmo pros investimentos de renda fixa.
+
+## Um C.A.O.S. só, nos dois projetos (JF, 23/11) · rascunho do Wally pra conversar com o Code
+
+**A ideia do JF:** o C.A.O.S. deixa de ser "um em cada app" e vira um agente pessoal (tipo um Jarvis) que entende ao mesmo
+tempo o que acontece no Perfil e na Carteira. Nada do zero: núcleo, memória, personalidade, avatares, leis e limites já
+existem (vieram do Perfil; na Carteira foram refinados). O trabalho é **juntar**, não inventar.
+
+**O que já é comum:** o núcleo (`caos_nucleo.json`: identidade, vida, leis, emoções, jeito de falar), a regra do 0 ou 5,
+o "ele propõe, você confirma".
+
+**O que ainda é separado:** o motor de conversa (cada app tem o seu), a memória (cada uma no seu aparelho/app), os
+avatares e as falas do trabalho (jogo × dinheiro), a IA online (cada app chama a sua).
+
+**Caminho em etapas (cada uma útil sozinha):**
+1. **Pacote do C.A.O.S.:** núcleo + leis + gerador de falas + emoções num lugar só (um repositório ou pasta compartilhada),
+   que o Perfil e a Carteira importam. O que é do trabalho (fatura, carta do jogo) fica em cada app, como "habilidade".
+2. **Memória dele, com a conta da pessoa:** a mesma conta (apelido + senha, ponta a ponta) guarda a memória do C.A.O.S.
+   embaralhada. O que ele aprende de você num app ele sabe no outro ("você jogou até tarde ontem; e o mercado de hoje?").
+3. **Habilidades com permissão:** cada app oferece as suas ("anotar gasto", "começar partida"); o C.A.O.S. só propõe e
+   você confirma (1ª lei). Um app nunca mexe no outro sozinho.
+4. **Roteador de cérebros:** pergunta simples vai pra IA leve, difícil pra forte, e há reserva se uma cair.
+5. **Iniciativa na hora certa:** ele puxa assunto sozinho quando faz sentido, com os limites de hoje (sem spam, quieto à noite).
+
+**Regra que não pode faltar (privacidade):** o Perfil é jogo, às vezes com outras pessoas na mesa (e criança). O que é
+de dinheiro **nunca** aparece no jogo sem a pessoa pedir, e o que é do jogo só entra na Carteira se for útil pra ela. Cada
+lembrança diz de qual app veio e quem pode ver.
+
+**Quando:** depois de dezembro, com o JF e o Code juntos (mexe nos dois projetos e no núcleo, que só muda com o ok do JF).
