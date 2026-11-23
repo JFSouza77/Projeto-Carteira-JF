@@ -15,6 +15,11 @@ Atualizada pelo Wally a cada rodada.
     frases com um exemplo de número e fecha com a lição. Ideia do Wally: "pílula" curta no Início ou no Chat ("me ensina
     algo"), de vez em quando, ligada ao que a pessoa acabou de fazer (parcelou? vem a pílula do parcelamento). Sem IA, tudo
     escrito à mão, em lista de 0 ou 5. O "vale a pena parcelar?" que já existe pode ganhar esse formato.
+  - **Ícone dos bancos (JF, 23/11):** hoje cada banco é um quadradinho com a cor dele e a sigla (44 bancos em
+    `js/cores.js`). Logo oficial não entra: é marca registrada, o código é público, e baixar arquivo do banco foge do
+    "offline, sem nada de fora". Veredito do Wally: em dezembro, desenhar **monogramas parecidos com o jeito de cada banco**
+    (a letra e o formato que a gente bate o olho e reconhece: o "itaú" minúsculo no quadrado laranja, o "BB" no amarelo, o
+    "S" vermelho do Santander, a chama da Caixa em traço simples…), feitos à mão em SVG, sem copiar o logo.
   - **Análise do Gemini do mesmo vídeo (22/11) e veredito do Wally:** o vídeo fala de 4 pontos: a ilusão da parcela pequena,
     o orçamento travado por várias parcelas, o desconto à vista embutido no "sem juros" e 3 perguntas antes de parcelar
     (preciso? cabe? sobra pra imprevisto?). Veredito: **entra em dezembro, nos dois lugares, aproveitando o que já existe**:
