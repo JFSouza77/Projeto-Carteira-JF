@@ -464,6 +464,11 @@ export async function confirmarAcao(i, ok) {
       : await registrarGasto({ amountCents: a.amountCents, categoryId: a.categoryId, note: a.note, date: a.date, imageId: a.imageId || fotoDaLegenda(a.amountCents), compromissoId: a.compromissoId, accountId: a.accountId,
           forma: a.forma || null, parcelas: a.parcelas || 1, limiteModo: a.limiteModo || 'total' });
     if (a.compromissoId) renderMes();
+    // 2.3.6.5 (JF): o gasto confirmado fecha o plano do mês (a mesma marca do ✓ em Mês → Planos)
+    if (a.planoId) {
+      const p = state.planos.find(x => x.id === a.planoId);
+      if (p && !p.feito) { const upd = { ...p, feito: true }; await db.put(db.STORES.planos, upd); state.planos = state.planos.map(x => (x.id === p.id ? upd : x)); renderMes(); }
+    }
     const fala = narrate(events, { ignoreCooldown: true });
     addMsg({ de: 'caos', texto: fala ? fala.texto : 'Anotado!', rosto: fala?.rosto });
     // JF, 14/11: lançamento com data de antes do saldo informado já está dentro dele; o C.A.O.S. explica
