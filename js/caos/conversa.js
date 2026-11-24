@@ -324,6 +324,16 @@ function cuidadosDoGastoTudo(cat, intencao, expenses, incomes, mes) {
   return { textos: out, assunto };
 }
 
+// 2.3.6.5 (JF, 24/11: "comprei minha geladeira" virou gasto de Moradia sem valor, mas a geladeira estava nos planos do
+// mês com teto de R$ 2.500): o que a pessoa comprou bate com um plano ainda não feito? (palavra de 4+ letras do nome)
+const NAO_CONTA_PLANO = new Set(['compra', 'comprar', 'nova', 'novo', 'minha', 'meu', 'para', 'pra', 'casa', 'mes', 'conta']);
+function planoDoTexto(t, planos = [], mes) {
+  return planos.filter(p => !p.feito && (!p.month || p.month <= mes)).find(p => {
+    const palavras = norm(p.nome).split(/\s+/).filter(w => w.length >= 4 && !NAO_CONTA_PLANO.has(w));
+    return palavras.length && palavras.some(w => new RegExp(`(^|\\s)${w}(s|es)?(\\s|$)`).test(t));
+  }) || null;
+}
+
 function acharFonte(t) {
   for (const [id, chaves] of Object.entries(FONTES)) if (chaves.some(k => t.includes(k))) return id;
   return null;
@@ -1951,6 +1961,11 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
           sugestoes: ['Mercado', 'Restaurante', 'Transporte', 'Deixa pra depois'], aguardar: { tipo: 'desc_gasto', valor: intencao.valor, extra } };
       }
       const cuidados = cuidadosDoGastoTudo(cat, intencao, expenses, incomes, mes); // 2.3.4.3: textos + avatar
+      // 2.3.6.5: gasto que fecha um plano do mês ganha festa e a comparação com o teto; ao confirmar, o plano vira feito
+      const planoFeito = planoDoTexto(intencao.t, dados.planos, mes);
+      const textoPlano = planoFeito ? `Isso estava nos seus planos! 🎉 ${intencao.valor <= planoFeito.valorCents
+        ? `Ficou ${intencao.valor < planoFeito.valorCents ? `${formatBRL(planoFeito.valorCents - intencao.valor)} abaixo do teto` : 'no teto certinho'} de ${formatBRL(planoFeito.valorCents)}. Mandou bem!`
+        : `Passou ${formatBRL(intencao.valor - planoFeito.valorCents)} do teto de ${formatBRL(planoFeito.valorCents)}, mas tá conquistado.`} Ao confirmar, marco o plano como feito.` : null;
       const recorrente = /\b(internet|luz|energia|agua|aluguel|condominio|netflix|spotify|streaming|academia|plano|celular|telefone|assinatura|mensalidade|escola|faculdade|seguro|gas)\b/.test(intencao.t)
         || ['contas', 'moradia', 'streaming'].includes(cat?.id);
       const movel = /\b(armario|guarda roupa|sofa|colchao|estante|rack|movel|moveis|cortina|geladeira|fogao|maquina de lavar|micro ondas|cama box)\b/.test(intencao.t); // 2.3.4.9
@@ -1965,7 +1980,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
             const tot = expenses.filter(e => e.date.slice(0, 7) === mes && ehLoteriaNota(e.note)).reduce((x, e) => x + e.amountCents, 0) + intencao.valor;
             return tot >= 5000 ? `Com essa, a fezinha do mês vai a ${formatBRL(tot)}. Boa sorte! Só não deixa a sorte entrar no orçamento das contas.` : 'Boa sorte! 🍀';
           })(),
-          movel ? 'Boa! Coisa pra casa que dura é um investimento legal.' : null,
+          textoPlano || (movel ? 'Boa! Coisa pra casa que dura é um investimento legal.' : null),
           // 2.3.5.2 (JF): anota, mas não compactua com ilícito; cigarro/bebida: anota e lembra da saúde; quantidade absurda: zoa
           ILICITO.test(intencao.t) ? 'Anoto porque o controle é seu, mas não compactuo: preço e lugar disso eu não passo. Se quiser ajuda pra parar, o CAPS AD do SUS atende de graça.' : null,
           TABACO.test(intencao.t) && !ILICITO.test(intencao.t) ? 'Anotado. O máximo que eu faço é te lembrar de cuidar da saúde, que ela vale mais que qualquer economia.' : null,
@@ -1973,7 +1988,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
           ...cuidados.textos].filter(Boolean).join(' ') || null,
         avatar: cuidados.assunto || (FAZ_TUDO.test(intencao.t) ? 'faz_tudo' : null),
         vars: { valor: formatBRL(intencao.valor), categoria: cat?.name ?? 'Outros' },
-        acao: { tipo: 'registrar_gasto', amountCents: intencao.valor, categoryId: cat?.id ?? 'outros', date: dataDoTexto(intencao.t, today),
+        acao: { tipo: 'registrar_gasto', amountCents: intencao.valor, categoryId: (planoFeito && !intencao.categoria ? planoFeito.categoryId : cat?.id) ?? 'outros', date: dataDoTexto(intencao.t, today), ...(planoFeito ? { planoId: planoFeito.id } : {}),
           note: intencao.vaquinha ? 'Vaquinha (minha parte)' : LOTERIA.test(intencao.t) ? nomeDaFezinha(intencao.t) : desc ? desc[0].toUpperCase() + desc.slice(1) : '', ...lerPagamento(intencao.t, dados.accounts) },
         aprendeu: !!aprendida,
         pagamento: true,
@@ -2121,6 +2136,13 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         const comp = (dados.compromissos || []).find(c => c.id === fixa.id) || fixa;
         return { fato: `Lançar ${fixa.nome} como pago: ${formatBRL(fixa.faltaCents)}? Se o valor foi outro, me fala tipo "paguei ${norm(fixa.nome)} 1350".`, cru: true, sugestoes: [],
           acao: { tipo: 'registrar_gasto', amountCents: fixa.faltaCents, categoryId: comp.categoryId || 'contas', note: fixa.nome, date: today, accountId: comp.accountId || null, compromissoId: fixa.id } };
+      }
+      // 2.3.6.5: comprou o que estava nos planos → comemora e propõe o teto do plano (ou o valor que a pessoa disser)
+      const plano = planoDoTexto(intencao.t, dados.planos, mes);
+      if (plano && !/\?/.test(intencao.t)) {
+        return { fato: `Aêê, saiu ${plano.nome.toLowerCase()} que estava nos seus planos! 🎉 No plano, o teto era ${formatBRL(plano.valorCents)}. Foi isso? Toca em Confirmar. Se saiu outro valor, me fala tipo "foi 2300".`,
+          cru: true, sugestoes: [], aguardar: { tipo: 'valor_gasto', t: intencao.t, categoria: categories.find(c => c.id === plano.categoryId) || intencao.categoria || null },
+          acao: { tipo: 'registrar_gasto', amountCents: plano.valorCents, categoryId: plano.categoryId || 'outros', note: plano.nome, date: today, planoId: plano.id } };
       }
       const desc = descricaoDe(intencao.t);
       const doQue = desc ? ` de ${desc}` : intencao.categoria ? ` em ${intencao.categoria.name}` : '';

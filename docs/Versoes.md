@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 2.3.6.5 Alfa | 24/11/2026 | (correção, pausa de novembro; JF: "comprei minha geladeira" perguntava o valor em Moradia) Compra que bate com um plano do mês é reconhecida: ele comemora, propõe o teto do plano (ou compara o valor dito) e, ao confirmar, marca o plano como feito. |
 | 2.3.6.4 Alfa | 20/11/2026 | (repaginada, fase 2, janela de sexta) A busca do extrato também filtra pela forma de pagamento ("pix", "crédito", "débito", "dinheiro"). |
 | 2.3.6.3 Alfa | 20/11/2026 | (ideia de 17/11, janela de sexta) O "guardar a cada compra" acompanha a data nova do gasto, tanto na janela de editar quanto no "esse gasto foi na quarta" do Chat. Teste do "foi no crédito?" do gasto de jogo (já funcionava). |
 | 2.3.6.2 Alfa | 20/11/2026 | (pendência de 15/11, janela de sexta) Entrada prevista ganha Editar (a mesma janela das entradas) e Apagar, além do Recebi; a linha passa a quebrar em duas no celular. |

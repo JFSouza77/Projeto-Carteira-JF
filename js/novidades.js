@@ -8,8 +8,8 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.3.6 Alfa',
-    ate: '2.3.6.4',
-    data: '19/11/2026',
+    ate: '2.3.6.5',
+    data: '24/11/2026',
     nome: 'Tudo no Lugar',
     t: 'Cada gasto no lugar certo: categorias novas, lojas e marcas pelo nome e um jeito de passar a lista da feira.',
     itens: [
@@ -21,12 +21,12 @@ export const NOVIDADES = Object.freeze([
     ],
     qol: [
       '💊 Farmácia pelo nome: Droga Raia, Drogasil, Droga Líder, Drogamais, Rede Farma e outras vão pra Saúde.',
-      '🥤 Distribuidora e adega: bebida comprada nelas vai pra Mercado.',
-      '🛒 Mercado de bairro: "Supermercado do Zé 80" vai pra Mercado, mesmo sem ser marca conhecida.',
+      '🛒 Mercado de bairro e adega: "Supermercado do Zé 80" e bebida da distribuidora vão pra Mercado.',
       '🔎 Busca por Pix ou crédito: em Mês → Análise, escreva "pix" ou "crédito" na busca do extrato.',
       '🐷 Cofrinho na data certa: mudou a data de um gasto, o que foi guardado no cofrinho muda junto.',
       '✏️ Entrada prevista: em Início → Entradas, toque no lápis pra editar ou na lixeira pra apagar.',
       '💊 Remédio controlado: diga "remédio manipulado 90" e ele anota em Saúde com um lembrete de cuidado.',
+      '🎯 Comprou o que planejou: no Chat, "comprei a geladeira" acha o plano do mês, comemora e marca feito.',
     ],
   },
   {
