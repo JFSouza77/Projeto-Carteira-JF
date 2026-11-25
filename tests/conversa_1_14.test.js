@@ -27,7 +27,7 @@ test('gasto sem valor vira pergunta, e o número seguinte vira proposta', () => 
   assert.match(p.texto, /^Bora anotar! Quanto foi/);
   assert.equal(r.acao?.tipo, 'registrar_gasto');
   assert.equal(r.acao.amountCents, 7990);
-  assert.match(r.texto, /Contas fixas/); // dica de conta de todo mês
+  assert.match(r.texto, /Mês → Compromissos/); // dica de conta de todo mês (2.3.6.13: o nome que a tela mostra)
 });
 
 test('número solto sem pergunta antes não vira gasto', () => {

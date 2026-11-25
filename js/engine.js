@@ -499,6 +499,9 @@ const BANCOS_AZ = [
   'VerdeCard', 'Sem Parar', 'ByBit', 'Crypto.com', 'Foxbit',
   // cartões de loja (JF, 13/11: "o cartão da Amazon está virando um cartão de crédito mesmo", emitido pelo Bradesco)
   'Cartão Amazon', 'Cartão Magalu', 'Cartão Carrefour', 'Cartão Renner', 'Cartão Riachuelo',
+  // 2.3.6.13 (JF, 25/11: Shopee, Mercado Livre, carnê de loja…): lojas com cartão ou crediário/parcelado próprio
+  'Cartão Shopee', 'Shopee (SParcelado)', 'Mercado Livre (Mercado Crédito)', 'Casas Bahia (carnê)', 'Magalu (carnê)',
+  'Cartão C&A', 'Pernambucanas', 'Cartão Havan', 'Pagaleve', 'Koin',
   // cartões de benefício (vale-refeição e vale-alimentação)
   'Alelo', 'VR Benefícios', 'Sodexo (Pluxee)', 'Ticket (Edenred)', 'Swile', 'Caju',
 ].sort((a, b) => a.localeCompare(b, 'pt-BR'));
@@ -703,7 +706,7 @@ const semAcento = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]
  * o banco. Banco "Outro" com apelido mostra só o apelido (06/11).
  */
 export function accountLabel(a) {
-  const tipo = a.tipo === 'cartao' ? 'Cartão' : a.subtipo && a.subtipo !== 'corrente' ? TIPOS_CONTA[a.subtipo] : null;
+  const tipo = a.tipo === 'cartao' ? (a.modalidade === 'parcelado' ? 'Crediário' : 'Cartão') : a.subtipo && a.subtipo !== 'corrente' ? TIPOS_CONTA[a.subtipo] : null;
   const apelido = a.nickname && semAcento(a.nickname) !== semAcento(tipo) ? a.nickname : '';
   if (a.bank === 'Outro') return [apelido || 'Outro banco', tipo].filter(Boolean).join(' · ');
   return [a.bank, tipo, apelido].filter(Boolean).join(' · ');
@@ -1494,7 +1497,11 @@ export function zerarSaldos(accounts, { now = new Date() } = {}) {
   return accounts.map(a => (a.tipo === 'cartao' ? { ...a, usadoInicialCents: 0, balanceAt: em } : { ...a, balanceCents: 0, balanceAt: em }));
 }
 
-export function createCartao({ bank, nickname = '', limiteCents, fechamentoDia, vencimentoDia, usadoCents = 0 }, { now = new Date(), id } = {}) {
+// 2.3.6.13 (JF, 25/11: "tem bancos e lojas com mercado parcelado, Shopee, Mercado Livre… na hora de cadastrar também tem
+// que ter, com o saldo"): crédito parcelado da loja ou do banco (Mercado Crédito, SParcelado, carnê digital) funciona
+// igual ao cartão (limite, vencimento todo mês, parcelas); só muda o nome que aparece
+export const MODALIDADES_CREDITO = Object.freeze({ cartao: 'Cartão de crédito', parcelado: 'Crediário / parcelado da loja ou banco' });
+export function createCartao({ bank, nickname = '', limiteCents, fechamentoDia, vencimentoDia, usadoCents = 0, modalidade = 'cartao' }, { now = new Date(), id } = {}) {
   const b = String(bank || '').trim();
   if (!b) throw new Error('Escolha o banco do cartão.');
   if (!Number.isInteger(limiteCents) || limiteCents <= 0) throw new Error('Qual o limite do cartão?');
@@ -1506,7 +1513,7 @@ export function createCartao({ bank, nickname = '', limiteCents, fechamentoDia, 
   return {
     id: id || newId(), tipo: 'cartao', bank: b.slice(0, 40), nickname: String(nickname).trim().slice(0, 30),
     balanceCents: 0, usadoInicialCents: usadoCents, limiteCents, fechamentoDia: f, vencimentoDia: v,
-    balanceAt: now.getTime(), createdAt: now.getTime(),
+    balanceAt: now.getTime(), createdAt: now.getTime(), ...(modalidade === 'parcelado' ? { modalidade: 'parcelado' } : {}),
   };
 }
 

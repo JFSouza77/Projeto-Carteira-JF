@@ -39,8 +39,9 @@ Atualizada pelo Wally a cada rodada.
        Inter (Pix no Crédito Inter, até 18x), Itaú, Nubank e BB (Pix parcelado no cartão), Magalu (Carnê Digital MagaluPay,
        até 24x), Casas Bahia (Carnê Digital, 24 a 30x). Todos com juros e IOF, menos promoção de loja.
     2. ~~"Quando vence a 1ª parcela?" e cada parcela como conta a pagar com lembrete~~ (feito na 2.3.6.12, JF: "você já
-       começou"). Falta: a mesma pergunta no parcelado sem a parte à vista ("3x de 100 no carnê"), parcela com valor
-       diferente da 1ª (juros, IOF) e cheque pré-datado (vira conta na data).
+       começou"). Na 2.3.6.13: "eu parcelei" (acha nos lançamentos), juros e o crediário em Contas. Falta: parcela com
+       valor diferente da 1ª (IOF), cheque pré-datado (vira conta na data) e a mesma pergunta na compra nova só parcelada
+       ("comprei em 3x de 100 no carnê" sem crediário cadastrado).
     3. **Conferir juros:** com o total à vista e as parcelas ele mostra quanto de juros saiu (o `lerParcelamento` já faz a
        conta) e, se passar de uns 3% ao mês, avisa sem sermão.
     4. **Cartão de loja** (Shopee, Magalu, Renner, C&A, Riachuelo, Casas Bahia): cadastrar como cartão já funciona pelo nome;
