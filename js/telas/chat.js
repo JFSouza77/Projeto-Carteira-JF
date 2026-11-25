@@ -5,7 +5,7 @@
 import { $, catById, dados, esc, renderizar, state } from '../estado.js';
 import { FORMAS, formaPara, rostoDaForma } from '../avatar.js';
 import { IDENTIDADE, SUGESTOES, ajeitarRapaz, comoChamar, conversar, curiosidadeDoGasto, humorParaIA, emocaoDoMomento, rostoAvulso } from '../caos/index.js';
-import { transferenciasNaDataDoGasto, accountLabel, createTransferencia, depoisDoSaldo, marcarRecebido, editarConta, editarLancamento, formatBRL, sugerirCategoria, toISODate } from '../engine.js';
+import { createCompromisso, transferenciasNaDataDoGasto, accountLabel, createTransferencia, depoisDoSaldo, marcarRecebido, editarConta, editarLancamento, formatBRL, sugerirCategoria, toISODate } from '../engine.js';
 import * as conta from '../conta.js';
 import { assuntoDeDinheiro, categoriaPeloNome, lerPagamento, perguntaDePesquisaGeral, MEDIA_ESGOTADA, MEDIA_POR_DIA, PESADA_ESGOTADA, PESADA_USADA, respostaAcordando, respostaTextoLongo, textoLongoDemais, respostaForaDoFoco, respostaPapoLivre, seguirPagamento } from '../caos/conversa.js';
 import * as db from '../db.js';
@@ -455,13 +455,25 @@ export async function confirmarAcao(i, ok) {
       // revisão do Gemini (16/11): junta os eventos de todos (antes só o último contava e um estouro do 1º sumia)
       for (const x of a.itens) eventos.push(...(await registrarGasto({ ...x, imageId: a.imageId })));
       const total = a.itens.reduce((t, x) => t + x.amountCents, 0);
+      // 2.3.6.12 (JF: "como o caos vai me lembrar que a 1ª parcela vence dia 30?"): o parcelado fora do cartão vira conta a
+      // pagar com fim (N parcelas); cada parcela entra como gasto quando for paga (sem contar duas vezes)
+      if (a.parcelasConta) {
+        const p = a.parcelasConta;
+        const c = createCompromisso({ nome: p.nome, valorCents: p.valorCents, tipo: 'conta', categoryId: p.categoryId, dia: p.dia, cadaMeses: 1, inicioMes: p.inicioMes, vezes: p.vezes }, { categories: state.categories });
+        await db.put(db.STORES.compromissos, c);
+        state.compromissos.push(c);
+        renderMes();
+      }
       // 2.3.6.8 (JF, a geladeira em duas partes): a compra dividida também fecha o plano do mês
       if (a.planoId) {
         const p = state.planos.find(x => x.id === a.planoId);
         if (p && !p.feito) { const upd = { ...p, feito: true }; await db.put(db.STORES.planos, upd); state.planos = state.planos.map(x => (x.id === p.id ? upd : x)); renderMes(); }
       }
       const fala = narrate(eventos, { ignoreCooldown: true });
-      addMsg({ de: 'caos', texto: `Anotei os ${a.itens.length} pagamentos (${formatBRL(total)}).${fala ? ` ${fala.texto}` : ''}`, rosto: fala?.rosto });
+      const p = a.parcelasConta;
+      const abre = p ? `Anotado: ${formatBRL(total)} à vista. As ${p.vezes} parcelas de ${formatBRL(p.valorCents)} estão em 📅 Mês → Contas fixas, e eu te lembro de cada vencimento.`
+        : a.itens.length === 1 ? `Anotado: ${formatBRL(total)}.` : `Anotei os ${a.itens.length} pagamentos (${formatBRL(total)}).`;
+      addMsg({ de: 'caos', texto: `${abre}${fala ? ` ${fala.texto}` : ''}`, rosto: fala?.rosto });
       return;
     }
     const events = a.tipo === 'registrar_entrada'

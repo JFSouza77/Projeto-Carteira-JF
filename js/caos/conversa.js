@@ -1795,6 +1795,24 @@ export function pagamentoDividido(texto, accounts = []) {
   };
 }
 
+/** 2.3.6.12: "dia 30", "30", "30/11", "dia 5 de dezembro" → { dia, inicioMes } da 1ª parcela (mês que vem se o dia já passou). */
+export function lerVencimento(texto, today) {
+  const t = norm(texto);
+  const MESES = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  const m = t.match(/\b(\d{1,2})\s*\/\s*(\d{1,2})\b/) || t.match(/\b(?:dia\s*)?(\d{1,2})(?:\s*de\s*([a-z]+))?\b/);
+  if (!m) return null;
+  const dia = Number(m[1]);
+  if (!(dia >= 1 && dia <= 31)) return null;
+  const [ano, mesHoje, diaHoje] = today.split('-').map(Number);
+  let mes = m[2] ? (/^\d+$/.test(m[2]) ? Number(m[2]) : MESES.indexOf(m[2]) + 1) : 0;
+  if (m[2] && !(mes >= 1 && mes <= 12)) mes = 0;
+  let y = ano;
+  if (!mes) mes = dia >= diaHoje ? mesHoje : mesHoje + 1;
+  else if (mes < mesHoje) y = ano + 1;
+  if (mes > 12) { mes = 1; y = ano + 1; }
+  return { dia, inicioMes: `${y}-${String(mes).padStart(2, '0')}` };
+}
+
 /** Lê do texto o que a pessoa já contou do pagamento. */
 export function lerPagamento(texto, accounts = []) {
   const t = norm(texto);
@@ -1956,7 +1974,7 @@ function notaDaEntrada(t, fonte, accounts = []) {
 export function descricaoDe(t) {
   // 2.3.0 (JF, foto com legenda): "comprei esse tênis por 250", "gastei 80 nessa camisa" → "tenis", "camisa"
   const m = String(t).match(/\b(?:no|na|nos|nas|em|de|do|da|com|pro|pra|num|numa|nesse|nessa|neste|nesta)\s+([a-z0-9 ]{2,40})$/)
-    || String(t).match(/\bcomprei\s+(?:(?:um|uma|uns|umas|esse|essa|este|esta|esses|essas|o|a|os|as|meu|minha|meus|minhas)\s+)?([a-z ]{2,30}?)\s+(?:por|de|a|em|no|na|pelo|pela)?\s*(?:r\$\s*)?\d/);
+    || String(t).match(/\bcomprei\s+(?:(?:um|uma|uns|umas|esse|essa|este|esta|esses|essas|o|a|os|as|meu|minha|meus|minhas)\s+)?([a-z ]{2,30}?)\s*[,:]?\s+(?:por|de|a|em|no|na|pelo|pela)?\s*(?:r\$\s*)?\d/); // 2.3.6.12: "comprei a geladeira, 2313" (com vírgula)
   if (!m) return '';
   // número fica na descrição ("no 99", "padaria 2 irmãos"); palavra vazia sai (achado do Gemini, 12/11)
   return m[1].split(/\s+/).filter(w => /^\d{1,4}$/.test(w) || palavrasDe(w).length).slice(0, 3).join(' ');
@@ -1998,7 +2016,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       const cat = intencao.categoria || (aprendida && categories.find(c => c.id === aprendida.categoryId))
         || categories.find(c => c.id === 'outros') || categories[0];
       // nem categoria nem descrição ("7 reais no débito do Inter"): pergunta em quê, sem inventar "Outros"
-      if (!intencao.categoria && !aprendida && !desc && !intencao.vaquinha) {
+      if (!intencao.categoria && !aprendida && !desc && !intencao.vaquinha && !planoDoTexto(intencao.t, dados)) { // 2.3.6.12: o que estava nos planos já diz em quê
         const extra = intencao.t.slice(semPag.length).trim();
         return { fato: `Anotando ${formatBRL(intencao.valor)}. Foi em quê? Tipo "mercado", "uber" ou "farmácia".`, cru: true,
           sugestoes: ['Mercado', 'Restaurante', 'Transporte', 'Deixa pra depois'], aguardar: { tipo: 'desc_gasto', valor: intencao.valor, extra } };
@@ -2018,6 +2036,17 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         const data = dataDoTexto(intencao.t, today);
         const festa = planoFeito ? ` Isso estava nos seus planos! 🎉 ${total <= planoFeito.valorCents ? `Ficou dentro do teto de ${formatBRL(planoFeito.valorCents)}.`
           : `Passou ${formatBRL(total - planoFeito.valorCents)} do teto de ${formatBRL(planoFeito.valorCents)}, mas tá conquistado.`}${planoFeito.fonte === 'plano' ? ' Ao confirmar, marco o plano como feito.' : ''}` : '';
+        // 2.3.6.12 (JF: "como é que o caos vai me lembrar que a 1ª parcela vence dia 30?"): parcelado fora do cartão
+        // (Mercado Parcelado, carnê, crediário, Pix parcelado) vira conta a pagar: ele pergunta quando vence a 1ª
+        if (!div.parcelado.accountId) {
+          const vista = { amountCents: div.vista.amountCents, categoryId: catId, note: nota ? `${nota} (à vista)` : 'À vista', date: data, forma: div.vista.forma, accountId: div.vista.accountId, parcelas: 1 };
+          return {
+            fato: `Entendi: compra de ${formatBRL(total)} em duas partes. ${formatBRL(div.vista.amountCents)} à vista agora e ${div.parcelado.parcelas}x de ${formatBRL(div.parcelado.parcelaCents)} no parcelado.${festa} Pra eu te lembrar de cada parcela: quando vence a 1ª? Me fala o dia, tipo "dia 30".`,
+            cru: true, sugestoes: ['Dia 10', 'Dia 30', 'Não sei'], avatar: cuidados.assunto || null,
+            aguardar: { tipo: 'venc_parcela', planoId: planoFeito?.fonte === 'plano' ? planoFeito.id : null, itens: [vista],
+              parcela: { nome: `${nota || 'Compra'} (parcelado)`, valorCents: div.parcelado.parcelaCents, vezes: div.parcelado.parcelas, categoryId: catId } },
+          };
+        }
         return {
           fato: `Entendi: compra de ${formatBRL(total)} em duas partes. ${formatBRL(div.vista.amountCents)} à vista (${div.vista.forma === 'dinheiro' ? 'dinheiro' : div.vista.forma === 'debito' ? 'débito' : 'pix/saldo'}) e ${div.parcelado.parcelas}x de ${formatBRL(div.parcelado.parcelaCents)} no crédito (${formatBRL(div.parcelado.amountCents)}). Anoto as duas?${festa}`,
           cru: true, sugestoes: [], avatar: cuidados.assunto || null,

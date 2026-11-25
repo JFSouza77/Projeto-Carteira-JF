@@ -1049,7 +1049,7 @@ export function monthsBetween(a, b) {
  * Ex. do JF: comida japonesa a cada 2 meses; comeram em outubro → inicioMes = dezembro (próxima vez), cadaMeses = 2.
  * `dia` = dia do vencimento (1–31), opcional pra planos.
  */
-export function createCompromisso({ nome, valorCents = 0, tipo = 'conta', categoryId = 'contas', dia = null, cadaMeses = 1, inicioMes, accountId = null },
+export function createCompromisso({ nome, valorCents = 0, tipo = 'conta', categoryId = 'contas', dia = null, cadaMeses = 1, inicioMes, accountId = null, vezes = null },
   { now = new Date(), id, categories } = {}) {
   const n = String(nome || '').trim();
   if (!n) throw new Error('Dá um nome pro compromisso.');
@@ -1063,16 +1063,28 @@ export function createCompromisso({ nome, valorCents = 0, tipo = 'conta', catego
   if (!(Number.isInteger(cada) && cada >= 1 && cada <= 24)) throw new Error('Repetição inválida.');
   const inicio = inicioMes || monthKey(toISODate(now));
   if (!/^\d{4}-\d{2}$/.test(inicio)) throw new Error('Mês inválido.');
+  // 2.3.6.12 (JF, a geladeira no Mercado Parcelado: "vai que eu esqueça que a 1ª parcela vence dia 30"): parcelado fora
+  // do cartão (carnê, crediário, parcelado da loja/banco) é uma conta com fim: `vezes` parcelas e acabou
+  const v = vezes == null ? null : Number(vezes);
+  if (v != null && !(Number.isInteger(v) && v >= 1 && v <= 72)) throw new Error('Número de parcelas inválido.');
   return {
     id: id || newId(), nome: n.slice(0, 60), valorCents, tipo, categoryId, dia: d, cadaMeses: cada, inicioMes: inicio,
-    accountId: accountId || null, ativo: true, createdAt: now.getTime(),
+    accountId: accountId || null, ativo: true, createdAt: now.getTime(), ...(v != null ? { vezes: v } : {}),
   };
 }
 
 export function ocorreNoMes(c, month) {
   if (!c.ativo) return false;
   const diff = monthsBetween(c.inicioMes, month);
+  // 2.3.6.12: com `vezes`, depois da última parcela ela não volta mais
+  if (c.vezes && diff / c.cadaMeses >= c.vezes) return false;
   return diff >= 0 && diff % c.cadaMeses === 0;
+}
+
+/** 2.3.6.12: qual parcela (1, 2, 3…) do compromisso cai no mês, ou null. */
+export function parcelaDoMes(c, month) {
+  if (!c.vezes || !ocorreNoMes(c, month)) return null;
+  return monthsBetween(c.inicioMes, month) / c.cadaMeses + 1;
 }
 
 /** Próximo mês (a partir de `month`, inclusive) em que o compromisso acontece. */
