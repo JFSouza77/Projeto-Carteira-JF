@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 2.3.6.11 Alfa | 25/11/2026 | (JF) Plano de saúde pelo nome (Unimed, Hapvida, Amil, Banescaixa, odonto…) vai pra Saúde; seguro de vida, plano funerário, parcela do carnê e crediário vão pra Contas (o "carnê" sem acento caía em Mercado como carne); seguro do carro e da moto em Transporte. O parcelado do próprio banco/loja ficou planejado pra dezembro (Pendências). |
 | 2.3.6.10 Alfa | 25/11/2026 | (JF) "Rapaz…" com reticências e sem o nome logo depois (também na resposta da IA online); fala longa não corta mais no fim (vai em pedaços de até 380 letras, cortando no fim da frase, e o próximo é pedido enquanto o anterior toca). |
 | 2.3.6.9 Alfa | 25/11/2026 | (pedido urgente do JF: "suspirando demais, parece cansado, pausa muito"; receita do Code do Perfil) Voz igual à do Perfil: normal 1,2× (ajuste de 1,0 a 2,0, com piso), velocidades por emoção da tabela do Perfil, protetor/carinho/preocupação/tenso em calmo (sem softvoice e fearful), "…" vira pausa do servidor sem pausa dupla, risada lida como "rá rá rá", o 2º balão pede o áudio enquanto o 1º toca, cache da voz antiga descartado (VOZ_SSML_VERSAO 2). |
 | 2.3.6.8 Alfa | 25/11/2026 | (correção; JF e a geladeira: parte no saldo do Mercado Pago, parte em 3x no Mercado Parcelado) Compra paga em duas partes vira dois lançamentos com o total certo (antes a parte à vista virava um parcelado de 3x); Mercado Parcelado não vira mais categoria Mercado; "geladeira," com vírgula acha o plano. |

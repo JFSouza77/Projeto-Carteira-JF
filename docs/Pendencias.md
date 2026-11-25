@@ -29,6 +29,24 @@ Atualizada pelo Wally a cada rodada.
     2. **Termômetro de parcelas** em Mês/Contas: quanto da renda dos próximos meses já está preso em parcela (já temos as
        próximas faturas mês a mês). Painel novo inteiro não: fica pesado e repete o que o cartão já mostra.
     3. À vista com desconto × parcelado: o "vale a pena parcelar?" já compara; ganha a frase do custo de abrir mão do desconto.
+  - **Parcelado do próprio banco ou loja, e pagamento em duas partes (JF, 25/11), pra dezembro.** Já entrou na 2.3.6.8: a
+    compra em duas partes ("2313 no saldo e 3x de 87,70 no parcelado") vira dois lançamentos. Na 2.3.6.11 entraram as
+    categorias de plano de saúde, seguro, funerário e carnê. **Falta (dezembro):**
+    1. **Saber quem parcela sem cartão** (pesquisa do Wally, 25/11, fontes: Serasa, Ecarts, iDinheiro, Mobills; taxas mudam,
+       conferir no app de cada um antes de pôr número em fala): Mercado Pago (Linha de Crédito / Mercado Crédito, até 18x,
+       uns 3,9% a 9% ao mês), Shopee (SParcelado, até 12x, 1ª parcela em até 40 dias), PicPay (Pix parcelado, até 24x com
+       o PicPay Card), Pagaleve (Pix parcelado em loja parceira), Santander ("Divide o Pix", até 12x, 1ª em até 59 dias),
+       Inter (Pix no Crédito Inter, até 18x), Itaú, Nubank e BB (Pix parcelado no cartão), Magalu (Carnê Digital MagaluPay,
+       até 24x), Casas Bahia (Carnê Digital, 24 a 30x). Todos com juros e IOF, menos promoção de loja.
+    2. **Forma de pagamento nova "parcelado da loja/banco"** (fora do cartão): pede a 1ª data de vencimento ("quando vence a
+       1ª parcela?") e o valor de cada parcela (pode ser diferente da 1ª: juros, IOF), e cada parcela vira uma conta a pagar
+       no mês dela (as contas fixas já fazem o lembrete). Cheque e cheque pré-datado entram junto (vira conta na data).
+    3. **Conferir juros:** com o total à vista e as parcelas ele mostra quanto de juros saiu (o `lerParcelamento` já faz a
+       conta) e, se passar de uns 3% ao mês, avisa sem sermão.
+    4. **Cartão de loja** (Shopee, Magalu, Renner, C&A, Riachuelo, Casas Bahia): cadastrar como cartão já funciona pelo nome;
+       ver se entram cor e sigla em `js/cores.js`.
+    5. **Proteção** (plano de saúde, seguro, funerário): sugerir cadastrar como conta fixa quando aparecer pela 1ª vez, e no
+       planejamento lembrar que é o que "não pode atrasar" (cobertura cai).
 
 ## Janela de sexta, 20/11
 
