@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 2.3.6.6 Alfa | 25/11/2026 | (correção, pausa de novembro; JF viu "saldo baixo" com R$ 10.748,61 nas contas) O aviso de saldo abaixo de R$ 100 ignora conta parada em R$ 0 e não aparece quando as outras contas somam R$ 500 ou mais. |
 | 2.3.6.5 Alfa | 24/11/2026 | (correção, pausa de novembro; JF: "comprei minha geladeira" perguntava o valor em Moradia) Compra que bate com um plano do mês é reconhecida: ele comemora, propõe o teto do plano (ou compara o valor dito) e, ao confirmar, marca o plano como feito. |
 | 2.3.6.4 Alfa | 20/11/2026 | (repaginada, fase 2, janela de sexta) A busca do extrato também filtra pela forma de pagamento ("pix", "crédito", "débito", "dinheiro"). |
 | 2.3.6.3 Alfa | 20/11/2026 | (ideia de 17/11, janela de sexta) O "guardar a cada compra" acompanha a data nova do gasto, tanto na janela de editar quanto no "esse gasto foi na quarta" do Chat. Teste do "foi no crédito?" do gasto de jogo (já funcionava). |

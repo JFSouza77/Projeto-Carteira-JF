@@ -8,8 +8,8 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.3.6 Alfa',
-    ate: '2.3.6.5',
-    data: '24/11/2026',
+    ate: '2.3.6.6',
+    data: '25/11/2026',
     nome: 'Tudo no Lugar',
     t: 'Cada gasto no lugar certo: categorias novas, lojas e marcas pelo nome e um jeito de passar a lista da feira.',
     itens: [
@@ -20,13 +20,13 @@ export const NOVIDADES = Object.freeze([
       '🧾 Imposto de renda: no Chat, pergunte "quanto pago de imposto?"; ele estima junto e avisa que é estimativa.',
     ],
     qol: [
-      '💊 Farmácia pelo nome: Droga Raia, Drogasil, Droga Líder, Drogamais, Rede Farma e outras vão pra Saúde.',
+      '💊 Farmácia e remédio: Droga Raia, Drogasil e outras vão pra Saúde; remédio controlado ganha lembrete.',
       '🛒 Mercado de bairro e adega: "Supermercado do Zé 80" e bebida da distribuidora vão pra Mercado.',
       '🔎 Busca por Pix ou crédito: em Mês → Análise, escreva "pix" ou "crédito" na busca do extrato.',
       '🐷 Cofrinho na data certa: mudou a data de um gasto, o que foi guardado no cofrinho muda junto.',
       '✏️ Entrada prevista: em Início → Entradas, toque no lápis pra editar ou na lixeira pra apagar.',
-      '💊 Remédio controlado: diga "remédio manipulado 90" e ele anota em Saúde com um lembrete de cuidado.',
       '🎯 Comprou o que planejou: no Chat, "comprei a geladeira" acha o plano do mês, comemora e marca feito.',
+      '🏦 Aviso de saldo mais justo: conta com pouco não avisa se o dinheiro está nas outras contas.',
     ],
   },
   {
