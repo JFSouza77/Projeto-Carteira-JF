@@ -950,10 +950,15 @@ export function analyze({ expenses, incomes = [], categories, accounts = [], com
   }
 
   // saldo saudável (JF, 15/11): conta corrente sem piso com menos de R$ 100 (e não negativa) ganha um aviso leve, num só
-  const baixas = accounts.filter(a => a.tipo !== 'cartao' && !a.paraQuem && !(a.pisoCents > 0) && (!a.subtipo || a.subtipo === 'corrente'))
-    .map(a => ({ a, bal: accountBalance(a, expenses, incomes, transferencias) }))
-    .filter(x => x.bal >= 0 && x.bal < SALDO_SAUDAVEL_CENTS);
-  if (baixas.length) out.push({ type: 'saldo_baixo', severity: 'baixa', count: baixas.length, accountName: baixas.map(x => accountLabel(x.a)).join(', '),
+  // 2.3.6.6 (JF, 24/11: o aviso aparecia com R$ 10.748,61 nas contas): conta parada em R$ 0 (sem lançamento há 30 dias)
+  // não conta, e se as outras contas somam R$ 500 ou mais o dinheiro existe, só está em outro banco: sem aviso
+  const mexeu = a => [...expenses, ...incomes].some(l => l.accountId === a.id && daysBetween(l.date, today) >= 0 && daysBetween(l.date, today) <= 30);
+  const correntes = accounts.filter(a => a.tipo !== 'cartao' && !a.paraQuem && !(a.pisoCents > 0) && (!a.subtipo || a.subtipo === 'corrente'))
+    .map(a => ({ a, bal: accountBalance(a, expenses, incomes, transferencias) }));
+  const baixas = correntes.filter(x => x.bal >= 0 && x.bal < SALDO_SAUDAVEL_CENTS && (x.bal > 0 || mexeu(x.a)));
+  const emOutras = accounts.filter(a => a.tipo !== 'cartao' && !a.paraQuem && !baixas.some(x => x.a.id === a.id))
+    .reduce((t, a) => t + Math.max(0, accountBalance(a, expenses, incomes, transferencias)), 0);
+  if (baixas.length && emOutras < SALDO_SAUDAVEL_CENTS * 5) out.push({ type: 'saldo_baixo', severity: 'baixa', count: baixas.length, accountName: baixas.map(x => accountLabel(x.a)).join(', '),
     balanceCents: baixas.reduce((t, x) => t + x.bal, 0), contas: baixas.map(x => ({ nome: accountLabel(x.a), saldoCents: x.bal })) });
 
   // orçamento por lugar é opcional (15/11, ideia do Code): o C.A.O.S. só sugere quando uma categoria sem limite pesa
