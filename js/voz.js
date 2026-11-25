@@ -236,16 +236,48 @@ function falarNoAparelho(t, emocao, minha) {
   });
 }
 
+// 2.3.6.10 (JF, 25/11: "a fala cortou bem no finalzinho"): o servidor da voz aceita até 400 letras por pedido e
+// cortava o resto. Fala longa vai em pedaços de até 380, sempre no fim de uma frase (ou numa pausa/vírgula, se a frase
+// for enorme); o próximo pedaço é pedido enquanto o anterior toca.
+export function pedacosDaFala(t, max = 380) {
+  const out = [];
+  let resto = String(t || '').trim();
+  while (resto.length > max) {
+    const janela = resto.slice(0, max + 1);
+    let corte = Math.max(...['. ', '! ', '? '].map(x => janela.lastIndexOf(x)));
+    if (corte < max * 0.4) corte = Math.max(janela.lastIndexOf(' ⏸ '), janela.lastIndexOf(', '), janela.lastIndexOf('; '));
+    if (corte < max * 0.4) corte = janela.lastIndexOf(' ');
+    if (corte <= 0) corte = max;
+    out.push(resto.slice(0, corte + 1).trim());
+    resto = resto.slice(corte + 1).trim();
+  }
+  if (resto) out.push(resto);
+  return out;
+}
+
 async function falarAgora(t, emocao, minha) {
   const base = servidorDaVoz();
   const [, tom] = JEITO[emocao] || JEITO.calmo;
   try {
     if (base && (typeof navigator === 'undefined' || navigator.onLine !== false) && await nuvemLigada(base)) {
       try {
-        const buf = await pedirAudio(base, t, emocao, velocidadeDaFala(emocao), Math.round(tom * 20) / 20);
-        if (minha !== corte) return;
-        await tocar(buf, minha);
-        return;
+        const vel = velocidadeDaFala(emocao), tomR = Math.round(tom * 20) / 20;
+        const partes = pedacosDaFala(t);
+        let feitas = 0;
+        try {
+          for (let i = 0; i < partes.length; i++) {
+            const buf = await pedirAudio(base, partes[i], emocao, vel, tomR);
+            if (i + 1 < partes.length) pedirAudio(base, partes[i + 1], emocao, vel, tomR).catch(() => {}); // já vai pedindo o próximo
+            if (minha !== corte) return;
+            await tocar(buf, minha);
+            feitas++;
+          }
+          return;
+        } catch (e) {
+          // falhou no meio: a voz do aparelho fala só o que faltou (sem repetir o começo)
+          if (feitas > 0) { if (minha === corte) await falarNoAparelho(partes.slice(feitas).join(' '), emocao, minha); return; }
+          throw e;
+        }
       } catch { /* demorou, falhou ou o som está travado: a voz do aparelho fala */ }
     }
     if (minha === corte) await falarNoAparelho(t, emocao, minha);
@@ -264,7 +296,7 @@ export function falar(texto, emocao = 'calmo', { emenda = false } = {}) {
   const base = servidorDaVoz();
   if (emenda && base && nuvem.base === base && nuvem.ok) {
     const [, tom] = JEITO[emocao] || JEITO.calmo;
-    pedirAudio(base, t, emocao, velocidadeDaFala(emocao), Math.round(tom * 20) / 20).catch(() => {});
+    pedirAudio(base, pedacosDaFala(t)[0], emocao, velocidadeDaFala(emocao), Math.round(tom * 20) / 20).catch(() => {});
   }
   falaAtual = antes.then(() => (minha === corte ? falarAgora(t, emocao, minha) : null)).catch(() => {});
   return falaAtual;

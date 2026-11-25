@@ -869,7 +869,7 @@ export const PROVOCA_NORMAL = Object.freeze([
   'Ô, espera aí que o bolso precisa ser consultado primeiro! Bora.',
 ]);
 export const PROVOCA_ACIDO = Object.freeze([
-  'Rapaz, nem se tu fosse a pessoa mais rica do mundo… Olha só: {mes}. Mas tá bom, eu ajudo.',
+  'Rapaz… nem se tu fosse a pessoa mais rica do mundo, Olha só: {mes}. Mas tá bom, eu ajudo.',
   'Irmão, deixa eu te lembrar de uma coisinha: {mes}. Ainda assim quer? Então bora, que eu não nego ajuda.',
   'Tu tá vendo os mesmos números que eu? {mes}. Respira. Agora sim: vamos lá.',
   'Ah, claro, porque o mês tá uma maravilha: {mes}. Tá, tá, eu ajudo. Reclamo, mas ajudo.',
@@ -2972,7 +2972,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       return { fato: fala, cru: true, sugestoes: ['Quanto sobra este mês?', 'Quero juntar dinheiro', 'Conta uma piada'] };
     }
     case 'previsao_fora':
-      return { fato: 'Rapaz, vidente eu não sou! 🔮 Tempo e placar de jogo fogem da minha alçada. Agora, prever como vai ficar o seu mês, isso eu faço: quer ver?', cru: true, sugestoes: ['Como vai fechar meu mês?', 'Quanto posso gastar até o salário?'] };
+      return { fato: 'Rapaz… vidente eu não sou! 🔮 Tempo e placar de jogo fogem da minha alçada. Agora, prever como vai ficar o seu mês, isso eu faço: quer ver?', cru: true, sugestoes: ['Como vai fechar meu mês?', 'Quanto posso gastar até o salário?'] };
     case 'absurdo_animal':
       return { fato: 'Tá de sacanagem? 😂 Bicho silvestre não é pet: a menos que seja num lugar legalizado pelo IBAMA, não rola, e comprar sem autorização é crime. Agora, se quiser um amigo de quatro patas, cachorro e gato pra adotar tem aos montes. Quer ver quanto custa ter um?', cru: true, sugestoes: ['Quanto custa ter um cachorro?', 'Quanto custa ter um gato?'] };
     case 'tabaco_pergunta':

@@ -29,3 +29,22 @@ test('reticências viram a marca de pausa, sem pausa dupla; risada sai como risa
   assert.equal(textoParaVoz('Boa…!'), 'Boa!');
   assert.equal(textoParaVoz('kkkk boa'), 'rá rá rá boa');
 });
+
+// 2.3.6.10 (JF: "a fala cortou bem no finalzinho"): o servidor aceita 400 letras; fala longa vai em pedaços
+import { pedacosDaFala } from '../js/voz.js';
+import { ajeitarRapaz } from '../js/caos/index.js';
+test('fala longa vira pedaços de até 380 letras, cortando no fim da frase, sem perder nada', () => {
+  const frase = 'O mês já tá negativo, gastou 2899 reais e 16 centavos contra 2550 reais de entrada. ';
+  const t = textoParaVoz(frase.repeat(7)).trim();
+  const p = pedacosDaFala(t);
+  assert.ok(p.length >= 2);
+  for (const x of p) { assert.ok(x.length <= 380, String(x.length)); assert.match(x, /\.$/); }
+  assert.equal(p.join(' '), t);
+  assert.deepEqual(pedacosDaFala('curta.'), ['curta.']);
+});
+
+test('"Rapaz…" com reticências e sem o nome logo depois', () => {
+  assert.equal(ajeitarRapaz('Rapaz, JF, quer comida japonesa?', 'JF'), 'Rapaz… quer comida japonesa?');
+  assert.equal(ajeitarRapaz('Rapaz, {nome}, olha isso', null), 'Rapaz… olha isso');
+  assert.equal(ajeitarRapaz('Rapaziada boa', 'JF'), 'Rapaziada boa');
+});

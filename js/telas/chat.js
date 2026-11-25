@@ -4,7 +4,7 @@
 
 import { $, catById, dados, esc, renderizar, state } from '../estado.js';
 import { FORMAS, formaPara, rostoDaForma } from '../avatar.js';
-import { IDENTIDADE, SUGESTOES, comoChamar, conversar, curiosidadeDoGasto, humorParaIA, emocaoDoMomento, rostoAvulso } from '../caos/index.js';
+import { IDENTIDADE, SUGESTOES, ajeitarRapaz, comoChamar, conversar, curiosidadeDoGasto, humorParaIA, emocaoDoMomento, rostoAvulso } from '../caos/index.js';
 import { transferenciasNaDataDoGasto, accountLabel, createTransferencia, depoisDoSaldo, marcarRecebido, editarConta, editarLancamento, formatBRL, sugerirCategoria, toISODate } from '../engine.js';
 import * as conta from '../conta.js';
 import { assuntoDeDinheiro, categoriaPeloNome, lerPagamento, perguntaDePesquisaGeral, MEDIA_ESGOTADA, MEDIA_POR_DIA, PESADA_ESGOTADA, PESADA_USADA, respostaAcordando, respostaTextoLongo, textoLongoDemais, respostaForaDoFoco, respostaPapoLivre, seguirPagamento } from '../caos/conversa.js';
@@ -27,7 +27,7 @@ export function trocarNome(texto, nome) {
 }
 
 export function addMsg(msg) {
-  if (msg.texto) msg.texto = trocarNome(msg.texto, comoChamar(state.perfil));
+  if (msg.texto) msg.texto = trocarNome(ajeitarRapaz(msg.texto, comoChamar(state.perfil)), comoChamar(state.perfil)); // 2.3.6.10: "Rapaz…" sem o nome logo depois
   if (msg.de === 'caos' && !msg.rosto) {
     msg.rosto = msg.temp
       ? rostoAvulso('pensando', { mood: state.settings.mood, memory: state.caosMemory })
@@ -193,7 +193,7 @@ export async function enviarPergunta(texto, { doPrint = false } = {}) {
       // 2.3.2: depois da média pesquisada, os botões de "quer juntar pra isso?" / "só curiosidade"
       addMsg({ de: 'caos', texto: resposta, ia: true, sugestoes: fala.intent === 'custo_medio' ? fala.sugestoes : SUGESTOES.slice(0, 5), rosto: fala.rosto, assunto: fala.avatar || null });
       pintarRosto(fala.rosto, fala.avatar || null);
-      if (state.settings.voice) falar(trocarNome(resposta, comoChamar(state.perfil)).replace(/\*\*/g, ''));
+      if (state.settings.voice) falar(trocarNome(ajeitarRapaz(resposta, comoChamar(state.perfil)), comoChamar(state.perfil)).replace(/\*\*/g, ''));
       if (fala.nivelIA === 'media') { // 2.3.5: conta a pesquisa média do dia
         const m = await db.getMeta('pesquisaMedia', null);
         await db.setMeta('pesquisaMedia', { dia: toISODate(), n: (m?.dia === toISODate() ? m.n : 0) + 1 });
@@ -510,7 +510,7 @@ export async function explicarPrint(img, duvida) {
       const texto = await ia.explicarImagem(state.settings.aiUrl, { base64: await imagens.paraBase64(img.blob), duvida, humor: humorParaIA(state.settings.mood, state.perfil) });
       state.chat = state.chat.filter(m => !m.temp);
       addMsg({ de: 'caos', ia: true, texto });
-      if (state.settings.voice) falar(trocarNome(texto, comoChamar(state.perfil)).replace(/\*\*/g, ''));
+      if (state.settings.voice) falar(trocarNome(ajeitarRapaz(texto, comoChamar(state.perfil)), comoChamar(state.perfil)).replace(/\*\*/g, ''));
       return;
     } catch {
       state.chat = state.chat.filter(m => !m.temp);
