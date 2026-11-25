@@ -1023,6 +1023,9 @@ export function criarAvatar(el, { tamanho = 'pequeno', forma = 'calmo' } = {}) {
   const a = { el, atual: null, pedacos, moedas, proximaMoeda: 0, piscaEm: 0, olhaEm: 0, lado: 1 };
 
   function desenharRosto(f) {
+    // 2.3.6.7 (achado do teste do macaco, 25/11): a troca espera 150 ms; se a tela trocou o avatar nesse meio-tempo,
+    // os pedaços do rosto não existem mais e o setAttribute quebrava. Sem rosto, não desenha.
+    if (!q('olhoE') || !q('boca')) return;
     for (const lado of ['olhoE', 'olhoD']) {
       q(lado).setAttribute('d', f[lado].d);
       q(lado).style.fill = f[lado].cheio ? f.cor : 'none';
@@ -1049,7 +1052,7 @@ export function criarAvatar(el, { tamanho = 'pequeno', forma = 'calmo' } = {}) {
     corpo.classList.toggle('treme', !!f.treme);
     for (const x of ANIM_CORPO) corpo.classList.toggle(x, f.anim === x);
     if (imediato || parar()) desenharRosto(f);
-    else { q('rosto').classList.add('troca'); setTimeout(() => { desenharRosto(f); q('rosto').classList.remove('troca'); }, 150); }
+    else { q('rosto').classList.add('troca'); setTimeout(() => { desenharRosto(f); q('rosto')?.classList.remove('troca'); }, 150); }
   };
   a.falando = sim => { for (const b of [q('boca'), q('bigodeVivo')]) b?.classList.toggle('falando', !!sim && !parar()); };
   // 2.1.7 (JF, 17/11: "seria muito legal se a boca dele mexesse quando a voz estivesse ligada"): com a voz natural, a

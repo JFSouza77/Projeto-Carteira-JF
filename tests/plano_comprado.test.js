@@ -38,3 +38,17 @@ test('"foi 2300" depois da pergunta continua ligado ao plano', () => {
   assert.equal(r2.fala.acao?.amountCents, 230000);
   assert.equal(r2.fala.acao?.planoId, 'p1');
 });
+
+// 2.3.6.7 (JF, 25/11): plano de outro mês, meta ou "plano que se repete" também contam
+test('geladeira planejada pra dezembro, numa meta ou em plano que se repete', () => {
+  const sem = { ...base(), planos: [] };
+  const dez = { ...base(), planos: [{ ...base().planos[0], month: '2026-12' }] };
+  assert.equal(conversar('Finalmente comprei minha geladeira', dez, { now }).fala.acao?.planoId, 'p1');
+  const meta = { ...sem, metas: [{ id: 'm1', nome: 'Geladeira nova', alvoCents: 250000, guardadoCents: 0, conquistadaEm: null }] };
+  const r = conversar('Finalmente comprei minha geladeira', meta, { now }).fala;
+  assert.match(r.texto, /nos seus planos/);
+  assert.equal(r.acao?.amountCents, 250000);
+  assert.equal(r.acao?.planoId, undefined);
+  const comp = { ...sem, compromissos: [{ id: 'c1', nome: 'Geladeira', tipo: 'plano', valorCents: 250000, categoryId: 'moradia' }] };
+  assert.equal(conversar('comprei minha geladeira', comp, { now }).fala.acao?.amountCents, 250000);
+});
