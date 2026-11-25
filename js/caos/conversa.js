@@ -141,7 +141,7 @@ export function categoriaPeloNome(texto, categorias) {
 }
 
 function acharCategoria(t, categorias) {
-  t = t.replace(/\b(no|pelo|via|com o|com|do|na conta do) mercado pago\b/g, ' '); // 2.3.5.12b: Mercado Pago é jeito de pagar, não mercado
+  t = t.replace(/\b(no|pelo|via|com o|com|do|na conta do) mercado (pago|parcelado|credito)\b/g, ' '); // 2.3.6.8: Mercado Parcelado e Mercado Crédito também; // 2.3.5.12b: Mercado Pago é jeito de pagar, não mercado
   let melhor = null;
   const temJogos = categorias.some(c => c.id === 'jogos'); // sem a categoria Jogos, jogo continua em Lazer
   for (const c of categorias) {
@@ -333,7 +333,7 @@ const NAO_CONTA_PLANO = new Set(['compra', 'comprar', 'nova', 'novo', 'minha', '
 function planoDoTexto(t, dados = {}) {
   const casa = nome => {
     const palavras = norm(nome).split(/\s+/).filter(w => w.length >= 4 && !NAO_CONTA_PLANO.has(w));
-    return palavras.length && palavras.some(w => new RegExp(`(^|\\s)${w}(s|es)?(\\s|$)`).test(t));
+    return palavras.length && palavras.some(w => new RegExp(`(^|[^a-z0-9])${w}(s|es)?([^a-z0-9]|$)`).test(t)); // 2.3.6.8: "geladeira," (com vírgula) também
   };
   const p = (dados.planos || []).find(x => !x.feito && casa(x.nome));
   if (p) return { fonte: 'plano', id: p.id, nome: p.nome, valorCents: p.valorCents, categoryId: p.categoryId };
@@ -1762,6 +1762,33 @@ function limparPagamento(desc, accounts = []) {
   return limpo.join(' ').trim() || null;
 }
 
+// 2.3.6.8 (JF, 25/11, a geladeira: "R$ 2.313,28 no saldo do Mercado Pago + 3x de R$ 87,70 no Mercado Parcelado"):
+// compra paga em duas partes. Antes os 2.313,28 viravam um parcelado de 3x. Agora: a parte à vista (com pix, débito,
+// saldo, dinheiro ou "à vista" dito) e a parte parcelada (N x de Y) viram dois lançamentos.
+export function pagamentoDividido(texto, accounts = []) {
+  const t = norm(texto);
+  const m = t.match(/\b(\d{1,2}) ?x ?(?:de )?(?:r\$ ?)?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:,\d{1,2})?)\b/);
+  if (!m) return null;
+  const n = Number(m[1]);
+  const parcela = parseAmount(m[2]);
+  if (n < 2 || n > 24 || !parcela) return null;
+  const depois = t.slice(m.index);
+  const corte = depois.search(/\s(e|mais)\s|,\s|\s\+\s/);
+  const segB = corte > 0 ? depois.slice(0, corte) : depois;
+  const segA = `${t.slice(0, m.index)} ${corte > 0 ? depois.slice(corte) : ''}`;
+  if (!/\b(pix|debito|saldo|dinheiro|especie|a vista|avista|entrada)\b/.test(segA)) return null;
+  const vista = acharValor(segA);
+  if (!vista || vista === n * parcela) return null;
+  const pagA = lerPagamento(segA, accounts);
+  if (pagA.forma === 'credito' || pagA.forma === 'cartao') delete pagA.forma;
+  delete pagA.parcelas; delete pagA.limiteModo;
+  const pagB = lerPagamento(segB, accounts);
+  return {
+    vista: { amountCents: vista, forma: pagA.forma || (/\bdinheiro|especie\b/.test(segA) ? 'dinheiro' : 'pix'), accountId: pagA.accountId || null, parcelas: 1 },
+    parcelado: { amountCents: n * parcela, forma: 'credito', parcelas: n, parcelaCents: parcela, accountId: pagB.forma === 'credito' || !pagB.forma ? pagB.accountId || null : null, limiteModo: 'total' },
+  };
+}
+
 /** Lê do texto o que a pessoa já contou do pagamento. */
 export function lerPagamento(texto, accounts = []) {
   const t = norm(texto);
@@ -1976,6 +2003,24 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       const textoPlano = planoFeito ? `Isso estava nos seus planos! 🎉 ${intencao.valor <= planoFeito.valorCents
         ? `Ficou ${intencao.valor < planoFeito.valorCents ? `${formatBRL(planoFeito.valorCents - intencao.valor)} abaixo do teto` : 'no teto certinho'} de ${formatBRL(planoFeito.valorCents)}. Mandou bem!`
         : `Passou ${formatBRL(intencao.valor - planoFeito.valorCents)} do teto de ${formatBRL(planoFeito.valorCents)}, mas tá conquistado.`}${planoFeito.fonte === 'plano' ? ' Ao confirmar, marco o plano como feito.' : ''}` : null;
+      // 2.3.6.8: parte à vista + parte parcelada → dois lançamentos (um Confirmar só)
+      const div = pagamentoDividido(intencao.t, dados.accounts);
+      if (div) {
+        const total = div.vista.amountCents + div.parcelado.amountCents;
+        const nota = planoFeito?.nome || (desc ? desc[0].toUpperCase() + desc.slice(1) : '');
+        const catId = (planoFeito?.categoryId && !intencao.categoria ? planoFeito.categoryId : cat?.id) ?? 'outros';
+        const data = dataDoTexto(intencao.t, today);
+        const festa = planoFeito ? ` Isso estava nos seus planos! 🎉 ${total <= planoFeito.valorCents ? `Ficou dentro do teto de ${formatBRL(planoFeito.valorCents)}.`
+          : `Passou ${formatBRL(total - planoFeito.valorCents)} do teto de ${formatBRL(planoFeito.valorCents)}, mas tá conquistado.`}${planoFeito.fonte === 'plano' ? ' Ao confirmar, marco o plano como feito.' : ''}` : '';
+        return {
+          fato: `Entendi: compra de ${formatBRL(total)} em duas partes. ${formatBRL(div.vista.amountCents)} à vista (${div.vista.forma === 'dinheiro' ? 'dinheiro' : div.vista.forma === 'debito' ? 'débito' : 'pix/saldo'}) e ${div.parcelado.parcelas}x de ${formatBRL(div.parcelado.parcelaCents)} no crédito (${formatBRL(div.parcelado.amountCents)}). Anoto as duas?${festa}`,
+          cru: true, sugestoes: [], avatar: cuidados.assunto || null,
+          acao: { tipo: 'registrar_varios', ...(planoFeito?.fonte === 'plano' ? { planoId: planoFeito.id } : {}), itens: [
+            { amountCents: div.vista.amountCents, categoryId: catId, note: nota ? `${nota} (à vista)` : 'À vista', date: data, forma: div.vista.forma, accountId: div.vista.accountId, parcelas: 1 },
+            { amountCents: div.parcelado.amountCents, categoryId: catId, note: nota ? `${nota} (parcelado)` : 'Parcelado', date: data, forma: 'credito', accountId: div.parcelado.accountId, parcelas: div.parcelado.parcelas, limiteModo: 'total' },
+          ] },
+        };
+      }
       const recorrente = /\b(internet|luz|energia|agua|aluguel|condominio|netflix|spotify|streaming|academia|plano|celular|telefone|assinatura|mensalidade|escola|faculdade|seguro|gas)\b/.test(intencao.t)
         || ['contas', 'moradia', 'streaming'].includes(cat?.id);
       const movel = /\b(armario|guarda roupa|sofa|colchao|estante|rack|movel|moveis|cortina|geladeira|fogao|maquina de lavar|micro ondas|cama box)\b/.test(intencao.t); // 2.3.4.9
