@@ -8,7 +8,7 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.3.6 Alfa',
-    ate: '2.3.6.6',
+    ate: '2.3.6.7',
     data: '25/11/2026',
     nome: 'Tudo no Lugar',
     t: 'Cada gasto no lugar certo: categorias novas, lojas e marcas pelo nome e um jeito de passar a lista da feira.',
@@ -25,7 +25,7 @@ export const NOVIDADES = Object.freeze([
       '🔎 Busca por Pix ou crédito: em Mês → Análise, escreva "pix" ou "crédito" na busca do extrato.',
       '🐷 Cofrinho na data certa: mudou a data de um gasto, o que foi guardado no cofrinho muda junto.',
       '✏️ Entrada prevista: em Início → Entradas, toque no lápis pra editar ou na lixeira pra apagar.',
-      '🎯 Comprou o que planejou: no Chat, "comprei a geladeira" acha o plano do mês, comemora e marca feito.',
+      '🎯 Comprou o que planejou: no Chat, "comprei a geladeira" acha o plano ou a meta e comemora.',
       '🏦 Aviso de saldo mais justo: conta com pouco não avisa se o dinheiro está nas outras contas.',
     ],
   },

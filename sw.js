@@ -1,6 +1,6 @@
 // Service worker: app shell em cache para funcionar offline + lembretes.
 // Mudou algum arquivo abaixo? Suba CACHE_VERSION.
-const CACHE_VERSION = 'v198';
+const CACHE_VERSION = 'v199';
 const CACHE = `carteira-jf-${CACHE_VERSION}`;
 const APP_SHELL = [
   './',
@@ -59,7 +59,14 @@ self.addEventListener('install', event => {
   // 2.1.9.2 (JF, 17/11: "ainda dá uma engasgada, pisca e recarrega"): a versão nova não assume sozinha no meio do uso.
   // Ela espera; o app pede a troca (mensagem 'trocar') quando a pessoa sai dele, e recarrega sem ninguém ver.
   // Na 1ª instalação não há versão velha, então ela assume direto mesmo assim.
-  event.waitUntil(caches.open(CACHE).then(c => c.addAll(APP_SHELL)));
+  // 2.3.6.7 (JF, 25/11: o Safari ficou preso na 2.1.7): a página de antes da v151 não sabe pedir a troca, então a versão
+  // nova ficava esperando pra sempre. Se o cache que está aí é dessa época, ela assume direto.
+  event.waitUntil(caches.open(CACHE).then(c => c.addAll(APP_SHELL))
+    .then(() => caches.keys())
+    .then(keys => {
+      const velhas = keys.map(k => /^carteira-jf-v(\d+)$/.exec(k)).filter(m => m && m[0] !== CACHE).map(m => Number(m[1]));
+      if (velhas.some(n => n < 151)) return self.skipWaiting();
+    }));
 });
 
 self.addEventListener('message', event => {

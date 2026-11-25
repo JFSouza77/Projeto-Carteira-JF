@@ -327,11 +327,21 @@ function cuidadosDoGastoTudo(cat, intencao, expenses, incomes, mes) {
 // 2.3.6.5 (JF, 24/11: "comprei minha geladeira" virou gasto de Moradia sem valor, mas a geladeira estava nos planos do
 // mês com teto de R$ 2.500): o que a pessoa comprou bate com um plano ainda não feito? (palavra de 4+ letras do nome)
 const NAO_CONTA_PLANO = new Set(['compra', 'comprar', 'nova', 'novo', 'minha', 'meu', 'para', 'pra', 'casa', 'mes', 'conta']);
-function planoDoTexto(t, planos = [], mes) {
-  return planos.filter(p => !p.feito && (!p.month || p.month <= mes)).find(p => {
-    const palavras = norm(p.nome).split(/\s+/).filter(w => w.length >= 4 && !NAO_CONTA_PLANO.has(w));
+// 2.3.6.7 (JF, 25/11: no app a geladeira ainda caiu no "Quanto foi o gasto em Moradia?"): o plano pode estar em outro
+// mês (planejou pra dezembro e comprou antes), numa meta ou num "plano que se repete"; todos contam. Só o plano do mês
+// leva planoId (é o que o Chat marca como feito)
+function planoDoTexto(t, dados = {}) {
+  const casa = nome => {
+    const palavras = norm(nome).split(/\s+/).filter(w => w.length >= 4 && !NAO_CONTA_PLANO.has(w));
     return palavras.length && palavras.some(w => new RegExp(`(^|\\s)${w}(s|es)?(\\s|$)`).test(t));
-  }) || null;
+  };
+  const p = (dados.planos || []).find(x => !x.feito && casa(x.nome));
+  if (p) return { fonte: 'plano', id: p.id, nome: p.nome, valorCents: p.valorCents, categoryId: p.categoryId };
+  const m = (dados.metas || []).find(x => !x.conquistadaEm && x.alvoCents > 0 && casa(x.nome));
+  if (m) return { fonte: 'meta', nome: m.nome, valorCents: m.alvoCents, categoryId: null };
+  const c = (dados.compromissos || []).find(x => x.tipo === 'plano' && x.valorCents > 0 && casa(x.nome));
+  if (c) return { fonte: 'compromisso', nome: c.nome, valorCents: c.valorCents, categoryId: c.categoryId };
+  return null;
 }
 
 function acharFonte(t) {
@@ -1962,10 +1972,10 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       }
       const cuidados = cuidadosDoGastoTudo(cat, intencao, expenses, incomes, mes); // 2.3.4.3: textos + avatar
       // 2.3.6.5: gasto que fecha um plano do mês ganha festa e a comparação com o teto; ao confirmar, o plano vira feito
-      const planoFeito = planoDoTexto(intencao.t, dados.planos, mes);
+      const planoFeito = planoDoTexto(intencao.t, dados);
       const textoPlano = planoFeito ? `Isso estava nos seus planos! 🎉 ${intencao.valor <= planoFeito.valorCents
         ? `Ficou ${intencao.valor < planoFeito.valorCents ? `${formatBRL(planoFeito.valorCents - intencao.valor)} abaixo do teto` : 'no teto certinho'} de ${formatBRL(planoFeito.valorCents)}. Mandou bem!`
-        : `Passou ${formatBRL(intencao.valor - planoFeito.valorCents)} do teto de ${formatBRL(planoFeito.valorCents)}, mas tá conquistado.`} Ao confirmar, marco o plano como feito.` : null;
+        : `Passou ${formatBRL(intencao.valor - planoFeito.valorCents)} do teto de ${formatBRL(planoFeito.valorCents)}, mas tá conquistado.`}${planoFeito.fonte === 'plano' ? ' Ao confirmar, marco o plano como feito.' : ''}` : null;
       const recorrente = /\b(internet|luz|energia|agua|aluguel|condominio|netflix|spotify|streaming|academia|plano|celular|telefone|assinatura|mensalidade|escola|faculdade|seguro|gas)\b/.test(intencao.t)
         || ['contas', 'moradia', 'streaming'].includes(cat?.id);
       const movel = /\b(armario|guarda roupa|sofa|colchao|estante|rack|movel|moveis|cortina|geladeira|fogao|maquina de lavar|micro ondas|cama box)\b/.test(intencao.t); // 2.3.4.9
@@ -1988,7 +1998,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
           ...cuidados.textos].filter(Boolean).join(' ') || null,
         avatar: cuidados.assunto || (FAZ_TUDO.test(intencao.t) ? 'faz_tudo' : null),
         vars: { valor: formatBRL(intencao.valor), categoria: cat?.name ?? 'Outros' },
-        acao: { tipo: 'registrar_gasto', amountCents: intencao.valor, categoryId: (planoFeito && !intencao.categoria ? planoFeito.categoryId : cat?.id) ?? 'outros', date: dataDoTexto(intencao.t, today), ...(planoFeito ? { planoId: planoFeito.id } : {}),
+        acao: { tipo: 'registrar_gasto', amountCents: intencao.valor, categoryId: (planoFeito?.categoryId && !intencao.categoria ? planoFeito.categoryId : cat?.id) ?? 'outros', date: dataDoTexto(intencao.t, today), ...(planoFeito?.fonte === 'plano' ? { planoId: planoFeito.id } : {}),
           note: intencao.vaquinha ? 'Vaquinha (minha parte)' : LOTERIA.test(intencao.t) ? nomeDaFezinha(intencao.t) : desc ? desc[0].toUpperCase() + desc.slice(1) : '', ...lerPagamento(intencao.t, dados.accounts) },
         aprendeu: !!aprendida,
         pagamento: true,
@@ -2138,11 +2148,11 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
           acao: { tipo: 'registrar_gasto', amountCents: fixa.faltaCents, categoryId: comp.categoryId || 'contas', note: fixa.nome, date: today, accountId: comp.accountId || null, compromissoId: fixa.id } };
       }
       // 2.3.6.5: comprou o que estava nos planos → comemora e propõe o teto do plano (ou o valor que a pessoa disser)
-      const plano = planoDoTexto(intencao.t, dados.planos, mes);
+      const plano = planoDoTexto(intencao.t, dados);
       if (plano && !/\?/.test(intencao.t)) {
-        return { fato: `Aêê, saiu ${plano.nome.toLowerCase()} que estava nos seus planos! 🎉 No plano, o teto era ${formatBRL(plano.valorCents)}. Foi isso? Toca em Confirmar. Se saiu outro valor, me fala tipo "foi 2300".`,
+        return { fato: `Aêê, saiu ${plano.nome.toLowerCase()} que estava nos seus planos! 🎉 ${plano.fonte === 'meta' ? 'Na meta' : 'No plano'}, o teto era ${formatBRL(plano.valorCents)}. Foi isso? Toca em Confirmar. Se saiu outro valor, me fala tipo "foi 2300".`,
           cru: true, sugestoes: [], aguardar: { tipo: 'valor_gasto', t: intencao.t, categoria: categories.find(c => c.id === plano.categoryId) || intencao.categoria || null },
-          acao: { tipo: 'registrar_gasto', amountCents: plano.valorCents, categoryId: plano.categoryId || 'outros', note: plano.nome, date: today, planoId: plano.id } };
+          acao: { tipo: 'registrar_gasto', amountCents: plano.valorCents, categoryId: plano.categoryId || intencao.categoria?.id || 'outros', note: plano.nome, date: today, ...(plano.fonte === 'plano' ? { planoId: plano.id } : {}) } };
       }
       const desc = descricaoDe(intencao.t);
       const doQue = desc ? ` de ${desc}` : intencao.categoria ? ` em ${intencao.categoria.name}` : '';
