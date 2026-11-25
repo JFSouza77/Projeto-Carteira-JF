@@ -15,7 +15,9 @@ test('pergunta quando vence a 1ª parcela e monta as contas a pagar', () => {
   const r1 = conversar(frase, d, { now });
   assert.match(r1.fala.texto, /quando vence a 1ª/);
   assert.equal(r1.fala.acao, null);
-  const a = conversar('dia 30', d, { now, memory: r1.memoria }).fala.acao;
+  const r2 = conversar('dia 30', d, { now, memory: r1.memoria });
+  assert.match(r2.fala.texto, /teve juros/); // 2.3.6.13: antes da proposta, a pergunta dos juros
+  const a = conversar('sem juros', d, { now, memory: r2.memoria }).fala.acao;
   assert.equal(a.tipo, 'registrar_varios');
   assert.equal(a.itens.length, 1);
   assert.equal(a.itens[0].amountCents, 231328);

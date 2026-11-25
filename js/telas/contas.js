@@ -358,17 +358,17 @@ export async function onAddCartao(ev) {
   err.hidden = true;
   try {
     const limite = parseAmount($('#card-limite').value);
-    if (!limite) throw new Error('Qual o limite do cartão?');
+    if (!limite) throw new Error($('#card-modalidade').value === 'parcelado' ? 'Qual o limite do crediário? (está no app da loja ou do banco)' : 'Qual o limite do cartão?');
     const usado = $('#card-usado').value.trim() ? parseSignedAmount($('#card-usado').value) : 0;
     if (usado == null || usado < 0) throw new Error('O valor já usado está estranho.');
-    const c = createCartao({ bank: $('#card-bank').value, nickname: $('#card-nick').value, limiteCents: limite, fechamentoDia: Number($('#card-fecha').value), vencimentoDia: Number($('#card-vence').value), usadoCents: usado });
+    const c = createCartao({ bank: $('#card-bank').value, nickname: $('#card-nick').value, limiteCents: limite, fechamentoDia: Number($('#card-fecha').value), vencimentoDia: Number($('#card-vence').value), usadoCents: usado, modalidade: $('#card-modalidade').value });
     await db.put(db.STORES.accounts, c);
     state.accounts.push(c);
     for (const id of ['#card-nick', '#card-limite', '#card-fecha', '#card-vence', '#card-usado']) $(id).value = '';
     renderContas();
     renderLancar();
     renderizar();
-    toast(`Cartão ${accountLabel(c)} adicionado. Ao lançar, escolha ele em "Conta".`);
+    toast(`${c.modalidade === 'parcelado' ? 'Crediário' : 'Cartão'} ${accountLabel(c)} adicionado. Ao lançar, escolha ele em "Conta".`);
   } catch (e) {
     err.textContent = e.message;
     err.hidden = false;

@@ -302,7 +302,7 @@ function cuidadosDoGastoTudo(cat, intencao, expenses, incomes, mes) {
   const especial = intencao.t.match(/\b(manipulad[oa]s?|controlad[oa]s?|tarja preta|receita controlada|receita azul|receita amarela)\b/);
   if (cat?.id === 'saude' && especial) {
     const tipo = /manipul/.test(especial[1]) ? 'manipulado' : 'controlado';
-    out.push(`Vai como remédio ${tipo}. Esse pede atenção: ${tipo === 'manipulado' ? 'demora uns dias pra ficar pronto' : 'precisa de receita'} e não pode faltar. Se for todo mês, cadastra em 📅 Mês → Contas fixas que eu te lembro antes de acabar.`);
+    out.push(`Vai como remédio ${tipo}. Esse pede atenção: ${tipo === 'manipulado' ? 'demora uns dias pra ficar pronto' : 'precisa de receita'} e não pode faltar. Se for todo mês, cadastra em 📅 Mês → Compromissos que eu te lembro antes de acabar.`);
     assunto = assunto || 'cuidado_saude';
   }
   if (BEBIDA.test(intencao.t)) {
@@ -647,6 +647,9 @@ function avisoDaData(data, today) {
 const HORAS = /\b\d{1,2}[:h]\d{2}\b|\b\d{1,2}h\b|\bas \d{1,2}(?:h| horas?)?\b|\b\d{1,2} ?(?:h|horas?)?(?= (?:da manha|da tarde|da noite|da madrugada)\b)/g;
 // Nome de banco com número não é valor (16/11: "já paguei a fatura do C6" virava gasto de R$ 6)
 const BANCO_COM_NUMERO = /\b(c6( bank)?|99( ?pay| ?food)?|bs2|b3|n26)\b/g;
+/** 2.3.6.13: o valor citado (pra resposta de "à vista era 250"). */
+export const valorDoTexto = t => acharValor(norm(t));
+
 function acharValor(t) {
   // 2.3.5.5 (Dona Débora, 18/11: "03/11 farmácia 45" virava R$ 3,00): data dd/mm não é valor
   t = String(t).replace(HORAS, ' ').replace(BANCO_COM_NUMERO, ' ').replace(/\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b/g, ' ')
@@ -1426,6 +1429,13 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
     const pct = lerPorcentagem(t);
     if (pct) return { ...r, intent: 'porcentagem', pct };
   }
+  // 2.3.6.13 (JF, 25/11: "eu já avisei que paguei a geladeira; agora falo 'lembrando que eu parcelei'. E se eu apaguei o
+  // chat? Parcelou o quê?"): aviso de parcelamento de algo JÁ anotado. Ele acha a compra nos lançamentos (não na conversa)
+  if (/\b(parcelei|parcelado|parcelada|parcelou|dividi|dividido|dividida)\b/.test(t)
+    && /\b(eu parcelei|lembrando que|lembra que|so lembrando|esqueci de (falar|dizer)|na verdade|alias|foi parcelad[oa]|era parcelad[oa]|ficou parcelad[oa]|eu dividi|parcelei (a|o|aquel[ae]|ess[ae]|minha|meu|em))\b|^parcelei\b/.test(t)
+    && !/\b(comprei|gastei|quanto|como|vale a pena|devo|posso|o que (eu )?tenho)\b/.test(t)) {
+    return { ...r, categoria: null, intent: 'parcelei' };
+  }
   // 2.3.3.6 (JF, 17/11, prometido pra Dona Débora): "apaga a entrada que lancei errado", "remove o último gasto",
   // "exclui o gasto de 50 do mercado". Ele acha o lançamento e PROPÕE apagar; quem apaga é o app, depois do Confirmar
   // (1ª lei: ele nunca mexe sozinho). "Como apago?" continua sendo explicação; conversa/chat/memória não entram aqui.
@@ -1813,6 +1823,59 @@ export function lerVencimento(texto, today) {
   return { dia, inicioMes: `${y}-${String(mes).padStart(2, '0')}` };
 }
 
+/** 2.3.6.13: "3x de 87,70" → { n, parcelaCents } (ou null). */
+export function lerParcelas(texto) {
+  const t = norm(texto);
+  const m = t.match(/\b(\d{1,2}) ?(?:x|vezes|parcelas) ?(?:de )?(?:r\$ ?)?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:,\d{1,2})?)\b/);
+  if (!m) return null;
+  const n = Number(m[1]), p = parseAmount(m[2]);
+  return n >= 2 && n <= 72 && p ? { n, parcelaCents: p } : null;
+}
+
+/** 2.3.6.13: juros ao mês de um parcelado (preço à vista, n parcelas de p), pela conta de banco (busca por bisseção). */
+export function jurosAoMes(vistaCents, n, parcelaCents) {
+  if (!(vistaCents > 0) || n * parcelaCents <= vistaCents) return 0;
+  const pv = i => parcelaCents * (1 - Math.pow(1 + i, -n)) / i;
+  let lo = 1e-6, hi = 1;
+  for (let k = 0; k < 60; k++) { const mid = (lo + hi) / 2; if (pv(mid) > vistaCents) lo = mid; else hi = mid; }
+  return Math.round(((lo + hi) / 2) * 10000) / 100; // em %, com 2 casas
+}
+
+/** 2.3.6.13: texto dos juros ("R$ 13,10 de juros, uns 1,7% ao mês"), com o aviso se passar de 3% ao mês. */
+export function textoJuros(vistaCents, n, parcelaCents) {
+  const total = n * parcelaCents;
+  if (!(vistaCents > 0)) return '';
+  if (total <= vistaCents) return 'Sem juros: as parcelas somam o mesmo que à vista. 👍';
+  const pct = jurosAoMes(vistaCents, n, parcelaCents);
+  return `Saiu ${formatBRL(total - vistaCents)} de juros no total (uns ${String(pct).replace('.', ',')}% ao mês).${pct > 3 ? ' É juro alto: na próxima, vale comparar com o cartão sem juros ou juntar e pagar à vista.' : ''}`;
+}
+
+/** 2.3.6.13: a compra que a pessoa parcelou: pelo nome dito, ou a mais recente acima de R$ 100 (últimos 45 dias). */
+export function acharCompraParcelada(t, expenses = [], today) {
+  const recentes = expenses.filter(e => e.date && e.date <= today && (Date.parse(today) - Date.parse(e.date)) / 864e5 <= 45 && !e.compromissoId)
+    .sort((a, b) => (b.date === a.date ? (b.createdAt || 0) - (a.createdAt || 0) : b.date < a.date ? -1 : 1));
+  const palavras = palavrasDe(t).filter(w => w.length >= 4 && !/^(parcel|lembr|dividi|verdade|alias|esqueci|falar|dizer|compra|minha|aquel|ficou)/.test(w));
+  const porNome = palavras.length ? recentes.filter(e => palavras.some(w => norm(e.note || '').includes(w))) : [];
+  const lista = porNome.length ? porNome : recentes.filter(e => e.amountCents >= 10000);
+  // a parte "(parcelado)" de uma compra em duas partes vem primeiro (é ela que vira parcela)
+  return lista.find(e => (e.parcelas || 1) > 1 && !e.accountId) || lista[0] || null;
+}
+
+/**
+ * 2.3.6.13: com a compra achada e as parcelas, monta a espera "quando vence a 1ª?". Parcelas que somam menos que o
+ * anotado: o resto foi entrada (fica como gasto). Parcelas que somam mais: o anotado era o preço, e os juros já saem.
+ */
+export function esperaDoParcelado(e, nome, { n, parcelaCents }) {
+  const total = n * parcelaCents;
+  const entrada = total < e.amountCents * 0.98 ? e.amountCents - total : 0;
+  const jurosJa = total > e.amountCents ? textoJuros(e.amountCents, n, parcelaCents) : '';
+  return {
+    tipo: 'venc_parcela', modo: 'existente', expenseId: e.id, novoValorCents: entrada, itens: [], planoId: null,
+    perguntarJuros: !jurosJa, jurosTxt: jurosJa, entradaCents: entrada,
+    parcela: { nome: `${nome} (parcelado)`.slice(0, 60), valorCents: parcelaCents, vezes: n, categoryId: e.categoryId },
+  };
+}
+
 /** Lê do texto o que a pessoa já contou do pagamento. */
 export function lerPagamento(texto, accounts = []) {
   const t = norm(texto);
@@ -1835,6 +1898,14 @@ export function lerPagamento(texto, accounts = []) {
     return nomes.some(n => n.length >= 2 && new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(t));
   });
   if (achou.length === 1) { r.accountId = achou[0].id; if (!r.forma && achou[0].tipo === 'cartao') r.forma = 'credito'; }
+  // 2.3.6.13: "no Mercado Parcelado", "no SParcelado", "no crediário", "no carnê": vai pro crediário cadastrado (se só tem um
+  // desse jeito, ou um do banco/loja citado)
+  if (/\b(mercado parcelado|mercado credito|sparcelado|shopee parcelado|crediario|carne|parcelado da loja|parcelado do banco)\b/.test(t)) {
+    const cred = accounts.filter(a => a.tipo === 'cartao' && a.modalidade === 'parcelado');
+    const doNome = cred.filter(a => [a.bank, a.nickname].filter(Boolean).map(norm).some(n => n.split(/\s+/).some(w => w.length >= 4 && t.includes(w))));
+    const esc = doNome.length === 1 ? doNome[0] : cred.length === 1 ? cred[0] : null;
+    if (esc) { r.accountId = esc.id; r.forma = 'credito'; }
+  }
   return r;
 }
 
@@ -2043,7 +2114,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
           return {
             fato: `Entendi: compra de ${formatBRL(total)} em duas partes. ${formatBRL(div.vista.amountCents)} à vista agora e ${div.parcelado.parcelas}x de ${formatBRL(div.parcelado.parcelaCents)} no parcelado.${festa} Pra eu te lembrar de cada parcela: quando vence a 1ª? Me fala o dia, tipo "dia 30".`,
             cru: true, sugestoes: ['Dia 10', 'Dia 30', 'Não sei'], avatar: cuidados.assunto || null,
-            aguardar: { tipo: 'venc_parcela', planoId: planoFeito?.fonte === 'plano' ? planoFeito.id : null, itens: [vista],
+            aguardar: { tipo: 'venc_parcela', modo: 'novo', perguntarJuros: true, entradaCents: div.vista.amountCents, planoId: planoFeito?.fonte === 'plano' ? planoFeito.id : null, itens: [vista],
               parcela: { nome: `${nota || 'Compra'} (parcelado)`, valorCents: div.parcelado.parcelaCents, vezes: div.parcelado.parcelas, categoryId: catId } },
           };
         }
@@ -2061,7 +2132,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       const movel = /\b(armario|guarda roupa|sofa|colchao|estante|rack|movel|moveis|cortina|geladeira|fogao|maquina de lavar|micro ondas|cama box)\b/.test(intencao.t); // 2.3.4.9
       return {
         gatilho: 'proposta_registro',
-        dica: [avisoDaData(dataDoTexto(intencao.t, today), today), recorrente && !movel ? 'Isso parece conta de todo mês. Se for, cadastra em 📅 Mês → Contas fixas que eu passo a lembrar do vencimento e já entra no planejamento.' : null,
+        dica: [avisoDaData(dataDoTexto(intencao.t, today), today), recorrente && !movel ? 'Isso parece conta de todo mês. Se for, cadastra em 📅 Mês → Compromissos que eu passo a lembrar do vencimento e já entra no planejamento.' : null,
           // 15/11 (JF, que compra Robux): gasto com jogo ganha a dica de gift card × crédito
           cat?.id === 'jogos' && !lerPagamento(intencao.t, dados.accounts).forma ? 'Dica de gamer: gift card ajuda a gastar só o que você separou pro jogo; no crédito é mais prático pra compra que se repete (passe, assinatura), mas aí vale ficar de olho na fatura.' : null,
           // 2.3.0.1 (JF): fezinha anotada; a partir de R$ 50 no mês, ele mostra o total, sem sermão
@@ -2086,6 +2157,27 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
     }
     case 'pagamento_resposta':
       return intencao.resposta;
+    case 'parcelei': {
+      // 2.3.6.13 (JF): "lembrando que eu parcelei": acha a compra NOS LANÇAMENTOS (funciona mesmo com o chat apagado)
+      const e = acharCompraParcelada(intencao.t, expenses, today);
+      if (!e) return { fato: 'Parcelou o quê? Não achei compra acima de R$ 100 nos últimos 45 dias. Me fala tipo "parcelei a geladeira em 3x de 87,70" que eu acho e arrumo.', cru: true, sugestoes: [] };
+      const nome = (e.note || categories.find(c => c.id === e.categoryId)?.name || 'Compra').replace(/\s*\((parcelado|à vista)\)$/i, '');
+      const quando = `${Number(e.date.slice(8, 10))}/${Number(e.date.slice(5, 7))}`;
+      const dito = lerParcelas(intencao.t);
+      const ja = dito || ((e.parcelas || 1) > 1 ? { n: e.parcelas, parcelaCents: Math.round(e.amountCents / e.parcelas) } : null);
+      if (!ja) {
+        return { fato: `Achei: ${nome}, ${formatBRL(e.amountCents)}, dia ${quando}. Parcelou em quantas vezes e de quanto? Tipo "3x de 87,70".`, cru: true,
+          sugestoes: [], aguardar: { tipo: 'parcelas_de', expenseId: e.id, nome, amountCents: e.amountCents, categoryId: e.categoryId } };
+      }
+      const espera = esperaDoParcelado(e, nome, ja);
+      // compra em duas partes: a parte "(à vista)" do mesmo dia é a entrada (pra conta dos juros; ela fica como está)
+      if (/\(parcelado\)$/i.test(e.note || '')) {
+        const irma = expenses.find(x => x.id !== e.id && x.date === e.date && norm(x.note || '') === norm(`${nome} (à vista)`));
+        if (irma) espera.jurosEntradaCents = irma.amountCents;
+      }
+      return { fato: `Achei: ${nome}, ${formatBRL(e.amountCents)}, dia ${quando}. ${ja.n}x de ${formatBRL(ja.parcelaCents)}${espera.entradaCents ? `, com ${formatBRL(espera.entradaCents)} de entrada` : ''}. Pra eu te lembrar de cada parcela: quando vence a 1ª? Tipo "dia 30".`,
+        cru: true, sugestoes: ['Dia 10', 'Dia 30', 'Não sei'], aguardar: espera };
+    }
     case 'apagar_lancamento': {
       // 2.3.3.6 (JF): acha o lançamento mais recente que bate com a frase (tipo, valor, nome) e propõe apagar
       const fonteNome = id => INCOME_SOURCES.find(s => s.id === id)?.name || 'entrada';

@@ -408,6 +408,27 @@ export async function confirmarAcao(i, ok) {
       addMsg({ de: 'caos', texto: `Pronto: agora está no dia ${Number(a.date.slice(8, 10))}/${Number(a.date.slice(5, 7))}.` });
       return;
     }
+    if (a.tipo === 'parcelar_lancamento') {
+      // 2.3.6.13 (JF: "lembrando que eu parcelei"): o gasto já anotado vira as parcelas (conta a pagar com fim); a entrada,
+      // se teve, fica como gasto. Assim cada parcela só conta quando for paga (sem contar duas vezes)
+      const x = state.expenses.find(e => e.id === a.expenseId);
+      if (!x) { addMsg({ de: 'caos', texto: 'Não achei mais esse gasto. Ele foi apagado?' }); return; }
+      const p = a.parcelasConta;
+      const c = createCompromisso({ nome: p.nome, valorCents: p.valorCents, tipo: 'conta', categoryId: p.categoryId, dia: p.dia, cadaMeses: 1, inicioMes: p.inicioMes, vezes: p.vezes }, { categories: state.categories });
+      await db.put(db.STORES.compromissos, c);
+      state.compromissos.push(c);
+      if (a.novoValorCents > 0) {
+        const novo = editarLancamento(x, { amountCents: a.novoValorCents, note: x.note, date: x.date, categoryId: x.categoryId }, { kind: 'gasto', categories: state.categories });
+        await db.put(db.STORES.expenses, { ...novo, parcelas: 1, forma: novo.forma === 'credito' && !novo.accountId ? null : novo.forma });
+        state.expenses = state.expenses.map(e => (e.id === x.id ? { ...novo, parcelas: 1 } : e));
+      } else {
+        await onDelete(x.id, 'gasto', { jaConfirmou: true });
+      }
+      renderMes();
+      renderizar();
+      addMsg({ de: 'caos', texto: `Pronto: as ${p.vezes} parcelas de ${formatBRL(p.valorCents)} estão em 📅 Mês → Compromissos. Quando pagar cada uma, me fala "paguei a parcela" ou toca em Lançar lá.` });
+      return;
+    }
     if (a.tipo === 'editar_valor') {
       // "errei, foi 45, não 50" (revisão do Gemini, 16/11): o C.A.O.S. propõe, a pessoa confirma, o app grava
       const x = state.expenses.find(e => e.id === a.expenseId);
@@ -471,7 +492,7 @@ export async function confirmarAcao(i, ok) {
       }
       const fala = narrate(eventos, { ignoreCooldown: true });
       const p = a.parcelasConta;
-      const abre = p ? `Anotado: ${formatBRL(total)} à vista. As ${p.vezes} parcelas de ${formatBRL(p.valorCents)} estão em 📅 Mês → Contas fixas, e eu te lembro de cada vencimento.`
+      const abre = p ? `Anotado: ${formatBRL(total)} à vista. As ${p.vezes} parcelas de ${formatBRL(p.valorCents)} estão em 📅 Mês → Compromissos, e eu te lembro de cada vencimento.`
         : a.itens.length === 1 ? `Anotado: ${formatBRL(total)}.` : `Anotei os ${a.itens.length} pagamentos (${formatBRL(total)}).`;
       addMsg({ de: 'caos', texto: `${abre}${fala ? ` ${fala.texto}` : ''}`, rosto: fala?.rosto });
       return;
