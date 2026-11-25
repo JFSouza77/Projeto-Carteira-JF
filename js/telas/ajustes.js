@@ -8,7 +8,7 @@ import { NOVIDADES, VERSAO_APP, partesDoItem, temNovidade } from '../novidades.j
 import { NUCLEO } from '../caos/nucleo.js';
 import { calcularJuros } from '../caos/conversa.js';
 import * as db from '../db.js';
-import { ditadoDisponivel, vozDisponivel } from '../voz.js';
+import { ditadoDisponivel, ritmoDaVoz, vozDisponivel } from '../voz.js';
 import { formatBRL, parseAmount, toISODate, validarBackup, zerarSaldos } from '../engine.js';
 import * as lembretes from '../notificacoes.js';
 import { focoAtual } from './chat.js';
@@ -129,8 +129,8 @@ export async function renderSettings() {
   for (const r of document.querySelectorAll('input[name="tema"]')) r.checked = r.value === (state.settings.tema || 'auto');
   for (const r of document.querySelectorAll('input[name="estilo"]')) r.checked = r.value === (state.settings.estilo || 'atual');
   $('#estilo-desc').textContent = ESTILO_DESC[state.settings.estilo || 'atual'];
-  $('#voz-vel').value = state.settings.vozVel ?? 1;
-  $('#voz-vel-out').textContent = `${Number(state.settings.vozVel ?? 1).toFixed(1).replace('.', ',')}×`;
+  $('#voz-vel').value = ritmoDaVoz(state.settings); // 2.3.6.9: 1,0 a 2,0 (normal 1,2, como no Perfil)
+  $('#voz-vel-out').textContent = `${ritmoDaVoz(state.settings).toFixed(1).replace('.', ',')}×`;
   $('#menos-mov').checked = MENOS_MOVIMENTO.matches;
   $('#voice-toggle').closest('label').hidden = !vozDisponivel();
   $('#caos-version').textContent = `${IDENTIDADE.nome} ${CAOS_VERSAO} (núcleo ${IDENTIDADE.nucleo}) · ${IDENTIDADE.sigla}. ${IDENTIDADE.slogan} Criado por ${IDENTIDADE.criador}, veio do ${IDENTIDADE.origem}.`;

@@ -58,3 +58,6 @@ nenhuma com estilo softvoice ou fearful, e sem silêncio entre dois balões segu
 Se quiser, me manda os números que você escolheu que eu confiro contra o Perfil.
 
 — Code
+
+---
+**Resolvido (Wally, 25/11):** os 4 itens aplicados na 2.3.6.9 (base 1,2 de 1,0 a 2,0 com piso 0,93×; tabela de velocidade do Perfil; protetor, carinho, preocupação e tenso em calmo; pré-pedido do 2º balão; ⏸ e risada como no Perfil; VOZ_SSML_VERSAO 2). Resposta em `correio/para_o_code/2026-11-25_voz_aplicada.md`.

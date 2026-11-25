@@ -19,7 +19,7 @@ import { fraseDoPrint, resumoDoPrint } from './caos/ofertas.js';
 import { corCategoria, corFonte, corForma, temaBanco } from './cores.js';
 import { NUCLEO } from './caos/nucleo.js';
 import { NOVIDADES, VERSAO_APP, temNovidade, partesDoItem } from './novidades.js';
-import { calar, falar, vozDisponivel, ditadoDisponivel, ouvir, pararDeOuvir, setVelocidade, definirServidorDaVoz, definirOuvinteDaFala, destravarAudio, testarVoz } from './voz.js';
+import { calar, falar, vozDisponivel, ditadoDisponivel, ouvir, pararDeOuvir, setVelocidade, ritmoDaVoz, definirServidorDaVoz, definirOuvinteDaFala, destravarAudio, testarVoz } from './voz.js';
 import * as imagens from './imagens.js';
 import * as ia from './ia.js';
 import * as lembretes from './notificacoes.js';
@@ -194,7 +194,7 @@ function aplicarAcessibilidade() {
   if (['claro', 'escuro', 'contraste'].includes(s.tema)) raiz.dataset.theme = s.tema; else delete raiz.dataset.theme;
   raiz.dataset.estilo = ['limpo', 'direto'].includes(s.estilo) ? s.estilo : 'atual';
   raiz.classList.toggle('menos-mov', MENOS_MOVIMENTO.matches);
-  setVelocidade(s.vozVel ?? 1);
+  setVelocidade(ritmoDaVoz(s)); // 2.3.6.9: 1,0 a 2,0, normal 1,2 (a escolha antiga é convertida)
 }
 function animarRostos() {
   if (document.hidden) return;
@@ -1663,7 +1663,7 @@ function bind() {
   $('#tema-options').addEventListener('change', e => { state.settings.tema = e.target.value; saveSettings(); aplicarAcessibilidade(); });
   $('#estilo-options').addEventListener('change', e => { state.settings.estilo = e.target.value; saveSettings(); aplicarAcessibilidade(); $('#estilo-desc').textContent = ESTILO_DESC[e.target.value]; });
   $('#voz-vel').addEventListener('input', e => {
-    state.settings.vozVel = Number(e.target.value);
+    state.settings.vozRitmo = Number(e.target.value);
     $('#voz-vel-out').textContent = `${Number(e.target.value).toFixed(1).replace('.', ',')}×`;
     aplicarAcessibilidade();
   });

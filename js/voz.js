@@ -27,12 +27,15 @@ function melhorVoz() {
 }
 
 // Tom e velocidade por emoção (o Perfil faz igual com o humor da matriz)
+// 2.3.6.9 (JF, 25/11: "suspirando demais, parece cansado o tempo inteiro, pausa muito"; receita do Code do Perfil):
+// as velocidades seguem a tabela do Perfil (quase tudo entre 0,94 e 1,10). Preocupado fala um pouco MAIS rápido,
+// não mais devagar; nada de 0,88 ou 0,95 nas emoções do dia a dia.
 const JEITO = {
-  alegria: [1.08, 1.1], radiante: [1.1, 1.12], orgulho: [1.02, 1.05], preocupacao: [0.95, 0.97],
-  protetor: [0.96, 0.97], tenso: [1.04, 0.95], irritacao: [1.05, 0.9], tedio: [0.88, 0.85],
-  curiosidade: [1.02, 1.08], carinho: [0.95, 1.02], calmo: [1, 1],
+  alegria: [1.06, 1.1], radiante: [1.1, 1.12], orgulho: [1.06, 1.05], preocupacao: [1.03, 0.97],
+  protetor: [1, 0.97], tenso: [1.03, 0.95], irritacao: [1.05, 0.9], tedio: [0.94, 0.85],
+  curiosidade: [1.02, 1.08], carinho: [0.98, 1.02], calmo: [1, 1],
   // emoções novas do núcleo (13/11, achado do Gemini): assustado fala um pouco mais rápido e agudo; enjoado e sem graça, mais baixo
-  medo: [1.06, 1.08], nojo: [0.92, 0.9], vergonha: [0.94, 0.96],
+  medo: [1.08, 1.08], nojo: [0.96, 0.9], vergonha: [0.96, 0.96],
 };
 
 export function textoParaVoz(t) {
@@ -43,16 +46,36 @@ export function textoParaVoz(t) {
     .replace(/C\.A\.O\.S\./g, 'Caos')
     .replace(/R\$\s?(\d[\d.]*)(?:,(\d{2}))?/g, (m, r, c) => `${r.replace(/\./g, '')} reais${c && c !== '00' ? ` e ${Number(c)} centavos` : ''}`)
     .replace(/(\d+)%/g, '$1 por cento')
-    .replace(/\s*(?:\.{2,}|…)\s*/g, ', ')
+    // 2.3.6.9 (receita do Perfil): risada lida como risada ("kkk" saía "cá cá cá"; o H é mudo e "haha" saía "aaa")
+    .replace(/\b(?:k{3,}|(?:ha){2,}h?|(?:ah){2,}|(?:rs){2,})\b/gi, 'rá rá rá').replace(/\b(?:he){2,}h?\b/gi, 'rê rê')
+    // "…" vira a marca ⏸: a voz do servidor troca pela pausa do tamanho da emoção (o aparelho lê como vírgula)
+    .replace(/\s*(?:\.{2,}|…)\s*/g, ' ⏸ ')
     .replace(/\s+/g, ' ')
+    .replace(/^\s*⏸\s*/, '').replace(/\s*⏸\s*$/, '.')
+    .replace(/\s*⏸\s*([,.!?;:])/g, '$1').replace(/([,.!?;:])\s*⏸/g, '$1')
+    .replace(/\s+([,.!?;:])/g, '$1')
     .trim();
 }
 
 // Velocidade escolhida em Ajustes → Acessibilidade (multiplica o jeito de cada emoção)
-let VELOCIDADE = 1;
+// 2.3.6.9 (igual ao Perfil): o normal dele é 1,2 (20% mais rápido que a voz pura, que soa arrastada), o ajuste vai de
+// 1,0 a 2,0, e nenhuma fala sai abaixo de 0,93 × a velocidade escolhida
+export const VELOCIDADE_PADRAO = 1.2;
+let VELOCIDADE = VELOCIDADE_PADRAO;
 export function setVelocidade(v) {
   const n = Number(v);
-  VELOCIDADE = Number.isFinite(n) ? Math.min(1.6, Math.max(0.6, n)) : 1;
+  VELOCIDADE = Number.isFinite(n) ? Math.min(2, Math.max(1, n)) : VELOCIDADE_PADRAO;
+}
+/** A velocidade guardada: a nova (vozRitmo, 1 a 2) ou a antiga (vozVel, 0,6 a 1,6 em cima de 1) convertida. */
+export function ritmoDaVoz(s = {}) {
+  if (Number.isFinite(Number(s.vozRitmo)) && s.vozRitmo != null) return Math.min(2, Math.max(1, Number(s.vozRitmo)));
+  const antiga = Number(s.vozVel ?? 1);
+  return Math.min(2, Math.max(1, Math.round((Number.isFinite(antiga) ? antiga : 1) * VELOCIDADE_PADRAO * 10) / 10));
+}
+/** Velocidade que vai pra voz: a da emoção × a escolhida, de 0,05 em 0,05, com o piso de 0,93 × a escolhida. */
+export function velocidadeDaFala(emocao) {
+  const [vel] = JEITO[emocao] || JEITO.calmo;
+  return Math.round(Math.max(0.93 * VELOCIDADE, vel * VELOCIDADE) * 20) / 20;
 }
 
 // 2.1.5 (JF, 16/11: "ele não espera acabar a primeira fala antes de falar a segunda; tem que dar esse respiro"):
@@ -74,9 +97,11 @@ export function definirOuvinteDaFala(o) { ouvinte = o || {}; }
 const avisar = (nome, ...a) => { try { ouvinte[nome]?.(...a); } catch { /* o avatar nunca derruba a voz */ } };
 
 // emoção da Carteira → emoção da voz do servidor (tabela do Code, 05_Voz.md: nunca raiva nem fúria, firme e não bravo)
+// 2.3.6.9 (JF: "suspirando demais"): protetor, carinho, preocupação e tenso aparecem o tempo todo num app de dinheiro e
+// caíam em softvoice/fearful (voz com ar, respirada). Agora saem em calmo (estilo neutral), como o dia a dia do Perfil.
 export const EMOCAO_DA_VOZ = Object.freeze({
-  alegria: 'orgulho', radiante: 'festa', orgulho: 'orgulho', preocupacao: 'preocupado', protetor: 'carinho', tenso: 'preocupado',
-  irritacao: 'desafio', tedio: 'tedio', curiosidade: 'pensando', carinho: 'carinho', calmo: 'calmo', medo: 'medo', nojo: 'nojo',
+  alegria: 'orgulho', radiante: 'festa', orgulho: 'orgulho', preocupacao: 'calmo', protetor: 'calmo', tenso: 'calmo',
+  irritacao: 'desafio', tedio: 'tedio', curiosidade: 'pensando', carinho: 'calmo', calmo: 'calmo', medo: 'medo', nojo: 'nojo',
   vergonha: 'vergonha',
 });
 
@@ -108,9 +133,16 @@ async function nuvemLigada(base) {
 // as falas se repetem muito: guarda as últimas 50 no aparelho (não pede de novo)
 const guardadas = new Map();
 let ultimaVoz = '';
-async function pedirAudio(base, t, emocao, vel, tom, limite = 5000) {
+// 2.3.6.9 (Code do Perfil: "pedir o áudio do 2º enquanto o 1º toca"): pedido em andamento é reaproveitado, então o
+// 2º balão já pode ser pedido antes, e quando chega a vez dele o áudio já está aqui (sem o silêncio da rede no meio)
+const pedindo = new Map();
+function pedirAudio(base, t, emocao, vel, tom, limite = 5000) {
   const chave = `${emocao}|${vel}|${tom}|${t}`;
-  if (guardadas.has(chave)) return guardadas.get(chave).slice(0);
+  if (guardadas.has(chave)) return Promise.resolve(guardadas.get(chave).slice(0));
+  if (!pedindo.has(chave)) pedindo.set(chave, buscarAudio(base, t, emocao, vel, tom, limite, chave).finally(() => pedindo.delete(chave)));
+  return pedindo.get(chave).then(b => b.slice(0));
+}
+async function buscarAudio(base, t, emocao, vel, tom, limite, chave) {
   const r = await fetch(`${base}/voz`, {
     method: 'POST', headers: { 'content-type': 'application/json' }, signal: tempoLimite(limite),
     body: JSON.stringify({ t, r: vel, p: tom, e: EMOCAO_DA_VOZ[emocao] || 'calmo' }),
@@ -183,14 +215,15 @@ function falarNoAparelho(t, emocao, minha) {
   if (!vozDisponivel() || minha !== corte) return Promise.resolve();
   return new Promise(fim => {
     try {
-      const u = new SpeechSynthesisUtterance(t);
+      const u = new SpeechSynthesisUtterance(t.replace(/\s*⏸\s*/g, ', ')); // a voz do aparelho não conhece a marca
       u.lang = 'pt-BR';
       const v = melhorVoz();
       if (v) u.voice = v;
       const [vel, tom] = JEITO[emocao] || JEITO.calmo;
       // sem voz masculina no aparelho, ele fala um pouco mais grave (como no Perfil)
       u.pitch = Math.max(0.4, Math.min(2, (v && !MASC.test(v.name || '') ? 0.8 : 1) * tom));
-      u.rate = Math.min(2, Math.max(0.5, vel * VELOCIDADE));
+      // voz do aparelho: o 1,0 dela já é o "normal" de cada celular, então a escolha entra relativa ao padrão 1,2
+      u.rate = Math.min(2, Math.max(0.5, Math.max(0.93, vel) * VELOCIDADE / VELOCIDADE_PADRAO));
       const acabou = () => { clearTimeout(tempo); fim(); };
       const tempo = setTimeout(acabou, Math.min(30_000, 1500 + t.length * 90 / u.rate));
       u.onboundary = () => avisar('palavra'); // cada palavra: a boca dá uma abridinha
@@ -205,11 +238,11 @@ function falarNoAparelho(t, emocao, minha) {
 
 async function falarAgora(t, emocao, minha) {
   const base = servidorDaVoz();
-  const [vel, tom] = JEITO[emocao] || JEITO.calmo;
+  const [, tom] = JEITO[emocao] || JEITO.calmo;
   try {
     if (base && (typeof navigator === 'undefined' || navigator.onLine !== false) && await nuvemLigada(base)) {
       try {
-        const buf = await pedirAudio(base, t, emocao, Math.round(vel * VELOCIDADE * 20) / 20, Math.round(tom * 20) / 20);
+        const buf = await pedirAudio(base, t, emocao, velocidadeDaFala(emocao), Math.round(tom * 20) / 20);
         if (minha !== corte) return;
         await tocar(buf, minha);
         return;
@@ -227,6 +260,12 @@ export function falar(texto, emocao = 'calmo', { emenda = false } = {}) {
   if (!emenda) calar();
   const minha = corte;
   const antes = emenda ? falaAtual : Promise.resolve();
+  // 2.3.6.9: o 2º balão já pede o áudio agora, enquanto o 1º ainda toca
+  const base = servidorDaVoz();
+  if (emenda && base && nuvem.base === base && nuvem.ok) {
+    const [, tom] = JEITO[emocao] || JEITO.calmo;
+    pedirAudio(base, t, emocao, velocidadeDaFala(emocao), Math.round(tom * 20) / 20).catch(() => {});
+  }
   falaAtual = antes.then(() => (minha === corte ? falarAgora(t, emocao, minha) : null)).catch(() => {});
   return falaAtual;
 }
@@ -248,7 +287,7 @@ export async function testarVoz() {
   if (!estado.ligada) return { ok: false, msg: 'O servidor ainda não tem a voz: faltam as chaves da Azure (ou o deploy depois de colocar as chaves).' };
   try {
     calar();
-    const buf = await pedirAudio(base, 'Oi! Essa é a minha voz natural. Gostou?', 'alegria', 1, 1, 15000);
+    const buf = await pedirAudio(base, 'Oi! Essa é a minha voz natural. Gostou?', 'alegria', velocidadeDaFala('alegria'), 1, 15000);
     const quem = ultimaVoz.replace(/^(nova|guardada):?/, '') || '';
     await tocar(buf, corte);
     avisar('fim');

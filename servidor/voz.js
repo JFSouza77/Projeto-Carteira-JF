@@ -33,7 +33,7 @@ export const VOZ_EMOCOES = {
   alivio: ['-3%', 340, 'neutral', 5],
 };
 // mudou a tabela ou o SSML? Suba, senão o cache devolve a voz antiga
-export const VOZ_SSML_VERSAO = 1;
+export const VOZ_SSML_VERSAO = 2; // 2 (25/11): velocidade 1,2 e dia a dia em calmo (o cache da voz cansada não volta)
 
 /** Texto já limpo (sem < > & ") → SSML, igual ao Perfil. */
 export function vozSsml(nome, t, rateN, pitch, e, estilos) {
