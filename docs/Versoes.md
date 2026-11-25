@@ -6,6 +6,7 @@ A versão do C.A.O.S. sobe à parte, sempre que ele é mexido (`CAOS_VERSAO`).
 
 | Versão | Data | Nome |
 | --- | --- | --- |
+| 2.3.6.10 Alfa | 25/11/2026 | (JF) "Rapaz…" com reticências e sem o nome logo depois (também na resposta da IA online); fala longa não corta mais no fim (vai em pedaços de até 380 letras, cortando no fim da frase, e o próximo é pedido enquanto o anterior toca). |
 | 2.3.6.9 Alfa | 25/11/2026 | (pedido urgente do JF: "suspirando demais, parece cansado, pausa muito"; receita do Code do Perfil) Voz igual à do Perfil: normal 1,2× (ajuste de 1,0 a 2,0, com piso), velocidades por emoção da tabela do Perfil, protetor/carinho/preocupação/tenso em calmo (sem softvoice e fearful), "…" vira pausa do servidor sem pausa dupla, risada lida como "rá rá rá", o 2º balão pede o áudio enquanto o 1º toca, cache da voz antiga descartado (VOZ_SSML_VERSAO 2). |
 | 2.3.6.8 Alfa | 25/11/2026 | (correção; JF e a geladeira: parte no saldo do Mercado Pago, parte em 3x no Mercado Parcelado) Compra paga em duas partes vira dois lançamentos com o total certo (antes a parte à vista virava um parcelado de 3x); Mercado Parcelado não vira mais categoria Mercado; "geladeira," com vírgula acha o plano. |
 | 2.3.6.7 Alfa | 25/11/2026 | (correção; JF: "Finalmente comprei minha geladeira" ainda perguntava o valor em Moradia) A compra também reconhece o plano feito pra outro mês, a meta e o "plano que se repete" com o mesmo nome. O Safari preso numa versão antiga (2.1.7) passa a atualizar sozinho. |
