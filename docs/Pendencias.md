@@ -38,9 +38,9 @@ Atualizada pelo Wally a cada rodada.
        o PicPay Card), Pagaleve (Pix parcelado em loja parceira), Santander ("Divide o Pix", até 12x, 1ª em até 59 dias),
        Inter (Pix no Crédito Inter, até 18x), Itaú, Nubank e BB (Pix parcelado no cartão), Magalu (Carnê Digital MagaluPay,
        até 24x), Casas Bahia (Carnê Digital, 24 a 30x). Todos com juros e IOF, menos promoção de loja.
-    2. **Forma de pagamento nova "parcelado da loja/banco"** (fora do cartão): pede a 1ª data de vencimento ("quando vence a
-       1ª parcela?") e o valor de cada parcela (pode ser diferente da 1ª: juros, IOF), e cada parcela vira uma conta a pagar
-       no mês dela (as contas fixas já fazem o lembrete). Cheque e cheque pré-datado entram junto (vira conta na data).
+    2. ~~"Quando vence a 1ª parcela?" e cada parcela como conta a pagar com lembrete~~ (feito na 2.3.6.12, JF: "você já
+       começou"). Falta: a mesma pergunta no parcelado sem a parte à vista ("3x de 100 no carnê"), parcela com valor
+       diferente da 1ª (juros, IOF) e cheque pré-datado (vira conta na data).
     3. **Conferir juros:** com o total à vista e as parcelas ele mostra quanto de juros saiu (o `lerParcelamento` já faz a
        conta) e, se passar de uns 3% ao mês, avisa sem sermão.
     4. **Cartão de loja** (Shopee, Magalu, Renner, C&A, Riachuelo, Casas Bahia): cadastrar como cartão já funciona pelo nome;

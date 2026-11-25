@@ -11,14 +11,20 @@ const contas = [{ id: 'mp', bank: 'Mercado Pago', tipo: 'conta' }, { id: 'nu', b
 const d = { expenses: [], incomes: [], accounts: contas, categories: DEFAULT_CATEGORIES, budgets: {}, compromissos: [],
   planos: [{ id: 'p1', nome: 'Geladeira', valorCents: 250000, categoryId: 'moradia', month: '2026-11', feito: false }] };
 
-test('à vista no saldo + parcelado: dois lançamentos, total certo e o plano', () => {
-  const f = conversar('Comprei a geladeira, 2313,28 no saldo do Mercado Pago e 3x de 87,70 no Mercado Parcelado', d, { now }).fala;
+test('à vista + parcelado no cartão: dois lançamentos, total certo e o plano', () => {
+  const f = conversar('Comprei a geladeira, 2313,28 no pix e 3x de 87,70 no Nubank', d, { now }).fala;
   assert.equal(f.acao.tipo, 'registrar_varios');
   assert.equal(f.acao.planoId, 'p1');
   const [a, b] = f.acao.itens;
-  assert.deepEqual([a.amountCents, a.forma, a.accountId, a.parcelas, a.categoryId], [231328, 'pix', 'mp', 1, 'moradia']);
-  assert.deepEqual([b.amountCents, b.forma, b.parcelas], [26310, 'credito', 3]);
+  assert.deepEqual([a.amountCents, a.forma, a.parcelas, a.categoryId], [231328, 'pix', 1, 'moradia']);
+  assert.deepEqual([b.amountCents, b.forma, b.parcelas, b.accountId], [26310, 'credito', 3, 'nu']);
   assert.match(f.texto, /2\.576,38 em duas partes/);
+});
+
+test('à vista no saldo + Mercado Parcelado (fora do cartão): pergunta o vencimento (2.3.6.12)', () => {
+  const f = conversar('Comprei a geladeira, 2313,28 no saldo do Mercado Pago e 3x de 87,70 no Mercado Parcelado', d, { now }).fala;
+  assert.match(f.texto, /2\.576,38 em duas partes/);
+  assert.match(f.texto, /quando vence a 1ª/);
 });
 
 test('pix + parcelado no cartão pega o cartão', () => {
