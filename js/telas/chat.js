@@ -455,6 +455,11 @@ export async function confirmarAcao(i, ok) {
       // revisão do Gemini (16/11): junta os eventos de todos (antes só o último contava e um estouro do 1º sumia)
       for (const x of a.itens) eventos.push(...(await registrarGasto({ ...x, imageId: a.imageId })));
       const total = a.itens.reduce((t, x) => t + x.amountCents, 0);
+      // 2.3.6.8 (JF, a geladeira em duas partes): a compra dividida também fecha o plano do mês
+      if (a.planoId) {
+        const p = state.planos.find(x => x.id === a.planoId);
+        if (p && !p.feito) { const upd = { ...p, feito: true }; await db.put(db.STORES.planos, upd); state.planos = state.planos.map(x => (x.id === p.id ? upd : x)); renderMes(); }
+      }
       const fala = narrate(eventos, { ignoreCooldown: true });
       addMsg({ de: 'caos', texto: `Anotei os ${a.itens.length} pagamentos (${formatBRL(total)}).${fala ? ` ${fala.texto}` : ''}`, rosto: fala?.rosto });
       return;

@@ -8,7 +8,7 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.3.6 Alfa',
-    ate: '2.3.6.7',
+    ate: '2.3.6.8',
     data: '25/11/2026',
     nome: 'Tudo no Lugar',
     t: 'Cada gasto no lugar certo: categorias novas, lojas e marcas pelo nome e um jeito de passar a lista da feira.',
@@ -17,6 +17,7 @@ export const NOVIDADES = Object.freeze([
       '🔧 Utilidades: loja de construção, de 1,99, papelaria, chaveiro e ferramenta caem aqui sozinhos.',
       '🏷️ Marca e loja pelo nome: anote "C&A 500", "iPhone 16 de 8000" ou "Droga Raia 40" e ele acerta.',
       '🧺 Modo lista: no Chat, diga "os próximos gastos são da feira", mande um atrás do outro e diga "pronto".',
+      '✂️ Compra em duas partes: no Chat, diga "2300 no pix e 3x de 87 no cartão" que ele anota as duas.',
       '🧾 Imposto de renda: no Chat, pergunte "quanto pago de imposto?"; ele estima junto e avisa que é estimativa.',
     ],
     qol: [
