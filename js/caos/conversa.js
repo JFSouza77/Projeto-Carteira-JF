@@ -1495,6 +1495,8 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   if (/quanto (eu )?(ainda )?(posso|da pra|consigo|devo) (gastar|usar|tirar)( ainda)? (no|na|do|da|pelo|pela)\b/.test(t)) return { ...r, intent: 'folga_conta' };
   if (/\b(aumento|aumentou|reajuste|diminuiu|reducao|reduziu|caiu meu salario)\b/.test(t) && /\b(salario|recebi|ganho|ganhei|tive|meu)\b/.test(t) && !r.valor) return { ...r, intent: 'entradas_comparar' };
   if (/\b(mais ou menos|menos ou mais|comparad[oa]|do que o mes passado|que o mes passado|que mes passado)\b/.test(t) && /\b(recebi|salario|entrou|entrada|entradas|ganhei)\b/.test(t)) return { ...r, intent: 'entradas_comparar' };
+  // 2.3.6.14 (JF): pergunta de "cabe?" com valor não é gasto ("dá pra gastar 300?", "cabe 300 esse mês?")
+  if (r.valor && /\b(posso|da pra|consigo) (gastar|torrar|usar) (r\$ ?)?\d|^cabe (r\$ ?)?\d/.test(t)) return { ...r, intent: 'cabe' };
   // Registro ("gastei 30 no mercado", "paguei 120 de luz", "recebi 1500 de salario")
   if (r.valor && !/\bquanto\b/.test(t)) {
     // sem verbo, mas dizendo como pagou (JF, 14/11: "7 reais no débito do Inter", "5,50 numa casquinha pelo débito")
@@ -1549,7 +1551,8 @@ function entenderSimples(t, { categories = [], anterior = null } = {}) {
   // Ele pede o orçamento e a IA online pesquisa 2 a 4 sites; ele orienta, não entrega a resposta pronta.
   const pesquisa = acharPesquisa(t, r.valor);
   if (pesquisa) return { ...r, categoria: null, intent: 'pesquisa_compra', ...pesquisa };
-  if (/(cabe no (mes|meu bolso|orcamento|bolso)|da pra comprar|posso comprar|consigo comprar|tenho dinheiro pra|vai sobrar|quanto (vai )?sobra)/.test(t)) return { ...r, intent: 'cabe' };
+  // 2.3.6.14 (JF): "posso gastar 300?" e "dá pra gastar 300?" com valor são o mesmo "cabe" (antes caíam em orçamento ou em gasto)
+  if (/(cabe no (mes|meu bolso|orcamento|bolso)|da pra comprar|posso comprar|consigo comprar|tenho dinheiro pra|vai sobrar|quanto (vai )?sobra|(posso|da pra|consigo) gastar (r\$ ?)?\d|^cabe (r\$ ?)?\d)/.test(t)) return { ...r, intent: 'cabe' };
   // "Explica o print do banco" (06/11): a pessoa manda o print e ele explica pelo servidor
   if (/(explica|explicar|nao entendi|o que (significa|quer dizer)|me ajuda a entender).*(print|tela|banco|fatura|extrato|app do banco|imagem|foto)|(print|tela) do banco/.test(t)) return { ...r, intent: 'explicar_print' };
   // Cartão de crédito (06/11): "como está meu cartão?", "quanto vem na fatura?", "quanto tenho de limite?"
@@ -1731,13 +1734,29 @@ function textoAtivo(m, a) {
   return `${x.nome || 'Ibovespa'}: ${valor}${x.varDia != null ? ` (${sinal(x.varDia)} no dia` : ''}${x.var5 != null ? `, ${sinal(x.var5)} em 5 dias)` : x.varDia != null ? ')' : ''}.${cem}${media}`;
 }
 
-function textoSobra(a) {
+// 2.3.6.14 (JF, 25/11: "ele considera déficit gastar mais do que recebeu; faz sentido, mas eu tenho dinheiro guardado em
+// outras contas. Não é tão preto no branco"): quando o mês não fecha, ele olha também o que está nas contas (acima do
+// piso de cada uma) antes de dizer que não dá. Gastar mais que a renda continua sendo avisado: o que muda é o veredito.
+export function olharOTodo(dados, faltaCents, today) {
+  const contas = (dados.accounts || []).filter(a => a.tipo !== 'cartao' && !a.paraQuem);
+  if (!contas.length || !(faltaCents > 0)) return '';
+  const rp = resumoPisos(contas, dados.expenses || [], dados.incomes || [], dados.transferencias || [], today);
+  const total = rp.contas.reduce((s, c) => s + Math.max(0, c.saldoCents), 0);
+  const livre = rp.contas.reduce((s, c) => s + Math.max(0, c.folgaCents), 0);
+  if (!total) return '';
+  if (livre >= faltaCents) {
+    return ` Mas olhando o todo: você tem ${formatBRL(total)} nas contas (${formatBRL(livre)} livres, acima dos pisos), então dá pra cobrir sem dívida. Só que aí sai do que está guardado, não da renda do mês: se der pra esperar, espera; se for importante, pode ir.`;
+  }
+  return ` E o que está guardado nas contas (${formatBRL(livre)} livres, acima dos pisos) também não cobre tudo: aí é segurar mesmo.`;
+}
+
+function textoSobra(a, dados = null, today = null) {
   // sem entrada nem orçamento não tem conta pra fazer (em JS, null >= 0 é true: antes virava "sobram R$ 0,00")
   if (a.sobraCents == null || !a.baseTipo) return semBase();
   const base = a.baseTipo === 'entradas' ? `das entradas (${formatBRL(a.baseCents)})` : `do orçamento (${formatBRL(a.baseCents)})`;
   const partes = `já saiu ${formatBRL(a.gastosCents)}, faltam ${formatBRL(a.compPendentesCents)} de compromissos e ${formatBRL(a.planosPendentesCents)} de planos`;
   if (a.sobraCents >= 0) return `Cabe no mês: ${partes}, e ainda sobram ${formatBRL(a.sobraCents)} ${base}.`;
-  return `Não cabe tudo: ${partes}, e faltariam ${formatBRL(-a.sobraCents)} ${base}.${a.adiar.length ? ` Dá pra adiar ${a.adiar.map(p => `${p.nome} (${formatBRL(p.valorCents)})`).join(', ')}.` : ''}`;
+  return `Não cabe tudo: ${partes}, e faltariam ${formatBRL(-a.sobraCents)} ${base}.${a.adiar.length ? ` Dá pra adiar ${a.adiar.map(p => `${p.nome} (${formatBRL(p.valorCents)})`).join(', ')}.` : ''}${dados ? olharOTodo(dados, -a.sobraCents, today) : ''}`;
 }
 
 // ---------- Como pagou (P8, vistoria do JF 12/11) ----------
@@ -2705,7 +2724,7 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
       if (!a.planos.length && !abertos.length) return { fato: 'Nada planejado ainda pra este mês. Na aba 📅 Mês você lista o que quer comprar ou gastar, com valores, e eu calculo se cabe.', sugestoes: ['O que tenho pra pagar?'] };
       const lista = a.planos.map(p => `${p.feito ? '✔ ' : ''}${p.nome} ${formatBRL(p.valorCents)}`).join('; ');
       const planos = a.planos.length ? `Planos deste mês: ${lista}. Faltam ${formatBRL(a.planosPendentesCents)}.` : 'Nenhum plano de compra este mês.';
-      return { fato: `${planos}${contas} ${textoSobra(a)}`, sugestoes: ['Cabe no mês?', 'O que tenho pra pagar?'] };
+      return { fato: `${planos}${contas} ${textoSobra(a, dados, today)}`, sugestoes: ['Cabe no mês?', 'O que tenho pra pagar?'] };
     }
     case 'cabe': {
       // "posso comprar 300 pelo C6?" (JF, 14/11): vê se o banco aguenta sem furar o piso, e sugere outro se não der
@@ -2729,13 +2748,13 @@ export function responder(intencao, dados, { today = toISODate(), emocao = 'calm
         return {
           fato: c.cabe
             ? `Cabe! Somando o que já saiu (${formatBRL(c.gastosCents)}), compromissos (${formatBRL(c.compPendentesCents)}) e planos (${formatBRL(c.planosPendentesCents)}), sobram ${formatBRL(c.sobraCents)}. Depois de ${formatBRL(intencao.valor)}, ficariam ${formatBRL(c.sobraDepois)}.`
-            : `Apertado. Hoje a sobra prevista é ${formatBRL(c.sobraCents)}; com ${formatBRL(intencao.valor)} ficaria ${formatBRL(c.sobraDepois)}. ${c.adiar.length ? `Dá pra adiar ${c.adiar.map(p => p.nome).join(', ')}.` : 'Talvez esperar o próximo mês.'}`,
+            : `Apertado. Hoje a sobra prevista é ${formatBRL(c.sobraCents)}; com ${formatBRL(intencao.valor)} ficaria ${formatBRL(c.sobraDepois)}. ${c.adiar.length ? `Dá pra adiar ${c.adiar.map(p => p.nome).join(', ')}.` : (olharOTodo(dados, -c.sobraDepois, today).includes('dá pra cobrir') ? '' : 'Talvez esperar o próximo mês.')}${olharOTodo(dados, -c.sobraDepois, today)}`,
           sugestoes: ['O que tenho pra pagar?', 'O que planejei pro mês?'],
         };
       }
       const a = analisarPlanejamento(dados, today);
       if (a.sobraCents == null) return { fato: semBase() };
-      return { fato: textoSobra(a), sugestoes: ['Posso comprar algo de 200?', 'O que tenho pra pagar?'] };
+      return { fato: textoSobra(a, dados, today), sugestoes: ['Posso comprar algo de 200?', 'O que tenho pra pagar?'] };
     }
     case 'bancos': {
       const bancos = [...new Set(accounts.map(a => a.bank).filter(b => b && !/carteira|outro/i.test(b)))];
