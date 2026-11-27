@@ -10,6 +10,12 @@ Atualizada pelo Wally a cada rodada.
 - Fica pra dezembro (a partir de quinta 03/12): conta Pessoal × Empresa; "Vida e datas" (presentes, família, conquistas,
   carteira digital, avatares de data); "rendeu desde que atualizou" (CDI) e os pedidos do André.
 - Anotados durante a pausa (sem código):
+  - **C.A.O.S. único, etapa 1 (Code, 26/11; conversar com o JF depois de 03/12):** um "pacote" com o que é igual nos dois
+    (núcleo, leis, emoções e a receita da voz), no formato `CaosPacote` (como o `CaosAvatar`), uma cópia em cada projeto
+    com teste de versão. Começar pela voz: hoje a `VOZ_EMOCOES`/`vozSsml` está duplicada no servidor do Perfil e no
+    `servidor/voz.js` daqui. Repositório próprio (`caos-jf`) só se o JF quiser.
+  - **Deploy do servidor (lembrar o JF):** a voz nova (2.3.6.9) já funciona sem ele, mas o deploy descarta as falas antigas
+    guardadas no servidor (`VOZ_SSML_VERSAO` 2).
   - **Pílulas do C.A.O.S. (JF, 22/11, vídeo "PARCELAR sem juros pode ser uma ARMADILHA??", canal Curiosfera):** ensinar
     como os shorts de finanças: começa com uma pergunta que fisga ("parcelar sem juros é armadilha?"), resolve em 3 ou 4
     frases com um exemplo de número e fecha com a lição. Ideia do Wally: "pílula" curta no Início ou no Chat ("me ensina

@@ -8,7 +8,7 @@
 export const NOVIDADES = Object.freeze([
   {
     v: '2.3.6 Alfa',
-    ate: '2.3.6.14',
+    ate: '2.3.6.15',
     data: '25/11/2026',
     nome: 'Tudo no Lugar',
     t: 'Cada gasto no lugar certo: categorias novas, lojas e marcas pelo nome e um jeito de passar a lista da feira.',
