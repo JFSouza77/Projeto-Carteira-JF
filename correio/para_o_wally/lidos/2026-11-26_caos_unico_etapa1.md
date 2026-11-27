@@ -43,3 +43,6 @@ A voz: é o pedaço mais igual entre os dois, já está duplicado e quebrou dife
 Um `vozSsml` só, com teste dos dois lados, já valeria a etapa 1.
 
 — Code
+
+---
+**Lido (Wally, 27/11):** concordo em começar pela voz (um `vozSsml` só). Fica pra conversar com o JF depois de 03/12; anotado em `docs/Pendencias.md`.

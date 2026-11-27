@@ -105,14 +105,16 @@ test('núcleo 1.9.0+: jeito de reagir fecha em 5 e tem o 2º balão, a emoção 
 });
 
 // Núcleo 2.0.0 (JF, 17/11): o bordão do criador, "Rapaz…", virou jeito de falar do C.A.O.S.
-test('núcleo 2.0.0: o bordão "Rapaz…" do criador', async () => {
-  assert.equal(NUCLEO.versao, '2.0.0');
+test('núcleo 2.0.1: o bordão "Rapaz…" do criador, com reticências e sem o nome logo depois', async () => {
+  assert.equal(NUCLEO.versao, '2.0.1');
   assert.match(NUCLEO.fala.bordao, /Rapaz…/);
+  assert.match(NUCLEO.fala.bordao, /sem o nome ou o apelido logo depois/);
   const { conversar } = await import('../js/caos/index.js');
   let mem = null; let viu = false;
   for (let i = 0; i < 8 && !viu; i++) {
     const r = conversar('o que você pode fazer?', { expenses: [], incomes: [], categories: [] }, { memory: mem, now: Date.now(), perfil: { apelido: 'Ana' } });
     mem = r.memoria; viu = /^Rapaz…/.test(r.fala.texto);
+    if (viu) assert.doesNotMatch(r.fala.texto, /^Rapaz… Ana\b/, 'sem chamar a pessoa duas vezes');
   }
   assert.ok(viu, 'em algumas respostas ele abre com "Rapaz…"');
 });
